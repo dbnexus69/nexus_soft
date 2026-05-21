@@ -1,0 +1,52 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Build outputs
+dist
+build
+
+# Uploads directory
+uploads/*
+!uploads/.gitkeep
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.tmp
+
+# Runtime
+pids
+*.pid
+*.seed
+*.pid.lock

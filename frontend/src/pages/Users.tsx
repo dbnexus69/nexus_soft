@@ -30,6 +30,7 @@ import {
   RolePermissions,
   DEFAULT_ASESOR_PERMISSIONS,
   ADMIN_PERMISSIONS,
+  normalizeRolePermissions,
 } from "../types";
 import StatCard from "../components/ui/StatCard";
 import PermissionsGrid from "../components/users/PermissionsGrid";
@@ -64,6 +65,9 @@ export default function Users() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserForDetail, setSelectedUserForDetail] =
@@ -74,6 +78,7 @@ export default function Users() {
     useState<RolePermissions>(
       data.config.rolePermissions?.asesor || DEFAULT_ASESOR_PERMISSIONS,
     );
+  const [editingRole, setEditingRole] = useState<'asesor' | 'freelancer'>('asesor');
 
   // Eliminación
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -163,7 +168,7 @@ export default function Users() {
         email: "",
         password: "",
         role: "asesor",
-        docType: "CC",
+        docType: data.config.documentTypes?.[0]?.abreviatura || "",
         docNumber: "",
         phone: "",
         birthDate: "",
@@ -175,7 +180,7 @@ export default function Users() {
     setIsModalOpen(true);
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     const newErrors: Record<string, string> = {};
     if (!formData.firstName.trim())
       newErrors.firstName = "El nombre es obligatorio";
@@ -216,7 +221,6 @@ export default function Users() {
     if (!formData.birthDate)
       newErrors.birthDate = "La fecha de nacimiento es obligatoria";
 
-    // Verificar duplicados (Email y Documento)
     const isDuplicateEmail = data.users.some(
       (u) =>
         u.email.toLowerCase() === formData.email.toLowerCase() &&
@@ -238,34 +242,49 @@ export default function Users() {
     }
 
     setErrors({});
-    if (editingUser) {
-      updateUser(editingUser.id, {
-        ...formData,
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
-      });
-      setSuccessMessage("Usuario actualizado exitosamente");
-    } else {
-      addUser({
-        ...formData,
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
-      } as any);
-      setSuccessMessage("Nuevo usuario registrado correctamente");
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
+    setIsSaving(true);
+    try {
+      if (editingUser) {
+        await updateUser(editingUser.id, {
+          ...formData,
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+        });
+        setSuccessMessage("Usuario actualizado exitosamente");
+      } else {
+        await addUser({
+          ...formData,
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+        } as any);
+        setSuccessMessage("Nuevo usuario registrado correctamente");
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
+      setShowSuccess(true);
+      setIsModalOpen(false);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al guardar el usuario");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsSaving(false);
     }
-    setShowSuccess(true);
-    setIsModalOpen(false);
-    setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const handleToggleStatus = (user: User) => {
-    const action = user.status === "active" ? "desactivado" : "activado";
-    updateUser(user.id, {
-      status: user.status === "active" ? "inactive" : "active",
-    });
-    setSuccessMessage(`Usuario ${user.name} ${action} correctamente`);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+  const handleToggleStatus = async (user: User) => {
+    try {
+      const action = user.status === "active" ? "desactivado" : "activado";
+      await updateUser(user.id, {
+        status: user.status === "active" ? "inactive" : "active",
+      });
+      setSuccessMessage(`Usuario ${user.name} ${action} correctamente`);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al cambiar estado");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    }
   };
 
   const handleDeleteRequest = (user: User) => {
@@ -273,13 +292,21 @@ export default function Users() {
     setIsDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (userToDelete) {
-      deleteUser(userToDelete.id);
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsSaving(true);
+    try {
+      await deleteUser(userToDelete.id);
       setSuccessMessage("Usuario eliminado correctamente");
       setShowSuccess(true);
       setIsDeleteModalOpen(false);
       setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al eliminar el usuario");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -291,36 +318,46 @@ export default function Users() {
         : user.role === "freelancer"
           ? data.config.rolePermissions.freelancer
           : data.config.rolePermissions.asesor;
-    setEditingUserPermissions(user.customPermissions || defaultPerms);
+    setEditingUserPermissions(
+      user.customPermissions
+        ? normalizeRolePermissions(user.customPermissions)
+        : defaultPerms
+    );
     setIsPermissionsModalOpen(true);
   };
 
-  const handleSaveUserPermissions = () => {
-    if (selectedUserForPermissions) {
-      updateUserPermissions(
-        selectedUserForPermissions.id,
-        editingUserPermissions,
-      );
-      setSuccessMessage(
-        `Permisos de ${selectedUserForPermissions.name} actualizados`,
-      );
+  const handleSaveUserPermissions = async () => {
+    if (!selectedUserForPermissions) return;
+    setIsSaving(true);
+    try {
+      await updateUserPermissions(selectedUserForPermissions.id, editingUserPermissions);
+      setSuccessMessage(`Permisos de ${selectedUserForPermissions.name} actualizados`);
       setShowSuccess(true);
       setIsPermissionsModalOpen(false);
       setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al guardar permisos");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleSaveRolePermissions = () => {
-    const roleToUpdate =
-      editingUserPermissions === data.config.rolePermissions.freelancer
-        ? "freelancer"
-        : "asesor";
-    updateRolePermissions(roleToUpdate, editingUserPermissions);
-    setSuccessMessage(
-      `Permisos globales del rol ${roleToUpdate === "asesor" ? "Asesor" : "Freelancer"} actualizados`,
-    );
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+  const handleSaveRolePermissions = async () => {
+    setIsSaving(true);
+    try {
+      await updateRolePermissions(editingRole, editingUserPermissions);
+      setSuccessMessage(`Permisos globales del rol ${editingRole === "asesor" ? "Asesor" : "Freelancer"} actualizados`);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al guardar permisos globales");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -356,6 +393,17 @@ export default function Users() {
           </div>
         </div>
       )}
+      {showError && (
+        <div className="fixed top-32 right-6 z-[100] bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right">
+          <div className="bg-rose-500 text-white rounded-full p-1">
+            <AlertCircle size={18} />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Error</p>
+            <p className="text-xs opacity-90">{errorMessage}</p>
+          </div>
+        </div>
+      )}
 
       {/* Header de Sección */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -387,6 +435,7 @@ export default function Users() {
         <button
           onClick={() => {
             setActiveTab("permissions");
+            setEditingRole('asesor');
             setEditingUserPermissions(data.config.rolePermissions.asesor);
           }}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === "permissions" ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-primary"}`}
@@ -527,8 +576,8 @@ export default function Users() {
         <Card className="animate-fade-in">
           <CardHeader
             actions={
-              <Button onClick={handleSaveRolePermissions}>
-                <ShieldCheck size={18} /> Guardar Cambios Globales
+              <Button onClick={handleSaveRolePermissions} disabled={isSaving}>
+                <ShieldCheck size={18} /> {isSaving ? "Guardando..." : "Guardar Cambios Globales"}
               </Button>
             }
           >
@@ -546,28 +595,29 @@ export default function Users() {
             <div className="flex gap-4 mb-6">
               <Button
                 variant={
-                  editingUserPermissions === data.config.rolePermissions.asesor
+                  editingRole === 'asesor'
                     ? "primary"
                     : "outline"
                 }
-                onClick={() =>
-                  setEditingUserPermissions(data.config.rolePermissions.asesor)
-                }
+                onClick={() => {
+                  setEditingRole('asesor');
+                  setEditingUserPermissions(data.config.rolePermissions.asesor);
+                }}
               >
                 Rol Asesor
               </Button>
               <Button
                 variant={
-                  editingUserPermissions ===
-                  data.config.rolePermissions.freelancer
+                  editingRole === 'freelancer'
                     ? "primary"
                     : "outline"
                 }
-                onClick={() =>
+                onClick={() => {
+                  setEditingRole('freelancer');
                   setEditingUserPermissions(
                     data.config.rolePermissions.freelancer,
-                  )
-                }
+                  );
+                }}
               >
                 Rol Freelancer
               </Button>
@@ -588,10 +638,12 @@ export default function Users() {
         size="lg"
         footer={
           <>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveUser}>Guardar</Button>
+            <Button onClick={handleSaveUser} disabled={isSaving}>
+              {isSaving ? "Guardando..." : "Guardar"}
+            </Button>
           </>
         }
       >
@@ -675,9 +727,11 @@ export default function Users() {
                 setFormData({ ...formData, docType: e.target.value })
               }
               options={[
-                { value: "CC", label: "Cédula de Ciudadanía" },
-                { value: "CE", label: "Cédula de Extranjería" },
-                { value: "PP", label: "Pasaporte" },
+                { value: "", label: "Seleccione" },
+                ...(data.config.documentTypes || []).map((d: any) => ({
+                  value: d.abreviatura,
+                  label: `${d.abreviatura} - ${d.nombre}`,
+                })),
               ]}
             />
           </FormField>
@@ -741,11 +795,12 @@ export default function Users() {
             <Button
               variant="outline"
               onClick={() => setIsPermissionsModalOpen(false)}
+              disabled={isSaving}
             >
               Cancelar
             </Button>
-            <Button onClick={handleSaveUserPermissions}>
-              Actualizar Permisos
+            <Button onClick={handleSaveUserPermissions} disabled={isSaving}>
+              {isSaving ? "Guardando..." : "Actualizar Permisos"}
             </Button>
           </>
         }
@@ -778,11 +833,12 @@ export default function Users() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isSaving}
             >
               Cancelar
             </Button>
-            <Button variant="danger" onClick={confirmDelete}>
-              Confirmar Eliminación
+            <Button variant="danger" onClick={confirmDelete} disabled={isSaving}>
+              {isSaving ? "Eliminando..." : "Confirmar Eliminación"}
             </Button>
           </>
         }

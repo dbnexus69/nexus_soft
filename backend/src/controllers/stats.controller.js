@@ -11,6 +11,10 @@ exports.dashboard = async (req, res, next) => {
       if (dateTo) where.creadoAt.lte = new Date(dateTo);
     }
 
+    if (req.permissionScope === 'own') {
+      where.usuarioId = req.user.id;
+    }
+
     // Run all DB queries in parallel
     const [ventas, monthlyTrend, categoryStats, [totalClients, activeClients], recentSales, supplierCount] = await Promise.all([
       prisma.ventas.findMany({ where: { ...where, deletedAt: null } }),

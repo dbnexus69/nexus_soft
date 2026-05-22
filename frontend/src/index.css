@@ -88,6 +88,39 @@
   }
 }
 
+@keyframes pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes flash-green {
+  0% {
+    background-color: rgba(5, 150, 105, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flash-red {
+  0% {
+    background-color: rgba(220, 38, 38, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 .animate-slide-in-right {
   animation: slide-in-right 0.5s ease-out forwards;
 }
@@ -128,6 +161,18 @@
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-flash-green {
+  animation: flash-green 1s ease-out forwards;
+}
+
+.animate-flash-red {
+  animation: flash-red 1s ease-out forwards;
 }
 
 ::-webkit-scrollbar {

@@ -112,15 +112,24 @@ exports.getById = async (req, res, next) => {
 exports.create = async (req, res, next) => {
   try {
     const data = req.body;
+    let tipoDocumentoId = null;
+
+    if (data.docType) {
+      const tipoDoc = await prisma.tiposDocumento.findUnique({
+        where: { abreviatura: data.docType }
+      });
+      if (tipoDoc) tipoDocumentoId = tipoDoc.id;
+    }
 
     const persona = await prisma.personas.create({
       data: {
         nombres: data.firstName || '',
         apellidos: data.lastName || '',
-        tipoDocumentoId: parseInt(data.docType) || null,
+        tipoDocumentoId,
         documento: data.docNumber,
         email: data.email,
         telefono: data.phone,
+        avatarUrl: data.avatar || null,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
         status: 'active'
       }
@@ -140,6 +149,8 @@ exports.create = async (req, res, next) => {
       docNumber: data.docNumber,
       phone: data.phone,
       email: data.email,
+      birthDate: data.birthDate,
+      avatar: persona.avatarUrl,
       status: 'active',
       registrationDate: cliente.fechaRegistro
     }, null, 201);
@@ -159,10 +170,18 @@ exports.update = async (req, res, next) => {
     const personaData = {};
     if (data.firstName) personaData.nombres = data.firstName;
     if (data.lastName) personaData.apellidos = data.lastName;
-    if (data.docType) personaData.tipoDocumentoId = parseInt(data.docType);
+    
+    if (data.docType) {
+      const tipoDoc = await prisma.tiposDocumento.findUnique({
+        where: { abreviatura: data.docType }
+      });
+      if (tipoDoc) personaData.tipoDocumentoId = tipoDoc.id;
+    }
+
     if (data.docNumber) personaData.documento = data.docNumber;
     if (data.email) personaData.email = data.email;
     if (data.phone) personaData.telefono = data.phone;
+    if (data.avatar) personaData.avatarUrl = data.avatar;
     if (data.birthDate) personaData.birthDate = new Date(data.birthDate);
 
     if (Object.keys(personaData).length > 0) {

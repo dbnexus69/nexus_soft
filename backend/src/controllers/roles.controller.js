@@ -1,24 +1,35 @@
 const prisma = require('../config/db');
 const { success, error } = require('../utils/apiResponse');
 
+const MODULE_ACTIONS = {
+  dashboard: ['view'],
+  sales: ['view', 'create', 'edit', 'delete'],
+  clients: ['view', 'create', 'edit'],
+  itineraries: ['view', 'edit'],
+  users: ['view', 'create', 'edit', 'delete'],
+  config: ['view', 'edit'],
+};
+
 const ROLE_PERMISSIONS_MAP = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { create: true, edit: 'own', delete: false },
-    clients: { view: 'all', create: true, edit: 'none' },
-    itineraries: { view: true, edit: false, delete: false },
+    sales: { view: 'own', create: true, edit: true, delete: false },
+    clients: { view: 'own', create: true, edit: false },
+    itineraries: { view: true, edit: false },
     users: { view: false, create: false, edit: false, delete: false },
     config: { view: false, edit: false },
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { create: true, edit: 'own', delete: false },
-    clients: { view: 'own', create: true, edit: 'none' },
-    itineraries: { view: true, edit: false, delete: false },
+    sales: { view: 'own', create: true, edit: true, delete: false },
+    clients: { view: 'own', create: true, edit: false },
+    itineraries: { view: true, edit: false },
     users: { view: false, create: false, edit: false, delete: false },
     config: { view: false, edit: false },
   },
 };
+
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients'];
 
 exports.getPermissions = async (req, res, next) => {
   try {
@@ -37,17 +48,17 @@ exports.getPermissions = async (req, res, next) => {
       const m = pr.permiso.modulo;
       const a = pr.permiso.accion;
       if (!acc[m]) acc[m] = {};
-      acc[m][a] = true;
+      acc[m][a] = (a === 'view' && SCOPED_VIEW_MODULES.includes(m)) ? 'all' : true;
       return acc;
     }, {});
 
     // Ensure all 6 modules exist (fill missing with empty object)
     const MODULES = ['dashboard', 'sales', 'clients', 'itineraries', 'users', 'config'];
-    const ACTIONS = ['view', 'create', 'edit', 'delete'];
     for (const mod of MODULES) {
       if (!grouped[mod]) grouped[mod] = {};
-      for (const act of ACTIONS) {
-        if (grouped[mod][act] === undefined) grouped[mod][act] = false;
+      const actions = MODULE_ACTIONS[mod] || [];
+      for (const act of actions) {
+        if (grouped[mod][act] === undefined) grouped[mod][act] = (act === 'view' && SCOPED_VIEW_MODULES.includes(mod)) ? 'none' : false;
       }
     }
 

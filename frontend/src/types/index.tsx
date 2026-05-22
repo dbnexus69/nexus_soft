@@ -22,39 +22,63 @@ export interface User {
 }
 
 export interface RolePermissions {
-  dashboard: { view: "all" | "own" };
-  sales: { create: boolean; edit: "all" | "own" | "none"; delete: boolean };
-  clients: { view: "all" | "own"; create: boolean; edit: "all" | "own" | "none" };
-  itineraries: { view: boolean; edit: boolean; delete: boolean };
+  dashboard: { view: "all" | "own" | "none" };
+  sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean; delete: boolean };
+  clients: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
+  itineraries: { view: boolean; edit: boolean };
   users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   config: { view: boolean; edit: boolean };
 }
 
 export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
-  sales: { create: true, edit: "own", delete: false },
-  clients: { view: "all", create: true, edit: "none" },
-  itineraries: { view: true, edit: false, delete: false },
+  sales: { view: "own", create: true, edit: true, delete: false },
+  clients: { view: "own", create: true, edit: false },
+  itineraries: { view: true, edit: false },
   users: { view: false, create: false, edit: false, delete: false },
   config: { view: false, edit: false },
 };
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
-  sales: { create: true, edit: "own", delete: false },
-  clients: { view: "own", create: true, edit: "none" },
-  itineraries: { view: true, edit: false, delete: false },
+  sales: { view: "own", create: true, edit: true, delete: false },
+  clients: { view: "own", create: true, edit: false },
+  itineraries: { view: true, edit: false },
   users: { view: false, create: false, edit: false, delete: false },
   config: { view: false, edit: false },
 };
 
 export const ADMIN_PERMISSIONS: RolePermissions = {
   dashboard: { view: "all" },
-  sales: { create: true, edit: "all", delete: true },
-  clients: { view: "all", create: true, edit: "all" },
-  itineraries: { view: true, edit: true, delete: true },
+  sales: { view: "all", create: true, edit: true, delete: true },
+  clients: { view: "all", create: true, edit: true },
+  itineraries: { view: true, edit: true },
   users: { view: true, create: true, edit: true, delete: true },
   config: { view: true, edit: true },
 };
+
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients'];
+
+export function normalizeRolePermissions(perms: RolePermissions): RolePermissions {
+  const normalized = {} as RolePermissions;
+  for (const mod of Object.keys(perms) as (keyof RolePermissions)[]) {
+    const src = perms[mod] as any;
+    const dst: any = {};
+    for (const key of Object.keys(src)) {
+      const val = src[key];
+      if (key === 'view') {
+        if (SCOPED_VIEW_MODULES.includes(mod)) {
+          dst[key] = val === true ? 'all' : val === false ? 'none' : val;
+        } else {
+          dst[key] = typeof val === 'string' ? val !== 'none' : !!val;
+        }
+      } else {
+        dst[key] = typeof val === 'string' ? val !== 'none' : !!val;
+      }
+    }
+    normalized[mod] = dst as any;
+  }
+  return normalized;
+}
 
 export interface Client {
   id: number;
@@ -488,14 +512,16 @@ export interface Sale {
 }
 
 export interface Flight {
-  id: number;
+  id: string;
   passenger: string;
   route: string;
   airline: string;
   date: string;
   time: string;
   type: "ida" | "regreso";
-  checkin: "pendiente" | "realizado";
+  checkin: "pendiente" | "realizado" | "critico";
+  flightNumber?: string;
+  seat?: string | null;
 }
 
 export interface CommissionAgent {
@@ -505,6 +531,10 @@ export interface CommissionAgent {
   docType: string;
   docNumber: string;
   status: "Activo" | "Inactivo";
+  phone?: string;
+  email?: string;
+  accumulated?: number;
+  paymentThreshold?: number;
 }
 
 export interface TravelPackage {
@@ -575,7 +605,7 @@ export interface ConfigData {
     description: string;
   }[];
   paymentMethods: { id: number; name: string }[];
-  documentTypes: { id: number; name: string }[];
+  documentTypes: { id: number; nombre: string; abreviatura: string }[];
   airlines: {
     id: number;
     name: string;

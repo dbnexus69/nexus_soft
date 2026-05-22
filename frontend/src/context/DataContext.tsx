@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { AppData, User, Client, Sale, Flight, RolePermissions } from '../types';
+import { AppData, User, Client, Sale, Flight, RolePermissions, normalizeRolePermissions } from '../types';
 import * as api from '../api';
 import { useAuth } from './AuthContext';
 import { getCurrentMonth } from '../utils/formatters';
@@ -50,8 +50,9 @@ interface DataContextType {
   deleteSale: (id: number) => Promise<void>;
   registerCreditPayment: (saleId: number, amount: number, method?: string, isTotal?: boolean) => Promise<{ payment: any; status: string; creditPaidAmount: number }>;
   deleteSalePayment: (saleId: number, paymentId: string) => Promise<void>;
-  updateFlight: (id: number, flight: Partial<Flight>) => Promise<void>;
+  updateFlight: (id: string, flight: Partial<Flight>) => Promise<void>;
   settleCommissions: (agentId: number, settlement: any) => Promise<void>;
+  refreshSettlements: () => Promise<void>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;
@@ -69,8 +70,8 @@ const emptyData: AppData = {
     airlines: [], suppliers: [], airports: [],
     baggage: [], packages: [],
     rolePermissions: {
-      asesor: { dashboard: { view: 'own' }, sales: { create: true, edit: 'own', delete: false }, clients: { view: 'all', create: true, edit: 'none' }, itineraries: { view: true, edit: false, delete: false }, users: { view: false, create: false, edit: false, delete: false }, config: { view: false, edit: false } },
-      freelancer: { dashboard: { view: 'own' }, sales: { create: true, edit: 'own', delete: false }, clients: { view: 'own', create: true, edit: 'none' }, itineraries: { view: true, edit: false, delete: false }, users: { view: false, create: false, edit: false, delete: false }, config: { view: false, edit: false } },
+      asesor: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true, delete: false }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, users: { view: false, create: false, edit: false, delete: false }, config: { view: false, edit: false } },
+      freelancer: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true, delete: false }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, users: { view: false, create: false, edit: false, delete: false }, config: { view: false, edit: false } },
     },
   },
   salesHistory: [],
@@ -128,8 +129,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           baggage: configAll?.baggage || [],
           packages: configAll?.packages || [],
           rolePermissions: {
-            asesor: asesorPerms || emptyData.config.rolePermissions.asesor,
-            freelancer: freelancerPerms || emptyData.config.rolePermissions.freelancer,
+            asesor: normalizeRolePermissions(asesorPerms || emptyData.config.rolePermissions.asesor),
+            freelancer: normalizeRolePermissions(freelancerPerms || emptyData.config.rolePermissions.freelancer),
           },
         },
         salesHistory: salesHistory || [],
@@ -240,8 +241,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const updateFlight = async (id: number, flightUpdate: Partial<Flight>) => {
-    const result = await api.updateCheckin(String(id), flightUpdate as any);
+  const updateFlight = async (id: string, flightUpdate: Partial<Flight>) => {
+    const result = await api.updateCheckin(id, flightUpdate as any);
     setData(prev => ({
       ...prev,
       flights: prev.flights.map(f => f.id === id ? { ...f, checkin: result.checkinStatus } : f)
@@ -249,7 +250,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const settleCommissions = async (agentId: number, settlement: any) => {
-    const created = await api.createSettlement({ ...settlement, agentId });
+    const salesIds = data.sales
+      .filter(s => s.commissionAgentId === agentId && !s.isSettled)
+      .map(s => s.id);
+
+    const created = await api.createSettlement({ ...settlement, agentId, salesIds });
     setData(prev => ({
       ...prev,
       commissionSettlements: [...(prev.commissionSettlements || []), created],
@@ -259,6 +264,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
           : s
       ),
     }));
+  };
+
+  const refreshSettlements = async () => {
+    const res = await api.listSettlements({ perPage: 100 }).catch(() => ({ data: [] }));
+    setData(prev => ({ ...prev, commissionSettlements: res.data || [] }));
   };
 
   const addConfigItem = async (section: ConfigSection, item: Record<string, unknown>): Promise<Record<string, unknown>> => {
@@ -318,14 +328,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateRolePermissions = async (role: 'asesor' | 'freelancer', permissions: RolePermissions) => {
-    await api.updateRolePermissions(role, permissions as any);
+    const normalized = normalizeRolePermissions(permissions);
+    await api.updateRolePermissions(role, normalized as any);
     setData(prev => ({
       ...prev,
       config: {
         ...prev.config,
         rolePermissions: {
           ...prev.config.rolePermissions,
-          [role]: permissions
+          [role]: normalized
         }
       }
     }));
@@ -349,6 +360,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateSale,
       deleteSale,
       settleCommissions,
+      refreshSettlements,
       registerCreditPayment,
       deleteSalePayment,
       updateFlight,

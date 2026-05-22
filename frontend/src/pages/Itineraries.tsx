@@ -27,6 +27,8 @@ export default function Itineraries() {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [checkinSearch, setCheckinSearch] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [selectedFlightForCheckin, setSelectedFlightForCheckin] = useState<Flight | null>(null);
@@ -65,7 +67,7 @@ export default function Itineraries() {
     setCurrentYear(newYear);
   };
 
-  const handleMarkCheckin = (flightId: number, passenger: string) => {
+  const handleMarkCheckin = (flightId: string, passenger: string) => {
     if (!canEditItinerary('itineraries')) return;
     const flight = data.flights.find(f => f.id === flightId);
     if (flight) {
@@ -76,23 +78,23 @@ export default function Itineraries() {
   };
 
   const confirmCheckin = async () => {
-    if (!selectedFlightForCheckin || !checkinFile) return;
+    if (!selectedFlightForCheckin) return;
 
     setIsSending(true);
-    
-    // Simular envío de correo y procesamiento de archivo
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const client = data.clients.find(c => c.name === selectedFlightForCheckin.passenger);
-    const emailTo = client ? client.email : 'el cliente';
-
-    updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
-    
-    setIsSending(false);
-    setIsCheckinModalOpen(false);
-    setSuccessMessage(`Check-in enviado exitosamente a ${emailTo}`);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    try {
+      await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
+      setIsCheckinModalOpen(false);
+      setSuccessMessage(`Check-in realizado para ${selectedFlightForCheckin.passenger}`);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message || 'Error al realizar check-in';
+      setErrorMessage(msg);
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const calendarDays = useMemo(() => {
@@ -160,6 +162,18 @@ export default function Itineraries() {
           <div>
             <p className="font-bold text-sm">Operación Exitosa</p>
             <p className="text-xs opacity-90">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {showError && (
+        <div className="fixed top-20 right-6 z-[100] bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right">
+          <div className="bg-red-500 text-white rounded-full p-1">
+            <X size={18} />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Error</p>
+            <p className="text-xs opacity-90">{errorMessage}</p>
           </div>
         </div>
       )}
@@ -454,7 +468,7 @@ export default function Itineraries() {
             </Button>
             <Button 
               onClick={confirmCheckin} 
-              disabled={!checkinFile || isSending}
+              disabled={isSending}
               className="relative"
             >
               {isSending ? (
@@ -505,7 +519,7 @@ export default function Itineraries() {
             </div>
           </div>
 
-          <FormField label="Adjuntar Documento de Check-in">
+          <FormField label="Adjuntar Documento de Check-in (Opcional)">
             <div className="relative group">
               <input
                 type="file"

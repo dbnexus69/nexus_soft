@@ -30,8 +30,14 @@ export default function Clients() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmToggle, setConfirmToggle] = useState<{ id: number; name: string; newStatus: string } | null>(null);
+  const [toggledClientId, setToggledClientId] = useState<number | null>(null);
+  const [toggleAction, setToggleAction] = useState<'activated' | 'deactivated' | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Client; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -125,36 +131,72 @@ export default function Clients() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
+    setIsSubmitting(true);
 
-    const clientData = {
-      ...formData,
-      name: `${formData.firstName} ${formData.lastName}`.trim(),
-    };
+    try {
+      const clientData = {
+        ...formData,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+      };
 
-    if (editingClient) {
-      updateClient(editingClient.id, clientData);
-      setSuccessMessage('Cliente actualizado exitosamente');
-    } else {
-      addClient({
-        ...clientData as any,
-        registrationDate: new Date().toISOString().split('T')[0],
-        createdBy: user?.id
-      });
-      setSuccessMessage('Nuevo cliente registrado correctamente');
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
+      if (editingClient) {
+        await updateClient(editingClient.id, clientData);
+        setSuccessMessage('Cliente actualizado exitosamente');
+      } else {
+        await addClient({
+          ...clientData as any,
+          registrationDate: new Date().toISOString().split('T')[0],
+          createdBy: user?.id
+        });
+        setSuccessMessage('Nuevo cliente registrado correctamente');
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
+      setShowSuccess(true);
+      setIsModalOpen(false);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message || err?.message || 'Error al guardar el cliente';
+      setErrorMessage(msg);
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+    } finally {
+      setIsSubmitting(false);
     }
-    setShowSuccess(true);
-    setIsModalOpen(false);
-    setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const handleToggleStatus = (id: number) => {
+  const handleToggleStatus = (client: Client) => {
     if (!canEdit('clients')) return;
-    toggleClientStatus(id);
+    setConfirmToggle({
+      id: client.id,
+      name: client.name,
+      newStatus: client.status === 'active' ? 'inactive' : 'active'
+    });
   };
+
+  const handleConfirmToggle = async () => {
+    if (!confirmToggle) return;
+    try {
+      await toggleClientStatus(confirmToggle.id);
+      const activated = confirmToggle.newStatus === 'active';
+      setToggleAction(activated ? 'activated' : 'deactivated');
+      setToggledClientId(confirmToggle.id);
+      setSuccessMessage(activated ? 'Cliente activado exitosamente' : 'Cliente desactivado exitosamente');
+      setShowSuccess(true);
+      setTimeout(() => { setShowSuccess(false); setToggledClientId(null); setToggleAction(null); }, 2500);
+      setConfirmToggle(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message || 'Error al cambiar estado';
+      setErrorMessage(msg);
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+      setConfirmToggle(null);
+    }
+  };
+
+  const handleCancelToggle = () => setConfirmToggle(null);
 
   const handleViewDetail = (client: Client) => {
     setSelectedClient(client);
@@ -254,15 +296,54 @@ export default function Clients() {
 
       {showSuccess && (
         <div className="fixed top-20 right-6 z-[100] bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right">
-          <div className="bg-green-500 text-white rounded-full p-1">
-            <CheckCircle size={18} />
+          <div className={`rounded-full p-1 ${toggleAction === 'activated' ? 'bg-green-500 animate-pop-in' : toggleAction === 'deactivated' ? 'bg-orange-500' : 'bg-green-500'}`}>
+            {toggleAction === 'activated' ? <UserCheck size={18} /> : toggleAction === 'deactivated' ? <UserX size={18} /> : <CheckCircle size={18} />}
           </div>
           <div>
-            <p className="font-bold text-sm">Operación Exitosa</p>
+            <p className="font-bold text-sm">{toggleAction === 'activated' ? 'Cliente Activado' : toggleAction === 'deactivated' ? 'Cliente Desactivado' : 'Operación Exitosa'}</p>
             <p className="text-xs opacity-90">{successMessage}</p>
           </div>
         </div>
       )}
+
+      {showError && (
+        <div className="fixed top-20 right-6 z-[100] bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right">
+          <div className="bg-red-500 text-white rounded-full p-1">
+            <X size={18} />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Error</p>
+            <p className="text-xs opacity-90">{errorMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmación de cambio de estado */}
+      <Modal
+        isOpen={!!confirmToggle}
+        onClose={handleCancelToggle}
+        title={confirmToggle?.newStatus === 'inactive' ? 'Desactivar Cliente' : 'Activar Cliente'}
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={handleCancelToggle}>Cancelar</Button>
+            <Button variant={confirmToggle?.newStatus === 'inactive' ? 'danger' : 'success'} onClick={handleConfirmToggle}>
+              Sí, {confirmToggle?.newStatus === 'inactive' ? 'desactivar' : 'activar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center py-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+            confirmToggle?.newStatus === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+          }`}>
+            {confirmToggle?.newStatus === 'inactive' ? <UserX size={32} /> : <UserCheck size={32} />}
+          </div>
+          <p className="text-gray-700">
+            ¿Estás seguro de que deseas <strong>{confirmToggle?.newStatus === 'inactive' ? 'desactivar' : 'activar'}</strong> a <strong>{confirmToggle?.name}</strong>?
+          </p>
+        </div>
+      </Modal>
 
       {/* Header de Sección */}
       <div className="mb-6 animate-fade-in">
@@ -338,7 +419,7 @@ export default function Clients() {
           ))}
         >
           {paginatedClients.map(client => (
-            <TableRow key={client.id}>
+            <TableRow key={client.id} className={toggledClientId === client.id ? (toggleAction === 'activated' ? 'animate-flash-green' : 'animate-flash-red') : ''}>
               <TableCell>{client.id}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-3">
@@ -375,7 +456,7 @@ export default function Clients() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handleToggleStatus(client.id)}
+                        onClick={() => handleToggleStatus(client)}
                         title={client.status === 'active' ? 'Desactivar' : 'Activar'}
                       >
                         {client.status === 'active' ? <UserX size={14} className="text-red-500" /> : <UserCheck size={14} className="text-green-500" />}
@@ -435,8 +516,8 @@ export default function Clients() {
         size="lg"
         footer={
           <>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit}>Guardar</Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar'}</Button>
           </>
         }
       >
@@ -486,7 +567,7 @@ export default function Clients() {
                     setFormData({ ...formData, docType: e.target.value });
                     if (errors.docType) setErrors(prev => ({ ...prev, docType: '' }));
                   }}
-                  options={[{ value: '', label: 'Seleccionar...' }, ...data.config.documentTypes.map(d => ({ value: d.name, label: d.name }))]}
+                  options={[{ value: '', label: 'Seleccionar...' }, ...data.config.documentTypes.map(d => ({ value: d.abreviatura, label: `${d.abreviatura} - ${d.nombre}` }))]}
                   error={errors.docType}
                 />
               </FormField>

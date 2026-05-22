@@ -2,9 +2,9 @@ const { error } = require('../utils/apiResponse');
 
 const ADMIN_PERMISSIONS = {
   dashboard: { view: 'all' },
-  sales: { view: 'all', create: true, edit: 'all', delete: true },
-  clients: { view: 'all', create: true, edit: 'all' },
-  itineraries: { view: true, edit: true, delete: true },
+  sales: { view: 'all', create: true, edit: true, delete: true },
+  clients: { view: 'all', create: true, edit: true },
+  itineraries: { view: true, edit: true },
   users: { view: true, create: true, edit: true, delete: true },
   config: { view: true, edit: true },
 };
@@ -12,17 +12,17 @@ const ADMIN_PERMISSIONS = {
 const ROLE_DEFAULT_PERMISSIONS = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { create: true, edit: 'own', delete: false },
-    clients: { view: 'all', create: true, edit: 'none' },
-    itineraries: { view: true, edit: false, delete: false },
+    sales: { view: 'own', create: true, edit: true, delete: false },
+    clients: { view: 'own', create: true, edit: false },
+    itineraries: { view: true, edit: false },
     users: { view: false, create: false, edit: false, delete: false },
     config: { view: false, edit: false },
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { create: true, edit: 'own', delete: false },
-    clients: { view: 'own', create: true, edit: 'none' },
-    itineraries: { view: true, edit: false, delete: false },
+    sales: { view: 'own', create: true, edit: true, delete: false },
+    clients: { view: 'own', create: true, edit: false },
+    itineraries: { view: true, edit: false },
     users: { view: false, create: false, edit: false, delete: false },
     config: { view: false, edit: false },
   },
@@ -34,13 +34,15 @@ function getEffectivePermissions(user) {
   }
 
   const rolePerms = ROLE_DEFAULT_PERMISSIONS[user.role] || ROLE_DEFAULT_PERMISSIONS.asesor;
-  const permissions = { ...rolePerms };
+  const permissions = JSON.parse(JSON.stringify(rolePerms));
 
-  const userPermMap = {};
   if (user.permisosUsuario) {
     for (const pu of user.permisosUsuario) {
-      const key = `${pu.modulo}.${pu.accion}`;
-      userPermMap[key] = true;
+      const mod = permissions[pu.modulo];
+      if (mod && pu.accion in mod) {
+        const currentVal = mod[pu.accion];
+        mod[pu.accion] = typeof currentVal === 'boolean' ? true : 'own';
+      }
     }
   }
 

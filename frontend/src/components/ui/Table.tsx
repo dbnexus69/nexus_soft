@@ -62,11 +62,12 @@ export function Table({ headers, children }: TableProps) {
 interface TableRowProps {
   children: React.ReactNode;
   onClick?: () => void;
+  className?: string;
 }
 
-export function TableRow({ children, onClick }: TableRowProps) {
+export function TableRow({ children, onClick, className = '' }: TableRowProps) {
   return (
-    <tr className={`hover:bg-gray-light ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
+    <tr className={`hover:bg-gray-light transition-colors ${onClick ? 'cursor-pointer' : ''} ${className}`} onClick={onClick}>
       {children}
     </tr>
   );

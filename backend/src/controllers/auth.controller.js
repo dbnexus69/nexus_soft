@@ -50,9 +50,13 @@ exports.login = async (req, res, next) => {
       data: { ultimoLogin: new Date() }
     });
 
-    const permisos = usuario.rol.permisosRol.map(pr => ({
+    let permisos = usuario.rol.permisosRol.map(pr => ({
       modulo: pr.permiso.modulo, accion: pr.permiso.accion
     }));
+    const userPermisos = usuario.permisosUsuario
+      .filter(pu => pu.permitido)
+      .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion }));
+    permisos = [...permisos, ...userPermisos];
 
     success(res, {
       user: {
@@ -101,9 +105,13 @@ exports.me = async (req, res, next) => {
       }
     });
 
-    const permisos = usuario.rol.permisosRol.map(pr => ({
+    let permisos = usuario.rol.permisosRol.map(pr => ({
       modulo: pr.permiso.modulo, accion: pr.permiso.accion
     }));
+    const userPermisos = usuario.permisosUsuario
+      .filter(pu => pu.permitido)
+      .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion }));
+    permisos = [...permisos, ...userPermisos];
 
     success(res, {
       id: usuario.id,

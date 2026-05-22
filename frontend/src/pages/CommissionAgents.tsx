@@ -26,7 +26,7 @@ import { formatCurrency } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
 
 export default function CommissionAgents() {
-  const { data, addCommissionAgent, updateCommissionAgent, deleteCommissionAgent, settleCommissions } = useData();
+  const { data, addCommissionAgent, updateCommissionAgent, deleteCommissionAgent, settleCommissions, refreshSettlements } = useData();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,10 +40,13 @@ export default function CommissionAgents() {
   const [successMessage, setSuccessMessage] = useState("");
   const [settleData, setSettleData] = useState<any>({
     date: new Date().toISOString().split("T")[0],
-    paymentMethod: "Transferencia",
+    paymentMethod: "",
     reference: "",
     notes: "",
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const notifySuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -90,39 +93,54 @@ export default function CommissionAgents() {
       setFormData({ ...agent });
     } else {
       setEditingAgent(null);
-      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.name || "" });
+      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.abreviatura || "" });
     }
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: Record<string, string> = {};
     if (!formData.name) errs.name = "El nombre es obligatorio";
     if (!formData.docNumber) errs.docNumber = "El documento es obligatorio";
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    if (editingAgent) {
-      updateCommissionAgent(editingAgent.id, formData);
-      notifySuccess("Aliado actualizado correctamente");
-    } else {
-      addCommissionAgent(formData);
-      notifySuccess("Aliado registrado correctamente");
+    setIsSaving(true);
+    try {
+      if (editingAgent) {
+        await updateCommissionAgent(editingAgent.id, formData);
+        notifySuccess("Aliado actualizado correctamente");
+      } else {
+        await addCommissionAgent(formData);
+        notifySuccess("Aliado registrado correctamente");
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al guardar el aliado");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("¿Estás seguro de eliminar este comisionista?")) {
-      deleteCommissionAgent(id);
+  const handleDelete = async (id: number) => {
+    if (!confirm("¿Estás seguro de eliminar este comisionista?")) return;
+    try {
+      await deleteCommissionAgent(id);
       notifySuccess("Aliado eliminado correctamente");
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al eliminar el aliado");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
     }
   };
 
   const openSettleModal = (agent: any) => {
     setSelectedAgent(agent);
+    const defaultPM = (data.config.paymentMethods || []).find((pm: any) => pm.nombre === "Transferencia");
     setSettleData({
       date: new Date().toISOString().split("T")[0],
-      paymentMethod: "Transferencia",
+      paymentMethod: defaultPM?.id?.toString() || "",
       amount: agent.accumulated,
       reference: "",
       notes: "",
@@ -130,12 +148,22 @@ export default function CommissionAgents() {
     setIsSettleModalOpen(true);
   };
 
-  const handleSettle = () => {
+  const handleSettle = async () => {
     if (!selectedAgent) return;
-    settleCommissions(selectedAgent.id, { ...settleData, agentName: selectedAgent.name });
-    notifySuccess(`Liquidación de ${formatCurrency(selectedAgent.accumulated)} procesada`);
-    setIsSettleModalOpen(false);
-    setActiveTab("history");
+    setIsSaving(true);
+    try {
+      await settleCommissions(selectedAgent.id, { ...settleData, agentName: selectedAgent.name });
+      await refreshSettlements();
+      notifySuccess(`Liquidación de ${formatCurrency(selectedAgent.accumulated)} procesada`);
+      setIsSettleModalOpen(false);
+      setActiveTab("history");
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Error al procesar la liquidación");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const TABS = [
@@ -155,6 +183,17 @@ export default function CommissionAgents() {
           <div>
             <p className="font-bold text-sm">Operación Exitosa</p>
             <p className="text-xs opacity-90">{successMessage}</p>
+          </div>
+        </div>
+      )}
+      {showError && (
+        <div className="fixed top-32 right-6 z-[100] bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
+          <div className="bg-rose-500 text-white rounded-full p-1">
+            <AlertCircle size={18} />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Error</p>
+            <p className="text-xs opacity-90">{errorMessage}</p>
           </div>
         </div>
       )}
@@ -536,7 +575,7 @@ export default function CommissionAgents() {
                 onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
                 options={[
                   { value: "", label: "Seleccione" },
-                  ...(data.config.documentTypes || []).map((dt: any) => ({ value: dt.name, label: dt.name })),
+                  ...(data.config.documentTypes || []).map((dt: any) => ({ value: dt.abreviatura, label: dt.abreviatura })),
                 ]}
               />
             </FormField>
@@ -552,9 +591,9 @@ export default function CommissionAgents() {
           </div>
 
           <div className="flex gap-4 justify-end pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="h-12 px-8 rounded-xl font-bold">Cancelar</Button>
-            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 px-10 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 text-white">
-              {editingAgent ? "Guardar Cambios" : "Confirmar Registro"}
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="h-12 px-8 rounded-xl font-bold" disabled={isSaving}>Cancelar</Button>
+            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 px-10 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 text-white" disabled={isSaving}>
+              {isSaving ? "Guardando..." : editingAgent ? "Guardar Cambios" : "Confirmar Registro"}
             </Button>
           </div>
         </div>
@@ -595,16 +634,18 @@ export default function CommissionAgents() {
               />
             </FormField>
             <FormField label="Canal de Pago">
-              <select
-                className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none bg-white text-sm font-bold text-gray-700"
-                value={settleData.paymentMethod}
+              <Select
+                className="h-12 rounded-xl"
+                value={settleData.paymentMethod?.toString() || ""}
                 onChange={(e) => setSettleData({ ...settleData, paymentMethod: e.target.value })}
-              >
-                <option value="Transferencia">Transferencia Bancaria</option>
-                <option value="Efectivo">Efectivo de Caja</option>
-                <option value="Cheque">Cheque Gerencia</option>
-                <option value="Otro">Otro Medio</option>
-              </select>
+                options={[
+                  { value: "", label: "Seleccione un canal" },
+                  ...(data.config.paymentMethods || []).map((pm: any) => ({
+                    value: pm.id.toString(),
+                    label: pm.nombre,
+                  })),
+                ]}
+              />
             </FormField>
           </div>
 
@@ -627,10 +668,10 @@ export default function CommissionAgents() {
           </FormField>
 
           <div className="flex flex-col gap-3 pt-4">
-            <Button onClick={handleSettle} className="bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 transition-all hover:scale-[1.02] active:scale-95">
-              Confirmar y Saldar Cuentas
+            <Button onClick={handleSettle} className="bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 transition-all hover:scale-[1.02] active:scale-95" disabled={isSaving}>
+              {isSaving ? "Procesando..." : "Confirmar y Saldar Cuentas"}
             </Button>
-            <Button variant="outline" onClick={() => setIsSettleModalOpen(false)} className="h-12 rounded-xl border-gray-200 text-gray-400 font-bold">
+            <Button variant="outline" onClick={() => setIsSettleModalOpen(false)} className="h-12 rounded-xl border-gray-200 text-gray-400 font-bold" disabled={isSaving}>
               Cancelar Operación
             </Button>
           </div>

@@ -65,7 +65,9 @@ export default function PermissionsGrid({ permissions, onChange }: PermissionsGr
                       value={val}
                       onChange={(e) => {
                         const next = { ...permissions };
-                        (next[mod.id] as any)[permKey] = e.target.value;
+                        const modulePerms = { ...(next[mod.id] as any) };
+                        modulePerms[permKey] = e.target.value;
+                        (next as any)[mod.id] = modulePerms;
                         onChange(next);
                       }}
                     >

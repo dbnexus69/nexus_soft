@@ -20,18 +20,17 @@ const PermissionsContext = createContext<PermissionsContextType | undefined>(und
 function buildPermissionsFromApiPermisos(permisos: { modulo: string; accion: string }[]): RolePermissions {
   const base: any = {
     dashboard: { view: 'none' },
-    sales: { create: false, edit: 'none', delete: false },
-    clients: { view: 'none', create: false, edit: 'none' },
-    itineraries: { view: false, edit: false, delete: false },
+    sales: { view: 'none', create: false, edit: false, delete: false },
+    clients: { view: 'none', create: false, edit: false },
+    itineraries: { view: false, edit: false },
     users: { view: false, create: false, edit: false, delete: false },
     config: { view: false, edit: false },
   };
 
   for (const { modulo, accion } of permisos) {
     if (!base[modulo]) continue;
-    if (modulo === 'dashboard' && accion === 'view') base[modulo].view = 'all';
+    if ((modulo === 'dashboard' || modulo === 'sales') && accion === 'view') base[modulo].view = 'all';
     else if (modulo === 'clients' && accion === 'view') base[modulo].view = 'all';
-    else if ((modulo === 'sales' || modulo === 'clients') && accion === 'edit') base[modulo].edit = 'own';
     else if (base[modulo][accion] !== undefined) base[modulo][accion] = true;
   }
 

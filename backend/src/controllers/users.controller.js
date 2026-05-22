@@ -51,7 +51,8 @@ exports.list = async (req, res, next) => {
       lastLogin: u.ultimoLogin,
       createdAt: u.creadoAt,
       customPermissions: u.permisosUsuario.length > 0 ? u.permisosUsuario.reduce((acc, pu) => {
-        acc[pu.permiso.modulo] = { [pu.permiso.accion]: true };
+        if (!acc[pu.permiso.modulo]) acc[pu.permiso.modulo] = {};
+        acc[pu.permiso.modulo][pu.permiso.accion] = true;
         return acc;
       }, {}) : undefined
     }));
@@ -66,10 +67,34 @@ exports.getById = async (req, res, next) => {
   try {
     const usuario = await prisma.usuarios.findUnique({
       where: { id: parseInt(req.params.id) },
-      include: { persona: true, rol: true, permisosUsuario: { include: { permiso: true } } }
+      include: {
+        persona: { include: { tipoDocumento: true } },
+        rol: true,
+        permisosUsuario: { include: { permiso: true }, where: { permitido: true } }
+      }
     });
     if (!usuario) return error(res, 'Usuario no encontrado', 404);
-    success(res, usuario);
+    success(res, {
+      id: usuario.id,
+      name: `${usuario.persona.nombres} ${usuario.persona.apellidos}`,
+      firstName: usuario.persona.nombres,
+      lastName: usuario.persona.apellidos,
+      email: usuario.email,
+      role: usuario.rol.nombre,
+      phone: usuario.persona.telefono,
+      docType: usuario.persona.tipoDocumento?.abreviatura || null,
+      docNumber: usuario.persona.documento,
+      status: usuario.status,
+      avatar: usuario.persona.avatarUrl,
+      birthDate: usuario.persona.birthDate,
+      lastLogin: usuario.ultimoLogin,
+      createdAt: usuario.creadoAt,
+      customPermissions: usuario.permisosUsuario.length > 0 ? usuario.permisosUsuario.reduce((acc, pu) => {
+        if (!acc[pu.permiso.modulo]) acc[pu.permiso.modulo] = {};
+        acc[pu.permiso.modulo][pu.permiso.accion] = true;
+        return acc;
+      }, {}) : undefined
+    });
   } catch (err) {
     next(err);
   }
@@ -80,19 +105,29 @@ exports.create = async (req, res, next) => {
     const data = req.body;
     const passwordHash = await bcrypt.hash(data.password, 12);
 
+    let tipoDocumentoId = null;
+    if (data.docType) {
+      const dt = await prisma.tiposDocumento.findUnique({ where: { abreviatura: data.docType } });
+      if (dt) tipoDocumentoId = dt.id;
+    }
+
     const persona = await prisma.personas.create({
       data: {
         nombres: data.firstName || data.name?.split(' ')[0] || '',
         apellidos: data.lastName || data.name?.split(' ').slice(1).join(' ') || '',
-        tipoDocumentoId: data.docType ? parseInt(data.docType) : null,
+        tipoDocumentoId,
         documento: data.docNumber,
         email: data.email,
         telefono: data.phone,
+        birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        avatarUrl: data.avatar || null,
         status: data.status || 'active'
       }
     });
 
     const rol = await prisma.roles.findUnique({ where: { nombre: data.role } });
+    if (!rol) return error(res, 'Rol no válido', 400);
+
     const usuario = await prisma.usuarios.create({
       data: {
         personaId: persona.id,
@@ -138,13 +173,25 @@ exports.update = async (req, res, next) => {
       delete data.password;
     }
 
-    if (data.firstName || data.lastName) {
+    const personaUpdate = {};
+    if (data.firstName) personaUpdate.nombres = data.firstName;
+    if (data.lastName) personaUpdate.apellidos = data.lastName;
+    if (data.phone !== undefined) personaUpdate.telefono = data.phone;
+    if (data.docNumber !== undefined) personaUpdate.documento = data.docNumber;
+    if (data.birthDate) personaUpdate.birthDate = new Date(data.birthDate);
+    if (data.avatar !== undefined) personaUpdate.avatarUrl = data.avatar;
+    if (data.email) personaUpdate.email = data.email;
+
+    if (data.docType) {
+      const dt = await prisma.tiposDocumento.findUnique({ where: { abreviatura: data.docType } });
+      if (dt) personaUpdate.tipoDocumentoId = dt.id;
+    }
+
+    if (Object.keys(personaUpdate).length > 0) {
+      personaUpdate.updatedAt = new Date();
       await prisma.personas.update({
         where: { id: usuario.personaId },
-        data: {
-          nombres: data.firstName || usuario.persona.nombres,
-          apellidos: data.lastName || usuario.persona.apellidos
-        }
+        data: personaUpdate
       });
     }
 
@@ -153,6 +200,7 @@ exports.update = async (req, res, next) => {
     if (data.passwordHash) updateData.passwordHash = data.passwordHash;
     if (data.role) {
       const rol = await prisma.roles.findUnique({ where: { nombre: data.role } });
+      if (!rol) return error(res, 'Rol no válido', 400);
       updateData.rolId = rol.id;
     }
     if (data.status) updateData.status = data.status;

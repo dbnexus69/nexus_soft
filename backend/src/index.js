@@ -29,7 +29,15 @@ app.use(cors({
     // Permitir solicitudes sin origen (como curl, postman o apps de celular)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    // Normalizar eliminando barras diagonales al final (trailing slashes)
+    const cleanOrigin = origin.replace(/\/$/, '');
+    const cleanAllowedOrigins = allowedOrigins.map(url => url.replace(/\/$/, ''));
+    
+    const isAllowed = cleanAllowedOrigins.includes(cleanOrigin) || 
+                      cleanAllowedOrigins.includes('*') ||
+                      cleanOrigin.endsWith('.vercel.app'); // Permite URLs de Vercel de producción y vistas previas
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS. Origen: ' + origin));

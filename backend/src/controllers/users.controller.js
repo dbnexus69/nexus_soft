@@ -55,7 +55,7 @@ exports.list = async (req, res, next) => {
         const val = pu.valor || 'true';
         const isScopedView = pu.permiso.accion === 'view' && ['dashboard','sales','clients'].includes(pu.permiso.modulo);
         acc[pu.permiso.modulo][pu.permiso.accion] = isScopedView
-          ? (val === 'own' || val === 'all' ? val : 'all')
+          ? (val === 'own' || val === 'all' || val === 'none' ? val : 'all')
           : (val === 'true' || val === true);
         return acc;
       }, {}) : undefined
@@ -98,7 +98,7 @@ exports.getById = async (req, res, next) => {
         const val = pu.valor || 'true';
         const isScopedView = pu.permiso.accion === 'view' && ['dashboard','sales','clients'].includes(pu.permiso.modulo);
         acc[pu.permiso.modulo][pu.permiso.accion] = isScopedView
-          ? (val === 'own' || val === 'all' ? val : 'all')
+          ? (val === 'own' || val === 'all' || val === 'none' ? val : 'all')
           : (val === 'true' || val === true);
         return acc;
       }, {}) : undefined
@@ -267,22 +267,22 @@ exports.updatePermissions = async (req, res, next) => {
 
     for (const [modulo, accs] of Object.entries(permissions)) {
       for (const [accion, value] of Object.entries(accs)) {
-        // Skip disabled permissions to keep DB clean
-        if (value === false || value === 'none') continue;
-
-        const encoded = value === 'all' || value === 'own' ? value
-          : value === true ? 'true'
-          : value === false ? 'false'
+        const encoded = value === 'all' || value === 'own' || value === 'none' ? value
+          : value === true || value === 'true' ? 'true'
+          : value === false || value === 'false' ? 'false'
           : String(value);
 
-        const permiso = await prisma.permisos.findFirst({
-          where: { modulo, accion }
-        });
-        if (permiso) {
-          await prisma.permisosUsuario.create({
-            data: { usuarioId: id, permisoId: permiso.id, permitido: true, valor: encoded }
+        // Buscar o crear el registro en el catálogo de permisos
+        let permiso = await prisma.permisos.findFirst({ where: { modulo, accion } });
+        if (!permiso) {
+          permiso = await prisma.permisos.create({
+            data: { modulo, accion, descripcion: `${modulo} - ${accion}` }
           });
         }
+
+        await prisma.permisosUsuario.create({
+          data: { usuarioId: id, permisoId: permiso.id, permitido: true, valor: encoded }
+        });
       }
     }
 

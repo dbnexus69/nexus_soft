@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Users as UsersGroup, Map, Lock, Settings } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users as UsersGroup, Map, Lock, Settings, Coins } from 'lucide-react';
 import { RolePermissions } from '../../types';
 
 interface PermissionsGridProps {
@@ -25,12 +25,10 @@ export default function PermissionsGrid({ permissions, onChange }: PermissionsGr
   };
 
   const modules: { id: keyof RolePermissions, label: string, icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { id: 'sales', label: 'Ventas', icon: <ShoppingBag size={18} /> },
     { id: 'clients', label: 'Clientes', icon: <UsersGroup size={18} /> },
     { id: 'itineraries', label: 'Itinerarios', icon: <Map size={18} /> },
-    { id: 'users', label: 'Usuarios', icon: <Lock size={18} /> },
-    { id: 'config', label: 'Configuración', icon: <Settings size={18} /> }
+    { id: 'commissions', label: 'Comisionistas', icon: <Coins size={18} /> }
   ];
 
   return (
@@ -49,20 +47,23 @@ export default function PermissionsGrid({ permissions, onChange }: PermissionsGr
               };
               const displayLabel = permLabels[permKey] || permKey;
               
+              const isLocked = mod.id === 'dashboard' && permKey === 'view';
+              
               return (
                 <div key={permKey} className="flex items-center justify-between p-2.5 bg-gray-50/50 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
                   <span className="text-xs font-bold text-gray-600 capitalize">{displayLabel}</span>
                   {typeof val === 'boolean' ? (
                     <div 
-                      className={`w-10 h-5 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${val ? 'bg-green-500' : 'bg-gray-300'}`}
-                      onClick={() => toggle(mod.id, permKey)}
+                      className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${isLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${val ? 'bg-green-500' : 'bg-gray-300'}`}
+                      onClick={() => !isLocked && toggle(mod.id, permKey)}
                     >
                       <div className={`bg-white w-3.5 h-3.5 rounded-full shadow-sm transform transition-transform duration-300 ${val ? 'translate-x-5' : 'translate-x-0'}`} />
                     </div>
                   ) : (
                     <select 
-                      className="text-xs bg-white border border-gray-200 rounded-lg px-2 py-1 font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                      className={`text-xs border border-gray-200 rounded-lg px-2 py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 ${isLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-primary cursor-pointer'}`}
                       value={val}
+                      disabled={isLocked}
                       onChange={(e) => {
                         const next = { ...permissions };
                         const modulePerms = { ...(next[mod.id] as any) };

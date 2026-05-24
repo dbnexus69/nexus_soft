@@ -51,11 +51,11 @@ exports.login = async (req, res, next) => {
     });
 
     let permisos = usuario.rol.permisosRol.map(pr => ({
-      modulo: pr.permiso.modulo, accion: pr.permiso.accion
+      modulo: pr.permiso.modulo, accion: pr.permiso.accion, valor: pr.valor
     }));
     const userPermisos = usuario.permisosUsuario
       .filter(pu => pu.permitido)
-      .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion }));
+      .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion, valor: pu.valor }));
     permisos = [...permisos, ...userPermisos];
 
     success(res, {
@@ -106,11 +106,11 @@ exports.me = async (req, res, next) => {
     });
 
     let permisos = usuario.rol.permisosRol.map(pr => ({
-      modulo: pr.permiso.modulo, accion: pr.permiso.accion
+      modulo: pr.permiso.modulo, accion: pr.permiso.accion, valor: pr.valor
     }));
     const userPermisos = usuario.permisosUsuario
       .filter(pu => pu.permitido)
-      .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion }));
+      .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion, valor: pu.valor }));
     permisos = [...permisos, ...userPermisos];
 
     success(res, {

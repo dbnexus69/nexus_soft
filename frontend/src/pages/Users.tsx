@@ -49,6 +49,7 @@ const ROLE_LABELS: Record<string, string> = {
 export default function Users() {
   const {
     data,
+    salesLoading,
     addUser,
     updateUser,
     deleteUser,
@@ -124,9 +125,9 @@ export default function Users() {
   const filteredUsers = useMemo(() => {
     const filtered = data.users.filter((user) => {
       const matchesSearch =
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.docNumber.includes(searchTerm);
+        (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.docNumber || "").includes(searchTerm);
       const matchesRole = filterRole === "all" || user.role === filterRole;
       const matchesStatus =
         filterStatus === "all" || user.status === filterStatus;
@@ -321,7 +322,7 @@ export default function Users() {
           : data.config.rolePermissions.asesor;
     setEditingUserPermissions(
       user.customPermissions
-        ? normalizeRolePermissions(user.customPermissions)
+        ? normalizeRolePermissions(user.customPermissions, defaultPerms)
         : defaultPerms
     );
     setIsPermissionsModalOpen(true);
@@ -490,7 +491,27 @@ export default function Users() {
               "Acciones",
             ]}
           >
-            {filteredUsers.map((user) => (
+            {salesLoading && data.users.length === 0 ? (
+              [...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><div className="h-4 w-6 bg-gray-200 rounded animate-pulse" /></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" />
+                      <div className="space-y-1.5">
+                        <div className="h-3.5 w-28 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-2.5 w-36 bg-gray-100 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell><div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" /></TableCell>
+                  <TableCell><div className="h-3.5 w-24 bg-gray-200 rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-3.5 w-20 bg-gray-200 rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-5 w-14 bg-gray-200 rounded-full animate-pulse" /></TableCell>
+                  <TableCell><div className="h-8 w-28 bg-gray-200 rounded-lg animate-pulse" /></TableCell>
+                </TableRow>
+              ))
+            ) : filteredUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell>

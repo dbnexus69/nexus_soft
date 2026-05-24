@@ -38,6 +38,7 @@ export default function Clients() {
   const [confirmToggle, setConfirmToggle] = useState<{ id: number; name: string; newStatus: string } | null>(null);
   const [toggledClientId, setToggledClientId] = useState<number | null>(null);
   const [toggleAction, setToggleAction] = useState<'activated' | 'deactivated' | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Client; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -178,6 +179,7 @@ export default function Clients() {
 
   const handleConfirmToggle = async () => {
     if (!confirmToggle) return;
+    setIsToggling(true);
     try {
       await toggleClientStatus(confirmToggle.id);
       const activated = confirmToggle.newStatus === 'active';
@@ -193,6 +195,8 @@ export default function Clients() {
       setShowError(true);
       setTimeout(() => setShowError(false), 5000);
       setConfirmToggle(null);
+    } finally {
+      setIsToggling(false);
     }
   };
 
@@ -326,9 +330,13 @@ export default function Clients() {
         size="sm"
         footer={
           <>
-            <Button variant="outline" onClick={handleCancelToggle}>Cancelar</Button>
-            <Button variant={confirmToggle?.newStatus === 'inactive' ? 'danger' : 'success'} onClick={handleConfirmToggle}>
-              Sí, {confirmToggle?.newStatus === 'inactive' ? 'desactivar' : 'activar'}
+            <Button variant="outline" onClick={handleCancelToggle} disabled={isToggling}>Cancelar</Button>
+            <Button 
+              variant={confirmToggle?.newStatus === 'inactive' ? 'danger' : 'success'} 
+              onClick={handleConfirmToggle}
+              disabled={isToggling}
+            >
+              {isToggling ? 'Procesando...' : `Sí, ${confirmToggle?.newStatus === 'inactive' ? 'desactivar' : 'activar'}`}
             </Button>
           </>
         }

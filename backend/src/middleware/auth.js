@@ -38,11 +38,13 @@ async function auth(req, res, next) {
       role: usuario.rol.nombre,
       permisosRol: usuario.rol.permisosRol.map(pr => ({
         modulo: pr.permiso.modulo,
-        accion: pr.permiso.accion
+        accion: pr.permiso.accion,
+        valor: pr.valor
       })),
       permisosUsuario: usuario.permisosUsuario.filter(pu => pu.permitido).map(pu => ({
         modulo: pu.permiso.modulo,
-        accion: pu.permiso.accion
+        accion: pu.permiso.accion,
+        valor: pu.valor
       }))
     };
 

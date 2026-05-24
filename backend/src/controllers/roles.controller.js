@@ -3,11 +3,10 @@ const { success, error } = require('../utils/apiResponse');
 
 const MODULE_ACTIONS = {
   dashboard: ['view'],
-  sales: ['view', 'create', 'edit', 'delete'],
+  sales: ['view', 'create', 'edit'],
   clients: ['view', 'create', 'edit'],
   itineraries: ['view', 'edit'],
-  users: ['view', 'create', 'edit', 'delete'],
-  config: ['view', 'edit'],
+  commissions: ['view', 'create', 'edit', 'delete'],
 };
 
 const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients'];
@@ -15,19 +14,17 @@ const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients'];
 const DEFAULT_ROLE_VALUES = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
-    clients: { view: 'own', create: 'true', edit: 'false' },
+    sales: { view: 'own', create: 'true', edit: 'true' },
+    clients: { view: 'own', create: 'true', edit: 'true' },
     itineraries: { view: 'true', edit: 'false' },
-    users: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    config: { view: 'false', edit: 'false' },
+    commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
-    clients: { view: 'own', create: 'true', edit: 'false' },
+    sales: { view: 'own', create: 'true', edit: 'true' },
+    clients: { view: 'own', create: 'true', edit: 'true' },
     itineraries: { view: 'true', edit: 'false' },
-    users: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    config: { view: 'false', edit: 'false' },
+    commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
   },
 };
 
@@ -63,8 +60,8 @@ exports.getPermissions = async (req, res, next) => {
       include: { permiso: true }
     });
 
-    // Start with default empty structure
-    const MODULES = ['dashboard', 'sales', 'clients', 'itineraries', 'users', 'config'];
+    // Start with default structure for all modules the role can configure
+    const MODULES = ['dashboard', 'sales', 'clients', 'itineraries', 'commissions'];
     const defaults = DEFAULT_ROLE_VALUES[role] || DEFAULT_ROLE_VALUES.asesor;
     const grouped = {};
 
@@ -72,7 +69,6 @@ exports.getPermissions = async (req, res, next) => {
       grouped[mod] = {};
       const actions = MODULE_ACTIONS[mod] || [];
       for (const act of actions) {
-        // Default: from DEFAULT_ROLE_VALUES
         const defVal = defaults[mod]?.[act];
         grouped[mod][act] = parseValor(act, mod, defVal ?? 'false');
       }
@@ -82,7 +78,7 @@ exports.getPermissions = async (req, res, next) => {
     for (const pr of permisos) {
       const m = pr.permiso.modulo;
       const a = pr.permiso.accion;
-      const v = pr.valor || 'true';
+      const v = pr.valor != null ? pr.valor : 'true';
       if (!grouped[m]) grouped[m] = {};
       grouped[m][a] = parseValor(a, m, v);
     }
@@ -106,18 +102,18 @@ exports.updatePermissions = async (req, res, next) => {
     for (const [modulo, accs] of Object.entries(permissions)) {
       for (const [accion, value] of Object.entries(accs)) {
         const encoded = encodeValor(value);
-        // Save all permissions, not just enabled ones (so we can restore disabled state too)
-        // But only save enabled/scoped ones to keep DB clean
-        if (value === false || value === 'none') continue;
 
-        const permiso = await prisma.permisos.findFirst({
-          where: { modulo, accion }
-        });
-        if (permiso) {
-          await prisma.permisosRol.create({
-            data: { rolId: rol.id, permisoId: permiso.id, valor: encoded }
+        // Buscar o crear el registro en el catálogo de permisos
+        let permiso = await prisma.permisos.findFirst({ where: { modulo, accion } });
+        if (!permiso) {
+          permiso = await prisma.permisos.create({
+            data: { modulo, accion, descripcion: `${modulo} - ${accion}` }
           });
         }
+
+        await prisma.permisosRol.create({
+          data: { rolId: rol.id, permisoId: permiso.id, valor: encoded }
+        });
       }
     }
 

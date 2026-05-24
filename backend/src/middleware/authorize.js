@@ -2,9 +2,10 @@ const { error } = require('../utils/apiResponse');
 
 const ADMIN_PERMISSIONS = {
   dashboard: { view: 'all' },
-  sales: { view: 'all', create: true, edit: true, delete: true },
+  sales: { view: 'all', create: true, edit: true },
   clients: { view: 'all', create: true, edit: true },
   itineraries: { view: true, edit: true },
+  commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
   config: { view: true, edit: true },
 };
@@ -12,19 +13,17 @@ const ADMIN_PERMISSIONS = {
 const ROLE_DEFAULT_PERMISSIONS = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: true, edit: true, delete: false },
-    clients: { view: 'own', create: true, edit: false },
+    sales: { view: 'own', create: true, edit: true },
+    clients: { view: 'own', create: true, edit: true },
     itineraries: { view: true, edit: false },
-    users: { view: false, create: false, edit: false, delete: false },
-    config: { view: false, edit: false },
+    commissions: { view: false, create: false, edit: false, delete: false },
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: true, edit: true, delete: false },
-    clients: { view: 'own', create: true, edit: false },
+    sales: { view: 'own', create: true, edit: true },
+    clients: { view: 'own', create: true, edit: true },
     itineraries: { view: true, edit: false },
-    users: { view: false, create: false, edit: false, delete: false },
-    config: { view: false, edit: false },
+    commissions: { view: false, create: false, edit: false, delete: false },
   },
 };
 
@@ -36,12 +35,32 @@ function getEffectivePermissions(user) {
   const rolePerms = ROLE_DEFAULT_PERMISSIONS[user.role] || ROLE_DEFAULT_PERMISSIONS.asesor;
   const permissions = JSON.parse(JSON.stringify(rolePerms));
 
+  // Aplicar permisos globales de DB
+  if (user.permisosRol) {
+    for (const pr of user.permisosRol) {
+      const mod = permissions[pr.modulo];
+      if (mod && pr.accion in mod) {
+        const currentVal = mod[pr.accion];
+        if (typeof currentVal === 'boolean') {
+          mod[pr.accion] = pr.valor === 'true' || pr.valor === true;
+        } else {
+          mod[pr.accion] = ['all', 'own', 'none'].includes(pr.valor) ? pr.valor : 'own';
+        }
+      }
+    }
+  }
+
+  // Aplicar overrides específicos del usuario
   if (user.permisosUsuario) {
     for (const pu of user.permisosUsuario) {
       const mod = permissions[pu.modulo];
       if (mod && pu.accion in mod) {
         const currentVal = mod[pu.accion];
-        mod[pu.accion] = typeof currentVal === 'boolean' ? true : 'own';
+        if (typeof currentVal === 'boolean') {
+          mod[pu.accion] = pu.valor === 'true' || pu.valor === true;
+        } else {
+          mod[pu.accion] = ['all', 'own', 'none'].includes(pu.valor) ? pu.valor : 'own';
+        }
       }
     }
   }

@@ -22,11 +22,13 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { FormField, Input, Select } from "../components/ui/Form";
 import { useData } from "../context/DataContext";
+import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
 
 export default function CommissionAgents() {
   const { data, addCommissionAgent, updateCommissionAgent, deleteCommissionAgent, settleCommissions, refreshSettlements } = useData();
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,7 +139,7 @@ export default function CommissionAgents() {
 
   const openSettleModal = (agent: any) => {
     setSelectedAgent(agent);
-    const defaultPM = (data.config.paymentMethods || []).find((pm: any) => pm.nombre === "Transferencia");
+    const defaultPM = (data.config.paymentMethods || []).find((pm: any) => pm.name === "Transferencia");
     setSettleData({
       date: new Date().toISOString().split("T")[0],
       paymentMethod: defaultPM?.id?.toString() || "",
@@ -216,9 +218,11 @@ export default function CommissionAgents() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-           <Button onClick={() => handleOpenModal()} className="h-14 px-8 bg-accent hover:bg-accent/90 text-white shadow-lg shadow-accent/20 rounded-2xl transition-all hover:scale-105 active:scale-95 font-bold">
-            <Plus size={20} /> Registrar Aliado
-          </Button>
+          {canCreate('commissions') && (
+            <Button onClick={() => handleOpenModal()} className="h-14 px-8 bg-accent hover:bg-accent/90 text-white shadow-lg shadow-accent/20 rounded-2xl transition-all hover:scale-105 active:scale-95 font-bold">
+              <Plus size={20} /> Registrar Aliado
+            </Button>
+          )}
         </div>
       </div>
 
@@ -303,12 +307,16 @@ export default function CommissionAgents() {
                             </div>
                           </div>
                           <div className="flex flex-col gap-1 relative z-10">
-                             <button onClick={() => handleOpenModal(agent)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
-                                <Pencil size={16} />
-                             </button>
-                             <button onClick={() => handleDelete(agent.id)} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                                <Trash2 size={16} />
-                             </button>
+                             {canEdit('commissions') && (
+                               <button onClick={() => handleOpenModal(agent)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+                                  <Pencil size={16} />
+                               </button>
+                             )}
+                             {canDelete('commissions') && (
+                               <button onClick={() => handleDelete(agent.id)} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                                  <Trash2 size={16} />
+                               </button>
+                             )}
                           </div>
                         </div>
 
@@ -409,26 +417,32 @@ export default function CommissionAgents() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-primary text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <AlertCircle size={120} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                <div className="bg-primary text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden transition-transform hover:-translate-y-1">
+                  <div className="absolute -top-10 -right-10 p-8 opacity-10 pointer-events-none">
+                    <AlertCircle size={160} />
                   </div>
-                  <h4 className="text-xl font-bold mb-3 flex items-center gap-2">
-                    <AlertCircle size={20} className="text-accent" /> Regla de Negocio
+                  <h4 className="text-xl font-bold mb-4 flex items-center gap-3">
+                    <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">
+                      <AlertCircle size={20} className="text-white" />
+                    </div>
+                    Regla de Negocio
                   </h4>
-                  <p className="text-primary-light/80 text-sm leading-relaxed text-blue-100">
-                    Las liquidaciones se habilitan automáticamente cuando un aliado acumula un neto de <span className="text-white font-bold">$50,000</span>. Esto optimiza los procesos administrativos y bancarios de la oficina.
+                  <p className="text-white/80 text-sm leading-relaxed relative z-10">
+                    Las liquidaciones se habilitan automáticamente cuando un aliado acumula un neto de <span className="bg-white/20 px-2 py-1 rounded-lg text-white font-black">$50,000</span>. Esto optimiza los procesos administrativos y bancarios de la oficina.
                   </p>
                 </div>
-                <div className="bg-accent text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <BadgeDollarSign size={120} />
+                <div className="bg-accent text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden transition-transform hover:-translate-y-1">
+                  <div className="absolute -top-10 -right-10 p-8 opacity-10 pointer-events-none">
+                    <BadgeDollarSign size={160} />
                   </div>
-                  <h4 className="text-xl font-bold mb-3 flex items-center gap-2">
-                    <BadgeDollarSign size={20} className="text-white" /> Cálculo Neto
+                  <h4 className="text-xl font-bold mb-4 flex items-center gap-3">
+                    <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">
+                      <BadgeDollarSign size={20} className="text-white" />
+                    </div>
+                    Cálculo Neto
                   </h4>
-                  <p className="text-white/80 text-sm leading-relaxed">
+                  <p className="text-white/80 text-sm leading-relaxed relative z-10">
                     El monto a liquidar corresponde al valor neto después de aplicar el porcentaje de retención configurado en cada venta. Asegúrate de verificar el historial antes de confirmar.
                   </p>
                 </div>
@@ -642,7 +656,7 @@ export default function CommissionAgents() {
                   { value: "", label: "Seleccione un canal" },
                   ...(data.config.paymentMethods || []).map((pm: any) => ({
                     value: pm.id.toString(),
-                    label: pm.nombre,
+                    label: pm.name,
                   })),
                 ]}
               />

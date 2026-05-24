@@ -32,7 +32,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     { to: "/sales", icon: DollarSign, label: "Ventas", permission: 'sales' as const },
     { to: "/clients", icon: Users, label: "Clientes", permission: 'clients' as const },
     { to: "/itineraries", icon: Plane, label: "Itinerarios", permission: 'itineraries' as const },
-    { to: "/commissions", icon: Coins, label: "Comisionistas", permission: 'sales' as const },
+    { to: "/commissions", icon: Coins, label: "Comisionistas", permission: 'commissions' as const },
   ];
 
   const adminLinks = [

@@ -10,23 +10,18 @@ import {
   invalidateSalesCache,
 } from '../utils/salesCache';
 import {
+  saveUsersCache,
+  loadUsersCache,
+  invalidateUsersCache,
+} from '../utils/usersCache';
+import {
   saveDashboardCache,
   loadDashboardCache,
   invalidateDashboardCache,
 } from '../utils/dashboardCache';
 
-const RP_CACHE_KEY = 'itea_role_permissions_cache';
-
-function loadCachedRolePermissions(): { asesor: RolePermissions; freelancer: RolePermissions } | null {
-  try {
-    const raw = localStorage.getItem(RP_CACHE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed?.asesor && parsed?.freelancer) return parsed;
-    }
-  } catch {}
-  return null;
-}
+// Limpiar caché de permisos de rol si quedó de versiones anteriores
+try { localStorage.removeItem('itea_role_permissions_cache'); } catch {}
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
 
@@ -95,8 +90,8 @@ const emptyData: AppData = {
     airlines: [], suppliers: [], airports: [],
     baggage: [], packages: [],
     rolePermissions: {
-      asesor: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true, delete: false }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, users: { view: false, create: false, edit: false, delete: false }, config: { view: false, edit: false } },
-      freelancer: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true, delete: false }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, users: { view: false, create: false, edit: false, delete: false }, config: { view: false, edit: false } },
+      asesor: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
+      freelancer: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
     },
   },
   salesHistory: [],
@@ -109,14 +104,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => {
     // ── Inicialización optimista desde caché ──────────────────────────────
     // Si hay datos cacheados válidos, pre-populamos el estado para que la
-    // tabla de ventas se renderice en 0ms antes del primer fetch de red.
+    // tabla de ventas/usuarios se renderice en 0ms antes del primer fetch de red.
     const cachedSales = loadSalesCache();
     const cachedClients = loadClientsCache();
-    if (cachedSales || cachedClients) {
+    const cachedUsers = loadUsersCache();
+    if (cachedSales || cachedClients || cachedUsers) {
       return {
         ...emptyData,
         sales: (cachedSales as Sale[]) || [],
         clients: (cachedClients as Client[]) || [],
+        users: (cachedUsers as User[]) || [],
       };
     }
     return emptyData;
@@ -206,16 +203,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       backgroundLoadingRef.current = false;
 
-      const resolvedRolePermissions = (() => {
-        const rp = {
-          asesor: normalizeRolePermissions(asesorPerms || loadCachedRolePermissions()?.asesor || emptyData.config.rolePermissions.asesor),
-          freelancer: normalizeRolePermissions(freelancerPerms || loadCachedRolePermissions()?.freelancer || emptyData.config.rolePermissions.freelancer),
-        };
-        if (asesorPerms || freelancerPerms) {
-          try { localStorage.setItem(RP_CACHE_KEY, JSON.stringify(rp)); } catch {}
-        }
-        return rp;
-      })();
+      const resolvedRolePermissions = {
+        // Los permisos siempre se leen frescos del servidor, nunca desde caché.
+        asesor: asesorPerms ? normalizeRolePermissions(asesorPerms) : emptyData.config.rolePermissions.asesor,
+        freelancer: freelancerPerms ? normalizeRolePermissions(freelancerPerms) : emptyData.config.rolePermissions.freelancer,
+      };
+
+      // Guardar usuarios en caché
+      if (usersRes.data?.length) saveUsersCache(usersRes.data);
 
       // Merge completo al estado — sin tocar sales/clients que ya están
       setData(prev => ({
@@ -260,21 +255,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addUser = async (user: Omit<User, 'id'>): Promise<User> => {
     const created = await api.createUser(user as any);
-    setData(prev => ({ ...prev, users: [...prev.users, created] }));
+    setData(prev => {
+      const updated = [...prev.users, created];
+      invalidateUsersCache();
+      return { ...prev, users: updated };
+    });
     return created;
   };
 
   const updateUser = async (id: number, userUpdate: Partial<User>) => {
     const updated = await api.updateUser(id, userUpdate);
-    setData(prev => ({
-      ...prev,
-      users: prev.users.map(u => u.id === id ? { ...u, ...updated } : u)
-    }));
+    setData(prev => {
+      const users = prev.users.map(u => u.id === id ? { ...u, ...updated } : u);
+      invalidateUsersCache();
+      return { ...prev, users };
+    });
   };
 
   const deleteUser = async (id: number) => {
     await api.deleteUser(id);
-    setData(prev => ({ ...prev, users: prev.users.filter(u => u.id !== id) }));
+    setData(prev => {
+      invalidateUsersCache();
+      return { ...prev, users: prev.users.filter(u => u.id !== id) };
+    });
   };
 
   const updateUserPermissions = async (id: number, permissions: RolePermissions) => {
@@ -469,22 +472,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateRolePermissions = async (role: 'asesor' | 'freelancer', permissions: RolePermissions) => {
     const normalized = normalizeRolePermissions(permissions);
     await api.updateRolePermissions(role, normalized as any);
-    setData(prev => {
-      const next = {
-        ...prev,
-        config: {
-          ...prev.config,
-          rolePermissions: {
-            ...prev.config.rolePermissions,
-            [role]: normalized
-          }
+    setData(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        rolePermissions: {
+          ...prev.config.rolePermissions,
+          [role]: normalized
         }
-      };
-      try {
-        localStorage.setItem(RP_CACHE_KEY, JSON.stringify(next.config.rolePermissions));
-      } catch {}
-      return next;
-    });
+      }
+    }));
   };
 
   return (

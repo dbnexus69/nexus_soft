@@ -246,7 +246,7 @@ exports.createItem = async (req, res, next) => {
 
     // Inyectar el ID del usuario creador si es un Paquete Turístico
     if (section === 'packages' && req.user && req.user.id) {
-      dbData.creadorId = req.user.id;
+      dbData.creadoPorId = req.user.id;
     }
 
     // Ejecutar creación transaccional optimizada (Carga Relaciones Eager e Inmediata)

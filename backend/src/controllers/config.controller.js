@@ -41,13 +41,15 @@ const SECTION_MAP = {
       notIncluded: r.noIncluido,
       flight: r.paqueteVuelo?.[0] ? {
         airline: r.paqueteVuelo[0].aerolinea?.nombre || null,
-        route: r.paqueteVuelo[0].nroVuelo || null
+        route: r.paqueteVuelo[0].nroVuelo || null,
+        flightMode: r.paqueteVuelo[0].modoVuelo || 'round_trip'
       } : undefined,
       accommodation: r.paqueteHotel?.[0] ? {
         hotel: r.paqueteHotel[0].hotelNombre,
         hotelType: r.paqueteHotel[0].tipoHotel,
         mealPlan: r.paqueteHotel[0].regimen
       } : undefined,
+      nights: r.paqueteHotel?.[0]?.noches || 0,
       rates: r.paqueteTarifas?.[0] ? {
         adult: r.paqueteTarifas[0].tarifaAdulto,
         child: r.paqueteTarifas[0].tarifaMenor || 0

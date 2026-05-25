@@ -502,6 +502,8 @@ model PaqueteVuelo {
   aerolinea   Aerolineas? @relation(fields: [aerolineaId], references: [id])
   nroVuelo    String?    @map("nro_vuelo")
   modoVuelo   FlightMode? @default(round_trip) @map("modo_vuelo")
+  trayectos   Json?
+  planEquipaje String?   @map("plan_equipaje")
 
   @@map("paquete_vuelo")
 }

@@ -32,7 +32,7 @@ const SECTION_MAP = {
   },
   'packages': {
     model: 'paquetes', idField: 'id',
-    include: { paqueteHotel: true, paqueteTarifas: true, paqueteAsistenciaMedica: true, paqueteVuelo: { include: { aerolinea: true } } },
+    include: { paqueteHotel: true, paqueteTarifas: true, paqueteAsistenciaMedica: true, paqueteVuelo: { include: { aerolinea: true } }, paqueteProveedor: { include: { proveedor: true } } },
     transform: (r) => ({
       id: r.id,
       name: r.nombre,
@@ -42,12 +42,16 @@ const SECTION_MAP = {
       flight: r.paqueteVuelo?.[0] ? {
         airline: r.paqueteVuelo[0].aerolinea?.nombre || null,
         route: r.paqueteVuelo[0].nroVuelo || null,
-        flightMode: r.paqueteVuelo[0].modoVuelo || 'round_trip'
+        flightMode: r.paqueteVuelo[0].modoVuelo || 'round_trip',
+        baggagePlan: r.paqueteVuelo[0].planEquipaje || '',
+        legs: r.paqueteVuelo[0].trayectos?.legs || undefined,
+        returnLeg: r.paqueteVuelo[0].trayectos?.returnLeg || undefined
       } : undefined,
       accommodation: r.paqueteHotel?.[0] ? {
         hotel: r.paqueteHotel[0].hotelNombre,
         hotelType: r.paqueteHotel[0].tipoHotel,
-        mealPlan: r.paqueteHotel[0].regimen
+        mealPlan: r.paqueteHotel[0].regimen,
+        supplier: r.paqueteProveedor?.[0]?.proveedor?.nombre || ''
       } : undefined,
       nights: r.paqueteHotel?.[0]?.noches || 0,
       rates: r.paqueteTarifas?.[0] ? {
@@ -196,7 +200,12 @@ const createPackageRelations = async (tx, paqueteId, body) => {
         paqueteId,
         aerolineaId,
         nroVuelo: body.flight.route || null,
-        modoVuelo: body.flight.flightMode || 'round_trip'
+        modoVuelo: body.flight.flightMode || 'round_trip',
+        planEquipaje: body.flight.baggagePlan || null,
+        trayectos: body.flight.legs || body.flight.returnLeg ? {
+          legs: body.flight.legs || [],
+          returnLeg: body.flight.returnLeg || null
+        } : null
       }
     });
   }
@@ -212,6 +221,16 @@ const createPackageRelations = async (tx, paqueteId, body) => {
         noches: body.nights || 0
       }
     });
+
+    if (body.accommodation.supplier) {
+      let proveedor = await tx.proveedores.findFirst({ where: { nombre: body.accommodation.supplier } });
+      if (!proveedor) {
+        proveedor = await tx.proveedores.create({ data: { nombre: body.accommodation.supplier, tipo: 'Hotel' } });
+      }
+      await tx.paqueteProveedor.create({
+        data: { paqueteId, proveedorId: proveedor.id }
+      });
+    }
   }
 
   // 3. Relación de Tarifas
@@ -306,6 +325,7 @@ exports.updateItem = async (req, res, next) => {
       if (section === 'packages') {
         await tx.paqueteVuelo.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteHotel.deleteMany({ where: { paqueteId: itemId } });
+        await tx.paqueteProveedor.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteTarifas.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteAsistenciaMedica.deleteMany({ where: { paqueteId: itemId } });
 

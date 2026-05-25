@@ -244,6 +244,11 @@ exports.createItem = async (req, res, next) => {
     // Mapear el cuerpo de la petición de entrada al formato de la base de datos
     const dbData = await untransformBody(section, req.body);
 
+    // Inyectar el ID del usuario creador si es un Paquete Turístico
+    if (section === 'packages' && req.user && req.user.id) {
+      dbData.creadorId = req.user.id;
+    }
+
     // Ejecutar creación transaccional optimizada (Carga Relaciones Eager e Inmediata)
     let createdResponse = await prisma.$transaction(async (tx) => {
       // Crear registro base e incluir sus relaciones en una sola consulta de base de datos

@@ -178,19 +178,18 @@ const untransformBody = async (section, body) => {
 };
 
 // Helper asíncrono para crear las relaciones de los paquetes turísticos en las tablas relacionales correspondientes
-const createPackageRelations = async (paqueteId, body) => {
+const createPackageRelations = async (tx, paqueteId, body) => {
   // 1. Relación de Vuelo
   if (body.flight) {
     let aerolineaId = null;
     if (body.flight.airline) {
-      // Corrección de integridad: Usamos findFirst en lugar de findUnique
-      let airline = await prisma.aerolineas.findFirst({ where: { nombre: body.flight.airline } });
+      let airline = await tx.aerolineas.findFirst({ where: { nombre: body.flight.airline } });
       if (!airline) {
-        airline = await prisma.aerolineas.create({ data: { nombre: body.flight.airline, codigoIata: body.flight.airline.slice(0, 2).toUpperCase() } });
+        airline = await tx.aerolineas.create({ data: { nombre: body.flight.airline, codigoIata: body.flight.airline.slice(0, 2).toUpperCase() } });
       }
       aerolineaId = airline.id;
     }
-    await prisma.paqueteVuelo.create({
+    await tx.paqueteVuelo.create({
       data: {
         paqueteId,
         aerolineaId,
@@ -202,7 +201,7 @@ const createPackageRelations = async (paqueteId, body) => {
 
   // 2. Relación de Hotel / Alojamiento
   if (body.accommodation) {
-    await prisma.paqueteHotel.create({
+    await tx.paqueteHotel.create({
       data: {
         paqueteId,
         hotelNombre: body.accommodation.hotel || '',
@@ -215,7 +214,7 @@ const createPackageRelations = async (paqueteId, body) => {
 
   // 3. Relación de Tarifas
   if (body.rates) {
-    await prisma.paqueteTarifas.create({
+    await tx.paqueteTarifas.create({
       data: {
         paqueteId,
         tarifaAdulto: parseFloat(body.rates.adult) || 0,
@@ -226,7 +225,7 @@ const createPackageRelations = async (paqueteId, body) => {
 
   // 4. Relación de Asistencia Médica
   if (body.medicalAssistance) {
-    await prisma.paqueteAsistenciaMedica.create({
+    await tx.paqueteAsistenciaMedica.create({
       data: {
         paqueteId,
         coberturaUsd: parseFloat(body.medicalAssistance.amountUsd) || 0,
@@ -255,7 +254,7 @@ exports.createItem = async (req, res, next) => {
 
       // Flujo de creación de relaciones hijas si es un Paquete Turístico
       if (section === 'packages') {
-        await createPackageRelations(createdItem.id, req.body);
+        await createPackageRelations(tx, createdItem.id, req.body);
         // Volvemos a buscar el paquete para retornar todas las relaciones hijas recién creadas
         return await tx[config.model].findUnique({
           where: { [config.idField]: createdItem.id },
@@ -303,7 +302,7 @@ exports.updateItem = async (req, res, next) => {
         await tx.paqueteTarifas.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteAsistenciaMedica.deleteMany({ where: { paqueteId: itemId } });
 
-        await createPackageRelations(itemId, req.body);
+        await createPackageRelations(tx, itemId, req.body);
 
         // Volvemos a buscar el paquete para retornar todas las relaciones hijas actualizadas
         return await tx[config.model].findUnique({

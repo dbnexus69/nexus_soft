@@ -263,7 +263,7 @@ exports.createItem = async (req, res, next) => {
       }
 
       return createdItem;
-    });
+    }, { maxWait: 20000, timeout: 20000 });
 
     if (config.transform) {
       createdResponse = config.transform(createdResponse);
@@ -312,7 +312,7 @@ exports.updateItem = async (req, res, next) => {
       }
 
       return updatedItem;
-    });
+    }, { maxWait: 20000, timeout: 20000 });
 
     if (config.transform) {
       updatedResponse = config.transform(updatedResponse);
@@ -345,7 +345,7 @@ exports.removeItem = async (req, res, next) => {
       await tx[config.model].delete({
         where: { [config.idField]: itemId }
       });
-    });
+    }, { maxWait: 20000, timeout: 20000 });
 
     success(res, { message: 'Elemento eliminado con éxito' });
   } catch (err) {

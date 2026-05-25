@@ -612,7 +612,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                     { value: "boutique", label: "Hotel Boutique" },
                     { value: "apartamento", label: "Apartamento / AirBnB" },
                     { value: "hostal", label: "Hostal / Albergue" },
-                    { value: "finca", label: "Finca / Casa Rural" },
+                    { value: "fincas", label: "Finca / Casa Rural" },
                   ]}
                 />
               </FormField>
@@ -622,11 +622,11 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                   onChange={e => setFormData({ ...formData, accommodation: { ...formData.accommodation, mealPlan: e.target.value } })}
                   options={[
                     { value: '', label: 'Seleccionar régimen...' },
-                    { value: 'Solo Desayuno', label: 'Solo Desayuno' },
-                    { value: 'Media Pensión', label: 'Media Pensión' },
-                    { value: 'Pensión Completa', label: 'Pensión Completa' },
-                    { value: 'Todo Incluido', label: 'Todo Incluido' },
-                    { value: 'Solo Alojamiento', label: 'Solo Alojamiento' }
+                    { value: 'solo_desayuno', label: 'Solo Desayuno' },
+                    { value: 'media_pension', label: 'Media Pensión' },
+                    { value: 'full', label: 'Pensión Completa' },
+                    { value: 'todo_incluido', label: 'Todo Incluido' },
+                    { value: 'sin_alimentacion', label: 'Solo Alojamiento' }
                   ]}
                 />
               </FormField>

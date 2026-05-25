@@ -498,8 +498,8 @@ model PaqueteVuelo {
   id          Int        @id @default(autoincrement())
   paqueteId   Int        @map("paquete_id")
   paquete     Paquetes   @relation(fields: [paqueteId], references: [id])
-  aerolineaId Int        @map("aerolinea_id")
-  aerolinea   Aerolineas @relation(fields: [aerolineaId], references: [id])
+  aerolineaId Int?       @map("aerolinea_id")
+  aerolinea   Aerolineas? @relation(fields: [aerolineaId], references: [id])
   nroVuelo    String?    @map("nro_vuelo")
   modoVuelo   FlightMode? @default(round_trip) @map("modo_vuelo")
 

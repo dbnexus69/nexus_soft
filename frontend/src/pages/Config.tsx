@@ -65,6 +65,7 @@ export default function Config() {
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [viewingPackage, setViewingPackage] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const currentData = ((data.config[currentSection as keyof ConfigData] || []) as any[])
     .slice()
@@ -230,10 +231,17 @@ export default function Config() {
     setDeleteItemId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteItemId !== null) {
-      deleteConfigItem(currentSection as ConfigSection, deleteItemId);
-      setDeleteItemId(null);
+      setIsDeleting(true);
+      try {
+        await deleteConfigItem(currentSection as ConfigSection, deleteItemId);
+        setDeleteItemId(null);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -475,15 +483,17 @@ export default function Config() {
       {/* Premium Custom Delete Confirmation Modal */}
       <Modal
         isOpen={deleteItemId !== null}
-        onClose={() => setDeleteItemId(null)}
+        onClose={() => {
+          if (!isDeleting) setDeleteItemId(null);
+        }}
         title="Confirmar Eliminación"
         footer={
           <div className="flex gap-2 w-full justify-end">
-            <Button variant="outline" onClick={() => setDeleteItemId(null)}>
+            <Button variant="outline" onClick={() => setDeleteItemId(null)} disabled={isDeleting}>
               No, cancelar
             </Button>
-            <Button variant="danger" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
-              Sí, eliminar registro
+            <Button variant="danger" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-semibold" disabled={isDeleting}>
+              {isDeleting ? 'Eliminando...' : 'Sí, eliminar registro'}
             </Button>
           </div>
         }

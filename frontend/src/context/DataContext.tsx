@@ -442,23 +442,51 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addConfigItem = async (section: ConfigSection, item: Record<string, unknown>): Promise<Record<string, unknown>> => {
-    // Flujo estándar y ultra-robusto (idéntico al de ventas):
-    // Esperamos la creación física en la base de datos (que ahora tarda milisegundos gracias a la optimización de 1 sola consulta en el back).
-    // Esto previene cualquier identificador temporal o parpadeo, y cierra la modal mostrando la tarjeta real creada.
-    const created = await api.createConfigItem(section, item);
+    const list = (data.config as any)[section] || [];
+    const maxId = list.reduce((max: number, i: any) => {
+      const idNum = Number(i.id);
+      return !isNaN(idNum) && idNum > max ? idNum : max;
+    }, 0);
+    const tempId = maxId + 1;
+
+    const optimisticItem = { id: tempId, ...item };
+
     setData(prev => {
       const nextConfig = {
         ...prev.config,
-        [section]: [...(prev.config as any)[section], created]
+        [section]: [...(prev.config as any)[section], optimisticItem]
       };
       saveConfigCache(nextConfig);
       return { ...prev, config: nextConfig };
     });
-    return created;
+
+    try {
+      const created = await api.createConfigItem(section, item);
+      setData(prev => {
+        const nextConfig = {
+          ...prev.config,
+          [section]: (prev.config as any)[section].map((i: any) => i.id === tempId ? created : i)
+        };
+        saveConfigCache(nextConfig);
+        return { ...prev, config: nextConfig };
+      });
+      return created;
+    } catch (err) {
+      setData(prev => {
+        const nextConfig = {
+          ...prev.config,
+          [section]: (prev.config as any)[section].filter((i: any) => i.id !== tempId)
+        };
+        saveConfigCache(nextConfig);
+        return { ...prev, config: nextConfig };
+      });
+      throw err;
+    }
   };
 
   const updateConfigItem = async (section: ConfigSection, id: number, itemUpdate: Record<string, unknown>) => {
-    await api.updateConfigItem(section, id, itemUpdate);
+    const originalItem = (data.config as any)[section].find((i: any) => i.id === id);
+
     setData(prev => {
       const nextConfig = {
         ...prev.config,
@@ -467,10 +495,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
       saveConfigCache(nextConfig);
       return { ...prev, config: nextConfig };
     });
+
+    try {
+      await api.updateConfigItem(section, id, itemUpdate);
+    } catch (err) {
+      setData(prev => {
+        const nextConfig = {
+          ...prev.config,
+          [section]: (prev.config as any)[section].map((i: any) => i.id === id ? originalItem : i)
+        };
+        saveConfigCache(nextConfig);
+        return { ...prev, config: nextConfig };
+      });
+      throw err;
+    }
   };
 
   const deleteConfigItem = async (section: ConfigSection, id: number) => {
-    await api.deleteConfigItem(section, id);
+    const originalList = (data.config as any)[section];
+
     setData(prev => {
       const nextConfig = {
         ...prev.config,
@@ -479,6 +522,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
       saveConfigCache(nextConfig);
       return { ...prev, config: nextConfig };
     });
+
+    try {
+      await api.deleteConfigItem(section, id);
+    } catch (err) {
+      setData(prev => {
+        const nextConfig = {
+          ...prev.config,
+          [section]: originalList
+        };
+        saveConfigCache(nextConfig);
+        return { ...prev, config: nextConfig };
+      });
+      throw err;
+    }
   };
 
   const addCommissionAgent = async (agent: any) => {

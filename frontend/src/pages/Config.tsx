@@ -64,8 +64,6 @@ export default function Config() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [viewingPackage, setViewingPackage] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const currentData = ((data.config[currentSection as keyof ConfigData] || []) as any[])
     .slice()
@@ -210,38 +208,25 @@ export default function Config() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!validate()) return;
-    setIsSaving(true);
-    try {
-      if (editingItem) {
-        await updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
-      } else {
-        await addConfigItem(currentSection as ConfigSection, formData);
-      }
-      setIsModalOpen(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
+    
+    if (editingItem) {
+      updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
+    } else {
+      addConfigItem(currentSection as ConfigSection, formData);
     }
+    setIsModalOpen(false);
   };
 
   const handleDelete = (id: number) => {
     setDeleteItemId(id);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (deleteItemId !== null) {
-      setIsDeleting(true);
-      try {
-        await deleteConfigItem(currentSection as ConfigSection, deleteItemId);
-        setDeleteItemId(null);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsDeleting(false);
-      }
+      deleteConfigItem(currentSection as ConfigSection, deleteItemId);
+      setDeleteItemId(null);
     }
   };
 
@@ -452,19 +437,13 @@ export default function Config() {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => {
-          if (!isSaving) {
-            setIsModalOpen(false);
-          }
-        }}
+        onClose={() => setIsModalOpen(false)}
         title={editingItem ? 'Editar Registro' : 'Registrar Elemento'}
         size={currentSection === 'packages' ? 'xl' : 'lg'}
         footer={
           <>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? (editingItem ? 'Guardando...' : 'Creando...') : 'Guardar Cambios'}
-            </Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSubmit}>Guardar Cambios</Button>
           </>
         }
       >
@@ -483,17 +462,15 @@ export default function Config() {
       {/* Premium Custom Delete Confirmation Modal */}
       <Modal
         isOpen={deleteItemId !== null}
-        onClose={() => {
-          if (!isDeleting) setDeleteItemId(null);
-        }}
+        onClose={() => setDeleteItemId(null)}
         title="Confirmar Eliminación"
         footer={
           <div className="flex gap-2 w-full justify-end">
-            <Button variant="outline" onClick={() => setDeleteItemId(null)} disabled={isDeleting}>
+            <Button variant="outline" onClick={() => setDeleteItemId(null)}>
               No, cancelar
             </Button>
-            <Button variant="danger" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-semibold" disabled={isDeleting}>
-              {isDeleting ? 'Eliminando...' : 'Sí, eliminar registro'}
+            <Button variant="danger" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
+              Sí, eliminar registro
             </Button>
           </div>
         }

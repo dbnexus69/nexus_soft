@@ -215,6 +215,8 @@ export interface PlanData {
   reservationNumber: string;
   flightNumber: string;
   ticketNumber: string;
+  adultsCount?: number;
+  childrenCount?: number;
   startDate: string;
   endDate: string;
   flightDepartureDate?: string;
@@ -472,7 +474,7 @@ export interface Sale {
   asesorName: string;
   date: string;
   total: number;
-  status: "credito" | "abonado" | "pagado";
+  status: "credito" | "abonado" | "pagado" | "anulado";
   category?: string;
   paymentMethod: string;
   observations?: string;

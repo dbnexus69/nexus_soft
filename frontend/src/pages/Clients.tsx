@@ -39,7 +39,7 @@ export default function Clients() {
   const [toggledClientId, setToggledClientId] = useState<number | null>(null);
   const [toggleAction, setToggleAction] = useState<'activated' | 'deactivated' | null>(null);
   const [isToggling, setIsToggling] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Client; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Client; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 

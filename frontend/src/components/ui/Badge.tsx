@@ -8,7 +8,8 @@ interface BadgeProps {
     | "realizado"
     | "pendiente-check"
     | "accent"
-    | "danger";
+    | "danger"
+    | "anulado";
   children: React.ReactNode;
   className?: string;
 }
@@ -22,6 +23,7 @@ export function Badge({ variant, children, className = "" }: BadgeProps) {
     active: "bg-green-100 text-green-800",
     inactive: "bg-red-100 text-red-800",
     danger: "bg-red-100 text-red-800",
+    anulado: "bg-red-100 text-red-800",
     realizado: "bg-green-100 text-green-800",
     "pendiente-check": "bg-yellow-100 text-yellow-800",
     accent: "bg-accent/20 text-accent",

@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   CreditCard,
   FileText,
+  Loader2,
+  Ban,
 } from "lucide-react";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -27,7 +29,7 @@ import StatCard from "../components/ui/StatCard";
 import CreditDashboard from "../components/sales/CreditDashboard";
 
 export default function Sales() {
-  const { data, addSale, updateSale, deleteSale, registerCreditPayment, deleteSalePayment, salesLoading, fetchSales } = useData();
+  const { data, addSale, updateSale, voidSale, registerCreditPayment, deleteSalePayment, salesLoading, fetchSales } = useData();
   const { user, isAdmin } = useAuth();
   const { canCreate, canEdit } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,7 +45,11 @@ export default function Sales() {
     type: string;
     data: any[];
   } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<Sale | null>(null);
+  const [voidConfirm, setVoidConfirm] = useState<Sale | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [isVoiding, setIsVoiding] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [voucherSale, setVoucherSale] = useState<Sale | null>(null);
 
   const filteredSales = useMemo(() => {
     const list = isAdmin ? data.sales : data.sales.filter((s) => s.asesorId === user?.id);
@@ -79,8 +85,8 @@ export default function Sales() {
 
   const canEditThis = (sale: Sale): boolean => {
     if (!canEdit("sales")) return false;
-    // Solo permitir edición si NO está pagada
-    if (sale.status === "pagado") return false;
+    // Solo permitir edición si NO está pagada ni anulada
+    if (sale.status === "pagado" || sale.status === "anulado") return false;
     if (isAdmin) return true;
     return sale.asesorId === user?.id;
   };
@@ -102,27 +108,50 @@ export default function Sales() {
   };
 
   const handleDownloadVoucher = (sale: Sale) => {
-    setSuccessMessage(`Descargando voucher de la venta #${sale.id}...`);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    setVoucherSale(sale);
   };
 
-  const handleDeleteSale = async (sale: Sale) => {
+  const handleVoidSale = async () => {
+    if (!voidConfirm || !voidReason.trim() || isVoiding) return;
+    setIsVoiding(true);
     try {
-      await deleteSale(sale.id);
-      setSuccessMessage(`Venta #${sale.id} eliminada correctamente`);
+      await voidSale(voidConfirm.id, voidReason);
+      setSuccessMessage(`Venta #${voidConfirm.id} anulada correctamente`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+      setVoidConfirm(null);
+      setVoidReason("");
     } catch {
-      setSuccessMessage(`Error al eliminar la venta #${sale.id}`);
+      setSuccessMessage(`Error al anular la venta #${voidConfirm.id}`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+    } finally {
+      setIsVoiding(false);
     }
-    setDeleteConfirm(null);
   };
 
   return (
     <div className="space-y-6 relative">
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none z-[100] flex justify-center">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="animate-confetti absolute top-0 text-2xl"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                color: ["#FFD700", "#FF4500", "#00BFFF", "#32CD32", "#FF69B4"][
+                  Math.floor(Math.random() * 5)
+                ],
+              }}
+            >
+              ★
+            </div>
+          ))}
+        </div>
+      )}
+
       {showSuccess && (
         <div className="fixed top-20 right-6 z-[100] bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right">
           <div className="bg-green-500 text-white rounded-full p-1">
@@ -218,7 +247,7 @@ export default function Sales() {
                 onPrefetchDetail={handlePrefetchDetail}
                 onDownloadVoucher={handleDownloadVoucher}
                 onEdit={handleOpenModal}
-                onDelete={(sale) => setDeleteConfirm(sale)}
+                onDelete={(sale) => setVoidConfirm(sale)}
                 canEditThis={canEditThis}
                 isAdmin={isAdmin}
               />
@@ -244,6 +273,8 @@ export default function Sales() {
           onSuccess={(msg) => {
             setSuccessMessage(msg);
             setShowSuccess(true);
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
             setTimeout(() => setShowSuccess(false), 3000);
           }}
         />
@@ -281,30 +312,96 @@ export default function Sales() {
         />
       )}
 
-      {/* ===== CONFIRMAR ELIMINACIÓN ===== */}
+      {/* ===== CONFIRMAR ANULACIÓN ===== */}
       <Modal
-        isOpen={deleteConfirm !== null}
-        onClose={() => setDeleteConfirm(null)}
-        title="Confirmar Eliminación"
-        size="sm"
+        isOpen={!!voidConfirm}
+        onClose={() => setVoidConfirm(null)}
+        title="Anular Venta"
+        size="md"
         footer={
           <>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+            <Button
+              variant="outline"
+              className="border-none"
+              onClick={() => setVoidConfirm(null)}
+              disabled={isVoiding}
+            >
               Cancelar
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => deleteConfirm && handleDeleteSale(deleteConfirm)}
+              className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
+              onClick={handleVoidSale}
+              disabled={!voidReason.trim() || isVoiding}
             >
-              Eliminar
+              {isVoiding && <Loader2 size={16} className="animate-spin" />}
+              {isVoiding ? "Anulando..." : "Anular Venta"}
             </Button>
           </>
         }
       >
-        <p className="text-gray-600 text-sm">
-          ¿Estás seguro de que deseas eliminar la venta <strong>#{deleteConfirm?.id}</strong>?
-          Esta acción no se puede deshacer.
-        </p>
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">
+            ¿Estás seguro de que deseas anular la venta <strong>#{voidConfirm?.id}</strong>?
+            El registro se conservará pero su estado pasará a "Anulado".
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Motivo de anulación <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="w-full text-sm border border-gray-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[100px]"
+              placeholder="Escribe la razón detallada para anular esta venta..."
+              value={voidReason}
+              onChange={(e) => setVoidReason(e.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ===== VOUCHER MODAL (Opciones de Voucher) ===== */}
+      <Modal
+        isOpen={!!voucherSale}
+        onClose={() => setVoucherSale(null)}
+        title="Opciones de Voucher"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm text-center">
+            ¿Qué deseas hacer con el voucher de la venta <strong>#{voucherSale?.id}</strong>?
+          </p>
+          <div className="flex flex-col gap-3 mt-4">
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white flex justify-center items-center"
+              onClick={() => {
+                setSuccessMessage(`Voucher enviado al cliente exitosamente`);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+                setVoucherSale(null);
+              }}
+            >
+              Enviar al Cliente
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full flex justify-center items-center"
+              onClick={() => {
+                setSuccessMessage(`Descargando voucher de la venta #${voucherSale?.id}...`);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+                setVoucherSale(null);
+              }}
+            >
+              Descargar Voucher
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-gray-500 mt-2 border-none"
+              onClick={() => setVoucherSale(null)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

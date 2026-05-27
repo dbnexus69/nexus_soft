@@ -496,16 +496,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       return;
     }
 
-    const productLabels = form.selectedProducts
-      .map((id) => {
-        const p = SALE_PRODUCTS.find((sp) => sp.id === id);
-        return p ? `${p.icon} ${p.label}` : id;
-      })
-      .join("\n");
-
-    const fullObservations = [productLabels, form.observations]
-      .filter(Boolean)
-      .join("\n---\n");
+    const fullObservations = form.observations.trim();
 
     const mappedTickets = form.tickets.map(t => {
       // 1. Accumulate outbound legs (initial leg + outbound stops/scales)

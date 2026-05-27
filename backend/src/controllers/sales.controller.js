@@ -1181,6 +1181,9 @@ exports.create = async (req, res, next) => {
       });
 
       return venta.id;
+    }, {
+      maxWait: 15000, // 15s
+      timeout: 30000  // 30s
     });
 
     const created = await prisma.ventas.findUnique({
@@ -1462,9 +1465,44 @@ exports.update = async (req, res, next) => {
           }
         }
       }
+    }, {
+      maxWait: 15000,
+      timeout: 30000
     });
 
     success(res, { message: 'Venta actualizada' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.voidSale = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { reason } = req.body;
+    
+    if (!reason) {
+      return res.status(400).json({ status: 'error', message: 'Debe proporcionar un motivo para anular la venta' });
+    }
+
+    const venta = await prisma.ventas.findUnique({ where: { id } });
+    if (!venta) {
+      return res.status(404).json({ status: 'error', message: 'Venta no encontrada' });
+    }
+
+    const newObservaciones = venta.observaciones 
+      ? `${venta.observaciones}\n[ANULADA] Motivo: ${reason}` 
+      : `[ANULADA] Motivo: ${reason}`;
+
+    await prisma.ventas.update({
+      where: { id },
+      data: { 
+        status: 'anulado',
+        observaciones: newObservaciones
+      }
+    });
+    
+    success(res, { message: 'Venta anulada correctamente' });
   } catch (err) {
     next(err);
   }

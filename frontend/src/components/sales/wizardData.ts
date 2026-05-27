@@ -145,6 +145,8 @@ export const INITIAL_PLAN = (client?: any): PlanData => ({
   reservationNumber: "",
   flightNumber: "",
   ticketNumber: "",
+  adultsCount: 2,
+  childrenCount: 0,
   startDate: "",
   endDate: "",
   flightDepartureDate: "",

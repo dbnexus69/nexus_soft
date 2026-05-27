@@ -31,6 +31,7 @@ exports.list = async (req, res, next) => {
     }
     if (role) where.rol = { nombre: role };
     if (status) where.status = status;
+    where.persona = { ...where.persona, deletedAt: null };
 
     // Ejecución paralela: Conteo (Prisma) y Búsqueda (SQL Puro)
     const [total, usuariosRaw] = await Promise.all([
@@ -54,7 +55,7 @@ exports.list = async (req, res, next) => {
         JOIN personas p ON u.persona_id = p.id
         LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
         JOIN roles r ON u.rol_id = r.id
-        WHERE 1=1 ${searchCondition} ${roleCondition} ${statusCondition}
+        WHERE p.deleted_at IS NULL ${searchCondition} ${roleCondition} ${statusCondition}
         ORDER BY u.id DESC
         LIMIT ${perPage} OFFSET ${skip}
       `)
@@ -290,7 +291,10 @@ exports.remove = async (req, res, next) => {
     const usuario = await prisma.usuarios.findUnique({ where: { id }, include: { persona: true } });
     if (!usuario) return error(res, 'Usuario no encontrado', 404);
 
-    await prisma.usuarios.delete({ where: { id } });
+    await prisma.usuarios.update({
+      where: { id },
+      data: { status: 'inactive' }
+    });
     await prisma.personas.update({
       where: { id: usuario.personaId },
       data: { deletedAt: new Date(), status: 'inactive' }

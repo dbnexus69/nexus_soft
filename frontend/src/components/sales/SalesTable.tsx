@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, FileDown, Pencil, Trash2 } from "lucide-react";
+import { Eye, FileDown, Pencil, Ban } from "lucide-react";
 import { RxUpdate } from "react-icons/rx";
 import { Table, TableRow, TableCell, Pagination } from "../ui/Table";
 import { Button } from "../ui/Button";
@@ -133,7 +133,9 @@ export default function SalesTable({
                     ? "Finalizado"
                     : sale.status === "abonado"
                       ? "Abonado"
-                      : "En Crédito"}
+                      : sale.status === "anulado"
+                        ? "Anulado"
+                        : "En Crédito"}
                 </Badge>
                 {sale.status === "credito" && sale.creditDueDate && (
                   <span className="text-[10px] text-rose-500 font-medium whitespace-nowrap">
@@ -179,9 +181,10 @@ export default function SalesTable({
                     size="icon"
                     className="h-8 w-8 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
                     onClick={() => onDelete(sale)}
-                    title="Eliminar venta"
+                    disabled={sale.status === "anulado"}
+                    title={sale.status === "anulado" ? "Venta ya anulada" : "Anular venta"}
                   >
-                    <Trash2 size={14} />
+                    <Ban size={14} className={sale.status === "anulado" ? "text-red-300" : ""} />
                   </Button>
                 )}
               </div>

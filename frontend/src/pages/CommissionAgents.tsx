@@ -78,7 +78,7 @@ export default function CommissionAgents() {
       (a: any) =>
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.docNumber?.includes(searchTerm)
-    );
+    ).sort((a: any, b: any) => b.id - a.id);
     console.log("Debug - FilteredAgents:", result);
     return result;
   }, [data.commissionAgents, data.sales, searchTerm]);

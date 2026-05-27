@@ -80,6 +80,7 @@ interface DataContextType {
   addSale: (sale: Omit<Sale, 'id'>) => Promise<Sale>;
   updateSale: (id: number, sale: Partial<Sale>) => Promise<void>;
   deleteSale: (id: number) => Promise<void>;
+  voidSale: (id: number, reason: string) => Promise<void>;
   registerCreditPayment: (saleId: number, amount: number, method?: string, isTotal?: boolean) => Promise<{ payment: any; status: string; creditPaidAmount: number }>;
   deleteSalePayment: (saleId: number, paymentId: string) => Promise<void>;
   updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<void>;
@@ -365,11 +366,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await api.deleteSale(id);
     setData(prev => {
       const updatedSales = prev.sales.filter(s => s.id !== id);
-      // Invalida caché al eliminar una venta
       invalidateSalesCache();
       invalidateDashboardCache();
       return { ...prev, sales: updatedSales };
     });
+  };
+
+  const voidSale = async (id: number, reason: string) => {
+    await api.voidSale(id, reason);
+    const updated = await api.getSale(id);
+    setData(prev => ({
+      ...prev,
+      sales: prev.sales.map(s => s.id === id ? { ...s, ...updated } : s)
+    }));
+    invalidateSalesCache();
+    invalidateDashboardCache();
   };
 
   const registerCreditPayment = async (saleId: number, amount: number, method?: string, isTotal: boolean = false) => {
@@ -602,6 +613,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addSale,
       updateSale,
       deleteSale,
+      voidSale,
       settleCommissions,
       refreshSettlements,
       registerCreditPayment,

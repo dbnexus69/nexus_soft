@@ -24,6 +24,11 @@ export async function deleteSale(id: number) {
   await api.delete(`/sales/${id}`);
 }
 
+export async function voidSale(id: number, reason: string) {
+  const res = await api.post(`/sales/${id}/void`, { reason });
+  return res.data.data;
+}
+
 export async function registerPayment(saleId: number, data: Record<string, unknown>) {
   const res = await api.post(`/sales/${saleId}/payments`, data);
   return res.data.data;

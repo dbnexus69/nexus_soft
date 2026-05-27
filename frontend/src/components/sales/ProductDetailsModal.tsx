@@ -217,13 +217,13 @@ export default function ProductDetailsModal({ product, onClose }: ProductDetails
               <Package size={16} className="text-accent" /> Paquete #{idx + 1} - {plan.planName || "Sin Nombre"}
             </h4>
             {renderGrid([
-              { label: "Paquete", value: plan.packageName },
+              ...(plan.packageName ? [{ label: "Paquete Base", value: plan.packageName }] : []),
               { label: "Aerolínea", value: plan.airlineName || plan.airline },
               { label: "Reserva", value: plan.reservationNumber },
               { label: "Fechas", value: plan.startDate && plan.endDate ? `${formatDate(plan.startDate)} al ${formatDate(plan.endDate)}` : (plan.startDate ? formatDate(plan.startDate) : (plan.endDate ? formatDate(plan.endDate) : "-")) },
               { label: "Adultos", value: plan.adultsCount },
               { label: "Menores", value: plan.childrenCount },
-              { label: "Confirmación", value: plan.confirmationNumber },
+              { label: "Confirmación", value: plan.ticketNumber },
             ])}
             {renderPassengers(plan.guests || plan.passengers)}
             {plan.observations && (

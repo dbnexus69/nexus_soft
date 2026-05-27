@@ -8,7 +8,7 @@ export {
   listClients, getClient, createClient, updateClient, toggleClientStatus,
 } from './clients';
 export {
-  listSales, getSale, createSale, updateSale, deleteSale,
+  listSales, getSale, createSale, updateSale, deleteSale, voidSale,
   registerPayment, deletePayment, getSalePayments, createProduct, updateProduct, deleteProduct,
 } from './sales';
 export {

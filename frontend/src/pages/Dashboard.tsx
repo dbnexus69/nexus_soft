@@ -137,7 +137,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
-              label: "INGRESOS BRUTOS",
+              label: "T.A INGRESADA",
               value: formatCurrency(stats.totalIngresos),
               subtitle: "Ventas Totales",
               detail: `+${formatCurrency(stats.monthIngresos)} mes`,
@@ -146,7 +146,7 @@ export default function Dashboard() {
               lightBg: "bg-emerald-50 text-emerald-600",
             },
             {
-              label: "PENDIENTES",
+              label: "CRÉDITO",
               value: formatCurrency(stats.totalPendiente),
               subtitle: "Cuentas por Cobrar",
               detail: `${stats.PendienteCount} cuentas`,
@@ -155,7 +155,7 @@ export default function Dashboard() {
               lightBg: "bg-orange-50 text-orange-600",
             },
             {
-              label: "PROVEEDORES",
+              label: "MAYORISTAS",
               value: formatCurrency(stats.totalProveedores),
               subtitle: "Costos Operativos",
               detail: `${stats.supplierCount} activos`,
@@ -173,7 +173,7 @@ export default function Dashboard() {
               lightBg: "bg-indigo-50 text-indigo-600",
             },
             {
-              label: "VUELOS",
+              label: "TIQUETES AÉREOS",
               value: stats.totalFlights,
               subtitle: "Tramos Emitidos",
               icon: <Plane size={24} />,
@@ -199,7 +199,7 @@ export default function Dashboard() {
               lightBg: "bg-fuchsia-50 text-fuchsia-600",
             },
             {
-              label: "PLANES",
+              label: "PAQUETES",
               value: stats.planesCount,
               subtitle: "Paquetes Turísticos",
               detail: formatCurrency(stats.planesIngresos),
@@ -215,7 +215,7 @@ export default function Dashboard() {
               <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${kpi.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em]">
+                  <p className="text-[13px] font-black text-gray-700 uppercase tracking-widest">
                     {kpi.label}
                   </p>
                   <div className={`p-3 rounded-2xl ${kpi.lightBg} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
@@ -226,7 +226,7 @@ export default function Dashboard() {
                   {kpi.value}
                 </h3>
                 <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-500 font-semibold truncate">
+                  <span className="text-xs text-gray-700 font-semibold truncate">
                     {kpi.subtitle}
                   </span>
                   {kpi.detail && (

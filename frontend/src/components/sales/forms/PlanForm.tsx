@@ -36,6 +36,8 @@ export function PlanForm({ plan, onChange, data }: PlanFormProps) {
         airline: pkg.flight?.airline || "",
         flightNumber: pkg.flight?.legs?.[0]?.flightNumber || "",
         // observations: `Incluye: ${pkg.includedServices}\nNo Incluye: ${pkg.notIncluded}`
+        adultsCount: 2,
+        childrenCount: 0,
       });
     }
   };
@@ -85,6 +87,22 @@ export function PlanForm({ plan, onChange, data }: PlanFormProps) {
               onChange={(val) => onChange({ airline: val })}
               options={data.config.airlines.map((a: any) => ({ value: a.name, label: a.name }))}
               placeholder="Seleccionar aerolínea..."
+            />
+          </FormField>
+          <FormField label="Adultos">
+            <Input
+              type="number"
+              min="0"
+              value={plan.adultsCount !== undefined ? plan.adultsCount : ""}
+              onChange={(e) => onChange({ adultsCount: e.target.value === "" ? undefined : Number(e.target.value) })}
+            />
+          </FormField>
+          <FormField label="Menores">
+            <Input
+              type="number"
+              min="0"
+              value={plan.childrenCount !== undefined ? plan.childrenCount : ""}
+              onChange={(e) => onChange({ childrenCount: e.target.value === "" ? undefined : Number(e.target.value) })}
             />
           </FormField>
         </div>

@@ -16,6 +16,9 @@ import {
   Trash2,
   AlertTriangle,
   Edit,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
@@ -35,6 +38,7 @@ import {
 import StatCard from "../components/ui/StatCard";
 import PermissionsGrid from "../components/users/PermissionsGrid";
 import Avatar from "../components/ui/Avatar";
+import SortIcon from "../components/ui/SortIcon";
 
 import AvatarPicker, { AVATARS } from "../components/ui/AvatarPicker";
 
@@ -93,7 +97,7 @@ export default function Users() {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof User;
     direction: "asc" | "desc";
-  }>({ key: "name", direction: "asc" });
+  }>({ key: "id", direction: "desc" });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -368,8 +372,26 @@ export default function Users() {
     }
   };
 
+  const requestSort = (key: keyof User) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterRole, filterStatus]);
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 relative animate-fade-in">
+    <div className="space-y-6 relative animate-fade-in">
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-[100] flex justify-center">
           {[...Array(20)].map((_, i) => (
@@ -453,34 +475,34 @@ export default function Users() {
       </div>
 
       {activeTab === "users" ? (
-        <Card>
+        <Card className="animate-fade-in">
           <CardHeader
             actions={
-              <div className="flex gap-2">
+              <div className="flex gap-3 items-center flex-wrap">
                 <div className="relative">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={16}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Buscar..."
-                    className="pl-9 pr-4 py-1.5 text-sm bg-gray-50 border border-gray-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Input 
+                    placeholder="Buscar por nombre, doc o correo..." 
+                    className="pl-10 pr-9 w-72"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                   />
+                  {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-                <Select
+                <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  options={[
-                    { value: "all", label: "Todos los Roles" },
-                    { value: "admin", label: "Admins" },
-                    { value: "asesor", label: "Asesores" },
-                    { value: "freelancer", label: "Freelancers" },
-                  ]}
-                  className="w-32 py-1.5"
-                />
+                  className="text-sm border border-gray-border rounded-lg px-3 py-2 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">Todos los Roles</option>
+                  <option value="admin">Admins</option>
+                  <option value="asesor">Asesores</option>
+                  <option value="freelancer">Freelancers</option>
+                </select>
               </div>
             }
           >
@@ -488,14 +510,23 @@ export default function Users() {
           </CardHeader>
           <Table
             headers={[
-              "#",
-              "Usuario",
-              "Rol",
-              "Documento",
-              "Teléfono",
-              "Estado",
-              "Acciones",
-            ]}
+              { key: 'id', label: '#' },
+              { key: 'name', label: 'Usuario' },
+              { key: 'role', label: 'Rol' },
+              { key: 'docNumber', label: 'Documento' },
+              { key: 'phone', label: 'Teléfono' },
+              { key: 'status', label: 'Estado' },
+              { key: null, label: 'Acciones' }
+            ].map(header => (
+              <div 
+                key={header.label}
+                className={`flex items-center gap-2 ${header.key ? 'cursor-pointer hover:text-primary transition-colors' : ''}`}
+                onClick={() => header.key && requestSort(header.key as any)}
+              >
+                {header.label}
+                {header.key && <SortIcon active={sortConfig.key === header.key} direction={sortConfig.direction} />}
+              </div>
+            ))}
           >
             {salesLoading && data.users.length === 0 ? (
               [...Array(5)].map((_, i) => (
@@ -517,17 +548,17 @@ export default function Users() {
                   <TableCell><div className="h-8 w-28 bg-gray-200 rounded-lg animate-pulse" /></TableCell>
                 </TableRow>
               ))
-            ) : filteredUsers.map((user) => (
+            ) : paginatedUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar src={user.avatar} name={user.name} />
                     <div className="flex flex-col">
-                      <span className="font-medium text-primary leading-tight">
+                      <span className="font-medium text-gray-900 leading-tight">
                         {user.name}
                       </span>
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-xs text-gray-500">
                         {user.email}
                       </span>
                     </div>
@@ -536,15 +567,15 @@ export default function Users() {
                 <TableCell>
                   <Badge
                     variant={user.role === "admin" ? "active" : "inactive"}
-                    className="uppercase text-[9px]"
+                    className="uppercase text-[10px]"
                   >
                     {ROLE_LABELS[user.role] || user.role}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-xs">
+                <TableCell className="text-sm">
                   {user.docType} {user.docNumber}
                 </TableCell>
-                <TableCell className="text-xs">{user.phone}</TableCell>
+                <TableCell className="text-sm">{user.phone}</TableCell>
                 <TableCell>
                   <Badge variant={user.status}>
                     {user.status === "active" ? "Activo" : "Inactivo"}
@@ -595,6 +626,42 @@ export default function Users() {
               </TableRow>
             ))}
           </Table>
+
+          <div className="p-4 bg-gray-50/30 border-t border-gray-border flex items-center justify-between">
+            <span className="text-xs text-gray-500">
+              Mostrando {Math.min(paginatedUsers.length + (currentPage - 1) * itemsPerPage, filteredUsers.length)} de {filteredUsers.length} usuarios
+              {filterRole !== 'all' && <span className="ml-1 text-primary font-medium">· Filtro: {filterRole}</span>}
+            </span>
+            {totalPages > 1 && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" size="sm" 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={16} /> Anterior
+                </Button>
+                <div className="flex items-center px-3 text-xs font-bold text-primary bg-white border border-gray-border rounded-lg">
+                  {currentPage} / {totalPages}
+                </div>
+                <Button 
+                  variant="outline" size="sm" 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente <ChevronRight size={16} />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {filteredUsers.length === 0 && !salesLoading && (
+            <div className="flex flex-col items-center justify-center p-12 text-gray-500 bg-white">
+              <UserX size={48} className="text-gray-200 mb-4" />
+              <p className="text-lg font-medium">No se encontraron usuarios</p>
+              <p className="text-sm">Prueba ajustando los términos de búsqueda.</p>
+            </div>
+          )}
         </Card>
       ) : (
         <Card className="animate-fade-in">

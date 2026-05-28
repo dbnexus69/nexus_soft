@@ -50,6 +50,7 @@ frontend/dist/
 frontend/dist-ssr/
 frontend/.tsbuildinfo
 frontend/.vite/
+frontend/build/
 
 # Temporary & logs
 logs/

@@ -71,7 +71,7 @@ const STEPS = [
 ] as const;
 
 export default function NewSaleWizard({ onClose, onSuccess }: Props) {
-  const { data, addSale } = useData();
+  const { data, addSale, fetchClients, fetchUsers, fetchCommissionAgents } = useData();
   const { user } = useAuth();
 
   const [step, setStep] = useState(1);
@@ -110,6 +110,13 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   useEffect(() => {
     localStorage.setItem("itea_new_sale_draft", JSON.stringify(form));
   }, [form]);
+
+  // Fetch data needed for comboboxes if not already loaded or to ensure freshness
+  useEffect(() => {
+    if (data.clients.length === 0) fetchClients();
+    if (data.users.length === 0) fetchUsers();
+    if (data.commissionAgents.length === 0) fetchCommissionAgents();
+  }, [fetchClients, fetchUsers, fetchCommissionAgents]);
 
   // Compute Totals Automatically
   useEffect(() => {

@@ -152,7 +152,8 @@ export default function Itineraries() {
   const getDayKey = (day: number, month: number, year: number) => 
     `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   if (!canView('itineraries')) {
     return (

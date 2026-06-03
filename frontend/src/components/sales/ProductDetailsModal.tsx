@@ -2,6 +2,17 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { formatDate } from "../../utils/formatters";
+import { type AirportInfo } from "../../utils/airportInfo";
+
+// Format time in 12-hour AM/PM
+const formatTimeAMPM = (dateStr: string) => new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+// Get full airport display name
+const getAirport = (code: string, map?: Record<string, AirportInfo>) => {
+  const info = map?.[code];
+  return info ? `${info.city} (${code}) - ${info.name}` : code;
+};
+
 import {
   Plane,
   Building2,
@@ -24,6 +35,7 @@ import {
 interface ProductDetailsModalProps {
   product: { type: string; data: any[] } | null;
   onClose: () => void;
+  airportMap?: Record<string, AirportInfo>;
 }
 
 function safe(val: any, fallback = "-") {
@@ -62,7 +74,7 @@ function renderGrid(items: { label: string; value: any }[]) {
   );
 }
 
-export default function ProductDetailsModal({ product, onClose }: ProductDetailsModalProps) {
+export default function ProductDetailsModal({ product, onClose, airportMap }: ProductDetailsModalProps) {
   if (!product) return null;
 
   const renderContent = () => {
@@ -139,14 +151,14 @@ export default function ProductDetailsModal({ product, onClose }: ProductDetails
                   </div>
                   {outboundLegs.map((leg: any, lIdx: number) => (
                     <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-gray-150 items-center">
-                      <div className="font-semibold text-gray-800">{leg.origin || "-"} <span className="text-gray-400 mx-1">→</span> {leg.destination || "-"}</div>
+                      <div className="font-semibold text-gray-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
-                        {leg.date ? `${formatDate(leg.date)} ${new Date(leg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "-"}
+                        {leg.date ? `${formatDate(leg.date)} ${formatTimeAMPM(leg.date)}` : "-"}
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Llegada</span>
-                        {leg.arrivalDate ? `${formatDate(leg.arrivalDate)} ${new Date(leg.arrivalDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "-"}
+                        {leg.arrivalDate ? `${formatDate(leg.arrivalDate)} ${formatTimeAMPM(leg.arrivalDate)}` : "-"}
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Vuelo</span>
@@ -175,14 +187,14 @@ export default function ProductDetailsModal({ product, onClose }: ProductDetails
                   </div>
                   {returnLegs.map((leg: any, lIdx: number) => (
                     <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-blue-50 items-center">
-                      <div className="font-semibold text-blue-800">{leg.origin || "-"} <span className="text-gray-400 mx-1">→</span> {leg.destination || "-"}</div>
+                      <div className="font-semibold text-blue-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
-                        {leg.date ? `${formatDate(leg.date)} ${new Date(leg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "-"}
+                        {leg.date ? `${formatDate(leg.date)} ${formatTimeAMPM(leg.date)}` : "-"}
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Llegada</span>
-                        {leg.arrivalDate ? `${formatDate(leg.arrivalDate)} ${new Date(leg.arrivalDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "-"}
+                        {leg.arrivalDate ? `${formatDate(leg.arrivalDate)} ${formatTimeAMPM(leg.arrivalDate)}` : "-"}
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Vuelo</span>

@@ -253,7 +253,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.listFlights({ perPage: 100 }).catch(() => ({ data: [] }));
       setData(prev => ({ ...prev, flights: res.data || [] }));
-    } catch {}
+    } catch (err) {
+      console.warn('[DataContext] Error fetching flights:', err);
+    }
   }, []);
 
   const fetchCommissionAgents = useCallback(async () => {
@@ -302,6 +304,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     invalidateDashboardCache();
     fetchSales();
     fetchClients();
+    fetchFlights();
   };
 
   const addUser = async (user: Omit<User, 'id'>): Promise<User> => {
@@ -371,6 +374,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, sales: updatedSales };
     });
     setDashboardData(null);
+    fetchFlights();
     return created;
   };
 
@@ -384,6 +388,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     invalidateSalesCache();
     invalidateDashboardCache();
     setDashboardData(null);
+    fetchFlights();
   };
 
   const deleteSale = async (id: number) => {
@@ -396,6 +401,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
     setDashboardData(null);
     invalidateDashboardCache();
+    fetchFlights();
   };
 
   const voidSale = async (id: number, reason: string) => {

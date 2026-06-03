@@ -204,7 +204,8 @@ const PRODUCT_INCLUDES = {
     prodTiqueteria: {
       include: {
         tramosVuelo: { include: { aeropuertoOrigen: true, aeropuertoDestino: true } },
-        aerolinea: true
+        aerolinea: true,
+        planEquipaje: true
       }
     }
   },
@@ -237,13 +238,24 @@ function mapPassengers(detalle) {
 }
 
 function mapLegs(legs) {
-  return (legs || []).map(l => ({
-    origin: l.aeropuertoOrigen?.codigoIata || null,
-    destination: l.aeropuertoDestino?.codigoIata || null,
-    flightNumber: l.nroVueloTramo,
-    seat: l.asiento || null,
-    date: l.salida?.toISOString() || null
-  }));
+  return (legs || []).map(l => {
+    const salidaStr = l.salida?.toISOString();
+    const llegadaStr = l.llegada?.toISOString();
+    return {
+      origin: l.aeropuertoOrigen?.codigoIata || null,
+      originCity: l.aeropuertoOrigen?.ciudad || null,
+      originName: l.aeropuertoOrigen?.nombre || null,
+      destination: l.aeropuertoDestino?.codigoIata || null,
+      destinationCity: l.aeropuertoDestino?.ciudad || null,
+      destinationName: l.aeropuertoDestino?.nombre || null,
+      flightNumber: l.nroVueloTramo,
+      seat: l.asiento || null,
+      date: salidaStr ? salidaStr.split('T')[0] : null,
+      time: salidaStr ? salidaStr.split('T')[1].substring(0, 5) : null,
+      arrivalDate: llegadaStr ? llegadaStr.split('T')[0] : null,
+      arrivalTime: llegadaStr ? llegadaStr.split('T')[1].substring(0, 5) : null,
+    };
+  });
 }
 
 const PRODUCT_TRANSFORMS = {
@@ -259,6 +271,11 @@ const PRODUCT_TRANSFORMS = {
       ticketNumber: t.nroTiquete,
       flightMode: t.modoVuelo,
       checkinStatus: t.checkinStatus,
+      baggagePlan: t.planEquipaje ? `${t.planEquipaje.tipoTarifa}` : null,
+      seatNumber: passengers.length > 0 ? passengers[0].asiento : null,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0,
       legs: mapLegs(t.tramosVuelo),
       passengerInfo: passengers.length > 0
         ? { name: passengers[0].nombreCompleto, docType: passengers[0].tipoDocumento, docNumber: passengers[0].nroDocumento }
@@ -278,6 +295,10 @@ const PRODUCT_TRANSFORMS = {
       endDate: h.fechaSalida?.toISOString().split('T')[0] || null,
       observations: h.observaciones,
       guests: passengers.map(p => ({ name: p.nombreCompleto, docType: String(p.tipoDocumento || ''), docNumber: p.nroDocumento || '' }))
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   seguros_viaje(d, passengers, target) {
@@ -294,6 +315,10 @@ const PRODUCT_TRANSFORMS = {
       contactNumber: s.telefonoEmergencia,
       address: s.direccionAsegurado,
       members: passengers.map(p => ({ name: p.nombreCompleto, docType: String(p.tipoDocumento || ''), docNumber: p.nroDocumento || '' }))
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   planes(d, passengers, target) {
@@ -321,6 +346,10 @@ const PRODUCT_TRANSFORMS = {
       confirmationNumber: p.numeroConfirmacion,
       observations: p.observaciones,
       guests: passengers.map(p => ({ name: p.nombreCompleto, docType: String(p.tipoDocumento || ''), docNumber: p.nroDocumento || '' }))
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   checkin(d, passengers, target) {
@@ -335,6 +364,10 @@ const PRODUCT_TRANSFORMS = {
       phone: c.telefonoContacto,
       specialNeeds: c.necesidadesEspeciales,
       needsWheelchair: c.usaSillaRuedas
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   documentacion_migratoria(d, passengers, target) {
@@ -347,6 +380,10 @@ const PRODUCT_TRANSFORMS = {
       passportNumber: m.pasaporteNro,
       passportExpiry: m.pasaporteVence?.toISOString() || null,
       destinationCountry: m.paisDestino
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   simcard(d, passengers, target) {
@@ -360,6 +397,10 @@ const PRODUCT_TRANSFORMS = {
       dataPlan: s.planDatos,
       simType: s.tipoSim,
       deliveryMethod: s.metodoEntrega
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   renta_vehiculos(d, passengers, target) {
@@ -376,6 +417,10 @@ const PRODUCT_TRANSFORMS = {
       additionalDrivers: a.conductoresAdicionales,
       insuranceType: a.tipoSeguro,
       guaranteeCreditCard: a.tarjetaGarantiaInfo
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   renta_fincas(d, passengers, target) {
@@ -392,6 +437,10 @@ const PRODUCT_TRANSFORMS = {
       hasPets: f.tieneMascotas,
       petType: f.tipoMascota,
       additionalServices: f.serviciosExtra?.split(', ') || []
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   tours(d, passengers, target) {
@@ -409,6 +458,10 @@ const PRODUCT_TRANSFORMS = {
       pickupPoint: t.puntoEncuentro,
       medicalConditions: t.condicionesMedicas,
       phone: t.telefonoContacto
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   centros_convencion(d, passengers, target) {
@@ -427,6 +480,10 @@ const PRODUCT_TRANSFORMS = {
       avEquipment: e.equiposAv?.split(', ') || [],
       hasCatering: e.requiereCatering,
       cateringNotes: e.notasCatering
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   restaurantes(d, passengers, target) {
@@ -442,6 +499,10 @@ const PRODUCT_TRANSFORMS = {
       dietaryRestrictions: r.restriccionesDieta?.split(', ') || [],
       specialOccasion: r.ocasionEspecial,
       phone: r.telefonoContacto
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   visa(d, passengers, target) {
@@ -458,6 +519,10 @@ const PRODUCT_TRANSFORMS = {
       visaType: v.tipoVisa,
       estimatedTravelDate: v.fechaEstimadaViaje?.toISOString() || null,
       email: v.emailContacto
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   pasaporte(d, passengers, target) {
@@ -472,6 +537,10 @@ const PRODUCT_TRANSFORMS = {
       processType: p.tipoTramite,
       estimatedTravelDate: p.fechaEstimadaViaje?.toISOString() || null,
       phone: p.telefonoContacto
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   },
   servicio_mascotas(d, passengers, target) {
@@ -490,6 +559,10 @@ const PRODUCT_TRANSFORMS = {
       destinationCountry: m.paisDestino,
       medicalConditions: m.condicionesMedicas,
       phone: m.telefonoContacto
+    ,
+      supplier: d.proveedor?.nombre || null,
+      supplierCost: d.costoProveedor || 0,
+      ta: d.ta || 0
     });
   }
 };

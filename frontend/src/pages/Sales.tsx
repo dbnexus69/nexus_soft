@@ -21,6 +21,7 @@ import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, formatDate } from "../utils/formatters";
+import { buildAirportMap } from "../utils/airportInfo";
 import { Sale } from "../types";
 import NewSaleWizard from "../components/sales/NewSaleWizard";
 import ProductDetailsModal from "../components/sales/ProductDetailsModal";
@@ -29,7 +30,8 @@ import SaleEditModal from "../components/sales/SaleEditModal";
 import SalesTable from "../components/sales/SalesTable";
 import StatCard from "../components/ui/StatCard";
 import CreditDashboard from "../components/sales/CreditDashboard";
-
+import { VoucherPDF } from "../components/sales/VoucherPDF";
+import { useRef } from "react";
 export default function Sales() {
   const { data, addSale, updateSale, voidSale, registerCreditPayment, deleteSalePayment, salesLoading, fetchSales, fetchClients } = useData();
   const { user, isAdmin } = useAuth();
@@ -52,6 +54,10 @@ export default function Sales() {
   const [isVoiding, setIsVoiding] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [voucherSale, setVoucherSale] = useState<Sale | null>(null);
+  const [voucherFullSale, setVoucherFullSale] = useState<Sale | null>(null);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+  const voucherRef = useRef<HTMLDivElement>(null);
+  const airportMap = useMemo(() => buildAirportMap(data.config.airports || []), [data.config.airports]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pagado' | 'credito' | 'abonado' | 'anulado'>('all');
@@ -140,6 +146,73 @@ export default function Sales() {
 
   const handleDownloadVoucher = (sale: Sale) => {
     setVoucherSale(sale);
+    setVoucherFullSale(null); // will be fetched on demand
+  };
+
+  const executeDownloadPDF = async () => {
+    if (!voucherSale) return;
+    setIsPdfGenerating(true);
+
+    try {
+      setSuccessMessage(`Cargando datos de la venta #${voucherSale.id}...`);
+      setShowSuccess(true);
+
+      // Step 1: Always fetch the FULL sale from API (list only has summary)
+      let fullSale: Sale = voucherSale;
+      try {
+        fullSale = await api.getSale(voucherSale.id);
+      } catch {
+        // fallback to what we have
+      }
+      setVoucherFullSale(fullSale);
+
+      // Step 2: Wait for React to render the VoucherPDF component with fresh data
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      if (!voucherRef.current) {
+        throw new Error('El contenedor del PDF no está listo');
+      }
+
+      setSuccessMessage(`Generando PDF...`);
+
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      const canvas = await html2canvas(voucherRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let position = 0;
+      const totalPages = Math.ceil(imgHeight / pageHeight);
+
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) doc.addPage();
+        doc.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, position, imgWidth, imgHeight);
+        position -= pageHeight;
+      }
+
+      doc.save(`Voucher_iTea_#${voucherSale.id}_${voucherSale.clientName.replace(/\s+/g, '_')}.pdf`);
+
+      setSuccessMessage(`✅ Voucher descargado correctamente`);
+      setTimeout(() => setShowSuccess(false), 3000);
+      setVoucherSale(null);
+      setVoucherFullSale(null);
+    } catch (error) {
+      console.error(error);
+      setSuccessMessage(`❌ Error al generar el PDF`);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } finally {
+      setIsPdfGenerating(false);
+    }
   };
 
   const handleVoidSale = async () => {
@@ -398,6 +471,7 @@ export default function Sales() {
         <ProductDetailsModal
           product={detailedProduct}
           onClose={() => setDetailedProduct(null)}
+          airportMap={airportMap}
         />
       )}
 
@@ -472,15 +546,15 @@ export default function Sales() {
             </Button>
             <Button
               variant="outline"
-              className="w-full flex justify-center items-center"
-              onClick={() => {
-                setSuccessMessage(`Descargando voucher de la venta #${voucherSale?.id}...`);
-                setShowSuccess(true);
-                setTimeout(() => setShowSuccess(false), 3000);
-                setVoucherSale(null);
-              }}
+              className="w-full flex justify-center items-center gap-2"
+              onClick={executeDownloadPDF}
+              disabled={isPdfGenerating}
             >
-              Descargar Voucher
+              {isPdfGenerating ? (
+                <><Loader2 size={16} className="animate-spin" /> Generando PDF...</>
+              ) : (
+                <>&#8595; Descargar Voucher</>
+              )}
             </Button>
             <Button
               variant="outline"
@@ -492,6 +566,9 @@ export default function Sales() {
           </div>
         </div>
       </Modal>
+
+      {/* COMPONENTE OCULTO PARA GENERAR PDF - usa la venta completa cargada del API */}
+      <VoucherPDF ref={voucherRef} sale={voucherFullSale} airportMap={airportMap} />
     </div>
   );
 }

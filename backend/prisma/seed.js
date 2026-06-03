@@ -3,31 +3,48 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
+const SALT_ROUNDS = 12;
+
+// ── Helpers idempotentes ──────────────────────────────────────────
+async function upsertByUnique(model, where, data) {
+  return prisma[model].upsert({ where, update: {}, create: data });
+}
+
+async function upsertByUniqueWithData(model, where, data) {
+  return prisma[model].upsert({ where, update: data, create: data });
+}
+
+async function createIfNotExists(model, where, data) {
+  const existing = await prisma[model].findFirst({ where });
+  if (existing) return existing;
+  return prisma[model].create({ data });
+}
+
 async function main() {
   console.log('🌱 Iniciando seed...');
-  const SALT = await bcrypt.genSalt(12);
+  const SALT = await bcrypt.genSalt(SALT_ROUNDS);
 
   // =========================================================
   // 1. CATÁLOGOS BASE
   // =========================================================
 
-  const tipoCC = await prisma.tiposDocumento.create({ data: { nombre: 'Cédula de Ciudadanía', abreviatura: 'CC' } });
-  const tipoCE = await prisma.tiposDocumento.create({ data: { nombre: 'Cédula de Extranjería', abreviatura: 'CE' } });
-  const tipoPasaporte = await prisma.tiposDocumento.create({ data: { nombre: 'Pasaporte', abreviatura: 'Pasaporte' } });
-  const tipoNIT = await prisma.tiposDocumento.create({ data: { nombre: 'NIT', abreviatura: 'NIT' } });
+  const tipoCC   = await upsertByUnique('tiposDocumento', { abreviatura: 'CC' }, { nombre: 'Cédula de Ciudadanía', abreviatura: 'CC' });
+  const tipoCE   = await upsertByUnique('tiposDocumento', { abreviatura: 'CE' }, { nombre: 'Cédula de Extranjería', abreviatura: 'CE' });
+  const tipoPasaporte = await upsertByUnique('tiposDocumento', { abreviatura: 'Pasaporte' }, { nombre: 'Pasaporte', abreviatura: 'Pasaporte' });
+  const tipoNIT  = await upsertByUnique('tiposDocumento', { abreviatura: 'NIT' }, { nombre: 'NIT', abreviatura: 'NIT' });
   console.log('  ✓ Tipos de documento');
 
-  const mpEfectivo = await prisma.metodosPago.create({ data: { nombre: 'Efectivo' } });
-  const mpTransferencia = await prisma.metodosPago.create({ data: { nombre: 'Transferencia' } });
-  const mpTarjetaCredito = await prisma.metodosPago.create({ data: { nombre: 'Tarjeta de Crédito' } });
-  const mpTarjetaDebito = await prisma.metodosPago.create({ data: { nombre: 'Tarjeta Débito' } });
-  const mpPSE = await prisma.metodosPago.create({ data: { nombre: 'PSE' } });
-  const mpConsignacion = await prisma.metodosPago.create({ data: { nombre: 'Consignación' } });
+  const mpEfectivo       = await upsertByUnique('metodosPago', { nombre: 'Efectivo' }, { nombre: 'Efectivo' });
+  const mpTransferencia  = await upsertByUnique('metodosPago', { nombre: 'Transferencia' }, { nombre: 'Transferencia' });
+  const mpTarjetaCredito = await upsertByUnique('metodosPago', { nombre: 'Tarjeta de Crédito' }, { nombre: 'Tarjeta de Crédito' });
+  const mpTarjetaDebito  = await upsertByUnique('metodosPago', { nombre: 'Tarjeta Débito' }, { nombre: 'Tarjeta Débito' });
+  const mpPSE            = await upsertByUnique('metodosPago', { nombre: 'PSE' }, { nombre: 'PSE' });
+  const mpConsignacion   = await upsertByUnique('metodosPago', { nombre: 'Consignación' }, { nombre: 'Consignación' });
   console.log('  ✓ Métodos de pago');
 
-  const rolAdmin = await prisma.roles.create({ data: { nombre: 'admin', descripcion: 'Administrador del sistema' } });
-  const rolAsesor = await prisma.roles.create({ data: { nombre: 'asesor', descripcion: 'Asesor de ventas' } });
-  const rolFreelancer = await prisma.roles.create({ data: { nombre: 'freelancer', descripcion: 'Vendedor independiente' } });
+  const rolAdmin      = await upsertByUnique('roles', { nombre: 'admin' }, { nombre: 'admin', descripcion: 'Administrador del sistema' });
+  const rolAsesor     = await upsertByUnique('roles', { nombre: 'asesor' }, { nombre: 'asesor', descripcion: 'Asesor de ventas' });
+  const rolFreelancer = await upsertByUnique('roles', { nombre: 'freelancer' }, { nombre: 'freelancer', descripcion: 'Vendedor independiente' });
   console.log('  ✓ Roles');
 
   // =========================================================
@@ -40,9 +57,11 @@ async function main() {
 
   for (const modulo of modulos) {
     for (const accion of acciones) {
-      const permiso = await prisma.permisos.create({
-        data: { modulo, accion, descripcion: `${modulo} - ${accion}` }
-      });
+      const permiso = await createIfNotExists(
+        'permisos',
+        { modulo, accion },
+        { modulo, accion, descripcion: `${modulo} - ${accion}` }
+      );
       permisosCreados.push(permiso);
     }
   }
@@ -50,11 +69,11 @@ async function main() {
 
   // Asignar todos los permisos a admin
   for (const permiso of permisosCreados) {
-    await prisma.permisosRol.create({ data: { rolId: rolAdmin.id, permisoId: permiso.id } });
+    await upsertByUnique('permisosRol', { rolId_permisoId: { rolId: rolAdmin.id, permisoId: permiso.id } }, { rolId: rolAdmin.id, permisoId: permiso.id });
   }
   console.log('  ✓ Permisos admin');
 
-  // Permisos para asesor: view/crear en dashboard,sales,clients,itineraries
+  // Permisos para asesor
   const asesorAcciones = {
     dashboard: ['view'],
     sales: ['view', 'create', 'edit'],
@@ -66,12 +85,14 @@ async function main() {
   for (const [modulo, accs] of Object.entries(asesorAcciones)) {
     for (const accion of accs) {
       const p = permisosCreados.find(p => p.modulo === modulo && p.accion === accion);
-      if (p) await prisma.permisosRol.create({ data: { rolId: rolAsesor.id, permisoId: p.id } });
+      if (p) {
+        await upsertByUnique('permisosRol', { rolId_permisoId: { rolId: rolAsesor.id, permisoId: p.id } }, { rolId: rolAsesor.id, permisoId: p.id });
+      }
     }
   }
   console.log('  ✓ Permisos asesor');
 
-  // Permisos para freelancer: solo view en dashboard y view/crear en sales
+  // Permisos para freelancer
   const freelancerAcciones = {
     dashboard: ['view'],
     sales: ['view', 'create'],
@@ -83,7 +104,9 @@ async function main() {
   for (const [modulo, accs] of Object.entries(freelancerAcciones)) {
     for (const accion of accs) {
       const p = permisosCreados.find(p => p.modulo === modulo && p.accion === accion);
-      if (p) await prisma.permisosRol.create({ data: { rolId: rolFreelancer.id, permisoId: p.id } });
+      if (p) {
+        await upsertByUnique('permisosRol', { rolId_permisoId: { rolId: rolFreelancer.id, permisoId: p.id } }, { rolId: rolFreelancer.id, permisoId: p.id });
+      }
     }
   }
   console.log('  ✓ Permisos freelancer');
@@ -114,7 +137,7 @@ async function main() {
   ];
   const aerolineasMap = {};
   for (const a of aerolineasData) {
-    const aerolinea = await prisma.aerolineas.create({ data: a });
+    const aerolinea = await upsertByUnique('aerolineas', { codigoIata: a.codigoIata }, a);
     aerolineasMap[a.codigoIata] = aerolinea;
   }
   console.log('  ✓ Aerolíneas');
@@ -145,7 +168,7 @@ async function main() {
   ];
   const aeropuertosMap = {};
   for (const a of aeropuertosData) {
-    const aeropuerto = await prisma.aeropuertos.create({ data: a });
+    const aeropuerto = await upsertByUnique('aeropuertos', { codigoIata: a.codigoIata }, a);
     aeropuertosMap[a.codigoIata] = aeropuerto;
   }
   console.log('  ✓ Aeropuertos');
@@ -162,7 +185,11 @@ async function main() {
   ];
   const equipajeMap = {};
   for (const e of equipajeData) {
-    const eq = await prisma.politicasEquipaje.create({ data: e });
+    const eq = await createIfNotExists(
+      'politicasEquipaje',
+      { aerolineaId: e.aerolineaId, tipoTarifa: e.tipoTarifa },
+      e
+    );
     const key = `${e.aerolineaId}-${e.tipoTarifa}`;
     equipajeMap[key] = eq;
   }
@@ -181,7 +208,7 @@ async function main() {
     { nombre: 'Viajes Falabella', tipo: 'Agencia Mayorista', emailContacto: 'ventas@viajesfalabella.com', telefono: '+5767890123', web: 'https://www.viajesfalabella.com' },
   ];
   for (const p of proveedoresData) {
-    await prisma.proveedores.create({ data: p });
+    await createIfNotExists('proveedores', { nombre: p.nombre }, p);
   }
   console.log('  ✓ Proveedores');
 
@@ -197,7 +224,7 @@ async function main() {
     { nombre: 'Nequi Empresarial', metodoPagoId: mpTransferencia.id, ultimosCuatro: '7890', status: 'active' },
   ];
   for (const t of tarjetasData) {
-    await prisma.tarjetasAgencia.create({ data: t });
+    await createIfNotExists('tarjetasAgencia', { nombre: t.nombre }, t);
   }
   console.log('  ✓ Tarjetas de agencia');
 
@@ -230,23 +257,27 @@ async function main() {
 
   const usuariosMap = {};
   for (const u of usuariosData) {
-    const persona = await prisma.personas.create({
-      data: {
+    const persona = await upsertByUnique(
+      'personas',
+      { documento: u.documento },
+      {
         nombres: u.nombres, apellidos: u.apellidos,
         tipoDocumentoId: u.tipoDocumentoId, documento: u.documento,
         email: u.email, telefono: u.telefono, birthDate: u.birthDate,
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.nombres}`,
         status: u.status || 'active'
       }
-    });
+    );
     const rol = u.role === 'admin' ? rolAdmin : (u.role === 'freelancer' ? rolFreelancer : rolAsesor);
-    const usuario = await prisma.usuarios.create({
-      data: {
+    const usuario = await upsertByUnique(
+      'usuarios',
+      { email: u.email },
+      {
         personaId: persona.id, email: u.email,
         passwordHash: await bcrypt.hash(u.password, SALT),
         rolId: rol.id, status: u.status || 'active'
       }
-    });
+    );
     usuariosMap[u.email] = usuario;
   }
   console.log('  ✓ Usuarios');
@@ -276,17 +307,21 @@ async function main() {
   ];
   const clientesMap = {};
   for (const c of clientesData) {
-    const persona = await prisma.personas.create({
-      data: {
+    const persona = await upsertByUnique(
+      'personas',
+      { documento: c.documento },
+      {
         nombres: c.nombres, apellidos: c.apellidos,
         tipoDocumentoId: c.tipoDocumentoId, documento: c.documento,
         email: c.email, telefono: c.telefono, birthDate: c.birthDate,
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.nombres.split(' ')[0]}`
       }
-    });
-    const cliente = await prisma.clientes.create({
-      data: { personaId: persona.id, creadoPorId: usuariosMap['admin@itea.com'].id }
-    });
+    );
+    const cliente = await upsertByUnique(
+      'clientes',
+      { personaId: persona.id },
+      { personaId: persona.id, creadoPorId: usuariosMap['admin@itea.com'].id }
+    );
     clientesMap[`${c.nombres} ${c.apellidos}`] = cliente;
   }
   console.log('  ✓ Clientes');
@@ -303,15 +338,19 @@ async function main() {
   ];
   const comisionistasMap = {};
   for (const c of comisionistasData) {
-    const persona = await prisma.personas.create({
-      data: {
+    const persona = await upsertByUnique(
+      'personas',
+      { documento: c.documento },
+      {
         nombres: c.nombres, apellidos: c.apellidos,
         tipoDocumentoId: c.tipoDocumentoId, documento: c.documento
       }
-    });
-    const comisionista = await prisma.comisionistas.create({
-      data: { personaId: persona.id, tipo: c.tipo, umbralPago: 500000, acumulado: 0, status: 'Activo' }
-    });
+    );
+    const comisionista = await upsertByUnique(
+      'comisionistas',
+      { personaId: persona.id },
+      { personaId: persona.id, tipo: c.tipo, umbralPago: 500000, acumulado: 0, status: 'Activo' }
+    );
     comisionistasMap[c.documento] = comisionista;
   }
   console.log('  ✓ Comisionistas');
@@ -351,35 +390,53 @@ async function main() {
   ];
 
   for (const p of paquetesData) {
-    const paquete = await prisma.paquetes.create({
-      data: {
+    const paquete = await createIfNotExists(
+      'paquetes',
+      { nombre: p.nombre, destino: p.destino },
+      {
         nombre: p.nombre, destino: p.destino, status: p.status,
         serviciosIncluidos: p.serviciosIncluidos, noIncluido: p.noIncluido,
         creadoPorId: usuariosMap['admin@itea.com'].id
       }
-    });
-    await prisma.paqueteVuelo.create({
-      data: {
-        paqueteId: paquete.id, aerolineaId: aerolineasMap[p.aerolineaIata].id,
-        nroVuelo: p.nroVuelo, modoVuelo: p.modoVuelo
-      }
-    });
-    await prisma.paqueteHotel.create({
-      data: {
-        paqueteId: paquete.id, hotelNombre: p.hotelNombre,
-        tipoHotel: p.tipoHotel, regimen: p.regimen, noches: p.noches
-      }
-    });
-    await prisma.paqueteTarifas.create({
-      data: {
-        paqueteId: paquete.id, tarifaAdulto: p.tarifaAdulto, tarifaMenor: p.tarifaMenor
-      }
-    });
-    await prisma.paqueteAsistenciaMedica.create({
-      data: {
-        paqueteId: paquete.id, coberturaUsd: p.coberturaUsd, diasCobertura: p.diasCobertura
-      }
-    });
+    );
+    // Solo crear relaciones si el paquete es nuevo (no existía)
+    const existingVuelo = await prisma.paqueteVuelo.findFirst({ where: { paqueteId: paquete.id } });
+    if (!existingVuelo) {
+      await prisma.paqueteVuelo.create({
+        data: {
+          paqueteId: paquete.id, aerolineaId: aerolineasMap[p.aerolineaIata].id,
+          nroVuelo: p.nroVuelo, modoVuelo: p.modoVuelo
+        }
+      });
+    }
+
+    const existingHotel = await prisma.paqueteHotel.findFirst({ where: { paqueteId: paquete.id } });
+    if (!existingHotel) {
+      await prisma.paqueteHotel.create({
+        data: {
+          paqueteId: paquete.id, hotelNombre: p.hotelNombre,
+          tipoHotel: p.tipoHotel, regimen: p.regimen, noches: p.noches
+        }
+      });
+    }
+
+    const existingTarifa = await prisma.paqueteTarifas.findFirst({ where: { paqueteId: paquete.id } });
+    if (!existingTarifa) {
+      await prisma.paqueteTarifas.create({
+        data: {
+          paqueteId: paquete.id, tarifaAdulto: p.tarifaAdulto, tarifaMenor: p.tarifaMenor
+        }
+      });
+    }
+
+    const existingAsistencia = await prisma.paqueteAsistenciaMedica.findFirst({ where: { paqueteId: paquete.id } });
+    if (!existingAsistencia) {
+      await prisma.paqueteAsistenciaMedica.create({
+        data: {
+          paqueteId: paquete.id, coberturaUsd: p.coberturaUsd, diasCobertura: p.diasCobertura
+        }
+      });
+    }
   }
   console.log('  ✓ Paquetes turísticos');
 
@@ -433,8 +490,15 @@ async function main() {
     const cliente = getCliente(v.clienteIndex);
     const comisionista = comisionistasMap[v.comisionistaDoc];
 
-    const venta = await prisma.ventas.create({
-      data: {
+    const venta = await createIfNotExists(
+      'ventas',
+      {
+        clienteId: cliente.id,
+        usuarioId: v.asesorId,
+        montoTotal: v.montoTotal,
+        status: v.status
+      },
+      {
         clienteId: cliente.id,
         usuarioId: v.asesorId,
         montoTotal: v.montoTotal,
@@ -451,87 +515,88 @@ async function main() {
         montoPagadoCredito: v.montoPagadoCredito || 0,
         observaciones: v.observaciones || ''
       }
-    });
+    );
 
-    // Crear detalle_venta + producto según categoría
-    const detalle = await prisma.detalleVenta.create({
-      data: {
-        ventaId: venta.id,
-        categoria: v.categoria,
-        nombreServicio: v.hotelNombre || `Servicio de ${v.categoria}`,
-        subtotal: v.costoProveedor,
-        ta: v.montoTotal - v.costoProveedor,
-        costoProveedor: v.costoProveedor || 0,
-        proveedorId: allProveedores[0]?.id,
-        fechaInicioViaje: v.fechaInicio,
-        fechaFinViaje: v.fechaFin,
-        origen: v.categoria === 'tiqueteria' ? 'Bogotá' : null,
-        destino: v.destino || null
+    const existingDetalle = await prisma.detalleVenta.findFirst({ where: { ventaId: venta.id } });
+    if (!existingDetalle) {
+      const detalle = await prisma.detalleVenta.create({
+        data: {
+          ventaId: venta.id,
+          categoria: v.categoria,
+          nombreServicio: v.hotelNombre || `Servicio de ${v.categoria}`,
+          subtotal: v.costoProveedor,
+          ta: v.montoTotal - v.costoProveedor,
+          costoProveedor: v.costoProveedor || 0,
+          proveedorId: allProveedores[0]?.id,
+          fechaInicioViaje: v.fechaInicio,
+          fechaFinViaje: v.fechaFin,
+          origen: v.categoria === 'tiqueteria' ? 'Bogotá' : null,
+          destino: v.destino || null
+        }
+      });
+
+      switch (v.categoria) {
+        case 'hoteleria':
+          await prisma.prodHoteleria.create({
+            data: {
+              detalleVentaId: detalle.id,
+              hotelNombre: v.hotelNombre,
+              destino: v.destino,
+              tipoHotel: 'hotel',
+              fechaEntrada: v.fechaInicio,
+              fechaSalida: v.fechaFin
+            }
+          });
+          break;
+        case 'tiqueteria': {
+          const prodTicket = await prisma.prodTiqueteria.create({
+            data: {
+              detalleVentaId: detalle.id,
+              aerolineaId: aerolineasMap['AV'].id,
+              nroReserva: `RES-${venta.id}`,
+              nroVuelo: `AV${100 + venta.id}`,
+              modoVuelo: 'round_trip',
+              planEquipajeId: equipajeMap[`${aerolineasMap['AV'].id}-Económica`]?.id
+            }
+          });
+          await prisma.tramosVuelo.create({
+            data: {
+              prodTiqueteriaId: prodTicket.id,
+              aeropuertoOrigenId: aeropuertosMap['BOG'].id,
+              aeropuertoDestinoId: aeropuertosMap['MDE'].id,
+              salida: new Date('2026-05-15T10:00:00'),
+              llegada: new Date('2026-05-15T11:00:00'),
+              nroVueloTramo: `AV${100 + venta.id}`,
+              orden: 1
+            }
+          });
+          break;
+        }
+        case 'planes':
+          await prisma.prodPlanes.create({
+            data: {
+              detalleVentaId: detalle.id,
+              nombrePlan: 'Plan San Andrés',
+              aerolineaId: aerolineasMap['AV'].id,
+              adultosCount: 2, menoresCount: 0,
+              fechaViajeInicio: new Date('2026-06-01'),
+              fechaViajeFin: new Date('2026-06-05')
+            }
+          });
+          break;
+        case 'seguros_viaje':
+          await prisma.prodSeguros.create({
+            data: {
+              detalleVentaId: detalle.id,
+              tipoSeguro: 'todo_riesgo',
+              coberturaUsd: 100000,
+              diasCobertura: 15,
+              contactoEmergencia: 'Contacto de emergencia',
+              telefonoEmergencia: '3000000000'
+            }
+          });
+          break;
       }
-    });
-
-    // Crear producto según categoría
-    switch (v.categoria) {
-      case 'hoteleria':
-        await prisma.prodHoteleria.create({
-          data: {
-            detalleVentaId: detalle.id,
-            hotelNombre: v.hotelNombre,
-            destino: v.destino,
-            tipoHotel: 'hotel',
-            fechaEntrada: v.fechaInicio,
-            fechaSalida: v.fechaFin
-          }
-        });
-        break;
-      case 'tiqueteria':
-        const prodTicket = await prisma.prodTiqueteria.create({
-          data: {
-            detalleVentaId: detalle.id,
-            aerolineaId: aerolineasMap['AV'].id,
-            nroReserva: `RES-${venta.id}`,
-            nroVuelo: `AV${100 + venta.id}`,
-            modoVuelo: 'round_trip',
-            planEquipajeId: equipajeMap[`${aerolineasMap['AV'].id}-Económica`]?.id
-          }
-        });
-        await prisma.tramosVuelo.create({
-          data: {
-            prodTiqueteriaId: prodTicket.id,
-            aeropuertoOrigenId: aeropuertosMap['BOG'].id,
-            aeropuertoDestinoId: aeropuertosMap['MDE'].id,
-            salida: new Date('2026-05-15T10:00:00'),
-            llegada: new Date('2026-05-15T11:00:00'),
-            nroVueloTramo: `AV${100 + venta.id}`,
-            orden: 1
-          }
-        });
-        // Crear vuelo en la tabla flights virtual (VentasMensuales la maneja)
-        break;
-      case 'planes':
-        await prisma.prodPlanes.create({
-          data: {
-            detalleVentaId: detalle.id,
-            nombrePlan: 'Plan San Andrés',
-            aerolineaId: aerolineasMap['AV'].id,
-            adultosCount: 2, menoresCount: 0,
-            fechaViajeInicio: new Date('2026-06-01'),
-            fechaViajeFin: new Date('2026-06-05')
-          }
-        });
-        break;
-      case 'seguros_viaje':
-        await prisma.prodSeguros.create({
-          data: {
-            detalleVentaId: detalle.id,
-            tipoSeguro: 'todo_riesgo',
-            coberturaUsd: 100000,
-            diasCobertura: 15,
-            contactoEmergencia: 'Contacto de emergencia',
-            telefonoEmergencia: '3000000000'
-          }
-        });
-        break;
     }
   }
   console.log('  ✓ Ventas de ejemplo');
@@ -546,7 +611,6 @@ async function main() {
   };
   const baseRevenue = 8500000;
   const years = [2025, 2026];
-  let idCount = 0;
 
   for (const year of years) {
     for (let month = 1; month <= 12; month++) {
@@ -556,9 +620,10 @@ async function main() {
       const count = Math.round(8 * factor * variance);
       const hotelShare = 0.32, flightShare = 0.28, packageShare = 0.22, insuranceShare = 0.1, transferShare = 0.08;
 
-      await prisma.ventasMensuales.create({
-        data: {
-          id: ++idCount,
+      await upsertByUniqueWithData(
+        'ventasMensuales',
+        { year_month: { year, month } },
+        {
           year, month, total, count,
           hoteles: Math.round(total * hotelShare),
           vuelos: Math.round(total * flightShare),
@@ -566,7 +631,7 @@ async function main() {
           seguros: Math.round(total * insuranceShare),
           transferencias: Math.round(total * transferShare)
         }
-      });
+      );
     }
   }
   console.log('  ✓ Ventas mensuales (historial)');

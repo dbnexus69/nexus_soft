@@ -34,22 +34,70 @@ exports.list = async (req, res, next) => {
       })
     ]);
 
-    const data = tramos.map(t => ({
+    const formatLocalDate = (dt) => {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const formatLocalTime = (dt) => {
+      const h = String(dt.getHours()).padStart(2, '0');
+      const m = String(dt.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    };
+
+    const filteredTramos = tramos.filter(t => {
+      const venta = t.prodTiqueteria?.detalleVenta?.venta;
+      return venta && !venta.deletedAt && venta.status !== 'anulado';
+    });
+
+    // Group by product to determine ida/regreso correctly for round_trip with stops
+    const productTramos = {};
+    for (const t of filteredTramos) {
+      const pid = t.prodTiqueteriaId;
+      if (!productTramos[pid]) productTramos[pid] = [];
+      productTramos[pid].push(t);
+    }
+    const tramoType = {};
+    for (const ptramos of Object.values(productTramos)) {
+      const modo = ptramos[0]?.prodTiqueteria?.modoVuelo;
+      ptramos.sort((a, b) => a.orden - b.orden);
+      if (modo === 'round_trip') {
+        const dates = [...new Set(ptramos.map(t => formatLocalDate(t.salida)))];
+        if (dates.length >= 2) {
+          const firstDate = dates[0];
+          for (const t of ptramos) {
+            tramoType[t.id] = formatLocalDate(t.salida) === firstDate ? 'ida' : 'regreso';
+          }
+        } else {
+          for (const t of ptramos) {
+            tramoType[t.id] = t.orden === 1 ? 'ida' : 'regreso';
+          }
+        }
+      } else {
+        for (const t of ptramos) {
+          tramoType[t.id] = t.orden === 1 ? 'ida' : 'regreso';
+        }
+      }
+    }
+
+    const data = filteredTramos.map(t => ({
       id: t.id,
       passenger: t.prodTiqueteria?.detalleVenta?.venta?.cliente?.persona
         ? `${t.prodTiqueteria.detalleVenta.venta.cliente.persona.nombres} ${t.prodTiqueteria.detalleVenta.venta.cliente.persona.apellidos}`
         : 'Desconocido',
       route: `${t.aeropuertoOrigen?.codigoIata || '?'} - ${t.aeropuertoDestino?.codigoIata || '?'}`,
       airline: t.prodTiqueteria?.aerolinea?.nombre || '',
-      date: t.salida.toISOString().split('T')[0],
-      time: t.salida.toISOString().split('T')[1].substring(0, 5),
-      type: t.orden === 1 ? 'ida' : 'regreso',
+      date: formatLocalDate(t.salida),
+      time: formatLocalTime(t.salida),
+      type: tramoType[t.id] || 'ida',
       checkin: t.prodTiqueteria?.checkinStatus || 'pendiente',
       flightNumber: t.nroVueloTramo,
       seat: null
     }));
 
-    success(res, data, buildMeta(total, page, perPage));
+    success(res, data, buildMeta(filteredTramos.length, page, perPage));
   } catch (err) {
     next(err);
   }

@@ -2,7 +2,7 @@ import { ReactNode, useState, useRef, useEffect } from 'react';
 import { X, AlertCircle, ChevronDown, Search } from 'lucide-react';
 
 interface FormFieldProps {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
   error?: string;
   className?: string;
@@ -87,9 +87,10 @@ interface ComboboxProps {
   placeholder?: string;
   error?: string;
   className?: string;
+  preventNumbers?: boolean;
 }
 
-export function Combobox({ value, onChange, options, placeholder, error, className = '' }: ComboboxProps) {
+export function Combobox({ value, onChange, options, placeholder, error, className = '', preventNumbers }: ComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,9 +98,10 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
   useEffect(() => {
     if (!isOpen) {
       const selected = options.find(o => o.value === value);
-      setSearchTerm(selected ? selected.label : value);
+      const displayValue = selected ? selected.label : value;
+      setSearchTerm(preventNumbers ? displayValue.replace(/[0-9]/g, "") : displayValue);
     }
-  }, [value, options, isOpen]);
+  }, [value, options, isOpen, preventNumbers]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -130,8 +132,13 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
           }`}
           value={searchTerm}
           onChange={(e) => {
-            setSearchTerm(e.target.value);
+            let val = e.target.value;
+            if (preventNumbers) {
+              val = val.replace(/[0-9]/g, "");
+            }
+            setSearchTerm(val);
             setIsOpen(true);
+            onChange(val);
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
@@ -152,8 +159,12 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
                   value === opt.value ? 'bg-accent/10 text-accent font-bold' : 'text-gray-700'
                 }`}
                 onClick={() => {
-                  onChange(opt.value);
-                  setSearchTerm(opt.label);
+                  let val = opt.value;
+                  if (preventNumbers) {
+                    val = val.replace(/[0-9]/g, "");
+                  }
+                  onChange(val);
+                  setSearchTerm(opt.label.replace(/[0-9]/g, ""));
                   setIsOpen(false);
                 }}
               >

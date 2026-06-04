@@ -152,7 +152,8 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
             <Input 
               value={formData.name || ''} 
               onChange={e => {
-                setFormData({ ...formData, name: e.target.value });
+                const val = e.target.value.replace(/[0-9]/g, "");
+                setFormData({ ...formData, name: val });
                 if (errors.name) setErrors({ ...errors, name: '' });
               }} 
               placeholder="Ej. Hotel Dann Carlton"
@@ -599,6 +600,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                   onChange={(val) => setFormData({ ...formData, accommodation: { ...formData.accommodation, supplier: val } })}
                   options={data.config.suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
                   placeholder="Seleccionar proveedor..."
+                  preventNumbers={true}
                 />
               </FormField>
               <FormField label="Tipo de Hotel">

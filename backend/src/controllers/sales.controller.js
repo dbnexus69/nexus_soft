@@ -357,6 +357,9 @@ const PRODUCT_TRANSFORMS = {
     if (!c) return;
     target.push({
       id: c.id,
+      passengerName: passengers.length > 0 ? passengers[0].nombreCompleto : null,
+      docType: passengers.length > 0 ? passengers[0].tipoDocumento : null,
+      docNumber: passengers.length > 0 ? passengers[0].nroDocumento : null,
       flightOrReservation: c.nroVueloReserva,
       travelDate: c.fechaViaje?.toISOString() || null,
       seat: c.asiento,
@@ -375,6 +378,7 @@ const PRODUCT_TRANSFORMS = {
     if (!m) return;
     target.push({
       id: m.id,
+      passengerName: passengers.length > 0 ? passengers[0].nombreCompleto : null,
       requestedDocType: m.tipoTramiteMigratorio,
       nationality: m.nacionalidad,
       passportNumber: m.pasaporteNro,
@@ -391,6 +395,7 @@ const PRODUCT_TRANSFORMS = {
     if (!s) return;
     target.push({
       id: s.id,
+      passengerName: passengers.length > 0 ? passengers[0].nombreCompleto : null,
       destinationCountry: s.paisDestino,
       arrivalDate: s.fechaLlegada?.toISOString() || null,
       tripDuration: s.duracionViaje,
@@ -448,6 +453,7 @@ const PRODUCT_TRANSFORMS = {
     if (!t) return;
     target.push({
       id: t.id,
+      passengerName: passengers.length > 0 ? passengers[0].nombreCompleto : null,
       selectedTour: t.tourNombre,
       preferredDate: t.fechaPreferida?.toISOString() || null,
       adultsCount: t.adultosCount,
@@ -548,7 +554,7 @@ const PRODUCT_TRANSFORMS = {
     if (!m) return;
     target.push({
       id: m.id,
-      ownerName: null,
+      ownerName: passengers.length > 0 ? passengers[0].nombreCompleto : null,
       petName: m.mascotaNombre,
       species: m.especie,
       breed: m.raza,
@@ -833,7 +839,7 @@ const PRODUCT_HANDLERS = {
       lugarRecogida: d.pickupLocation || null,
       categoriaAuto: d.vehicleCategory || null,
       conductoresAdicionales: d.additionalDrivers || 0,
-      tipoSeguro: d.insuranceType || null,
+      tipoSeguro: d.insuranceType === 'basic' ? 'basico' : (d.insuranceType === 'all_risk' ? 'todo_riesgo' : null),
       tarjetaGarantiaInfo: d.guaranteeCreditCard || null
     })
   },
@@ -951,6 +957,42 @@ const PRODUCT_HANDLERS = {
     })
   }
 };
+
+async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaId) {
+  if (!name && !docNumber) {
+    return defaultPersonaId || null;
+  }
+  
+  if (docNumber) {
+    const match = await tx.personas.findUnique({
+      where: { documento: String(docNumber) }
+    });
+    if (match) return match.id;
+  }
+
+  const nameParts = (name || '').trim().split(/\s+/);
+  const nombres = nameParts[0] || 'Pasajero';
+  const apellidos = nameParts.slice(1).join(' ') || 'Temporal';
+
+  let tipoDocumentoId = null;
+  if (docType) {
+    const td = await tx.tiposDocumento.findUnique({
+      where: { abreviatura: String(docType) }
+    });
+    if (td) tipoDocumentoId = td.id;
+  }
+
+  const newPersona = await tx.personas.create({
+    data: {
+      nombres,
+      apellidos,
+      tipoDocumentoId,
+      documento: docNumber ? String(docNumber) : null,
+      status: 'active'
+    }
+  });
+  return newPersona.id;
+}
 
 async function resolvePaymentMethodId(prisma, paymentMethod, cache) {
   if (!paymentMethod) return null;
@@ -1192,15 +1234,21 @@ exports.create = async (req, res, next) => {
           const productData = await handler.transform(item, undefined, tx);
           delete productData.detalleVentaId; // Omit foreign key for nested create
 
-          const pasajerosDetalleData = [];
-          if (personaId && (item.passengerInfo || item.guests)) {
-            const passengers = item.passengerInfo ? [item.passengerInfo] : (item.guests || []);
-            for (const p of passengers) {
-              pasajerosDetalleData.push({
-                personaId,
-                esTitular: true,
-                asiento: item.seatNumber || null
-              });
+           const pasajerosDetalleData = [];
+          if (personaId) {
+            const hasPassengerInfo = item.passengerInfo || item.guests || item.passengerName || item.ownerName ||
+              ['checkin', 'documentacion_migratoria', 'simcard', 'tours', 'servicio_mascotas', 'renta_vehiculos'].includes(handler.category);
+            
+            if (hasPassengerInfo) {
+              const passengers = item.passengerInfo ? [item.passengerInfo] : (item.guests || [{}]);
+              for (const p of passengers) {
+                const pid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName || item.passengerName || item.ownerName || item.mainDriver, p.docType || item.docType, p.docNumber || item.docNumber || item.licenseNumber || item.passportNumber || item.idNumber, personaId);
+                pasajerosDetalleData.push({
+                  personaId: pid,
+                  esTitular: p.esTitular ?? true,
+                  asiento: p.asiento || item.seatNumber || item.seat || null
+                });
+              }
             }
           }
 
@@ -1531,25 +1579,41 @@ exports.update = async (req, res, next) => {
           const productData = await handler.transform(item, detalle.id, tx);
           const product = await tx[handler.table].create({ data: productData });
 
+          const pid = personaId;
+          const passengersToCreate = [];
           if (item.passengerInfo || item.guests) {
-            const cliente = await tx.clientes.findUnique({
-              where: { id: venta.clienteId },
-              select: { personaId: true }
-            });
-            const pid = cliente?.personaId;
-            if (pid) {
-              const passengers = item.passengerInfo ? [item.passengerInfo] : (item.guests || []);
-              for (const p of passengers) {
-                await tx.pasajerosDetalle.create({
-                  data: {
-                    detalleVentaId: detalle.id,
-                    personaId: pid,
-                    esTitular: true,
-                    asiento: item.seatNumber || null
-                  }
-                });
-              }
+            const passengers = item.passengerInfo ? [item.passengerInfo] : (item.guests || []);
+            for (const p of passengers) {
+              const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, pid);
+              passengersToCreate.push({
+                personaId: resolvedPid,
+                esTitular: p.esTitular ?? true,
+                asiento: p.asiento || item.seatNumber || item.seat || null
+              });
             }
+          } else {
+            const passengerName = item.passengerName || item.mainDriver || item.responsibleName || item.ownerName || item.fullName || item.reservationName || item.contactName;
+            const docType = item.docType;
+            const docNumber = item.docNumber || item.licenseNumber || item.passportNumber || item.idNumber;
+            if (passengerName || docNumber || ['checkin', 'documentacion_migratoria', 'simcard', 'tours', 'servicio_mascotas', 'renta_vehiculos'].includes(handler.category)) {
+              const resolvedPid = await findOrCreatePersona(tx, passengerName, docType, docNumber, pid);
+              passengersToCreate.push({
+                personaId: resolvedPid,
+                esTitular: true,
+                asiento: item.seat || item.seatNumber || null
+              });
+            }
+          }
+
+          for (const passengerData of passengersToCreate) {
+            await tx.pasajerosDetalle.create({
+              data: {
+                detalleVentaId: detalle.id,
+                personaId: passengerData.personaId,
+                esTitular: passengerData.esTitular,
+                asiento: passengerData.asiento
+              }
+            });
           }
 
           if (handler.table === 'prodTiqueteria' && item.legs && item.legs.length > 0) {
@@ -2014,7 +2078,8 @@ exports.sendVoucher = async (req, res, next) => {
     });
 
     if (!emailResult.success) {
-      return error(res, 'Error al enviar el correo. Intenta de nuevo.', 500);
+      const errMsg = emailResult.error?.message || 'Error al enviar el correo. Intenta de nuevo.';
+      return error(res, errMsg, 500);
     }
 
     success(res, { message: `Voucher enviado a ${clientEmail}`, email: clientEmail });

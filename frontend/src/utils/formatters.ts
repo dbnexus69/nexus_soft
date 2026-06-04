@@ -12,6 +12,15 @@ export function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-CO');
 }
 
+export function formatDateTime(dateStr: string): string {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleString('es-CO', { 
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: true 
+  });
+}
+
 export function formatDateInput(date: Date): string {
   return date.toISOString().split('T')[0];
 }

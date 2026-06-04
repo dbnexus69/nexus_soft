@@ -96,7 +96,6 @@ export function VisaForm({ visa, client, suppliers, onChange }: VisaFormProps) {
           <FormField label="Fecha Estimada Viaje">
             <Input 
               type="date" 
-              required 
               min={new Date().toISOString().slice(0, 10)} 
               value={visa.estimatedTravelDate} 
               onChange={(e) => onChange({ estimatedTravelDate: e.target.value })} 

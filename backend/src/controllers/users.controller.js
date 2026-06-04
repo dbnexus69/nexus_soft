@@ -113,6 +113,7 @@ exports.getById = async (req, res, next) => {
       birthDate: usuario.persona.birthDate,
       lastLogin: usuario.ultimoLogin,
       createdAt: usuario.creadoAt,
+      
       customPermissions: usuario.permisosUsuario.length > 0 ? usuario.permisosUsuario.reduce((acc, pu) => {
         if (!acc[pu.permiso.modulo]) acc[pu.permiso.modulo] = {};
         const val = pu.valor || 'true';

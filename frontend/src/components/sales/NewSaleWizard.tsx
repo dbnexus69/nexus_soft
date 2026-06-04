@@ -865,9 +865,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 if (!visa.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
-              if (!visa.estimatedTravelDate) {
-                errors.push("Fecha Estimada de Viaje (requerida)");
-              } else {
+              if (visa.estimatedTravelDate) {
                 const now = new Date();
                 now.setHours(0, 0, 0, 0);
                 if (new Date(visa.estimatedTravelDate) < now) {
@@ -918,9 +916,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 }
               }
 
-              if (!passport.estimatedTravelDate) {
-                errors.push("Fecha Estimada de Viaje (requerida)");
-              } else {
+              if (passport.estimatedTravelDate) {
                 const now = new Date();
                 now.setHours(0, 0, 0, 0);
                 if (new Date(passport.estimatedTravelDate) < now) {
@@ -1232,6 +1228,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   checkIn={form.checkIns[activeIdx] || INITIAL_CHECKIN(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  baggage={data.config.baggage}
                   onChange={(updates) => {
                     const next = [...form.checkIns];
                     next[activeIdx] = { ...next[activeIdx], ...updates };

@@ -7,10 +7,11 @@ interface CheckInFormProps {
   checkIn: CheckInData;
   client: any;
   suppliers?: any[];
+  baggage?: any[];
   onChange: (updates: Partial<CheckInData>) => void;
 }
 
-export function CheckInForm({ checkIn, client, suppliers, onChange }: CheckInFormProps) {
+export function CheckInForm({ checkIn, client, suppliers, baggage, onChange }: CheckInFormProps) {
   return (
     <div className="space-y-6 animate-fade-in">
       {client && <ClientInfoSection client={client} />}
@@ -68,7 +69,10 @@ export function CheckInForm({ checkIn, client, suppliers, onChange }: CheckInFor
             <Combobox
               value={checkIn.baggage}
               onChange={(val) => onChange({ baggage: val })}
-              options={[
+              options={baggage && baggage.length > 0 ? baggage.map((b: any) => ({
+                value: `${b.airlineName} - ${b.fareType}`,
+                label: `${b.airlineName} - ${b.fareType}`
+              })) : [
                 { value: "Solo Artículo Personal", label: "Solo Artículo Personal" },
                 { value: "Maleta de Mano (10kg)", label: "Maleta de Mano (10kg)" },
                 { value: "Bodega (23kg)", label: "Bodega (23kg)" },

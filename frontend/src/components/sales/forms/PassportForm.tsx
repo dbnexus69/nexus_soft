@@ -61,7 +61,6 @@ export function PassportForm({ passport, client, suppliers, onChange }: Passport
           <FormField label="Fecha Estimada de Viaje">
             <Input 
               type="date" 
-              required 
               min={new Date().toISOString().slice(0, 10)} 
               value={passport.estimatedTravelDate} 
               onChange={(e) => onChange({ estimatedTravelDate: e.target.value })} 

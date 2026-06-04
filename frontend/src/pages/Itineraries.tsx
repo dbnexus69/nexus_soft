@@ -242,7 +242,26 @@ export default function Itineraries() {
           <Card className="overflow-hidden border-none shadow-lg">
             <div className="flex items-center justify-between p-4 bg-white border-b border-gray-border">
               <div className="flex items-center gap-4">
-                <h2 className="text-lg font-bold text-primary">{MONTHS[currentMonth]} {currentYear}</h2>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={currentMonth}
+                    onChange={(e) => setCurrentMonth(Number(e.target.value))}
+                    className="text-lg font-bold text-primary bg-transparent outline-none cursor-pointer hover:bg-gray-100 rounded p-1"
+                  >
+                    {MONTHS.map((m, i) => (
+                      <option key={m} value={i}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={currentYear}
+                    onChange={(e) => setCurrentYear(Number(e.target.value))}
+                    className="text-lg font-bold text-primary bg-transparent outline-none cursor-pointer hover:bg-gray-100 rounded p-1"
+                  >
+                    {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 3 + i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-border">
                   <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500">
                     <ChevronLeft size={18} />

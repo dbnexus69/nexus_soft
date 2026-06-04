@@ -192,6 +192,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, suppliers = [
               options={supplierOptions}
               placeholder="Seleccionar proveedor..."
               className="pl-7"
+              preventNumbers={true}
             />
           </div>
         </FormField>

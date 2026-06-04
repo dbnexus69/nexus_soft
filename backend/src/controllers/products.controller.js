@@ -9,6 +9,42 @@ const CATEGORIES = {
   visa: 'visa', passport: 'pasaporte', petService: 'servicio_mascotas'
 };
 
+async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaId) {
+  if (!name && !docNumber) {
+    return defaultPersonaId || null;
+  }
+  
+  if (docNumber) {
+    const match = await tx.personas.findUnique({
+      where: { documento: String(docNumber) }
+    });
+    if (match) return match.id;
+  }
+
+  const nameParts = (name || '').trim().split(/\s+/);
+  const nombres = nameParts[0] || 'Pasajero';
+  const apellidos = nameParts.slice(1).join(' ') || 'Temporal';
+
+  let tipoDocumentoId = null;
+  if (docType) {
+    const td = await tx.tiposDocumento.findUnique({
+      where: { abreviatura: String(docType) }
+    });
+    if (td) tipoDocumentoId = td.id;
+  }
+
+  const newPersona = await tx.personas.create({
+    data: {
+      nombres,
+      apellidos,
+      tipoDocumentoId,
+      documento: docNumber ? String(docNumber) : null,
+      status: 'active'
+    }
+  });
+  return newPersona.id;
+}
+
 async function getSale(saleId) {
   const id = parseInt(saleId);
   return prisma.ventas.findUnique({ where: { id } });
@@ -47,34 +83,47 @@ const productHandler = (category, tableName, transformData) => ({
         const transformed = transformData ? transformData(data, detalle.id) : { detalleVentaId: detalle.id, ...data };
         const product = await tx[tableName].create({ data: transformed });
 
-        const passengers = data.passengers?.length
-          ? data.passengers
-          : data.passengerInfo
-            ? [data.passengerInfo]
-            : data.guests?.length
-              ? data.guests
-              : null;
+        const pasajerosDetalleData = [];
+        const cliente = await tx.clientes.findUnique({
+          where: { id: venta.clienteId },
+          select: { personaId: true }
+        });
+        const defaultPersonaId = cliente?.personaId;
 
-        if (passengers && passengers.length > 0) {
-          const cliente = await tx.clientes.findUnique({
-            where: { id: venta.clienteId },
-            select: { personaId: true }
-          });
-          const defaultPersonaId = cliente?.personaId;
-          if (defaultPersonaId) {
-            for (const p of passengers) {
-              const pid = p.personaId ? parseInt(p.personaId) : defaultPersonaId;
-              if (!pid) continue;
-              await tx.pasajerosDetalle.create({
-                data: {
-                  detalleVentaId: detalle.id,
-                  personaId: pid,
-                  esTitular: p.esTitular ?? true,
-                  asiento: p.asiento || p.seat || null
-                }
-              });
-            }
+        if (data.passengers || data.passengerInfo || data.guests) {
+          const passengers = data.passengers ? data.passengers : (data.passengerInfo ? [data.passengerInfo] : (data.guests || []));
+          for (const p of passengers) {
+            const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, defaultPersonaId);
+            pasajerosDetalleData.push({
+              personaId: resolvedPid,
+              esTitular: p.esTitular ?? true,
+              asiento: p.asiento || p.seat || null
+            });
           }
+        } else {
+          const passengerName = data.passengerName || data.mainDriver || data.responsibleName || data.ownerName || data.fullName || data.reservationName || data.contactName;
+          const docType = data.docType;
+          const docNumber = data.docNumber || data.licenseNumber || data.passportNumber || data.idNumber;
+          
+          if (passengerName || docNumber || ['checkin', 'documentacion_migratoria', 'simcard', 'tours', 'servicio_mascotas', 'renta_vehiculos'].includes(category)) {
+            const resolvedPid = await findOrCreatePersona(tx, passengerName, docType, docNumber, defaultPersonaId);
+            pasajerosDetalleData.push({
+              personaId: resolvedPid,
+              esTitular: true,
+              asiento: data.seat || data.seatNumber || null
+            });
+          }
+        }
+
+        for (const passengerData of pasajerosDetalleData) {
+          await tx.pasajerosDetalle.create({
+            data: {
+              detalleVentaId: detalle.id,
+              personaId: passengerData.personaId,
+              esTitular: passengerData.esTitular,
+              asiento: passengerData.asiento
+            }
+          });
         }
 
         if (tableName === 'prodTiqueteria') {

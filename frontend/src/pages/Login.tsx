@@ -179,7 +179,9 @@ export default function Login() {
 
         {/* Footer del Login */}
         <p className="text-center mt-8 text-white/40 text-xs">
-          &copy; {new Date().getFullYear()} iTea Software de Viajes. Todos los derechos reservados.
+          &copy; {new Date().getFullYear()} iTea Servicio Exclusivo Para Agencias de Viajes 
+          <br></br>
+          Todos los derechos reservados.
         </p>
       </div>
     </div>

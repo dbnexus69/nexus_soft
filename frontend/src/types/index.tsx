@@ -533,6 +533,7 @@ export interface Flight {
   flightNumber?: string;
   seat?: string | null;
   reservationNumber?: string;
+  source?: "ticket" | "plan";
 }
 
 export interface CommissionAgent {

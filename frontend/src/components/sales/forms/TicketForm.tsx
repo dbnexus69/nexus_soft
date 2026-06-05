@@ -62,7 +62,7 @@ export function DateTimePicker({
   triggerError,
   fieldName,
   className = "",
-  popoverDirection,
+  popoverDirection = "up",
 }: DateTimePickerProps) {
   const [displayValue, setDisplayValue] = useState("");
   const [showTimePopover, setShowTimePopover] = useState(false);
@@ -264,7 +264,9 @@ export function DateTimePicker({
 
       {/* Popover de Selección de Hora */}
       {showTimePopover && (
-        <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-50 w-52 text-xs text-gray-700 animate-fade-in">
+        <div className={`absolute right-0 bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-50 w-52 text-xs text-gray-700 animate-fade-in ${
+          popoverDirection === "up" ? "bottom-full mb-2" : "top-10"
+        }`}>
           <div className="font-bold text-center border-b pb-1.5 mb-2 text-primary">
             Elegir Hora
           </div>

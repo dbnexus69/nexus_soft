@@ -550,7 +550,7 @@ export default function Sales() {
         onClose={() => setIsWizardOpen(false)}
         title="Nueva Venta"
         size="xl"
-        contentClassName="!p-0 flex flex-col h-[75vh] sm:h-[80vh] md:h-[85vh]"
+        contentClassName="!p-0 flex flex-col overflow-hidden h-[65vh] sm:h-[70vh] md:h-[75vh]"
       >
         <NewSaleWizard
           onClose={() => setIsWizardOpen(false)}

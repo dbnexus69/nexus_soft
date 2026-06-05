@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plane, X, Calendar as CalendarIcon, 
   UserCheck, PlaneTakeoff, PlaneLanding, Search, Filter, AlertCircle,
-  Clock, CheckCircle2, UploadCloud, ExternalLink
+  Clock, CheckCircle2, UploadCloud, ExternalLink, Package
 } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -42,7 +42,7 @@ export default function Itineraries() {
 
   // Estadísticas y filtros
   const pendingCheckins = useMemo(() => {
-    return data.flights.filter(f => f.checkin === 'pendiente').sort((a, b) => a.date.localeCompare(b.date));
+    return data.flights.filter(f => f.checkin === 'pendiente' && f.source !== 'plan').sort((a, b) => a.date.localeCompare(b.date));
   }, [data.flights]);
 
   const filteredPending = useMemo(() => {
@@ -324,22 +324,27 @@ export default function Itineraries() {
                           {displayFlights.map(flight => {
                             const client = data.clients.find(c => c.name === flight.passenger);
                             const docInfo = client ? `\n${client.docType}: ${client.docNumber}` : '';
+                            const isPlan = flight.source === 'plan';
                             return (
                             <div
                               key={flight.id}
-                              title={`${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}`}
+                              title={`${isPlan ? '📦 ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}`}
                               className={`px-2 py-1 rounded-md text-[10px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
-                                flight.type === 'ida' 
-                                  ? 'bg-blue-50 border-blue-100 text-blue-700' 
-                                  : 'bg-indigo-50 border-indigo-100 text-indigo-800'
+                                isPlan
+                                  ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                  : flight.type === 'ida' 
+                                    ? 'bg-blue-50 border-blue-100 text-blue-700' 
+                                    : 'bg-indigo-50 border-indigo-100 text-indigo-800'
                               }`}
                             >
-                              {flight.type === 'ida' ? <PlaneTakeoff size={10} className="shrink-0" /> : <PlaneLanding size={10} className="shrink-0" />}
+                              {isPlan ? <Package size={10} className="shrink-0" /> : flight.type === 'ida' ? <PlaneTakeoff size={10} className="shrink-0" /> : <PlaneLanding size={10} className="shrink-0" />}
                               <span className="truncate flex-1">{flight.passenger}</span>
                               <span className="opacity-60 shrink-0">{flight.time}</span>
+                              {!isPlan && (
                               <span title={flight.checkin === 'realizado' ? 'Check-in realizado' : 'Check-in pendiente'}
                                 className={`w-1.5 h-1.5 rounded-full shrink-0 ${flight.checkin === 'realizado' ? 'bg-green-500' : 'bg-yellow-400'}`}
                               />
+                              )}
                             </div>
                             );
                           })}
@@ -390,10 +395,19 @@ export default function Itineraries() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
-                            <span title={flight.checkin === 'realizado' ? 'Check-in realizado' : 'Check-in pendiente'}
-                              className={`w-2 h-2 rounded-full ${flight.checkin === 'realizado' ? 'bg-green-500' : 'bg-yellow-400'}`}
-                            />
-                            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">{flight.checkin === 'realizado' ? 'Listo' : 'Pendiente'}</span>
+                            {flight.source === 'plan' ? (
+                              <>
+                                <Package size={14} className="text-emerald-500" />
+                                <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Paquete</span>
+                              </>
+                            ) : (
+                              <>
+                                <span title={flight.checkin === 'realizado' ? 'Check-in realizado' : 'Check-in pendiente'}
+                                  className={`w-2 h-2 rounded-full ${flight.checkin === 'realizado' ? 'bg-green-500' : 'bg-yellow-400'}`}
+                                />
+                                <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">{flight.checkin === 'realizado' ? 'Listo' : 'Pendiente'}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -471,7 +485,7 @@ export default function Itineraries() {
                                 </div>
                               </div>
                             </div>
-                            {canEditItinerary('itineraries') && (
+                            {canEditItinerary('itineraries') && flight.source !== 'plan' && (
                               <Button 
                                 size="sm" 
                                 onClick={() => handleMarkCheckin(flight.id, flight.passenger)}

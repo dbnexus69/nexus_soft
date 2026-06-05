@@ -105,10 +105,105 @@ exports.list = async (req, res, next) => {
       checkin: t.prodTiqueteria?.checkinStatus || 'pendiente',
       flightNumber: t.nroVueloTramo,
       seat: null,
-      reservationNumber: t.prodTiqueteria?.nroReserva || ''
+      reservationNumber: t.prodTiqueteria?.nroReserva || '',
+      source: 'ticket'
     }));
 
-    success(res, data, buildMeta(filteredTramos.length, page, perPage));
+    // === Also include flights from packages/plans (prodPlanes) ===
+    const planWhere = {
+      OR: [
+        { fechaSalidaVuelo: { not: null } },
+        { fechaRegresoVuelo: { not: null } }
+      ],
+      detalleVenta: {
+        venta: {
+          deletedAt: null,
+          status: { not: 'anulado' },
+          ...(req.permissionScope === 'own' ? { usuarioId: req.user.id } : {})
+        }
+      }
+    };
+
+    const planes = await prisma.prodPlanes.findMany({
+      where: planWhere,
+      include: {
+        aerolinea: true,
+        detalleVenta: {
+          include: {
+            venta: {
+              include: {
+                cliente: {
+                  include: { persona: true }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    for (const p of planes) {
+      const venta = p.detalleVenta?.venta;
+      if (!venta) continue;
+
+      const passengerName = venta.cliente?.persona
+        ? `${venta.cliente.persona.nombres} ${venta.cliente.persona.apellidos}`
+        : 'Desconocido';
+      const airlineName = p.aerolinea?.nombre || '';
+      const planLabel = p.nombrePlan || 'Paquete';
+
+      // Ida flight (departure)
+      if (p.fechaSalidaVuelo) {
+        const depDate = p.fechaSalidaVuelo;
+        // Apply date filter if provided
+        if (dateFrom && depDate < new Date(dateFrom)) { /* skip */ }
+        else if (dateTo && depDate > new Date(dateTo)) { /* skip */ }
+        else {
+          data.push({
+            id: `plan-ida-${p.id}`,
+            passenger: passengerName,
+            route: `${planLabel}`,
+            airline: airlineName,
+            date: formatLocalDate(depDate),
+            time: formatLocalTime(depDate),
+            type: 'ida',
+            checkin: 'pendiente',
+            flightNumber: p.nroVuelo || '',
+            seat: null,
+            reservationNumber: p.nroReserva || '',
+            source: 'plan'
+          });
+        }
+      }
+
+      // Regreso flight (return)
+      if (p.fechaRegresoVuelo) {
+        const retDate = p.fechaRegresoVuelo;
+        if (dateFrom && retDate < new Date(dateFrom)) { /* skip */ }
+        else if (dateTo && retDate > new Date(dateTo)) { /* skip */ }
+        else {
+          data.push({
+            id: `plan-ret-${p.id}`,
+            passenger: passengerName,
+            route: `${planLabel}`,
+            airline: airlineName,
+            date: formatLocalDate(retDate),
+            time: formatLocalTime(retDate),
+            type: 'regreso',
+            checkin: 'pendiente',
+            flightNumber: p.nroVuelo || '',
+            seat: null,
+            reservationNumber: p.nroReserva || '',
+            source: 'plan'
+          });
+        }
+      }
+    }
+
+    // Sort all flights by date and time
+    data.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+    success(res, data, buildMeta(data.length, page, perPage));
   } catch (err) {
     next(err);
   }

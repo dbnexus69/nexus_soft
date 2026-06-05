@@ -44,7 +44,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
         hotelName: pkg.accommodation?.hotel || "",
         supplier: pkg.accommodation?.supplier || "",
         airline: pkg.flight?.airline || "",
-        flightNumber: pkg.flight?.legs?.[0]?.flightNumber || "",
+        flightNumber: (pkg.flight?.legs?.[0]?.flightNumber || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8),
         observations: `Incluye: ${pkg.includedServices || 'N/A'}\nNo Incluye: ${pkg.notIncluded || 'N/A'}`,
         adultsCount: 2,
         childrenCount: 0,
@@ -149,10 +149,11 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               required
               value={plan.flightNumber}
               onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
                 onChange({ flightNumber: cleaned });
               }}
               placeholder="Ej: AV9301"
+              maxLength={8}
             />
           </FormField>
           <FormField label={<span>Número de Tiquete <span className="text-red-500">*</span></span>}>
@@ -160,25 +161,26 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               required
               value={plan.ticketNumber}
               onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                const cleaned = e.target.value.replace(/\D/g, "").slice(0, 14);
                 onChange({ ticketNumber: cleaned });
               }}
-              placeholder="Número de 13 dígitos"
-              maxLength={13}
+              placeholder="13 a 14 dígitos numéricos"
+              maxLength={14}
             />
           </FormField>
-          <FormField label="Confirmación">
-            <Input
-              value={plan.confirmationNumber || ""}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ confirmationNumber: cleaned });
-              }}
-              placeholder="Número de confirmación"
-              maxLength={20}
-            />
-          </FormField>
-          <FormField label="Fecha Ida (Vuelo)">
+           <FormField label={<span>Confirmación <span className="text-red-500">*</span></span>}>
+             <Input
+               required
+               value={plan.confirmationNumber || ""}
+               onChange={(e) => {
+                 const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
+                 onChange({ confirmationNumber: cleaned });
+               }}
+               placeholder="6 caracteres (Ej: AB1234)"
+               maxLength={6}
+             />
+           </FormField>
+          <FormField label={<span>Fecha Ida (Vuelo) <span className="text-red-500">*</span></span>}>
             <DateTimePicker
               value={plan.flightDepartureDate || ""}
               onChange={(val) => onChange({ flightDepartureDate: val })}
@@ -187,7 +189,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               fieldName="Salida de ida del plan"
             />
           </FormField>
-          <FormField label="Llegada Ida (Vuelo)">
+          <FormField label={<span>Llegada Ida (Vuelo) <span className="text-red-500">*</span></span>}>
             <DateTimePicker
               value={plan.flightDepartureArrivalDate || ""}
               onChange={(val) => onChange({ flightDepartureArrivalDate: val })}
@@ -196,7 +198,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               fieldName="Llegada de ida del plan"
             />
           </FormField>
-          <FormField label="Fecha Vuelta (Vuelo)">
+          <FormField label={<span>Fecha Vuelta (Vuelo) <span className="text-red-500">*</span></span>}>
             <DateTimePicker
               value={plan.flightReturnDate || ""}
               onChange={(val) => onChange({ flightReturnDate: val })}
@@ -205,7 +207,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               fieldName="Salida de vuelta del plan"
             />
           </FormField>
-          <FormField label="Llegada Vuelta (Vuelo)">
+          <FormField label={<span>Llegada Vuelta (Vuelo) <span className="text-red-500">*</span></span>}>
             <DateTimePicker
               value={plan.flightReturnArrivalDate || ""}
               onChange={(val) => onChange({ flightReturnArrivalDate: val })}
@@ -214,7 +216,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               fieldName="Llegada de vuelta del plan"
             />
           </FormField>
-          <FormField label="Ingreso Hotel">
+          <FormField label={<span>Ingreso Hotel <span className="text-red-500">*</span></span>}>
             <DateTimePicker
               value={plan.startDate || ""}
               onChange={(val) => onChange({ startDate: val })}
@@ -223,7 +225,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               fieldName="Ingreso al hotel del plan"
             />
           </FormField>
-          <FormField label="Salida Hotel">
+          <FormField label={<span>Salida Hotel <span className="text-red-500">*</span></span>}>
             <DateTimePicker
               value={plan.endDate || ""}
               onChange={(val) => onChange({ endDate: val })}
@@ -289,7 +291,7 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
             <Users size={14} />
             Integrantes del Plan
           </h4>
-          <Button variant="outline" size="sm" onClick={addGuest}>
+          <Button type="button" variant="outline" size="sm" onClick={addGuest}>
             <PlusCircle size={14} className="mr-1" />
             Agregar
           </Button>
@@ -300,8 +302,12 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
                 <Input
                   value={guest.name}
-                  onChange={(e) => updateGuest(gIdx, { name: e.target.value })}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                    updateGuest(gIdx, { name: cleaned });
+                  }}
                   placeholder="Nombre completo"
+                  maxLength={70}
                 />
                 <Select
                   value={guest.docType}
@@ -313,12 +319,16 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
                 />
                 <Input
                   value={guest.docNumber}
-                  onChange={(e) => updateGuest(gIdx, { docNumber: e.target.value })}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                    updateGuest(gIdx, { docNumber: cleaned });
+                  }}
                   placeholder="Número de documento"
+                  maxLength={20}
                 />
               </div>
               {plan.guests.length > 1 && (
-                <Button variant="outline" size="sm" onClick={() => removeGuest(gIdx)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => removeGuest(gIdx)}>
                   <Trash2 size={14} className="text-red-500" />
                 </Button>
               )}

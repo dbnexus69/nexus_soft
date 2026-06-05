@@ -65,9 +65,9 @@ function renderGrid(items: { label: string; value: any }[]) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
       {items.map((item, i) => (
-        <div key={i}>
-          <span className="block text-xs text-gray-500">{item.label}</span>
-          <span className="font-semibold text-sm text-gray-800">{safe(item.value)}</span>
+        <div key={i} className="min-w-0">
+          <span className="block text-xs text-gray-500 truncate" title={item.label}>{item.label}</span>
+          <span className="font-semibold text-sm text-gray-800 block break-all whitespace-normal">{safe(item.value)}</span>
         </div>
       ))}
     </div>

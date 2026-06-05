@@ -58,6 +58,14 @@ exports.login = async (req, res, next) => {
       .map(pu => ({ modulo: pu.permiso.modulo, accion: pu.permiso.accion, valor: pu.valor }));
     permisos = [...permisos, ...userPermisos];
 
+    const maxAge = remember ? 1000 * 60 * 60 * 24 * 7 : 1000 * 60 * 60 * 24;
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge
+    });
+
     success(res, {
       user: {
         id: usuario.id,
@@ -86,8 +94,17 @@ exports.login = async (req, res, next) => {
 exports.logout = async (req, res, next) => {
   try {
     const header = req.headers.authorization;
-    const token = header.split(' ')[1];
-    await prisma.sesiones.deleteMany({ where: { tokenHash: token } });
+    if (header && header.startsWith('Bearer ')) {
+      const token = header.split(' ')[1];
+      await prisma.sesiones.deleteMany({ where: { tokenHash: token } });
+    }
+    
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
+
     success(res, { message: 'Sesión cerrada' });
   } catch (err) {
     next(err);

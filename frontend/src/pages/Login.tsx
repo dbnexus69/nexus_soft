@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, Plane, ShieldCheck, UserRound, ChevronRight, Info } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ChevronRight, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Input, FormField } from '../components/ui/Form';
 
@@ -13,7 +13,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,19 +48,19 @@ export default function Login() {
       {/* Contenedor del Login */}
       <div className="relative z-20 w-full max-w-md animate-fade-in-up">
         {/* Tarjeta de Login Glassmorphism */}
-        <div className="bg-white/65 backdrop-blur-xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,130,138,0.15)] p-8 border border-white/40 text-[#002855]">
+        <div className="bg-white/65 backdrop-blur-xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,130,138,0.15)] p-6 border border-white/40 text-[#002855]">
           {/* Logo Corporativo */}
-          <div className="text-center mb-6 flex flex-col items-center">
-            <img src="/itea logo.png" className="w-52 h-auto object-contain drop-shadow-md" alt="iCTea Logo" />
+          <div className="text-center mb-3 flex flex-col items-center">
+            <img src="/itea logo.png" className="w-40 h-auto object-contain drop-shadow-md" alt="iCTea Logo" />
           </div>
 
-          <div className="mb-6 text-center">
+          <div className="mb-4 text-center">
             <h2 className="text-xl font-bold text-[#002855]">Bienvenido de nuevo</h2>
             <p className="text-gray-500 text-sm">Ingresa tus credenciales para acceder al sistema.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <FormField label="Correo electrónico">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            <FormField label="Correo electrónico" className="mb-1">
               <Input
                 type="email"
                 value={email}
@@ -73,7 +72,7 @@ export default function Login() {
               />
             </FormField>
 
-            <FormField label="Contraseña">
+            <FormField label="Contraseña" className="mb-1">
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
@@ -112,7 +111,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-2 animate-shake">
+              <div className="p-2.5 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-2 animate-shake">
                 <Info size={16} className="text-red-500" />
                 {error}
               </div>
@@ -120,7 +119,7 @@ export default function Login() {
 
             <button 
               type="submit" 
-              className="w-full h-12 text-lg font-bold text-white bg-gradient-to-r from-[#002855] to-[#00828a] rounded-xl shadow-lg shadow-[#00828a]/15 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" 
+              className="w-full h-11 text-base font-bold text-white bg-gradient-to-r from-[#002855] to-[#00828a] rounded-xl shadow-lg shadow-[#00828a]/15 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" 
               disabled={isLoading}
             >
               {isLoading ? (
@@ -137,48 +136,10 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Sección de Cuentas Demo Mejorada */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <button 
-              onClick={() => setShowDemo(!showDemo)}
-              className="w-full flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#00828a] transition-colors"
-            >
-              <span>Cuentas de demostración</span>
-              <div className={`transition-transform duration-300 ${showDemo ? 'rotate-180' : ''}`}>
-                <ChevronRight size={14} className="rotate-90" />
-              </div>
-            </button>
-            
-            {showDemo && (
-              <div className="mt-4 grid grid-cols-1 gap-2 animate-fade-in">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between group hover:border-[#00828a]/30 transition-all cursor-pointer" onClick={() => {setEmail('admin@itea.com'); setPassword('Admin123');}}>
-                  <div>
-                    <p className="text-[10px] font-bold text-[#00828a] uppercase">Administrador</p>
-                    <p className="text-xs text-slate-600">admin@itea.com</p>
-                  </div>
-                  <ShieldCheck size={16} className="text-slate-300 group-hover:text-[#00828a] transition-colors" />
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between group hover:border-[#00828a]/30 transition-all cursor-pointer" onClick={() => {setEmail('juan@itea.com'); setPassword('Vendor123');}}>
-                  <div>
-                    <p className="text-[10px] font-bold text-[#00828a] uppercase">Asesor</p>
-                    <p className="text-xs text-slate-600">juan@itea.com</p>
-                  </div>
-                  <Plane size={16} className="text-slate-300 group-hover:text-[#00828a] transition-colors" />
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between group hover:border-[#00828a]/30 transition-all cursor-pointer" onClick={() => {setEmail('maria@itea.com'); setPassword('Vendor123');}}>
-                  <div>
-                    <p className="text-[10px] font-bold text-[#00828a] uppercase">Asesora</p>
-                    <p className="text-xs text-slate-600">maria@itea.com</p>
-                  </div>
-                  <UserRound size={16} className="text-slate-300 group-hover:text-[#00828a] transition-colors" />
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Footer del Login */}
-        <p className="text-center mt-8 text-white/40 text-xs">
+        <p className="text-center mt-4 text-white/40 text-xs">
           &copy; {new Date().getFullYear()} iTea Servicio Exclusivo Para Agencias de Viajes 
           <br></br>
           Todos los derechos reservados.

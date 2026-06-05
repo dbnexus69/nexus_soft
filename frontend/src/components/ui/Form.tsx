@@ -9,8 +9,9 @@ interface FormFieldProps {
 }
 
 export function FormField({ label, children, error, className = "" }: FormFieldProps) {
+  const hasMb = className.split(' ').some(c => c.startsWith('mb-'));
   return (
-    <div className={`mb-4 ${className}`}>
+    <div className={`${hasMb ? '' : 'mb-4'} ${className}`}>
       <label className={`block text-sm font-medium mb-1 ${error ? 'text-red-500' : 'text-gray-700'}`}>{label}</label>
       {children}
       {error && (

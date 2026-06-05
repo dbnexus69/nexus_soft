@@ -327,7 +327,7 @@ export default function Itineraries() {
                             return (
                             <div
                               key={flight.id}
-                              title={`${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${flight.checkin}`}
+                              title={`${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}`}
                               className={`px-2 py-1 rounded-md text-[10px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
                                 flight.type === 'ida' 
                                   ? 'bg-blue-50 border-blue-100 text-blue-700' 
@@ -463,6 +463,11 @@ export default function Itineraries() {
                                   <span className="flex items-center gap-1"><Filter size={12} /> {flight.route}</span>
                                   <span className="flex items-center gap-1"><Clock size={12} /> {formatDate(flight.date)} - {flight.time}</span>
                                   <span className="font-medium text-primary/60">{flight.airline}</span>
+                                  {flight.reservationNumber && (
+                                    <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-mono text-[10px] border border-blue-150 font-semibold">
+                                      Reserva: {flight.reservationNumber}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -628,6 +633,14 @@ export default function Itineraries() {
               <p className="text-sm font-bold text-primary truncate" title={modalClient?.email}>
                 {modalClient?.email || 'Sin correo registrado'}
               </p>
+            </div>
+            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
+              <p className="text-xs text-gray-500 font-medium mb-1">Nº Vuelo:</p>
+              <p className="text-sm font-bold text-primary">{selectedFlightForCheckin?.flightNumber || 'No registrado'}</p>
+            </div>
+            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
+              <p className="text-xs text-gray-500 font-medium mb-1">Código Reserva (PNR):</p>
+              <p className="text-sm font-bold text-primary font-mono select-all" title="Click para copiar">{selectedFlightForCheckin?.reservationNumber || 'No registrado'}</p>
             </div>
           </div>
 

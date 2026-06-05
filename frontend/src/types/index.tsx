@@ -25,7 +25,7 @@ export interface RolePermissions {
   dashboard: { view: "all" | "own" | "none" };
   sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
   clients: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
-  itineraries: { view: boolean; edit: boolean };
+  itineraries: { view: "all" | "own" | "none"; edit: boolean };
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
 }
 
@@ -33,14 +33,14 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
   sales: { view: "own", create: true, edit: true },
   clients: { view: "own", create: true, edit: true },
-  itineraries: { view: true, edit: false },
+  itineraries: { view: "own", edit: false },
   commissions: { view: false, create: false, edit: false, delete: false },
 };
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
   sales: { view: "own", create: true, edit: true },
   clients: { view: "own", create: true, edit: true },
-  itineraries: { view: true, edit: false },
+  itineraries: { view: "own", edit: false },
   commissions: { view: false, create: false, edit: false, delete: false },
 };
 
@@ -48,11 +48,11 @@ export const ADMIN_PERMISSIONS: RolePermissions = {
   dashboard: { view: "all" },
   sales: { view: "all", create: true, edit: true },
   clients: { view: "all", create: true, edit: true },
-  itineraries: { view: true, edit: true },
+  itineraries: { view: "all", edit: true },
   commissions: { view: true, create: true, edit: true, delete: true },
 };
 
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients'];
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
 export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTemplate: RolePermissions = DEFAULT_ASESOR_PERMISSIONS): RolePermissions {
   const normalized = JSON.parse(JSON.stringify(baseTemplate)) as RolePermissions;
@@ -532,6 +532,7 @@ export interface Flight {
   checkin: "pendiente" | "realizado" | "critico";
   flightNumber?: string;
   seat?: string | null;
+  reservationNumber?: string;
 }
 
 export interface CommissionAgent {

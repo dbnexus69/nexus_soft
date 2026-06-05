@@ -105,8 +105,8 @@ const emptyData: AppData = {
     airlines: [], suppliers: [], airports: [],
     baggage: [], packages: [],
     rolePermissions: {
-      asesor: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
-      freelancer: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: true, edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
+      asesor: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: 'own', edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
+      freelancer: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, itineraries: { view: 'own', edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
     },
   },
   salesHistory: [],

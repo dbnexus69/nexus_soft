@@ -14,6 +14,16 @@ exports.list = async (req, res, next) => {
       if (dateTo) where.salida.lte = new Date(dateTo);
     }
 
+    if (req.permissionScope === 'own') {
+      where.prodTiqueteria = {
+        detalleVenta: {
+          venta: {
+            usuarioId: req.user.id
+          }
+        }
+      };
+    }
+
     const [total, tramos] = await Promise.all([
       prisma.tramosVuelo.count({ where }),
       prisma.tramosVuelo.findMany({
@@ -94,7 +104,8 @@ exports.list = async (req, res, next) => {
       type: tramoType[t.id] || 'ida',
       checkin: t.prodTiqueteria?.checkinStatus || 'pendiente',
       flightNumber: t.nroVueloTramo,
-      seat: null
+      seat: null,
+      reservationNumber: t.prodTiqueteria?.nroReserva || ''
     }));
 
     success(res, data, buildMeta(filteredTramos.length, page, perPage));
@@ -115,6 +126,11 @@ exports.getById = async (req, res, next) => {
       }
     });
     if (!tramo) return error(res, 'Vuelo no encontrado', 404);
+
+    if (req.permissionScope === 'own' && tramo.prodTiqueteria?.detalleVenta?.venta?.usuarioId !== req.user.id) {
+      return error(res, 'No tiene permiso para ver este vuelo', 403);
+    }
+
     success(res, tramo);
   } catch (err) {
     next(err);
@@ -152,6 +168,10 @@ exports.updateCheckin = async (req, res, next) => {
       }
     });
     if (!tramo) return error(res, 'Vuelo no encontrado', 404);
+
+    if (req.permissionScope === 'own' && tramo.prodTiqueteria?.detalleVenta?.venta?.usuarioId !== req.user.id) {
+      return error(res, 'No tiene permiso para modificar este check-in', 403);
+    }
 
     const updated = await prisma.prodTiqueteria.update({
       where: { id: tramo.prodTiqueteriaId },

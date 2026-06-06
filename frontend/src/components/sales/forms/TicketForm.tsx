@@ -778,10 +778,10 @@ export function TicketForm({
               maxLength={6}
               value={ticket.reservationNumber}
               onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
                 onChange({ reservationNumber: cleaned });
               }}
-              placeholder="6 caracteres"
+              placeholder="6 caracteres exactos"
             />
           </FormField>
         </div>

@@ -17,6 +17,7 @@ lerna-debug.log*
 .env.development
 .env.test
 .env*.local
+.env.example
 
 # IDEs / Editors / System Files
 .vscode/

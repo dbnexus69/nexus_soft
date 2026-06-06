@@ -351,7 +351,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (!ticket) return false;
               if (!ticket.airline?.trim()) return false;
               if (!ticket.supplier?.trim()) return false;
-              if (!ticket.reservationNumber || ticket.reservationNumber.length !== 6) return false;
+              if (!ticket.reservationNumber || ticket.reservationNumber.length !== 6 || !/^[A-Z0-9]+$/.test(ticket.reservationNumber)) return false;
               if (!ticket.ticketNumber?.trim() || ticket.ticketNumber.length === 0 || ticket.ticketNumber.length > 13) return false;
               
               // Tramos de ida

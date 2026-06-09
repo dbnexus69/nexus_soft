@@ -18,6 +18,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // Configuración dinámica de CORS para soportar producción y desarrollo local
 const allowedOrigins = [
   env.frontendUrl,
+  'https://itea-samturtravel.com',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',

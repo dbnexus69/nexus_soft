@@ -31,6 +31,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isExpanded = isHovered || isMobileOpen;
 
+  const getShortName = (name?: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 4) return `${parts[0]} ${parts[2]}`; // Primer nombre y primer apellido
+    if (parts.length === 3) return `${parts[0]} ${parts[1]}`; // Primer nombre y primer apellido
+    return name;
+  };
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -173,8 +181,10 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             {user ? getInitials(user.name) : "??"}
           </div>
           <div className={`transition-all duration-300 origin-left ${isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"}`}>
-            <p className="text-sm font-bold truncate text-white">{user?.name}</p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+            <p className="text-sm font-bold truncate text-white max-w-[130px]" title={user?.name}>
+              {getShortName(user?.name)}
+            </p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider truncate max-w-[130px]">
               {user?.role === "admin" ? "Administrador" : "Asesor"}
             </p>
           </div>

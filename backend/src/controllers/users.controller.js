@@ -171,11 +171,11 @@ exports.create = async (req, res, next) => {
     try {
       await emailService.sendEmail({
         to: data.email,
-        subject: '¡Bienvenido a iTea Travel - Cuenta Creada!',
+        subject: '¡Bienvenido a Samtur Travel - Cuenta Creada!',
         html: `
           <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaec; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #0f172a; padding: 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido a iTea Travel!</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido a Samtur Travel!</h1>
             </div>
             <div style="padding: 30px;">
               <p style="font-size: 16px;">Hola <strong>${persona.nombres}</strong>,</p>

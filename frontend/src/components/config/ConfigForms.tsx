@@ -609,7 +609,8 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                   onChange={(e) => setFormData({ ...formData, accommodation: { ...formData.accommodation, hotelType: e.target.value } })}
                   options={[
                     { value: "", label: "Seleccionar tipo..." },
-                    { value: "hotel", label: "Hotel Normal" },
+                    { value: "hotel", label: "Hotel" },
+                    { value: "hotel_turistico", label: "Hotel Turístico" },
                     { value: "resort", label: "Resort / Todo Incluido" },
                     { value: "boutique", label: "Hotel Boutique" },
                     { value: "apartamento", label: "Apartamento / AirBnB" },
@@ -668,7 +669,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                 <ShieldCheck size={14} /> Asistencia Médica
               </h4>
               <div className="grid grid-cols-1 gap-4">
-                <FormField label="Monto Cobertura (USD)">
+                <FormField label="Monto Cobertura (USD) (Opcional)">
                   <Input 
                     type="number"
                     value={formData.medicalAssistance?.amountUsd || ''} 
@@ -676,7 +677,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                     placeholder="Ej. 50000"
                   />
                 </FormField>
-                <FormField label="Días de Cobertura">
+                <FormField label="Días de Cobertura (Opcional)">
                   <Input 
                     type="number"
                     value={formData.medicalAssistance?.coverageDays || ''} 

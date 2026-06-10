@@ -13,6 +13,7 @@ router.get('/', authorize('sales', 'view'), paginate, salesController.list);
 router.get('/:id', authorize('sales', 'view'), salesController.getById);
 router.post('/', authorize('sales', 'create'), salesController.create);
 router.put('/:id', authorize('sales', 'edit'), salesController.update);
+router.patch('/:id/review-status', authorize('sales', 'edit'), salesController.updateReviewStatus);
 router.post('/:id/void', authorize('sales', 'delete'), salesController.voidSale);
 router.delete('/:id', authorize('sales', 'delete'), salesController.remove);
 router.post('/:id/payments', authorize('sales', 'edit'), salesController.registerPayment);

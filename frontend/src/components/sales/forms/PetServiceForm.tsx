@@ -8,11 +8,12 @@ interface PetServiceFormProps {
   pet: PetServiceData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<PetServiceData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function PetServiceForm({ pet, client, suppliers, onChange, triggerError }: PetServiceFormProps) {
+export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChange, triggerError }: PetServiceFormProps) {
   const todayStr = new Date().toISOString().slice(0, 10);
   return (
     <div className="space-y-6 animate-fade-in">
@@ -151,7 +152,23 @@ export function PetServiceForm({ pet, client, suppliers, onChange, triggerError 
               maxLength={15}
             />
           </FormField>
-          <FormField label="Condiciones Médicas" className="md:col-span-2">
+          <FormField label="Nombre de la Empresa">
+            <div className="relative pb-5">
+              <Input 
+                value={pet.transportCompany || ""} 
+                onChange={(e) => {
+                  let cleaned = e.target.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, "");
+                  onChange({ transportCompany: cleaned });
+                }} 
+                placeholder="Ej: Pet Airways" 
+                maxLength={40}
+              />
+              {pet.transportCompany !== undefined && pet.transportCompany.length > 0 && pet.transportCompany.length < 3 && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 3 caracteres</p>
+              )}
+            </div>
+          </FormField>
+          <FormField label="Condiciones Médicas">
             <Textarea 
               value={pet.medicalConditions} 
               onChange={(e) => onChange({ medicalConditions: e.target.value })} 
@@ -160,12 +177,23 @@ export function PetServiceForm({ pet, client, suppliers, onChange, triggerError 
               maxLength={100}
             />
           </FormField>
+          <FormField label="Observaciones">
+            <Textarea 
+              value={pet.observations || ""} 
+              onChange={(e) => onChange({ observations: e.target.value })} 
+              placeholder="Anotaciones adicionales..." 
+              rows={2} 
+            />
+          </FormField>
         </div>
       </div>
 
       <FinancialSection 
         supplierName={pet.supplierName}
         supplierCost={pet.supplierCost}
+        supplierPaymentMethod={pet.supplierPaymentMethod}
+        isPaymentMethodRequired={true}
+        paymentMethods={paymentMethods}
         ta={pet.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

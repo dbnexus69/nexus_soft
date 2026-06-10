@@ -243,11 +243,11 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
               <React.Fragment key={`ins-${i}`}>
                 {i > 0 && <div className="v-item-divider" />}
                 <div className="v-data-grid">
-                  <DataCell label="Nombre de Contacto" value={ins.contactName} highlight />
-                  <DataCell label="Teléfono" value={ins.contactNumber} />
-                  <DataCell label="Proveedor" value={ins.supplier} />
-                  <DataCell label="Dirección" value={ins.address} />
+                  <DataCell label="Tipo de Seguro" value={ins.insuranceType ? <span className="v-badge v-badge-emerald">{ins.insuranceType}</span> : '—'} highlight />
                   <DataCell label="Asegurados" value={(ins.members || []).map(m => m.name).join(', ') || '—'} />
+                  <DataCell label="Teléfono de Contacto" value={ins.phone} />
+                  <DataCell label="Proveedor" value={ins.supplier} />
+
                 </div>
               </React.Fragment>
             ))}
@@ -335,8 +335,8 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <DataCell label="Pasajero" value={mig.passengerName} highlight />
                   <DataCell label="Nacionalidad" value={mig.nationality} />
                   <DataCell label="Documento Solicitado" value={mig.requestedDocType} />
-                  <DataCell label="N° Pasaporte" value={mig.passportNumber} />
-                  <DataCell label="Vencimiento Pasaporte" value={mig.passportExpiry ? formatDate(mig.passportExpiry) : null} />
+                  <DataCell label={mig.docType ? `N° ${mig.docType}` : "N° Documento"} value={mig.docNumber} />
+                  {mig.passportExpiry && <DataCell label="Vencimiento" value={formatDate(mig.passportExpiry)} />}
                   <DataCell label="País Destino" value={mig.destinationCountry} />
                 </div>
               </React.Fragment>
@@ -392,13 +392,17 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
               <React.Fragment key={`finca-${i}`}>
                 {i > 0 && <div className="v-item-divider" />}
                 <div className="v-data-grid">
-                  <DataCell label="Responsable" value={finca.responsibleName} highlight />
+                  <DataCell label="Nombre de la Finca" value={finca.fincaName} highlight />
+                  <DataCell label="Ciudad o Pueblo" value={finca.fincaCity} />
+                  <DataCell label="Dirección" value={finca.fincaAddress} />
+                  <DataCell label="Responsable" value={finca.responsibleName} />
                   <DataCell label="Documento" value={finca.docNumber} />
                   <DataCell label="Check-In" value={finca.checkInDate ? formatDate(finca.checkInDate) : null} />
                   <DataCell label="Check-Out" value={finca.checkOutDate ? formatDate(finca.checkOutDate) : null} />
                   <DataCell label="Adultos" value={finca.adultsCount?.toString()} />
                   <DataCell label="Niños" value={finca.childrenCount?.toString()} />
                   <DataCell label="Mascotas" value={finca.hasPets ? `Sí — ${finca.petType}` : 'No'} />
+                  {finca.observations && <DataCell label="Observaciones" value={finca.observations} fullWidth />}
                 </div>
               </React.Fragment>
             ))}
@@ -420,6 +424,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <DataCell label="Punto de Recogida" value={tour.pickupPoint} />
                   <DataCell label="Idioma Guía" value={tour.guideLanguage} />
                   <DataCell label="Transporte" value={tour.needsTransport ? 'Incluido' : 'No requiere'} />
+                  {tour.observations && <DataCell label="Observaciones" value={tour.observations} fullWidth />}
                 </div>
               </React.Fragment>
             ))}
@@ -434,6 +439,9 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                 {i > 0 && <div className="v-item-divider" />}
                 <div className="v-data-grid">
                   <DataCell label="Organización" value={conv.organization} highlight />
+                  <DataCell label="Nombre del Lugar" value={conv.placeName} />
+                  <DataCell label="Ciudad" value={conv.city} />
+                  <DataCell label="Dirección" value={conv.address} />
                   <DataCell label="Contacto" value={conv.contactName} />
                   <DataCell label="Tipo de Evento" value={conv.eventType} />
                   <DataCell label="Inicio" value={conv.startDate ? formatDate(conv.startDate) : null} />
@@ -476,7 +484,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                 <div className="v-data-grid">
                   <DataCell label="Solicitante" value={visa.fullName} highlight />
                   <DataCell label="Nacionalidad" value={visa.nationality} />
-                  <DataCell label="N° Pasaporte" value={visa.passportNumber} />
+                  <DataCell label={visa.docType ? `N° ${visa.docType}` : "N° Documento"} value={visa.docNumber} />
                   <DataCell label="País al que Aplica" value={visa.countryApplying} />
                   <DataCell label="Tipo de Visa" value={visa.visaType ? <span className="v-badge v-badge-accent">{visa.visaType}</span> : null} />
                   <DataCell label="Viaje Estimado" value={visa.estimatedTravelDate ? formatDate(visa.estimatedTravelDate) : null} />
@@ -517,8 +525,10 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <DataCell label="Especie / Raza" value={`${pet.species || '—'} / ${pet.breed || '—'}`} />
                   <DataCell label="Peso / Tamaño" value={`${pet.weight ?? '—'} kg — ${pet.size || '—'}`} />
                   <DataCell label="Tipo de Viaje" value={pet.travelType ? <span className="v-badge">{pet.travelType}</span> : null} />
+                  <DataCell label="Empresa de Transporte" value={pet.transportCompany} />
                   <DataCell label="Fecha" value={pet.travelDate ? formatDate(pet.travelDate) : null} />
                   <DataCell label="País Destino" value={pet.destinationCountry} />
+                  {pet.observations && <DataCell label="Observaciones" value={pet.observations} fullWidth />}
                 </div>
               </React.Fragment>
             ))}

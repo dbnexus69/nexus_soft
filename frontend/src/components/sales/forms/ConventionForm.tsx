@@ -8,11 +8,12 @@ interface ConventionFormProps {
   convention: ConventionData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<ConventionData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function ConventionForm({ convention, client, suppliers, onChange, triggerError }: ConventionFormProps) {
+export function ConventionForm({ convention, client, suppliers, paymentMethods, onChange, triggerError }: ConventionFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -33,6 +34,32 @@ export function ConventionForm({ convention, client, suppliers, onChange, trigge
           <Building2 size={14} /> Centro de Convenciones
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField label="Nombre del Lugar">
+            <div className="relative pb-5">
+              <Input value={convention.placeName || ""} maxLength={40} onChange={(e) => onChange({ placeName: e.target.value })} placeholder="Ej. Plaza Mayor" />
+              {convention.placeName !== undefined && convention.placeName.length > 0 && (convention.placeName.length < 3 || convention.placeName.length > 40) && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+              )}
+            </div>
+          </FormField>
+          <FormField label="Ciudad">
+            <div className="relative pb-5">
+              <Input value={convention.city || ""} maxLength={40} onChange={(e) => onChange({ city: e.target.value })} placeholder="Ej. Medellín" />
+              {convention.city !== undefined && convention.city.length > 0 && (convention.city.length < 3 || convention.city.length > 40) && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+              )}
+            </div>
+          </FormField>
+          <div className="md:col-span-2">
+            <FormField label="Dirección">
+              <div className="relative pb-5">
+                <Input value={convention.address || ""} maxLength={40} onChange={(e) => onChange({ address: e.target.value })} placeholder="Ej. Calle 41 #55-80" />
+                {convention.address !== undefined && convention.address.length > 0 && (convention.address.length < 5 || convention.address.length > 40) && (
+                  <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 5, Max 40 caracteres</p>
+                )}
+              </div>
+            </FormField>
+          </div>
           <FormField label="Organización">
             <Input 
               value={convention.organization} 
@@ -76,28 +103,30 @@ export function ConventionForm({ convention, client, suppliers, onChange, trigge
             />
           </FormField>
           <FormField label="Espacio Requerido">
-            <Combobox
-              value={convention.requiredSpace}
-              onChange={(val) => onChange({ requiredSpace: val })}
-              options={[
-                { value: "sala A", label: "Sala A" },
-                { value: "sala B", label: "Sala B" },
-                { value: "sala C", label: "Sala C" },
-                { value: "salón completo", label: "Salón Completo" },
-              ]}
-            />
+            <div className="relative pb-5">
+              <Input 
+                value={convention.requiredSpace || ""} 
+                maxLength={40} 
+                onChange={(e) => onChange({ requiredSpace: e.target.value })} 
+                placeholder="Ej. Sala A, Auditorio Principal..." 
+              />
+              {convention.requiredSpace !== undefined && convention.requiredSpace.length > 0 && (convention.requiredSpace.length < 3 || convention.requiredSpace.length > 40) && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+              )}
+            </div>
           </FormField>
           <FormField label="Tipo de Evento">
-            <Combobox
-              value={convention.eventType}
-              onChange={(val) => onChange({ eventType: val })}
-              options={[
-                { value: "congreso", label: "Congreso" },
-                { value: "convención", label: "Convención" },
-                { value: "feria", label: "Feria" },
-                { value: "otro", label: "Otro" },
-              ]}
-            />
+            <div className="relative pb-5">
+              <Input 
+                value={convention.eventType || ""} 
+                maxLength={40} 
+                onChange={(e) => onChange({ eventType: e.target.value })} 
+                placeholder="Ej. Congreso, Feria, Seminario..." 
+              />
+              {convention.eventType !== undefined && convention.eventType.length > 0 && (convention.eventType.length < 3 || convention.eventType.length > 40) && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+              )}
+            </div>
           </FormField>
           <FormField label="Correo Electrónico">
             <Input 
@@ -156,6 +185,9 @@ export function ConventionForm({ convention, client, suppliers, onChange, trigge
       <FinancialSection 
         supplierName={convention.supplierName}
         supplierCost={convention.supplierCost}
+        supplierPaymentMethod={convention.supplierPaymentMethod}
+        isPaymentMethodRequired={true}
+        paymentMethods={paymentMethods}
         ta={convention.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

@@ -10,7 +10,7 @@ export {
 export {
   listSales, getSale, createSale, updateSale, deleteSale, voidSale,
   registerPayment, deletePayment, getSalePayments, createProduct, updateProduct, deleteProduct,
-  sendVoucher,
+  sendVoucher, updateReviewStatus,
 } from './sales';
 export {
   listFlights, updateCheckin,

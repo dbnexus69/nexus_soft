@@ -1,5 +1,6 @@
+import React, { useEffect } from "react";
 import { AlertCircle, Users, Briefcase, Trash2, PlusCircle } from "lucide-react";
-import { FormField, Input, Combobox, Select , CurrencyInput} from "../../ui/Form";
+import { FormField, Input, Select, CurrencyInput, Combobox } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { InsuranceData, GuestInfo } from "../../../types";
 
@@ -7,9 +8,15 @@ interface InsuranceFormProps {
   insurance: InsuranceData;
   onChange: (updates: Partial<InsuranceData>) => void;
   data: any;
+  client?: any;
 }
 
-export function InsuranceForm({ insurance, onChange, data }: InsuranceFormProps) {
+export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFormProps) {
+  useEffect(() => {
+    if (!insurance.phone && client?.phone) {
+      onChange({ phone: client.phone });
+    }
+  }, [client?.phone, insurance.phone]);
   const addMember = () => {
     onChange({ members: [...insurance.members, { name: "", docType: "CC", docNumber: "" }] });
   };
@@ -32,39 +39,35 @@ export function InsuranceForm({ insurance, onChange, data }: InsuranceFormProps)
           Datos del Seguro de Viaje
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre del Contacto">
-            <Input
-              value={insurance.contactName}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
-                onChange({ contactName: cleaned });
-              }}
-              placeholder="Nombre completo (Mín 3, Máx 70)"
-              maxLength={70}
-            />
+          <FormField label="Tipo de Seguro">
+            <div className="relative pb-5">
+              <Input
+                value={insurance.insuranceType || ""}
+                onChange={(e) => {
+                  let cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                  if (cleaned.length > 0) {
+                    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+                  }
+                  onChange({ insuranceType: cleaned });
+                }}
+                placeholder="Ej: Todo Riesgo, Básico"
+                maxLength={40}
+              />
+              {insurance.insuranceType && insurance.insuranceType.length > 0 && insurance.insuranceType.length < 3 && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 3 caracteres</p>
+              )}
+            </div>
           </FormField>
-          <FormField label="Teléfono">
+          <FormField label="Teléfono del Cliente">
             <Input
-              value={insurance.contactNumber}
+              value={insurance.phone}
               onChange={(e) => {
                 // Only allow numbers, spaces, plus, minus, and parentheses
                 const cleaned = e.target.value.replace(/[^0-9\s+\-()]/g, "");
-                onChange({ contactNumber: cleaned });
+                onChange({ phone: cleaned });
               }}
               placeholder="Ej: +57 300 123 4567"
               maxLength={20}
-            />
-          </FormField>
-          <FormField label="Dirección">
-            <Input
-              value={insurance.address}
-              onChange={(e) => {
-                // Alphanumeric characters, common signs like #, - and spaces
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9\s#\-.]/g, "");
-                onChange({ address: cleaned });
-              }}
-              placeholder="Dirección de residencia (Mín 3, Máx 40)"
-              maxLength={40}
             />
           </FormField>
           <FormField label="Proveedor">

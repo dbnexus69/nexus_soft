@@ -8,11 +8,12 @@ interface MigrationFormProps {
   migration: MigrationData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<MigrationData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function MigrationForm({ migration, client, suppliers, onChange, triggerError }: MigrationFormProps) {
+export function MigrationForm({ migration, client, suppliers, paymentMethods, onChange, triggerError }: MigrationFormProps) {
   const todayStr = new Date().toISOString().slice(0, 10);
   return (
     <div className="space-y-6 animate-fade-in">
@@ -46,24 +47,47 @@ export function MigrationForm({ migration, client, suppliers, onChange, triggerE
               maxLength={30}
             />
           </FormField>
-          <FormField label="Número de Pasaporte">
-            <Input 
-              value={migration.passportNumber} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ passportNumber: cleaned });
-              }} 
-              placeholder="Número de pasaporte" 
-              maxLength={20}
+          <FormField label="Tipo de Documento">
+            <Combobox
+              value={migration.docType || "CC"}
+              onChange={(val) => onChange({ docType: val, docNumber: "" })}
+              options={[
+                { value: "CC", label: "Cédula de Ciudadanía" },
+                { value: "TI", label: "Tarjeta de Identidad" },
+                { value: "CE", label: "Cédula de Extranjería" },
+                { value: "Pasaporte", label: "Pasaporte" },
+                { value: "Otro", label: "Otro Documento" },
+              ]}
             />
           </FormField>
-          <FormField label="Vencimiento Pasaporte">
+          <FormField label="Número de Documento">
+            <div className="relative pb-5">
+              <Input 
+                value={migration.docNumber} 
+                onChange={(e) => {
+                  let cleaned = e.target.value;
+                  if (migration.docType === "CC" || migration.docType === "TI") {
+                    cleaned = cleaned.replace(/[^0-9]/g, "");
+                  } else {
+                    cleaned = cleaned.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  }
+                  onChange({ docNumber: cleaned });
+                }} 
+                placeholder={migration.docType === "Pasaporte" ? "N° Pasaporte" : "Número de documento"} 
+                maxLength={20}
+              />
+              {migration.docNumber !== undefined && migration.docNumber.length > 0 && migration.docNumber.length < 5 && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 5 caracteres</p>
+              )}
+            </div>
+          </FormField>
+          <FormField label="Vencimiento de Documento">
             <DatePicker
               value={migration.passportExpiry}
               onChange={(val) => onChange({ passportExpiry: val })}
               min={todayStr}
               triggerError={triggerError}
-              fieldName="Vencimiento del pasaporte"
+              fieldName="Vencimiento del documento"
             />
           </FormField>
           <FormField label="País de Destino">
@@ -112,6 +136,9 @@ export function MigrationForm({ migration, client, suppliers, onChange, triggerE
       <FinancialSection 
         supplierName={migration.supplierName}
         supplierCost={migration.supplierCost}
+        supplierPaymentMethod={migration.supplierPaymentMethod}
+        isPaymentMethodRequired={false}
+        paymentMethods={paymentMethods}
         ta={migration.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

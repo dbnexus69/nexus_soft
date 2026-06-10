@@ -115,10 +115,11 @@ interface ComboboxProps {
   placeholder?: string;
   error?: string;
   className?: string;
+  inputClassName?: string;
   preventNumbers?: boolean;
 }
 
-export function Combobox({ value, onChange, options, placeholder, error, className = '', preventNumbers }: ComboboxProps) {
+export function Combobox({ value, onChange, options, placeholder, error, className = '', inputClassName = '', preventNumbers }: ComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,7 +158,7 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
           type="text"
           className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all ${
             error ? 'border-red-500' : 'border-gray-border'
-          }`}
+          } ${inputClassName}`}
           value={searchTerm}
           onChange={(e) => {
             let val = e.target.value;

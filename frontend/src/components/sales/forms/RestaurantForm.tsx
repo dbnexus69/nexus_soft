@@ -8,11 +8,12 @@ interface RestaurantFormProps {
   restaurant: RestaurantData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<RestaurantData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function RestaurantForm({ restaurant, client, suppliers, onChange, triggerError }: RestaurantFormProps) {
+export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, onChange, triggerError }: RestaurantFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -115,6 +116,9 @@ export function RestaurantForm({ restaurant, client, suppliers, onChange, trigge
       <FinancialSection 
         supplierName={restaurant.supplierName}
         supplierCost={restaurant.supplierCost}
+        supplierPaymentMethod={restaurant.supplierPaymentMethod}
+        isPaymentMethodRequired={false}
+        paymentMethods={paymentMethods}
         ta={restaurant.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

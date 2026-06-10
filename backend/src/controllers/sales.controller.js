@@ -57,6 +57,7 @@ exports.list = async (req, res, next) => {
           v.es_credito as "esCredito",
           v.fecha_vence_credito as "fechaVenceCredito",
           v.monto_pagado_credito as "montoPagadoCredito",
+          v.is_reviewed as "isReviewed",
           v.comisionista_id as "comisionistaId",
           v.monto_comision_bruto as "montoComisionBruto",
           v.monto_comision_neto as "montoComisionNeto",
@@ -172,6 +173,7 @@ exports.list = async (req, res, next) => {
         isCredit: v.esCredito,
         creditDueDate: v.fechaVenceCredito,
         creditPaidAmount: v.montoPagadoCredito,
+        isReviewed: v.isReviewed,
         commissionAgentId: v.comisionistaId,
         commissionAgentName: v.commissionAgentName,
         commissionAgentAmount: v.montoComisionBruto,
@@ -311,9 +313,7 @@ const PRODUCT_TRANSFORMS = {
       coverageDays: s.diasCobertura,
       startDate: s.fechaInicioVigencia?.toISOString() || null,
       endDate: s.fechaFinVigencia?.toISOString() || null,
-      contactName: s.contactoEmergencia,
-      contactNumber: s.telefonoEmergencia,
-      address: s.direccionAsegurado,
+      phone: s.telefonoContacto,
       members: passengers.map(p => ({ name: p.nombreCompleto, docType: String(p.tipoDocumento || ''), docNumber: p.nroDocumento || '' }))
     ,
       supplier: d.proveedor?.nombre || null,
@@ -381,10 +381,10 @@ const PRODUCT_TRANSFORMS = {
       passengerName: passengers.length > 0 ? passengers[0].nombreCompleto : null,
       requestedDocType: m.tipoTramiteMigratorio,
       nationality: m.nacionalidad,
-      passportNumber: m.pasaporteNro,
-      passportExpiry: m.pasaporteVence?.toISOString() || null,
-      destinationCountry: m.paisDestino
-    ,
+      docType: m.tipoDocumento || 'Pasaporte',
+      docNumber: m.pasaporteNro,
+      passportExpiry: m.pasaporteVence?.toISOString().split('T')[0] || null,
+      destinationCountry: m.paisDestino,
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
       ta: d.ta || 0
@@ -441,7 +441,11 @@ const PRODUCT_TRANSFORMS = {
       childrenCount: f.ninosCount,
       hasPets: f.tieneMascotas,
       petType: f.tipoMascota,
-      additionalServices: f.serviciosExtra?.split(', ') || []
+      additionalServices: f.serviciosExtra?.split(', ') || [],
+      fincaName: f.nombreFinca,
+      fincaAddress: f.direccionFinca,
+      fincaCity: f.ciudadPueblo,
+      observations: f.observaciones
     ,
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
@@ -463,7 +467,8 @@ const PRODUCT_TRANSFORMS = {
       needsTransport: t.requiereTransporte,
       pickupPoint: t.puntoEncuentro,
       medicalConditions: t.condicionesMedicas,
-      phone: t.telefonoContacto
+      phone: t.telefonoContacto,
+      observations: t.observaciones
     ,
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
@@ -485,7 +490,10 @@ const PRODUCT_TRANSFORMS = {
       eventType: e.tipoEvento,
       avEquipment: e.equiposAv?.split(', ') || [],
       hasCatering: e.requiereCatering,
-      cateringNotes: e.notasCatering
+      cateringNotes: e.notasCatering,
+      city: e.ciudad || null,
+      address: e.direccion || null,
+      placeName: e.nombreLugar || null
     ,
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
@@ -517,10 +525,11 @@ const PRODUCT_TRANSFORMS = {
     target.push({
       id: v.id,
       fullName: v.nombreCompleto,
-      birthDate: v.fechaNacimiento?.toISOString() || null,
+      birthDate: v.fechaNacimiento?.toISOString().split('T')[0] || null,
       nationality: v.nacionalidad,
-      passportNumber: v.nroPasaporte,
-      passportExpiration: v.vencimientoPasaporte?.toISOString() || null,
+      docType: v.tipoDocumento || 'Pasaporte',
+      docNumber: v.nroPasaporte,
+      passportExpiration: v.vencimientoPasaporte?.toISOString().split('T')[0] || null,
       countryApplying: v.paisAplicacion,
       visaType: v.tipoVisa,
       estimatedTravelDate: v.fechaEstimadaViaje?.toISOString() || null,
@@ -564,7 +573,9 @@ const PRODUCT_TRANSFORMS = {
       travelDate: m.fechaViaje?.toISOString() || null,
       destinationCountry: m.paisDestino,
       medicalConditions: m.condicionesMedicas,
-      phone: m.telefonoContacto
+      phone: m.telefonoContacto,
+      transportCompany: m.empresaTransporte,
+      observations: m.observaciones
     ,
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
@@ -677,6 +688,7 @@ exports.getById = async (req, res, next) => {
       isCredit: venta.esCredito,
       creditDueDate: venta.fechaVenceCredito,
       creditPaidAmount: venta.montoPagadoCredito,
+      isReviewed: venta.isReviewed,
       commissionAgentId: venta.comisionistaId,
       commissionAgentName: venta.comisionista ? `${venta.comisionista.persona.nombres} ${venta.comisionista.persona.apellidos}` : null,
       commissionAgentAmount: venta.montoComisionBruto,
@@ -753,11 +765,11 @@ const PRODUCT_HANDLERS = {
     transform: (d, detalleId) => ({
       detalleVentaId: detalleId,
       tipoSeguro: d.insuranceType || 'basico',
-      coberturaUsd: d.coverageAmount || 0,
-      diasCobertura: d.coverageDays || 0,
-      contactoEmergencia: d.contactName || null,
-      telefonoEmergencia: d.contactNumber || null,
-      direccionAsegurado: d.address || null
+      coberturaUsd: Number(d.coverageAmount) || 0,
+      diasCobertura: Number(d.coverageDays) || 0,
+      fechaInicioVigencia: d.startDate ? new Date(d.startDate) : null,
+      fechaFinVigencia: d.endDate ? new Date(d.endDate) : null,
+      telefonoContacto: d.phone || null
     })
   },
   planData: {
@@ -809,7 +821,8 @@ const PRODUCT_HANDLERS = {
       detalleVentaId: detalleId,
       tipoTramiteMigratorio: d.requestedDocType || null,
       nacionalidad: d.nationality || null,
-      pasaporteNro: d.passportNumber || null,
+      tipoDocumento: d.docType || 'Pasaporte',
+      pasaporteNro: d.docNumber || null,
       pasaporteVence: d.passportExpiry ? new Date(d.passportExpiry) : null,
       paisDestino: d.destinationCountry || null
     })
@@ -856,7 +869,11 @@ const PRODUCT_HANDLERS = {
       ninosCount: d.childrenCount || 0,
       tieneMascotas: d.hasPets || false,
       tipoMascota: d.petType || null,
-      serviciosExtra: d.additionalServices?.join(', ') || null
+      serviciosExtra: d.additionalServices?.join(', ') || null,
+      nombreFinca: d.fincaName || null,
+      direccionFinca: d.fincaAddress || null,
+      ciudadPueblo: d.fincaCity || null,
+      observaciones: d.observations || null
     })
   },
   tourData: {
@@ -873,7 +890,8 @@ const PRODUCT_HANDLERS = {
       requiereTransporte: d.needsTransport || false,
       puntoEncuentro: d.pickupPoint || null,
       condicionesMedicas: d.medicalConditions || null,
-      telefonoContacto: d.phone || null
+      telefonoContacto: d.phone || null,
+      observaciones: d.observations || null
     })
   },
   conventionData: {
@@ -891,7 +909,10 @@ const PRODUCT_HANDLERS = {
       tipoEvento: d.eventType || null,
       equiposAv: d.avEquipment?.join(', ') || null,
       requiereCatering: d.hasCatering || false,
-      notasCatering: d.cateringNotes || null
+      notasCatering: d.cateringNotes || null,
+      ciudad: d.city || null,
+      direccion: d.address || null,
+      nombreLugar: d.placeName || null
     })
   },
   restaurantData: {
@@ -917,7 +938,8 @@ const PRODUCT_HANDLERS = {
       nombreCompleto: d.fullName || null,
       fechaNacimiento: d.birthDate ? new Date(d.birthDate) : null,
       nacionalidad: d.nationality || null,
-      nroPasaporte: d.passportNumber || null,
+      tipoDocumento: d.docType || 'Pasaporte',
+      nroPasaporte: d.docNumber || null,
       vencimientoPasaporte: d.passportExpiration ? new Date(d.passportExpiration) : null,
       paisAplicacion: d.countryApplying || null,
       tipoVisa: d.visaType || null,
@@ -953,7 +975,9 @@ const PRODUCT_HANDLERS = {
       fechaViaje: d.travelDate ? new Date(d.travelDate) : null,
       paisDestino: d.destinationCountry || null,
       condicionesMedicas: d.medicalConditions || null,
-      telefonoContacto: d.phone || null
+      telefonoContacto: d.phone || null,
+      empresaTransporte: d.transportCompany || null,
+      observaciones: d.observations || null
     })
   }
 };
@@ -1827,6 +1851,40 @@ exports.deletePayment = async (req, res, next) => {
   }
 };
 
+exports.deleteSale = async (req, res, next) => {
+  try {
+    const saleId = parseInt(req.params.id);
+
+    await prisma.ventas.delete({
+      where: { id: saleId }
+    });
+
+    success(res, null, 'Venta eliminada exitosamente.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateReviewStatus = async (req, res, next) => {
+  try {
+    const saleId = parseInt(req.params.id);
+    const { isReviewed } = req.body;
+
+    const sale = await prisma.ventas.findUnique({ where: { id: saleId } });
+    if (!sale) return error(res, 'Venta no encontrada', 404);
+    if (sale.status !== 'pagado') return error(res, 'La venta debe estar pagada para ser revisada', 400);
+    if (sale.isReviewed) return error(res, 'Esta venta ya fue revisada y no se puede modificar su estado', 400);
+
+    const updatedSale = await prisma.ventas.update({
+      where: { id: saleId },
+      data: { isReviewed }
+    });
+
+    success(res, updatedSale, 'Estado de revisión actualizado');
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.listPayments = async (req, res, next) => {
   try {

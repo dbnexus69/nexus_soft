@@ -35,7 +35,7 @@ import CreditDashboard from "../components/sales/CreditDashboard";
 import { VoucherPDF } from "../components/sales/VoucherPDF";
 import { useRef } from "react";
 export default function Sales() {
-  const { data, addSale, updateSale, voidSale, registerCreditPayment, deleteSalePayment, salesLoading, fetchSales, fetchClients } = useData();
+  const { data, addSale, updateSale, voidSale, registerCreditPayment, deleteSalePayment, updateReviewStatus, salesLoading, fetchSales, fetchClients } = useData();
   const { user, isAdmin } = useAuth();
   const { canCreate, canEdit } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -384,13 +384,23 @@ export default function Sales() {
       )}
 
       {/* Header de Sección */}
-      <div className="mb-6 animate-fade-in">
-        <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
-          <ShoppingBag className="text-accent w-8 h-8" /> Gestión de Ventas
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Control de ingresos, facturación y estados de pago de tus clientes.
-        </p>
+      <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
+            <ShoppingBag className="text-accent w-8 h-8" /> Gestión de Ventas
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Control de ingresos, facturación y estados de pago de tus clientes.
+          </p>
+        </div>
+        <a 
+          href="https://siigonube.siigo.com/#/sales-management/2044" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-blue-200 transition-all shadow-sm shrink-0"
+        >
+          <ExternalLink size={16} /> Ir a Siigo Nube
+        </a>
       </div>
 
       {/* TABS SELECTOR */}
@@ -535,6 +545,20 @@ export default function Sales() {
                 onDelete={(sale) => setVoidConfirm(sale)}
                 canEditThis={canEditThis}
                 isAdmin={isAdmin}
+                onReviewStatusChange={(saleId, isReviewed) => {
+                  updateReviewStatus(saleId, isReviewed)
+                    .then(() => {
+                      setSuccessMessage("Estado de revisión actualizado");
+                      setShowSuccess(true);
+                      setTimeout(() => setShowSuccess(false), 3000);
+                    })
+                    .catch((err: any) => {
+                      const msg = err.response?.data?.error?.message || "Error al actualizar estado";
+                      setSuccessMessage(msg);
+                      setShowSuccess(true);
+                      setTimeout(() => setShowSuccess(false), 4000);
+                    });
+                }}
               />
             )}
           </Card>

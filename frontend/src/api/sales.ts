@@ -63,3 +63,8 @@ export async function sendVoucher(saleId: number, pdfBase64: string) {
   const res = await api.post(`/sales/${saleId}/send-voucher`, { pdfBase64 });
   return res.data.data;
 }
+
+export async function updateReviewStatus(id: number, isReviewed: boolean) {
+  const res = await api.patch(`/sales/${id}/review-status`, { isReviewed });
+  return res.data.data;
+}

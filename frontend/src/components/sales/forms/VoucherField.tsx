@@ -1,5 +1,5 @@
-import { LuFileText, LuSend, LuUser, LuUpload, LuX, LuFileCheck, LuDollarSign, LuBuilding } from "react-icons/lu";
-import { Input, Combobox , CurrencyInput} from "../../ui/Form";
+import { LuFileText, LuSend, LuUser, LuUpload, LuX, LuFileCheck, LuDollarSign, LuBuilding, LuCreditCard } from "react-icons/lu";
+import { Input, Combobox , CurrencyInput, Select} from "../../ui/Form";
 import { FormField } from "../../ui/Form";
 import { useRef } from "react";
 
@@ -156,11 +156,14 @@ interface FinancialSectionProps {
   supplierName?: string;
   supplierCost?: number;
   ta?: number;
+  supplierPaymentMethod?: string;
+  isPaymentMethodRequired?: boolean;
+  paymentMethods?: any[];
   suppliers?: { id: number; name: string }[];
-  onChange: (updates: { supplierName?: string; supplierCost?: number; ta?: number }) => void;
+  onChange: (updates: { supplierName?: string; supplierCost?: number; ta?: number; supplierPaymentMethod?: string }) => void;
 }
 
-export function FinancialSection({ supplierName, supplierCost, ta, suppliers = [], onChange }: FinancialSectionProps) {
+export function FinancialSection({ supplierName, supplierCost, ta, supplierPaymentMethod, isPaymentMethodRequired, paymentMethods = [], suppliers = [], onChange }: FinancialSectionProps) {
   const supplierOptions = suppliers.map(s => ({ value: s.name, label: s.name }));
 
   const handleNumericChange = (field: 'supplierCost' | 'ta', value: string) => {
@@ -182,7 +185,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, suppliers = [
         </span>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField label="Proveedor">
           <div className="relative">
             <LuBuilding className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={16} />
@@ -191,7 +194,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, suppliers = [
               onChange={(val) => onChange({ supplierName: val })} 
               options={supplierOptions}
               placeholder="Seleccionar proveedor..."
-              className="pl-7"
+              inputClassName="pl-8"
               preventNumbers={true}
             />
           </div>
@@ -215,6 +218,23 @@ export function FinancialSection({ supplierName, supplierCost, ta, suppliers = [
               onChange={(val) => handleNumericChange('ta', val)} 
               className={`pl-7 transition-all ${!ta ? 'border-amber-200 bg-amber-50/30' : 'border-emerald-200 focus:border-emerald-500'}`}
               placeholder="0.00" 
+            />
+          </div>
+        </FormField>
+        <FormField label={`Método de Pago${isPaymentMethodRequired ? ' *' : ''}`}>
+          <div className="relative group">
+            <LuCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={16} />
+            <Select
+              value={supplierPaymentMethod || ""}
+              onChange={(e) => onChange({ supplierPaymentMethod: e.target.value })}
+              options={[
+                { value: "", label: "Seleccionar método..." },
+                ...paymentMethods.map(m => ({
+                  value: m.name,
+                  label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name
+                }))
+              ]}
+              className={`pl-8 ${isPaymentMethodRequired && !supplierPaymentMethod ? 'border-amber-200 bg-amber-50/30' : 'border-emerald-200'}`}
             />
           </div>
         </FormField>

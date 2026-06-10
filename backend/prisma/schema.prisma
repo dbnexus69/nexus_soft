@@ -42,10 +42,7 @@ enum Cobertura {
   Ambos
 }
 
-enum TipoSeguro {
-  basico
-  todo_riesgo
-}
+
 
 enum TamanoMascota {
   pequeno
@@ -328,6 +325,7 @@ model Ventas {
   esCredito               Boolean?    @default(false) @map("es_credito")
   fechaVenceCredito       DateTime?   @map("fecha_vence_credito")
   montoPagadoCredito      Float?      @default(0) @map("monto_pagado_credito")
+  isReviewed              Boolean?    @default(false) @map("is_reviewed")
   observaciones           String?
   creadoAt                DateTime    @default(now()) @map("creado_at")
   deletedAt               DateTime?   @map("deleted_at")
@@ -645,14 +643,12 @@ model ProdSeguros {
   id                  String       @id @default(uuid())
   detalleVentaId      String       @unique @map("detalle_venta_id")
   detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  tipoSeguro          TipoSeguro?  @default(basico) @map("tipo_seguro")
+  tipoSeguro          String?      @map("tipo_seguro")
   coberturaUsd        Float?       @default(0) @map("cobertura_usd")
   diasCobertura       Int?         @default(0) @map("dias_cobertura")
   fechaInicioVigencia DateTime?    @map("fecha_inicio_vigencia")
   fechaFinVigencia    DateTime?    @map("fecha_fin_vigencia")
-  contactoEmergencia  String?      @map("contacto_emergencia")
-  telefonoEmergencia  String?      @map("telefono_emergencia")
-  direccionAsegurado  String?      @map("direccion_asegurado")
+  telefonoContacto    String?      @map("telefono_contacto")
 
   @@map("prod_seguros")
 }
@@ -678,6 +674,7 @@ model ProdMigracion {
   detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
   tipoTramiteMigratorio String?    @map("tipo_tramite_migratorio")
   nacionalidad        String?
+  tipoDocumento       String?      @default("Pasaporte") @map("tipo_documento")
   pasaporteNro        String?      @map("pasaporte_nro")
   pasaporteVence      DateTime?    @map("pasaporte_vence")
   paisDestino         String?      @map("pais_destino")
@@ -710,7 +707,7 @@ model ProdAutos {
   lugarRecogida       String?      @map("lugar_recogida")
   categoriaAuto       String?      @map("categoria_auto")
   conductoresAdicionales Int?      @default(0) @map("conductores_adicionales")
-  tipoSeguro          TipoSeguro?
+  tipoSeguro          String?      @map("tipo_seguro")
   tarjetaGarantiaInfo String?      @map("tarjeta_garantia_info")
 
   @@map("prod_autos")
@@ -729,6 +726,10 @@ model ProdFincas {
   tieneMascotas       Boolean?     @default(false) @map("tiene_mascotas")
   tipoMascota         String?      @map("tipo_mascota")
   serviciosExtra      String?      @map("servicios_extra")
+  nombreFinca         String?      @map("nombre_finca")
+  direccionFinca      String?      @map("direccion_finca")
+  ciudadPueblo        String?      @map("ciudad_pueblo")
+  observaciones       String?
 
   @@map("prod_fincas")
 }
@@ -747,6 +748,7 @@ model ProdTours {
   puntoEncuentro      String?      @map("punto_encuentro")
   condicionesMedicas  String?      @map("condiciones_medicas")
   telefonoContacto    String?      @map("telefono_contacto")
+  observaciones       String?
 
   @@map("prod_tours")
 }
@@ -766,6 +768,9 @@ model ProdEventos {
   equiposAv           String?      @map("equipos_av")
   requiereCatering    Boolean?     @default(false) @map("requiere_catering")
   notasCatering       String?      @map("notas_catering")
+  ciudad              String?      @db.VarChar(40)
+  direccion           String?      @db.VarChar(40)
+  nombreLugar         String?      @map("nombre_lugar") @db.VarChar(40)
 
   @@map("prod_eventos")
 }
@@ -793,6 +798,7 @@ model ProdVisas {
   nombreCompleto      String?      @map("nombre_completo")
   fechaNacimiento     DateTime?    @map("fecha_nacimiento")
   nacionalidad        String?
+  tipoDocumento       String?      @default("Pasaporte") @map("tipo_documento")
   nroPasaporte        String?      @map("nro_pasaporte")
   vencimientoPasaporte DateTime?   @map("vencimiento_pasaporte")
   paisAplicacion      String?      @map("pais_aplicacion")
@@ -832,6 +838,8 @@ model ProdMascotas {
   paisDestino         String?       @map("pais_destino")
   condicionesMedicas  String?       @map("condiciones_medicas")
   telefonoContacto    String?       @map("telefono_contacto")
+  empresaTransporte   String?       @map("empresa_transporte")
+  observaciones       String?
 
   @@map("prod_mascotas")
 }

@@ -8,11 +8,12 @@ interface PassportFormProps {
   passport: PassportData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<PassportData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function PassportForm({ passport, client, suppliers, onChange, triggerError }: PassportFormProps) {
+export function PassportForm({ passport, client, suppliers, paymentMethods, onChange, triggerError }: PassportFormProps) {
   const todayStr = new Date().toISOString().slice(0, 10);
   return (
     <div className="space-y-6 animate-fade-in">
@@ -87,6 +88,9 @@ export function PassportForm({ passport, client, suppliers, onChange, triggerErr
       <FinancialSection 
         supplierName={passport.supplierName}
         supplierCost={passport.supplierCost}
+        supplierPaymentMethod={passport.supplierPaymentMethod}
+        isPaymentMethodRequired={false}
+        paymentMethods={paymentMethods}
         ta={passport.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

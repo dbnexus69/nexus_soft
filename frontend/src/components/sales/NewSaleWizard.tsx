@@ -452,16 +452,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             const isStrictlyValid = (() => {
               if (!ins) return false;
               
-              // Validar nombre contacto: mín 3, máx 70, no vacío, sin especiales ni números
-              if (!ins.contactName || ins.contactName.trim().length < 3 || ins.contactName.trim().length > 70) return false;
-              if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(ins.contactName)) return false;
+              // Validar tipo de seguro
+              if (!ins.insuranceType || ins.insuranceType.trim().length < 3 || ins.insuranceType.trim().length > 40) return false;
 
-              // Validar teléfono de contacto: limpiar a números y medir de 7 a 15
-              const cleanedPhone = ins.contactNumber ? ins.contactNumber.replace(/\D/g, "") : "";
+              // Validar teléfono del cliente: limpiar a números y medir de 7 a 15
+              const cleanedPhone = ins.phone ? ins.phone.replace(/\D/g, "") : "";
               if (cleanedPhone.length < 7 || cleanedPhone.length > 15) return false;
-
-              // Validar dirección: mín 3, máx 40, no vacío
-              if (!ins.address || ins.address.trim().length < 3 || ins.address.trim().length > 40) return false;
 
               // Validar financieros: obligatorios y mayores de 0
               if (ins.supplierCost <= 0 || ins.ta < 0) return false;
@@ -470,7 +466,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             })();
 
             if (!isStrictlyValid) {
-              triggerError(`El servicio de Seguro de Viaje #${i + 1} tiene campos requeridos vacíos o inválidos. El nombre del contacto debe tener entre 3 y 70 caracteres (solo letras), el teléfono entre 7 y 15 dígitos, la dirección entre 3 y 40 caracteres y los costos financieros obligatorios.`);
+              triggerError(`El servicio de Seguro de Viaje #${i + 1} tiene campos requeridos vacíos o inválidos. El tipo de seguro debe tener entre 3 y 40 caracteres, el teléfono entre 7 y 15 dígitos y los costos financieros obligatorios.`);
               errs.segurosValidation = "invalid";
               break;
             }
@@ -619,8 +615,9 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (!mig.passengerName || mig.passengerName.trim().length === 0) errors.push("Nombre del pasajero (requerido)");
               if (!mig.birthDate) errors.push("Fecha de Nacimiento (requerida)");
               if (!mig.nationality || mig.nationality.trim().length === 0 || mig.nationality.length > 30) errors.push("Nacionalidad (1-30 chars)");
-              if (!mig.passportNumber || mig.passportNumber.trim().length === 0 || mig.passportNumber.length > 20) errors.push("Número de Pasaporte (1-20 chars)");
-              if (!mig.passportExpiry) errors.push("Vencimiento de Pasaporte (requerido)");
+              if (!mig.docType) errors.push("Tipo de Documento (requerido)");
+              if (!mig.docNumber || mig.docNumber.trim().length < 5 || mig.docNumber.length > 20) errors.push("Número de Documento (5-20 chars)");
+              if (mig.docType === "Pasaporte" && !mig.passportExpiry) errors.push("Vencimiento de Documento (requerido)");
               if (!mig.destinationCountry || mig.destinationCountry.trim().length === 0) errors.push("País de Destino (requerido)");
               if (!mig.requestedDocType || mig.requestedDocType.trim().length === 0) errors.push("Trámite (requerido)");
               
@@ -634,7 +631,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               now.setHours(0, 0, 0, 0);
               
               if (mig.birthDate && new Date(mig.birthDate) > now) errors.push("Fecha de Nacimiento no puede ser futura");
-              if (mig.passportExpiry && new Date(mig.passportExpiry) < now) errors.push("Vencimiento de Pasaporte no puede ser pasado");
+              if (mig.passportExpiry && new Date(mig.passportExpiry) < now) errors.push("Vencimiento de Documento no puede ser pasado");
             }
 
             if (errors.length > 0) {
@@ -733,6 +730,9 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             const errors: string[] = [];
             if (!finca) errors.push("Renta de Finca inválida");
             else {
+              if (!finca.fincaName || finca.fincaName.trim().length < 3 || finca.fincaName.trim().length > 30) errors.push("Nombre de la Finca (3-30 caracteres)");
+              if (!finca.fincaCity || finca.fincaCity.trim().length < 3 || finca.fincaCity.trim().length > 50) errors.push("Ciudad o Pueblo (3-50 caracteres)");
+              if (!finca.fincaAddress || finca.fincaAddress.trim().length < 5 || finca.fincaAddress.trim().length > 30) errors.push("Dirección de la Finca (5-30 caracteres)");
               if (!finca.responsibleName || finca.responsibleName.trim().length === 0) errors.push("Responsable (requerido)");
               if (!finca.checkInDate) errors.push("Check-in (requerido)");
               if (!finca.checkOutDate) errors.push("Check-out (requerido)");
@@ -746,6 +746,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (finca.checkInDate && new Date(finca.checkInDate) < now) errors.push("Check-in no puede ser pasado");
               if (finca.checkOutDate && new Date(finca.checkOutDate) < now) errors.push("Check-out no puede ser pasado");
               if (finca.checkInDate && finca.checkOutDate && new Date(finca.checkOutDate) < new Date(finca.checkInDate)) errors.push("Check-out debe ser posterior al Check-in");
+              if (!finca.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -778,6 +779,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               now.setHours(0, 0, 0, 0);
               
               if (tour.preferredDate && new Date(tour.preferredDate) < now) errors.push("Fecha Preferida no puede ser pasada");
+              if (!tour.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -798,6 +800,11 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             const errors: string[] = [];
             if (!conv) errors.push("Convención inválida");
             else {
+              if (!conv.placeName || conv.placeName.trim().length < 3 || conv.placeName.trim().length > 40) errors.push("Nombre del Lugar (3-40 caracteres)");
+              if (!conv.city || conv.city.trim().length < 3 || conv.city.trim().length > 40) errors.push("Ciudad (3-40 caracteres)");
+              if (!conv.address || conv.address.trim().length < 5 || conv.address.trim().length > 40) errors.push("Dirección (5-40 caracteres)");
+              if (!conv.requiredSpace || conv.requiredSpace.trim().length < 3 || conv.requiredSpace.trim().length > 40) errors.push("Espacio Requerido (3-40 caracteres)");
+              if (!conv.eventType || conv.eventType.trim().length < 3 || conv.eventType.trim().length > 40) errors.push("Tipo de Evento (3-40 caracteres)");
               if (!conv.organization || conv.organization.trim().length === 0) errors.push("Organización (requerido)");
               if (!conv.contactName || conv.contactName.trim().length === 0) errors.push("Nombre de Contacto (requerido)");
               if (!conv.startDate) errors.push("Fecha Inicio (requerida)");
@@ -817,6 +824,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (conv.startDate && new Date(conv.startDate) < now) errors.push("Fecha Inicio no puede ser pasada");
               if (conv.endDate && new Date(conv.endDate) < now) errors.push("Fecha Fin no puede ser pasada");
               if (conv.startDate && conv.endDate && new Date(conv.endDate) < new Date(conv.startDate)) errors.push("Fecha Fin debe ser posterior a la de Inicio");
+              if (!conv.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -854,6 +862,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               now.setHours(0, 0, 0, 0);
               
               if (rest.dateTime && new Date(rest.dateTime) < now) errors.push("Fecha y Hora no puede ser pasada");
+
+              if (rest.ta === undefined || rest.ta <= 0) {
+                errors.push("Tarifa Admin (TA) obligatoria (> $0)");
+              }
             }
 
             if (errors.length > 0) {
@@ -892,19 +904,21 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 errors.push("Nacionalidad solo permite letras");
               }
 
-              if (!visa.passportNumber || visa.passportNumber.trim().length === 0 || visa.passportNumber.length > 20) {
-                errors.push("Número de Pasaporte (1-20 chars)");
-              } else if (/[^a-zA-Z0-9]/.test(visa.passportNumber)) {
-                errors.push("Número de Pasaporte debe ser alfanumérico");
+              if (!visa.docType) errors.push("Tipo de Documento (requerido)");
+
+              if (!visa.docNumber || visa.docNumber.trim().length < 5 || visa.docNumber.length > 20) {
+                errors.push("Número de Documento (5-20 chars)");
+              } else if (/[^a-zA-Z0-9]/.test(visa.docNumber)) {
+                errors.push("Número de Documento debe ser alfanumérico");
               }
 
-              if (!visa.passportExpiration) {
-                errors.push("Vencimiento de Pasaporte (requerido)");
-              } else {
+              if (visa.docType === "Pasaporte" && !visa.passportExpiration) {
+                errors.push("Vencimiento de Documento (requerido)");
+              } else if (visa.passportExpiration) {
                 const now = new Date();
                 now.setHours(0, 0, 0, 0);
                 if (new Date(visa.passportExpiration) < now) {
-                  errors.push("Vencimiento de Pasaporte no puede ser pasado");
+                  errors.push("Vencimiento de Documento no puede ser pasado");
                 }
               }
 
@@ -1030,6 +1044,9 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (pet.weight === undefined || isNaN(pet.weight) || pet.weight < 0 || pet.weight > 999.9) {
                 errors.push("Peso debe ser entre 0 y 999.9 kg");
               }
+              if (pet.transportCompany && (pet.transportCompany.length < 3 || pet.transportCompany.length > 40)) {
+                errors.push("Nombre de Empresa (3-40 caracteres)");
+              }
 
               if (!pet.travelDate) {
                 errors.push("Fecha de Viaje (requerida)");
@@ -1057,6 +1074,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   errors.push("Teléfono no puede contener letras");
                 }
               }
+              if (!pet.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -1334,6 +1352,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   }}
                   airlines={data.config.airlines}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   airports={data.config.airports}
                   paymentMethods={data.config.cards}
                   baggage={data.config.baggage}
@@ -1363,6 +1382,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                     set("insurances", next);
                   }}
                   data={data}
+                  client={client}
                 />
               );
             case "planes":
@@ -1384,6 +1404,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   checkIn={form.checkIns[activeIdx] || INITIAL_CHECKIN(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   baggage={data.config.baggage}
                   onChange={(updates) => {
                     const next = [...form.checkIns];
@@ -1399,6 +1420,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   migration={form.migrations[activeIdx] || INITIAL_MIGRATION(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.migrations];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1413,6 +1435,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   sim={form.simCards[activeIdx] || INITIAL_SIMCARD(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.simCards];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1427,6 +1450,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   car={form.carRentals[activeIdx] || INITIAL_CAR_RENTAL(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.carRentals];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1441,6 +1465,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   finca={form.fincas[activeIdx] || INITIAL_FINCA(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.fincas];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1455,6 +1480,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   tour={form.tours[activeIdx] || INITIAL_TOUR(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.tours];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1469,6 +1495,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   convention={form.conventions[activeIdx] || INITIAL_CONVENTION(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.conventions];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1483,6 +1510,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   restaurant={form.restaurants[activeIdx] || INITIAL_RESTAURANT(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.restaurants];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1497,6 +1525,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   visa={form.visas[activeIdx] || INITIAL_VISA(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.visas];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1511,6 +1540,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   passport={form.passports[activeIdx] || INITIAL_PASSPORT(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.passports];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1525,6 +1555,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   pet={form.petServices[activeIdx] || INITIAL_PET_SERVICE(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.petServices];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1872,7 +1903,7 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.hotelType
       );
     case "seguros_viaje":
-      return !item.contactName && !item.contactNumber && !item.address;
+      return !item.phone && !item.insuranceType;
     case "planes":
       return (
         !item.planName &&
@@ -1893,7 +1924,7 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
     case "documentacion_migratoria":
       return (
         !item.nationality &&
-        !item.passportNumber &&
+        !item.docNumber &&
         !item.passportExpiry &&
         !item.destinationCountry
       );
@@ -1919,7 +1950,8 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.preferredDate &&
         !item.childrenAges &&
         !item.pickupPoint &&
-        !item.medicalConditions
+        !item.medicalConditions &&
+        !item.observations
       );
     case "centros_convencion":
       return (
@@ -1933,13 +1965,12 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
     case "visa":
       return (
         !item.nationality &&
-        !item.passportNumber &&
+        !item.docNumber &&
         !item.passportExpiration &&
-        !item.countryApplying &&
-        !item.estimatedTravelDate
+        !item.countryApplying
       );
     case "pasaporte":
-      return !item.residenceCity && !item.estimatedTravelDate;
+      return !item.residenceCity;
     case "servicio_mascotas":
       return (
         !item.petName &&
@@ -1947,7 +1978,9 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         item.weight === 0 &&
         !item.travelDate &&
         !item.destinationCountry &&
-        !item.medicalConditions
+        !item.medicalConditions &&
+        !item.transportCompany &&
+        !item.observations
       );
     default:
       return true;

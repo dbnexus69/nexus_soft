@@ -328,7 +328,7 @@ export default function Itineraries() {
                             return (
                             <div
                               key={flight.id}
-                              title={`${isPlan ? '📦 ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}`}
+                              title={`${isPlan ? '📦 ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}${isPlan && flight.additionalPassengers ? `\nAcompañantes: ${flight.additionalPassengers}` : ''}`}
                               className={`px-2 py-1 rounded-md text-[10px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
                                 isPlan
                                   ? 'bg-emerald-50 border-emerald-100 text-emerald-700'

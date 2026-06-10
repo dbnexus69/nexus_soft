@@ -238,9 +238,8 @@ export interface PlanData {
 }
 
 export interface InsuranceData {
-  contactName: string;
-  contactNumber: string;
-  address: string;
+  insuranceType: string;
+  phone: string;
   supplier: string;
   supplierCost: number;
   ta: number;
@@ -298,7 +297,8 @@ export interface MigrationData {
   passengerName: string;
   birthDate: string;
   nationality: string;
-  passportNumber: string;
+  docType: string;
+  docNumber: string;
   passportExpiry: string;
   destinationCountry: string;
   requestedDocType: string;
@@ -307,6 +307,7 @@ export interface MigrationData {
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -335,7 +336,7 @@ export interface CarRentalData {
   pickupLocation: string;
   vehicleCategory: string;
   additionalDrivers: number;
-  insuranceType: "basic" | "all_risk";
+  insuranceType: string;
   guaranteeCreditCard: string;
   voucher?: { name: string; base64: string };
   sendVoucher?: boolean;
@@ -345,6 +346,10 @@ export interface CarRentalData {
 }
 
 export interface FincaData {
+  fincaName: string;
+  fincaAddress: string;
+  fincaCity: string;
+  observations: string;
   responsibleName: string;
   docNumber: string;
   checkInDate: string;
@@ -359,6 +364,7 @@ export interface FincaData {
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -374,14 +380,19 @@ export interface TourData {
   pickupPoint: string;
   medicalConditions: string;
   phone: string;
+  observations?: string;
   voucher?: { name: string; base64: string };
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
 export interface ConventionData {
+  city?: string;
+  address?: string;
+  placeName?: string;
   organization: string;
   contactName: string;
   startDate: string;
@@ -397,6 +408,7 @@ export interface ConventionData {
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -413,6 +425,7 @@ export interface RestaurantData {
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -420,7 +433,8 @@ export interface VisaData {
   fullName: string;
   birthDate: string;
   nationality: string;
-  passportNumber: string;
+  docType: string;
+  docNumber: string;
   passportExpiration: string;
   countryApplying: string;
   visaType: string;
@@ -430,6 +444,7 @@ export interface VisaData {
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -445,6 +460,7 @@ export interface PassportData {
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -460,10 +476,13 @@ export interface PetServiceData {
   destinationCountry: string;
   medicalConditions: string;
   phone: string;
+  transportCompany?: string;
+  observations?: string;
   voucher?: { name: string; base64: string };
   sendVoucher?: boolean;
   supplierName?: string;
   supplierCost?: number;
+  supplierPaymentMethod?: string;
   ta?: number;
 }
 
@@ -519,6 +538,7 @@ export interface Sale {
   supplierCost?: number;
   payments?: PaymentRecord[];
   servicesSummary?: Array<{ tipo: string; label: string; detail: string | null }>;
+  isReviewed?: boolean;
 }
 
 export interface Flight {
@@ -534,6 +554,7 @@ export interface Flight {
   seat?: string | null;
   reservationNumber?: string;
   source?: "ticket" | "plan";
+  additionalPassengers?: number;
 }
 
 export interface CommissionAgent {

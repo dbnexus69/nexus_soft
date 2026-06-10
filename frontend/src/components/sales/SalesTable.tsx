@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Eye, FileDown, Pencil, Ban } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Eye, FileDown, Pencil, Ban, ChevronDown, CheckCircle2 } from "lucide-react";
 import { RxUpdate } from "react-icons/rx";
 import { Table, TableRow, TableCell, Pagination } from "../ui/Table";
 import { Button } from "../ui/Button";
@@ -18,6 +18,7 @@ interface SalesTableProps {
   onDelete: (sale: Sale) => void;
   canEditThis: (sale: Sale) => boolean;
   isAdmin: boolean;
+  onReviewStatusChange?: (saleId: number, isReviewed: boolean) => void;
 }
 
 export default function SalesTable({
@@ -31,10 +32,13 @@ export default function SalesTable({
   onDelete,
   canEditThis,
   isAdmin,
+  onReviewStatusChange,
 }: SalesTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const totalPages = Math.ceil(sales.length / itemsPerPage);
+  
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
   // Volver a la página 1 cuando se agrega una nueva venta
   useEffect(() => {
@@ -128,15 +132,45 @@ export default function SalesTable({
             </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1">
-                <Badge variant={sale.status} className="uppercase text-[9px] font-black">
-                  {sale.status === "pagado"
-                    ? "Finalizado"
-                    : sale.status === "abonado"
-                      ? "Abonado"
-                      : sale.status === "anulado"
-                        ? "Anulado"
-                        : "En Crédito"}
-                </Badge>
+                <div className="flex items-center gap-1">
+                  <Badge variant={sale.status} className="uppercase text-[9px] font-black">
+                    {sale.status === "pagado"
+                      ? "Finalizado"
+                      : sale.status === "abonado"
+                        ? "Abonado"
+                        : sale.status === "anulado"
+                          ? "Anulado"
+                          : "En Crédito"}
+                  </Badge>
+                  {sale.status === "pagado" && onReviewStatusChange && (
+                    <div className="relative inline-flex items-center">
+                      {sale.isReviewed ? (
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100" title="Revisado">
+                          <CheckCircle2 size={12} />
+                        </span>
+                      ) : (
+                        <div
+                          className="relative flex items-center justify-center w-5 h-5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-primary transition-colors border border-transparent hover:border-gray-200"
+                          title="Marcar como revisado"
+                        >
+                          <select
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            value="Pendiente"
+                            onChange={(e) => {
+                              if (e.target.value === "Revisado") {
+                                onReviewStatusChange(sale.id, true);
+                              }
+                            }}
+                          >
+                            <option value="Pendiente" disabled>Opciones...</option>
+                            <option value="Revisado">Marcar Revisado</option>
+                          </select>
+                          <ChevronDown size={14} className="pointer-events-none" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {sale.status === "credito" && sale.creditDueDate && (
                   <span className="text-[10px] text-rose-500 font-medium whitespace-nowrap">
                     Vence: {formatDate(sale.creditDueDate)}

@@ -8,11 +8,12 @@ interface TourFormProps {
   tour: TourData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<TourData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function TourForm({ tour, client, suppliers, onChange, triggerError }: TourFormProps) {
+export function TourForm({ tour, client, suppliers, paymentMethods, onChange, triggerError }: TourFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -118,8 +119,11 @@ export function TourForm({ tour, client, suppliers, onChange, triggerError }: To
               maxLength={30}
             />
           </FormField>
-          <FormField label="Condiciones Médicas" className="md:col-span-2">
+          <FormField label="Condiciones Médicas">
             <Textarea value={tour.medicalConditions} onChange={(e) => onChange({ medicalConditions: e.target.value })} placeholder="Alergias, enfermedades, etc." rows={2} />
+          </FormField>
+          <FormField label="Observaciones">
+            <Textarea value={tour.observations} onChange={(e) => onChange({ observations: e.target.value })} placeholder="Notas adicionales del tour..." rows={2} />
           </FormField>
         </div>
       </div>
@@ -127,6 +131,9 @@ export function TourForm({ tour, client, suppliers, onChange, triggerError }: To
       <FinancialSection 
         supplierName={tour.supplierName}
         supplierCost={tour.supplierCost}
+        supplierPaymentMethod={tour.supplierPaymentMethod}
+        isPaymentMethodRequired={true}
+        paymentMethods={paymentMethods}
         ta={tour.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

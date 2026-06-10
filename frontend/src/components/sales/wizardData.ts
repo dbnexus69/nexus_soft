@@ -128,9 +128,8 @@ export const INITIAL_HOTEL = (client?: any): HotelData => ({
 });
 
 export const INITIAL_INSURANCE = (client?: any): InsuranceData => ({
-  contactName: "",
-  contactNumber: "",
-  address: "",
+  insuranceType: "",
+  phone: client?.phone || "",
   supplier: "",
   supplierCost: 0,
   ta: 0,
@@ -201,7 +200,8 @@ export const INITIAL_MIGRATION = (client?: any): MigrationData => ({
   passengerName: client?.name || "",
   birthDate: client?.birthDate ? client.birthDate.split('T')[0] : "",
   nationality: "",
-  passportNumber: "",
+  docType: client?.docType || "CC",
+  docNumber: client?.docNumber || "",
   passportExpiry: "",
   destinationCountry: "",
   requestedDocType: "Visa Turismo",
@@ -248,6 +248,10 @@ export const INITIAL_CAR_RENTAL = (client?: any): CarRentalData => ({
 });
 
 export const INITIAL_FINCA = (client?: any): FincaData => ({
+  fincaName: "",
+  fincaAddress: "",
+  fincaCity: "",
+  observations: "",
   responsibleName: client?.name || "",
   docNumber: client?.docNumber || "",
   checkInDate: "",
@@ -277,6 +281,7 @@ export const INITIAL_TOUR = (client?: any): TourData => ({
   pickupPoint: "",
   medicalConditions: "",
   phone: client?.phone || "",
+  observations: "",
   voucher: undefined,
   sendVoucher: false,
   supplierName: "",
@@ -285,6 +290,9 @@ export const INITIAL_TOUR = (client?: any): TourData => ({
 });
 
 export const INITIAL_CONVENTION = (client?: any): ConventionData => ({
+  city: "",
+  address: "",
+  placeName: "",
   organization: "",
   contactName: client?.name || "",
   startDate: "",
@@ -323,7 +331,8 @@ export const INITIAL_VISA = (client?: any): VisaData => ({
   fullName: client?.name || "",
   birthDate: client?.birthDate ? client.birthDate.split('T')[0] : "",
   nationality: "",
-  passportNumber: "",
+  docType: client?.docType || "CC",
+  docNumber: client?.docNumber || "",
   passportExpiration: "",
   countryApplying: "",
   visaType: "turista",
@@ -363,6 +372,8 @@ export const INITIAL_PET_SERVICE = (client?: any): PetServiceData => ({
   destinationCountry: "",
   medicalConditions: "",
   phone: client?.phone || "",
+  transportCompany: "",
+  observations: "",
   voucher: undefined,
   sendVoucher: false,
   supplierName: "",

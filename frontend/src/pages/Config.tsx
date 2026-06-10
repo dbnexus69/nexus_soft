@@ -166,9 +166,6 @@ export default function Config() {
       if (!formData.status) {
         newErrors.status = 'Debe seleccionar un estado.';
       }
-      if (!formData.description || formData.description.trim().length < 5) {
-        newErrors.description = 'Debe ingresar una descripción de al menos 5 caracteres.';
-      }
     } else {
       switch (currentSection) {
         case 'paymentMethods':

@@ -83,6 +83,7 @@ interface DataContextType {
   updateSale: (id: number, sale: Partial<Sale>) => Promise<void>;
   deleteSale: (id: number) => Promise<void>;
   voidSale: (id: number, reason: string) => Promise<void>;
+  updateReviewStatus: (id: number, isReviewed: boolean) => Promise<void>;
   registerCreditPayment: (saleId: number, amount: number, method?: string, isTotal?: boolean) => Promise<{ payment: any; status: string; creditPaidAmount: number }>;
   deleteSalePayment: (saleId: number, paymentId: string) => Promise<void>;
   updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<void>;
@@ -416,6 +417,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDashboardData(null);
   };
 
+  const updateReviewStatus = async (id: number, isReviewed: boolean) => {
+    const updated = await api.updateReviewStatus(id, isReviewed);
+    setData(prev => ({
+      ...prev,
+      sales: prev.sales.map(s => s.id === id ? { ...s, isReviewed: updated.isReviewed } : s)
+    }));
+    invalidateSalesCache();
+  };
+
   const registerCreditPayment = async (saleId: number, amount: number, method?: string, isTotal: boolean = false) => {
     // Find current sale to pass totals — backend can skip a findUnique
     const sale = data.sales.find(s => s.id === saleId);
@@ -651,6 +661,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateSale,
       deleteSale,
       voidSale,
+      updateReviewStatus,
       settleCommissions,
       refreshSettlements,
       registerCreditPayment,

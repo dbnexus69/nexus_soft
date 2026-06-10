@@ -8,11 +8,12 @@ interface VisaFormProps {
   visa: VisaData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<VisaData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function VisaForm({ visa, client, suppliers, onChange, triggerError }: VisaFormProps) {
+export function VisaForm({ visa, client, suppliers, paymentMethods, onChange, triggerError }: VisaFormProps) {
   const todayStr = new Date().toISOString().slice(0, 10);
   return (
     <div className="space-y-6 animate-fade-in">
@@ -49,24 +50,47 @@ export function VisaForm({ visa, client, suppliers, onChange, triggerError }: Vi
               maxLength={30}
             />
           </FormField>
-          <FormField label="Número de Pasaporte">
-            <Input 
-              value={visa.passportNumber} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ passportNumber: cleaned });
-              }} 
-              placeholder="Número de pasaporte" 
-              maxLength={20}
+          <FormField label="Tipo de Documento">
+            <Combobox
+              value={visa.docType || "CC"}
+              onChange={(val) => onChange({ docType: val, docNumber: "" })}
+              options={[
+                { value: "CC", label: "Cédula de Ciudadanía" },
+                { value: "TI", label: "Tarjeta de Identidad" },
+                { value: "CE", label: "Cédula de Extranjería" },
+                { value: "Pasaporte", label: "Pasaporte" },
+                { value: "Otro", label: "Otro Documento" },
+              ]}
             />
           </FormField>
-          <FormField label="Vencimiento Pasaporte">
+          <FormField label="Número de Documento">
+            <div className="relative pb-5">
+              <Input 
+                value={visa.docNumber} 
+                onChange={(e) => {
+                  let cleaned = e.target.value;
+                  if (visa.docType === "CC" || visa.docType === "TI") {
+                    cleaned = cleaned.replace(/[^0-9]/g, "");
+                  } else {
+                    cleaned = cleaned.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  }
+                  onChange({ docNumber: cleaned });
+                }} 
+                placeholder={visa.docType === "Pasaporte" ? "N° Pasaporte" : "Número de documento"} 
+                maxLength={20}
+              />
+              {visa.docNumber !== undefined && visa.docNumber.length > 0 && visa.docNumber.length < 5 && (
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 5 caracteres</p>
+              )}
+            </div>
+          </FormField>
+          <FormField label="Vencimiento de Documento">
             <DatePicker
               value={visa.passportExpiration}
               onChange={(val) => onChange({ passportExpiration: val })}
               min={todayStr}
               triggerError={triggerError}
-              fieldName="Vencimiento del pasaporte"
+              fieldName="Vencimiento del documento"
             />
           </FormField>
           <FormField label="País al que aplica">
@@ -125,6 +149,9 @@ export function VisaForm({ visa, client, suppliers, onChange, triggerError }: Vi
       <FinancialSection 
         supplierName={visa.supplierName}
         supplierCost={visa.supplierCost}
+        supplierPaymentMethod={visa.supplierPaymentMethod}
+        isPaymentMethodRequired={false}
+        paymentMethods={paymentMethods}
         ta={visa.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

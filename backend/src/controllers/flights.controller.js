@@ -130,6 +130,7 @@ exports.list = async (req, res, next) => {
         aerolinea: true,
         detalleVenta: {
           include: {
+            pasajerosDetalle: true,
             venta: {
               include: {
                 cliente: {
@@ -151,6 +152,7 @@ exports.list = async (req, res, next) => {
         : 'Desconocido';
       const airlineName = p.aerolinea?.nombre || '';
       const planLabel = p.nombrePlan || 'Paquete';
+      const additionalPassengers = p.detalleVenta?.pasajerosDetalle ? Math.max(0, p.detalleVenta.pasajerosDetalle.length - 1) : 0;
 
       // Ida flight (departure)
       if (p.fechaSalidaVuelo) {
@@ -171,6 +173,7 @@ exports.list = async (req, res, next) => {
             flightNumber: p.nroVuelo || '',
             seat: null,
             reservationNumber: p.nroReserva || '',
+            additionalPassengers,
             source: 'plan'
           });
         }
@@ -194,6 +197,7 @@ exports.list = async (req, res, next) => {
             flightNumber: p.nroVuelo || '',
             seat: null,
             reservationNumber: p.nroReserva || '',
+            additionalPassengers,
             source: 'plan'
           });
         }

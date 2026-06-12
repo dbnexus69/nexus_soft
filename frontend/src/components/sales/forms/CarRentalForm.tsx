@@ -8,11 +8,12 @@ interface CarRentalFormProps {
   car: CarRentalData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<CarRentalData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function CarRentalForm({ car, client, suppliers, onChange, triggerError }: CarRentalFormProps) {
+export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange, triggerError }: CarRentalFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -128,6 +129,9 @@ export function CarRentalForm({ car, client, suppliers, onChange, triggerError }
       <FinancialSection 
         supplierName={car.supplierName}
         supplierCost={car.supplierCost}
+        supplierPaymentMethod={car.supplierPaymentMethod}
+        isPaymentMethodRequired={true}
+        paymentMethods={paymentMethods}
         ta={car.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

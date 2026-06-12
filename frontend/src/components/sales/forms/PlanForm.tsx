@@ -273,13 +273,14 @@ export function PlanForm({ plan, onChange, data, triggerError }: PlanFormProps) 
             />
           </FormField>
           <FormField label="Método de Pago">
-            <Select
-              value={plan.supplierPaymentMethod}
-              onChange={(e) => onChange({ supplierPaymentMethod: e.target.value })}
+            <Combobox
+              value={plan.supplierPaymentMethod || ""}
+              onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={data.config.cards.map((m: any) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
+              placeholder="Seleccionar método..."
             />
           </FormField>
         </div>

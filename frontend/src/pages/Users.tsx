@@ -987,7 +987,7 @@ export default function Users() {
               type="email"
               value={formData.email}
               onChange={(e) => {
-                const cleaned = e.target.value.replace(/\s/g, '');
+                const cleaned = e.target.value.replace(/\s/g, '').toLowerCase();
                 setFormData({ ...formData, email: cleaned });
                 if (errors.email) setErrors((p) => ({ ...p, email: "" }));
               }}

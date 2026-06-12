@@ -153,13 +153,14 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
             />
           </FormField>
           <FormField label="Método de Pago">
-            <Select
-              value={insurance.supplierPaymentMethod}
-              onChange={(e) => onChange({ supplierPaymentMethod: e.target.value })}
+            <Combobox
+              value={insurance.supplierPaymentMethod || ""}
+              onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={data.config.cards.map((m: any) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
+              placeholder="Seleccionar método..."
             />
           </FormField>
         </div>

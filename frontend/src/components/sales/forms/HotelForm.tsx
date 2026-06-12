@@ -190,13 +190,14 @@ export function HotelForm({ hotel, onChange, data, triggerError }: HotelFormProp
             />
           </FormField>
           <FormField label="Método de Pago">
-            <Select
-              value={hotel.supplierPaymentMethod}
-              onChange={(e) => onChange({ supplierPaymentMethod: e.target.value })}
+            <Combobox
+              value={hotel.supplierPaymentMethod || ""}
+              onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={data.config.cards.map((m: any) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
+              placeholder="Seleccionar método..."
             />
           </FormField>
         </div>

@@ -87,7 +87,7 @@ export default function Dashboard() {
       planesCount: d?.categoryBreakdown?.planes?.count ?? 0,
       planesIngresos: d?.categoryBreakdown?.planes?.revenue ?? 0,
       supplierCount: d?.supplierCount ?? 0,
-      creditMayoristas: d?.creditMayoristas ?? 0,
+      creditProveedores: d?.creditProveedores ?? 0,
       creditTa: d?.creditTa ?? 0,
       yearlyTrendData: MONTH_NAMES.map((monthName, index) => {
         const monthNum = index + 1;
@@ -176,7 +176,7 @@ export default function Dashboard() {
               onClick: () => setIsCreditModalOpen(true),
             },
             {
-              label: "MAYORISTAS",
+              label: "PROVEEDORES",
               value: formatCurrency(stats.totalProveedores),
               subtitle: "Costos Operativos",
               detail: `${stats.supplierCount} activos`,
@@ -445,20 +445,20 @@ export default function Dashboard() {
 
           {/* Grid de Desglose */}
           <div className="grid grid-cols-1 gap-4">
-            {/* Mayoristas */}
+            {/* Proveedores */}
             <div className="p-5 bg-rose-50/50 border border-rose-100 rounded-2xl flex items-start gap-4 hover:shadow-md transition-shadow">
               <div className="p-3 bg-rose-500 text-white rounded-xl shadow-md shadow-rose-200">
                 <Briefcase size={20} />
               </div>
               <div className="flex-1">
                 <p className="text-[10px] font-extrabold text-rose-500 uppercase tracking-widest mb-1">
-                  Deuda con Mayoristas (Proveedores)
+                  Deuda con Proveedores
                 </p>
                 <h4 className="text-xl font-black text-gray-800 mb-1">
-                  {formatCurrency(stats.creditMayoristas)}
+                  {formatCurrency(stats.creditProveedores)}
                 </h4>
                 <p className="text-xs text-gray-500 font-medium">
-                  Costo neto de servicios turísticos adquiridos con operadores mayoristas pendientes de pago.
+                  Costo neto de servicios turísticos adquiridos con operadores proveedores pendientes de pago.
                 </p>
               </div>
             </div>
@@ -483,20 +483,20 @@ export default function Dashboard() {
           </div>
 
           {/* Gráfico/Progreso Segmentado */}
-          {stats.creditMayoristas + stats.creditTa > 0 && (
+          {stats.creditProveedores + stats.creditTa > 0 && (
             <div className="space-y-2 pt-2">
               <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <span>Mayoristas ({Math.round((stats.creditMayoristas / (stats.creditMayoristas + stats.creditTa)) * 100)}%)</span>
-                <span>TA ({Math.round((stats.creditTa / (stats.creditMayoristas + stats.creditTa)) * 100)}%)</span>
+                <span>Proveedores ({Math.round((stats.creditProveedores / (stats.creditProveedores + stats.creditTa)) * 100)}%)</span>
+                <span>TA ({Math.round((stats.creditTa / (stats.creditProveedores + stats.creditTa)) * 100)}%)</span>
               </div>
               <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
                 <div 
                   className="bg-rose-500 transition-all duration-1000 ease-out" 
-                  style={{ width: `${(stats.creditMayoristas / (stats.creditMayoristas + stats.creditTa)) * 100}%` }} 
+                  style={{ width: `${(stats.creditProveedores / (stats.creditProveedores + stats.creditTa)) * 100}%` }} 
                 />
                 <div 
                   className="bg-emerald-500 transition-all duration-1000 ease-out" 
-                  style={{ width: `${(stats.creditTa / (stats.creditMayoristas + stats.creditTa)) * 100}%` }} 
+                  style={{ width: `${(stats.creditTa / (stats.creditProveedores + stats.creditTa)) * 100}%` }} 
                 />
               </div>
             </div>

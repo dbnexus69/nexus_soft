@@ -1406,6 +1406,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   client={client}
                   suppliers={data.config.suppliers}
                   baggage={data.config.baggage}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.checkIns];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1435,6 +1436,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   sim={form.simCards[activeIdx] || INITIAL_SIMCARD(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.simCards];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -1449,6 +1451,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   car={form.carRentals[activeIdx] || INITIAL_CAR_RENTAL(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.carRentals];
                     next[activeIdx] = { ...next[activeIdx], ...updates };

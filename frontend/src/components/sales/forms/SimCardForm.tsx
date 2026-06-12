@@ -8,11 +8,12 @@ interface SimCardFormProps {
   sim: SimCardData;
   client: any;
   suppliers?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<SimCardData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function SimCardForm({ sim, client, suppliers, onChange, triggerError }: SimCardFormProps) {
+export function SimCardForm({ sim, client, suppliers, paymentMethods, onChange, triggerError }: SimCardFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -113,6 +114,9 @@ export function SimCardForm({ sim, client, suppliers, onChange, triggerError }: 
       <FinancialSection 
         supplierName={sim.supplierName}
         supplierCost={sim.supplierCost}
+        supplierPaymentMethod={sim.supplierPaymentMethod}
+        isPaymentMethodRequired={true}
+        paymentMethods={paymentMethods}
         ta={sim.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

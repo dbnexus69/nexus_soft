@@ -9,11 +9,12 @@ interface CheckInFormProps {
   client: any;
   suppliers?: any[];
   baggage?: any[];
+  paymentMethods?: any[];
   onChange: (updates: Partial<CheckInData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function CheckInForm({ checkIn, client, suppliers, baggage, onChange, triggerError }: CheckInFormProps) {
+export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethods, onChange, triggerError }: CheckInFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -116,6 +117,9 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, onChange, tri
       <FinancialSection 
         supplierName={checkIn.supplierName}
         supplierCost={checkIn.supplierCost}
+        supplierPaymentMethod={checkIn.supplierPaymentMethod}
+        isPaymentMethodRequired={true}
+        paymentMethods={paymentMethods}
         ta={checkIn.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}

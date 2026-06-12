@@ -1097,13 +1097,14 @@ export function TicketForm({
             />
           </FormField>
           <FormField label="Método de Pago Proveedor">
-            <Select
-              value={ticket.supplierPaymentMethod}
-              onChange={(e) => onChange({ supplierPaymentMethod: e.target.value })}
+            <Combobox
+              value={ticket.supplierPaymentMethod || ""}
+              onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={paymentMethods.map((m) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
+              placeholder="Seleccionar método..."
             />
           </FormField>
           <FormField label="Plan de Equipaje">

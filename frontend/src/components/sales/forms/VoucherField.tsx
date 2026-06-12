@@ -224,17 +224,16 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
         <FormField label={`Método de Pago${isPaymentMethodRequired ? ' *' : ''}`}>
           <div className="relative group">
             <LuCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={16} />
-            <Select
+            <Combobox
               value={supplierPaymentMethod || ""}
-              onChange={(e) => onChange({ supplierPaymentMethod: e.target.value })}
-              options={[
-                { value: "", label: "Seleccionar método..." },
-                ...paymentMethods.map(m => ({
-                  value: m.name,
-                  label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name
-                }))
-              ]}
-              className={`pl-8 ${isPaymentMethodRequired && !supplierPaymentMethod ? 'border-amber-200 bg-amber-50/30' : 'border-emerald-200'}`}
+              onChange={(val) => onChange({ supplierPaymentMethod: val })}
+              options={paymentMethods.map(m => ({
+                value: m.name,
+                label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name
+              }))}
+              placeholder="Seleccionar método..."
+              inputClassName={`pl-8 ${isPaymentMethodRequired && !supplierPaymentMethod ? 'border-amber-200 bg-amber-50/30' : 'border-emerald-200'}`}
+              preventNumbers={false}
             />
           </div>
         </FormField>

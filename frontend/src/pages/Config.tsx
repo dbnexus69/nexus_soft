@@ -40,7 +40,7 @@ const SECTIONS = [
   { id: 'paymentMethods', label: 'Formas de Pago', desc: 'Métodos de cobro del sistema', icon: <Coins size={18} /> },
   { id: 'documentTypes', label: 'Tipos de Documento', desc: 'Documentos de identidad base', icon: <IdCard size={18} /> },
   { id: 'airlines', label: 'Aerolíneas', desc: 'Líneas aéreas autorizadas', icon: <PlaneTakeoff size={18} /> },
-  { id: 'suppliers', label: 'Mayoristas', desc: 'Hoteles, operadores y aerolíneas', icon: <Building2 size={18} /> },
+  { id: 'suppliers', label: 'Proveedores', desc: 'Hoteles, operadores y aerolíneas', icon: <Building2 size={18} /> },
   { id: 'airports', label: 'Aeropuertos', desc: 'Aeropuertos y ubicaciones base', icon: <Compass size={18} /> },
   { id: 'baggage', label: 'Equipaje', desc: 'Políticas y pesos de equipaje', icon: <Luggage size={18} /> },
   { id: 'packages', label: 'Paquetes', desc: 'Catálogo de paquetes turísticos', icon: <Boxes size={18} /> }
@@ -180,7 +180,7 @@ export default function Config() {
           break;
         case 'suppliers':
           if (!formData.name || formData.name.trim().length === 0) newErrors.name = 'El nombre es obligatorio.';
-          if (!formData.type) newErrors.type = 'Debe seleccionar un tipo de mayorista.';
+          if (!formData.type) newErrors.type = 'Debe seleccionar un tipo de proveedor.';
           if (!formData.email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) newErrors.email = 'Debe ingresar un correo electrónico válido.';
           if (!formData.phone || formData.phone.trim().length < 7) newErrors.phone = 'Debe ingresar un teléfono válido.';
           if (!formData.website || !formData.website.startsWith('http')) newErrors.website = 'Debe ingresar un enlace de sitio web válido (que inicie con http:// o https://).';
@@ -239,7 +239,7 @@ export default function Config() {
 
   // Static statistics based on actual active config lengths
   const stats = [
-    { label: 'Mayoristas Activos', count: data.config.suppliers?.length || 0, icon: <Building2 className="text-primary" size={18} /> },
+    { label: 'Proveedores Activos', count: data.config.suppliers?.length || 0, icon: <Building2 className="text-primary" size={18} /> },
     { label: 'Aeropuertos Base', count: data.config.airports?.length || 0, icon: <Compass className="text-accent" size={18} /> },
     { label: 'Aerolíneas de Viaje', count: data.config.airlines?.length || 0, icon: <PlaneTakeoff className="text-success" size={18} /> },
     { label: 'Formas de Pago', count: data.config.paymentMethods?.length || 0, icon: <Coins className="text-warning" size={18} /> },

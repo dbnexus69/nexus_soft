@@ -789,7 +789,7 @@ export default function Clients() {
                   type="email"
                   value={formData.email}
                   onChange={e => {
-                    const cleaned = e.target.value.replace(/\s/g, ''); // Sin espacios en correos
+                    const cleaned = e.target.value.replace(/\s/g, '').toLowerCase(); // Sin espacios en correos
                     setFormData({ ...formData, email: cleaned });
                     if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
                   }}

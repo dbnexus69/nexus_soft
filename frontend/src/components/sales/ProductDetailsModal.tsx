@@ -134,7 +134,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                 { label: "Aerolínea", value: ticket.airlineName || ticket.airline },
                 { label: "Reserva", value: ticket.reservationNumber },
                 { label: "Tiquete", value: ticket.ticketNumber },
-                { label: "Vuelo", value: ticket.flightNumber },
+                { label: "Vuelo", value: ticket.flightNumber || ticket.legs?.[0]?.flightNumber || "-" },
               ])}
 
               {/* Outbound Flights (Trayecto de Ida) */}

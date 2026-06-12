@@ -171,23 +171,26 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                 { value: '', label: 'Seleccione un tipo' },
                 { value: 'Hotel', label: 'Hotel' }, 
                 { value: 'Operador', label: 'Operador' }, 
-                { value: 'Aerolinea', label: 'Aerolínea' }
+                { value: 'Operador Internacional', label: 'Operador Internacional' },
+                { value: 'Aerolinea', label: 'Aerolínea' },
+                { value: 'Consolidadores', label: 'Consolidadores' },
+                { value: 'Asistencia de viajes', label: 'Asistencia de Viajes' }
               ]}
               error={errors.type}
             />
           </FormField>
-          <FormField label="Email de Contacto" error={errors.email}>
+          <FormField label="Email de Contacto (Opcional)" error={errors.email}>
             <Input 
               value={formData.email || ''} 
               onChange={e => {
-                setFormData({ ...formData, email: e.target.value });
+                setFormData({ ...formData, email: e.target.value.replace(/\s/g, '').toLowerCase() });
                 if (errors.email) setErrors({ ...errors, email: '' });
               }} 
               placeholder="Ej. reservas@danncarlton.com"
               error={errors.email} 
             />
           </FormField>
-          <FormField label="Teléfono de Contacto" error={errors.phone}>
+          <FormField label="Teléfono de Contacto (Opcional)" error={errors.phone}>
             <Input 
               value={formData.phone || ''} 
               onChange={e => {

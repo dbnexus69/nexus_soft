@@ -365,6 +365,7 @@ exports.removeItem = async (req, res, next) => {
       if (section === 'packages') {
         await tx.paqueteVuelo.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteHotel.deleteMany({ where: { paqueteId: itemId } });
+        await tx.paqueteProveedor.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteTarifas.deleteMany({ where: { paqueteId: itemId } });
         await tx.paqueteAsistenciaMedica.deleteMany({ where: { paqueteId: itemId } });
       }

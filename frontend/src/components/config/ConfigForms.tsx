@@ -299,17 +299,14 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
       return (
         <>
           <FormField label="Aerolínea" error={errors.airlineName}>
-            <Select
+            <Combobox
               value={formData.airlineName || ''}
-              onChange={e => {
-                setFormData({ ...formData, airlineName: e.target.value });
+              onChange={val => {
+                setFormData({ ...formData, airlineName: val });
                 if (errors.airlineName) setErrors({ ...errors, airlineName: '' });
               }}
-              options={[
-                { value: '', label: 'Seleccione aerolínea' },
-                ...data.config.airlines.map((a: any) => ({ value: a.name, label: a.name }))
-              ]}
-              error={errors.airlineName}
+              options={data.config.airlines.map((a: any) => ({ value: a.name, label: a.name }))}
+              placeholder="Seleccione o escriba aerolínea"
             />
           </FormField>
           <FormField label="Tipo de Tarifa / Cabina" error={errors.fareType}>

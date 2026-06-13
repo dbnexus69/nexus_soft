@@ -46,7 +46,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientSales
           <div><span className="text-gray-500 text-sm block">Tipo Doc:</span> <span className="font-medium">{client.docType}</span></div>
           <div><span className="text-gray-500 text-sm block">Numero:</span> <span className="font-medium">{client.docNumber}</span></div>
           <div><span className="text-gray-500 text-sm block">Telefono:</span> <span className="font-medium">{client.phone}</span></div>
-          <div><span className="text-gray-500 text-sm block">Correo:</span> <span className="font-medium">{client.email}</span></div>
+          <div className="min-w-0"><span className="text-gray-500 text-sm block">Correo:</span> <span className="font-medium block break-all">{client.email}</span></div>
           <div><span className="text-gray-500 text-sm block">F. Nacimiento:</span> <span className="font-medium">{client.birthDate ? formatDate(client.birthDate) : 'N/A'}</span></div>
           <div><span className="text-gray-500 text-sm block">Registro:</span> <span className="font-medium">{formatDate(client.registrationDate)}</span></div>
         </div>

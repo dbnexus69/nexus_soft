@@ -79,16 +79,49 @@ exports.createAgent = async (req, res, next) => {
       if (dt) tipoDocumentoId = dt.id;
     }
 
-    const persona = await prisma.personas.create({
-      data: {
-        nombres: formatName(data.name) || '',
-        apellidos: '',
-        tipoDocumentoId,
-        documento: data.docNumber || null,
-        email: data.email || null,
-        telefono: data.phone || null
+    // Check if agent with this document already exists
+    if (data.docNumber) {
+      const existingAgent = await prisma.comisionistas.findFirst({
+        where: { persona: { documento: data.docNumber } }
+      });
+      if (existingAgent) {
+        return error(res, 'Este número de documento ya está registrado como comisionista', 400);
       }
-    });
+    }
+
+    let persona;
+    if (data.docNumber) {
+      const existingPersona = await prisma.personas.findUnique({
+        where: { documento: data.docNumber }
+      });
+      if (existingPersona) {
+        persona = await prisma.personas.update({
+          where: { id: existingPersona.id },
+          data: {
+            nombres: formatName(data.name) || existingPersona.nombres,
+            tipoDocumentoId: tipoDocumentoId || existingPersona.tipoDocumentoId,
+            email: data.email || existingPersona.email,
+            telefono: data.phone || existingPersona.telefono,
+            status: 'active',
+            deletedAt: null
+          }
+        });
+      }
+    }
+
+    if (!persona) {
+      persona = await prisma.personas.create({
+        data: {
+          nombres: formatName(data.name) || '',
+          apellidos: '',
+          tipoDocumentoId,
+          documento: data.docNumber || null,
+          email: data.email || null,
+          telefono: data.phone || null
+        }
+      });
+    }
+
     const agent = await prisma.comisionistas.create({
       data: {
         personaId: persona.id,
@@ -99,6 +132,7 @@ exports.createAgent = async (req, res, next) => {
       },
       include: { persona: { include: { tipoDocumento: true } } }
     });
+
     success(res, {
       id: agent.id,
       name: `${agent.persona.nombres} ${agent.persona.apellidos}`.trim(),
@@ -128,7 +162,19 @@ exports.updateAgent = async (req, res, next) => {
 
     const personaUpdate = {};
     if (data.name) personaUpdate.nombres = formatName(data.name);
-    if (data.docNumber !== undefined) personaUpdate.documento = data.docNumber;
+    
+    if (data.docNumber !== undefined) {
+      if (data.docNumber) {
+        const existingDoc = await prisma.personas.findUnique({
+          where: { documento: data.docNumber }
+        });
+        if (existingDoc && existingDoc.id !== agent.personaId) {
+          return error(res, 'Este número de documento ya está asignado a otra persona en el sistema', 400);
+        }
+      }
+      personaUpdate.documento = data.docNumber;
+    }
+
     if (data.phone !== undefined) personaUpdate.telefono = data.phone;
     if (data.email !== undefined) personaUpdate.email = data.email;
 

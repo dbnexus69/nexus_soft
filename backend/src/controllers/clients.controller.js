@@ -144,19 +144,55 @@ exports.create = async (req, res, next) => {
       if (tipoDoc) tipoDocumentoId = tipoDoc.id;
     }
 
-    const persona = await prisma.personas.create({
-      data: {
-        nombres: data.firstName || '',
-        apellidos: data.lastName || '',
-        tipoDocumentoId,
-        documento: data.docNumber,
-        email: data.email,
-        telefono: data.phone,
-        avatarUrl: data.avatar || null,
-        birthDate: data.birthDate ? new Date(data.birthDate) : null,
-        status: 'active'
+    // Check if client with this document already exists
+    if (data.docNumber) {
+      const existingClient = await prisma.clientes.findFirst({
+        where: { persona: { documento: data.docNumber } }
+      });
+      if (existingClient) {
+        return error(res, 'Este número de documento ya está registrado como cliente', 400);
       }
-    });
+    }
+
+    let persona;
+    if (data.docNumber) {
+      const existingPersona = await prisma.personas.findUnique({
+        where: { documento: data.docNumber }
+      });
+      if (existingPersona) {
+        // Reuse existing persona and update details
+        persona = await prisma.personas.update({
+          where: { id: existingPersona.id },
+          data: {
+            nombres: data.firstName || existingPersona.nombres,
+            apellidos: data.lastName || existingPersona.apellidos,
+            tipoDocumentoId: tipoDocumentoId || existingPersona.tipoDocumentoId,
+            email: data.email || existingPersona.email,
+            telefono: data.phone || existingPersona.telefono,
+            avatarUrl: data.avatar || existingPersona.avatarUrl,
+            birthDate: data.birthDate ? new Date(data.birthDate) : existingPersona.birthDate,
+            status: 'active',
+            deletedAt: null
+          }
+        });
+      }
+    }
+
+    if (!persona) {
+      persona = await prisma.personas.create({
+        data: {
+          nombres: data.firstName || '',
+          apellidos: data.lastName || '',
+          tipoDocumentoId,
+          documento: data.docNumber || null,
+          email: data.email,
+          telefono: data.phone,
+          avatarUrl: data.avatar || null,
+          birthDate: data.birthDate ? new Date(data.birthDate) : null,
+          status: 'active'
+        }
+      });
+    }
 
     const cliente = await prisma.clientes.create({
       data: { personaId: persona.id, creadoPorId: req.user.id },
@@ -202,7 +238,16 @@ exports.update = async (req, res, next) => {
       if (tipoDoc) personaData.tipoDocumentoId = tipoDoc.id;
     }
 
-    if (data.docNumber) personaData.documento = data.docNumber;
+    if (data.docNumber) {
+      const existingDoc = await prisma.personas.findUnique({
+        where: { documento: data.docNumber }
+      });
+      if (existingDoc && existingDoc.id !== cliente.personaId) {
+        return error(res, 'Este número de documento ya está asignado a otra persona en el sistema', 400);
+      }
+      personaData.documento = data.docNumber;
+    }
+
     if (data.email) personaData.email = data.email;
     if (data.phone) personaData.telefono = data.phone;
     if (data.avatar) personaData.avatarUrl = data.avatar;

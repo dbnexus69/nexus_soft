@@ -140,19 +140,54 @@ exports.create = async (req, res, next) => {
       if (dt) tipoDocumentoId = dt.id;
     }
 
-    const persona = await prisma.personas.create({
-      data: {
-        nombres: formatName(data.firstName || data.name?.split(' ')[0] || ''),
-        apellidos: formatName(data.lastName || data.name?.split(' ').slice(1).join(' ') || ''),
-        tipoDocumentoId,
-        documento: data.docNumber,
-        email: data.email,
-        telefono: data.phone,
-        birthDate: data.birthDate ? new Date(data.birthDate) : null,
-        avatarUrl: data.avatar || null,
-        status: data.status || 'active'
+    // Check if user with this document already exists
+    if (data.docNumber) {
+      const existingUser = await prisma.usuarios.findFirst({
+        where: { persona: { documento: data.docNumber } }
+      });
+      if (existingUser) {
+        return error(res, 'Este número de documento ya está registrado como usuario', 400);
       }
-    });
+    }
+
+    let persona;
+    if (data.docNumber) {
+      const existingPersona = await prisma.personas.findUnique({
+        where: { documento: data.docNumber }
+      });
+      if (existingPersona) {
+        persona = await prisma.personas.update({
+          where: { id: existingPersona.id },
+          data: {
+            nombres: formatName(data.firstName || data.name?.split(' ')[0] || existingPersona.nombres),
+            apellidos: formatName(data.lastName || data.name?.split(' ').slice(1).join(' ') || existingPersona.apellidos),
+            tipoDocumentoId: tipoDocumentoId || existingPersona.tipoDocumentoId,
+            email: data.email || existingPersona.email,
+            telefono: data.phone || existingPersona.telefono,
+            birthDate: data.birthDate ? new Date(data.birthDate) : existingPersona.birthDate,
+            avatarUrl: data.avatar || existingPersona.avatarUrl,
+            status: data.status || 'active',
+            deletedAt: null
+          }
+        });
+      }
+    }
+
+    if (!persona) {
+      persona = await prisma.personas.create({
+        data: {
+          nombres: formatName(data.firstName || data.name?.split(' ')[0] || ''),
+          apellidos: formatName(data.lastName || data.name?.split(' ').slice(1).join(' ') || ''),
+          tipoDocumentoId,
+          documento: data.docNumber || null,
+          email: data.email,
+          telefono: data.phone,
+          birthDate: data.birthDate ? new Date(data.birthDate) : null,
+          avatarUrl: data.avatar || null,
+          status: data.status || 'active'
+        }
+      });
+    }
 
     const rol = await prisma.roles.findUnique({ where: { nombre: data.role } });
     if (!rol) return error(res, 'Rol no válido', 400);
@@ -233,7 +268,19 @@ exports.update = async (req, res, next) => {
     if (data.firstName) personaUpdate.nombres = formatName(data.firstName);
     if (data.lastName) personaUpdate.apellidos = formatName(data.lastName);
     if (data.phone !== undefined) personaUpdate.telefono = data.phone;
-    if (data.docNumber !== undefined) personaUpdate.documento = data.docNumber;
+    
+    if (data.docNumber !== undefined) {
+      if (data.docNumber) {
+        const existingDoc = await prisma.personas.findUnique({
+          where: { documento: data.docNumber }
+        });
+        if (existingDoc && existingDoc.id !== usuario.personaId) {
+          return error(res, 'Este número de documento ya está asignado a otra persona en el sistema', 400);
+        }
+      }
+      personaUpdate.documento = data.docNumber;
+    }
+
     if (data.birthDate) personaUpdate.birthDate = new Date(data.birthDate);
     if (data.avatar !== undefined) personaUpdate.avatarUrl = data.avatar;
     if (data.email) personaUpdate.email = data.email;
@@ -294,14 +341,20 @@ exports.remove = async (req, res, next) => {
     const usuario = await prisma.usuarios.findUnique({ where: { id }, include: { persona: true } });
     if (!usuario) return error(res, 'Usuario no encontrado', 404);
 
+    const hasActiveRelations = await prisma.clientes.findFirst({ where: { personaId: usuario.personaId } })
+      || await prisma.comisionistas.findFirst({ where: { personaId: usuario.personaId } });
+
     await prisma.usuarios.update({
       where: { id },
       data: { status: 'inactive' }
     });
-    await prisma.personas.update({
-      where: { id: usuario.personaId },
-      data: { deletedAt: new Date(), status: 'inactive' }
-    });
+
+    if (!hasActiveRelations) {
+      await prisma.personas.update({
+        where: { id: usuario.personaId },
+        data: { deletedAt: new Date(), status: 'inactive' }
+      });
+    }
 
     success(res, { message: 'Usuario eliminado' });
   } catch (err) {

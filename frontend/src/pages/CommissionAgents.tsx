@@ -16,6 +16,7 @@ import {
   Trash2,
   Pencil,
   Users,
+  Loader2,
 } from "lucide-react";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -48,6 +49,8 @@ export default function CommissionAgents() {
     notes: "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -162,15 +165,19 @@ export default function CommissionAgents() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este comisionista?")) return;
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
     try {
-      await deleteCommissionAgent(id);
+      await deleteCommissionAgent(deleteConfirm.id);
       notifySuccess("Comisionista eliminado correctamente");
+      setDeleteConfirm(null);
     } catch (err: any) {
       setErrorMessage(err?.response?.data?.message || "Error al eliminar el comisionista");
       setShowError(true);
       setTimeout(() => setShowError(false), 3000);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -351,7 +358,7 @@ export default function CommissionAgents() {
                                </button>
                              )}
                              {canDelete('commissions') && (
-                               <button onClick={() => handleDelete(agent.id)} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                               <button onClick={() => setDeleteConfirm(agent)} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
                                   <Trash2 size={16} />
                                </button>
                              )}
@@ -762,6 +769,41 @@ export default function CommissionAgents() {
               Cancelar Operación
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* ===== CONFIRMAR ELIMINACIÓN ===== */}
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Eliminar Comisionista"
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              className="border-none"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={isDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 font-bold"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 size={16} className="animate-spin" />}
+              {isDeleting ? "Eliminando..." : "Eliminar Comisionista"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">
+            ¿Estás seguro de que deseas eliminar al comisionista <strong>{deleteConfirm?.name}</strong>?
+            Esta acción removerá su perfil del sistema de comisiones.
+          </p>
         </div>
       </Modal>
     </div>

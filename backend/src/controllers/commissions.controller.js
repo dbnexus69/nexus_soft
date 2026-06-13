@@ -3,6 +3,25 @@ const { success, error } = require('../utils/apiResponse');
 const { buildMeta } = require('../utils/paginationHelper');
 const { formatName } = require('../utils/stringUtils');
 
+const splitFullName = (fullName) => {
+  const parts = fullName ? fullName.trim().split(/\s+/) : [];
+  let firstName = fullName || '';
+  let lastName = '';
+  if (parts.length > 1) {
+    if (parts.length === 2) {
+      firstName = parts[0];
+      lastName = parts[1];
+    } else if (parts.length === 3) {
+      firstName = parts.slice(0, 2).join(' ');
+      lastName = parts[2];
+    } else {
+      firstName = parts.slice(0, 2).join(' ');
+      lastName = parts.slice(2).join(' ');
+    }
+  }
+  return { firstName, lastName };
+};
+
 exports.listAgents = async (req, res, next) => {
   try {
     const { page, perPage, skip } = req.pagination;
@@ -95,10 +114,12 @@ exports.createAgent = async (req, res, next) => {
         where: { documento: data.docNumber }
       });
       if (existingPersona) {
+        const { firstName, lastName } = splitFullName(data.name || `${existingPersona.nombres} ${existingPersona.apellidos}`);
         persona = await prisma.personas.update({
           where: { id: existingPersona.id },
           data: {
-            nombres: formatName(data.name) || existingPersona.nombres,
+            nombres: formatName(firstName) || existingPersona.nombres,
+            apellidos: formatName(lastName) || existingPersona.apellidos,
             tipoDocumentoId: tipoDocumentoId || existingPersona.tipoDocumentoId,
             email: data.email || existingPersona.email,
             telefono: data.phone || existingPersona.telefono,
@@ -110,10 +131,11 @@ exports.createAgent = async (req, res, next) => {
     }
 
     if (!persona) {
+      const { firstName, lastName } = splitFullName(data.name);
       persona = await prisma.personas.create({
         data: {
-          nombres: formatName(data.name) || '',
-          apellidos: '',
+          nombres: formatName(firstName),
+          apellidos: formatName(lastName),
           tipoDocumentoId,
           documento: data.docNumber || null,
           email: data.email || null,
@@ -161,7 +183,11 @@ exports.updateAgent = async (req, res, next) => {
     if (!agent) return error(res, 'Comisionista no encontrado', 404);
 
     const personaUpdate = {};
-    if (data.name) personaUpdate.nombres = formatName(data.name);
+    if (data.name) {
+      const { firstName, lastName } = splitFullName(data.name);
+      personaUpdate.nombres = formatName(firstName);
+      personaUpdate.apellidos = formatName(lastName);
+    }
     
     if (data.docNumber !== undefined) {
       if (data.docNumber) {

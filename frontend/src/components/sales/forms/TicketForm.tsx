@@ -107,7 +107,7 @@ export function DateTimePicker({
       hour24 = 0;
     }
     const formattedHour24 = String(hour24).padStart(2, "0");
-    return `${y}-${m}-${d}T${formattedHour24}:${minStr}`;
+    return `${y}-${m}-${d}T${formattedHour24}:${minStr}:00-05:00`;
   };
 
   useEffect(() => {
@@ -238,7 +238,7 @@ export function DateTimePicker({
               setTempMin(currentMin);
               setTempPeriod(hour24 >= 12 ? "PM" : "AM");
               
-              const newIso = `${formattedDate}T${currentHour}:${currentMin}`;
+              const newIso = `${formattedDate}T${currentHour}:${currentMin}:00-05:00`;
               if (validateAndTrigger(newIso)) {
                 onChange(newIso);
               } else {
@@ -322,7 +322,7 @@ export function DateTimePicker({
                 }
                 const formattedHour24 = String(hour24).padStart(2, "0");
 
-                const newIso = `${datePart}T${formattedHour24}:${tempMin}`;
+                const newIso = `${datePart}T${formattedHour24}:${tempMin}:00-05:00`;
                 if (validateAndTrigger(newIso)) {
                   onChange(newIso);
                 } else {

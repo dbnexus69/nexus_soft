@@ -34,7 +34,7 @@ export default function Itineraries() {
   const [successMessage, setSuccessMessage] = useState('');
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [selectedFlightForCheckin, setSelectedFlightForCheckin] = useState<Flight | null>(null);
-  const [checkinFile, setCheckinFile] = useState<File | null>(null);
+  const [checkinFiles, setCheckinFiles] = useState<File[]>([]);
   const [isSending, setIsSending] = useState(false);
 
   const getFlightStatus = (flight: Flight) => {
@@ -104,7 +104,7 @@ export default function Itineraries() {
     if (flight) {
       setSelectedFlightForCheckin(flight);
       setIsCheckinModalOpen(true);
-      setCheckinFile(null);
+      setCheckinFiles([]);
     }
   };
 
@@ -113,10 +113,12 @@ export default function Itineraries() {
 
     setIsSending(true);
     try {
-      if (checkinFile) {
+      if (checkinFiles.length > 0) {
         const formData = new FormData();
         formData.append('checkin', 'realizado');
-        formData.append('file', checkinFile);
+        checkinFiles.forEach(file => {
+          formData.append('files', file);
+        });
         await updateFlight(selectedFlightForCheckin.id, formData);
       } else {
         await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
@@ -699,31 +701,48 @@ export default function Itineraries() {
             </div>
           </div>
 
-          <FormField label="Adjuntar Documento de Check-in (Opcional)">
-            <div className="relative group">
+          <FormField label="Adjuntar Documentos de Check-in (Opcional)">
+            <div className="relative group mb-3">
               <input
                 type="file"
-                onChange={(e) => setCheckinFile(e.target.files?.[0] || null)}
+                multiple
+                onChange={(e) => {
+                  const filesList = Array.from(e.target.files || []);
+                  setCheckinFiles(prev => [...prev, ...filesList]);
+                  e.target.value = '';
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 accept=".pdf,.jpg,.jpeg,.png"
               />
-              <div className={`p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${checkinFile ? 'border-green-400 bg-green-50' : 'border-gray-300 bg-white group-hover:border-primary group-hover:bg-primary/5'}`}>
-                {checkinFile ? (
-                  <>
-                    <CheckCircle2 size={28} className="text-green-500" />
-                    <p className="text-xs font-bold text-green-700 truncate max-w-full px-2 text-center">{checkinFile.name}</p>
-                    <p className="text-[10px] text-green-600">Archivo listo para enviar</p>
-                    <button type="button" onClick={() => setCheckinFile(null)} className="text-[10px] text-red-400 hover:text-red-600 underline mt-1">Cambiar archivo</button>
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud size={28} className="text-gray-300" />
-                    <p className="text-xs font-bold text-gray-500 uppercase">Seleccionar PDF o Imagen</p>
-                    <p className="text-[10px] text-gray-400">Haz clic o arrastra aquí</p>
-                  </>
-                )}
+              <div className="p-6 border-2 border-dashed border-gray-300 bg-white rounded-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:border-primary group-hover:bg-primary/5">
+                <UploadCloud size={28} className="text-gray-300 group-hover:text-primary transition-colors" />
+                <p className="text-xs font-bold text-gray-500 uppercase">Seleccionar PDF o Imagen</p>
+                <p className="text-[10px] text-gray-400">Haz clic o arrastra aquí (Soporta múltiples archivos)</p>
               </div>
             </div>
+
+            {checkinFiles.length > 0 && (
+              <div className="space-y-2 border border-gray-border rounded-xl p-3 bg-gray-50/50 max-h-[160px] overflow-y-auto">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Archivos seleccionados ({checkinFiles.length}):</p>
+                {checkinFiles.map((file, idx) => (
+                  <div key={`${file.name}-${idx}`} className="flex items-center justify-between gap-3 p-2 bg-white border border-gray-150 rounded-lg text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+                      <span className="font-medium text-gray-700 truncate" title={file.name}>{file.name}</span>
+                      <span className="text-[9px] text-gray-400 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setCheckinFiles(prev => prev.filter((_, i) => i !== idx))} 
+                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      title="Eliminar archivo"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </FormField>
 
           <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-700">

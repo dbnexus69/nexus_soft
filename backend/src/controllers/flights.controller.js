@@ -306,7 +306,7 @@ exports.updateCheckin = async (req, res, next) => {
   try {
     const id = req.params.id;
     const data = req.body;
-    const file = req.file;
+    const files = req.files || (req.file ? [req.file] : []);
 
     const parts = id.split('__');
     const baseId = parts[0];
@@ -349,8 +349,8 @@ exports.updateCheckin = async (req, res, next) => {
         data: updateData
       });
 
-      // Send email if file attached
-      if (file) {
+      // Send email if files attached
+      if (files && files.length > 0) {
         const emailService = require('../utils/emailService');
         
         let targetEmail = plan.detalleVenta?.venta?.cliente?.persona?.email;
@@ -379,12 +379,10 @@ exports.updateCheckin = async (req, res, next) => {
                 <p>Atentamente,<br>El equipo de iTea Travel</p>
               </div>
             `,
-            attachments: [
-              {
-                filename: file.originalname,
-                content: file.buffer
-              }
-            ]
+            attachments: files.map(f => ({
+              filename: f.originalname,
+              content: f.buffer
+            }))
           });
         }
       }
@@ -423,7 +421,7 @@ exports.updateCheckin = async (req, res, next) => {
       data: { checkinStatus: data.checkin || 'pendiente' }
     });
 
-    if (file) {
+    if (files && files.length > 0) {
       const emailService = require('../utils/emailService');
       let targetEmail = tramo.prodTiqueteria?.detalleVenta?.venta?.cliente?.persona?.email;
       let pasajeroNombres = tramo.prodTiqueteria?.detalleVenta?.venta?.cliente?.persona?.nombres || 'Cliente';
@@ -452,12 +450,10 @@ exports.updateCheckin = async (req, res, next) => {
               <p>Atentamente,<br>El equipo de iTea Travel</p>
             </div>
           `,
-          attachments: [
-            {
-              filename: file.originalname,
-              content: file.buffer
-            }
-          ]
+          attachments: files.map(f => ({
+            filename: f.originalname,
+            content: f.buffer
+          }))
         });
       }
     }

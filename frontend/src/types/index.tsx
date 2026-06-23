@@ -261,6 +261,7 @@ export interface PlanData {
   guests: GuestInfo[];
   packageType?: 'own' | 'supplier';
   voucher?: { name: string; base64: string };
+  vouchers?: Array<{ name: string; base64: string }>;
   sendVoucher?: boolean;
 }
 

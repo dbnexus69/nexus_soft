@@ -228,7 +228,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   };
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify(form));
+    try {
+      // Intentar guardar el draft en localStorage
+      localStorage.setItem(draftKey, JSON.stringify(form));
+    } catch (error) {
+      console.warn("No se pudo guardar el borrador en localStorage (probablemente los archivos adjuntos son muy grandes):", error);
+    }
   }, [form]);
 
   // Fetch data needed for comboboxes to ensure freshness
@@ -1258,8 +1263,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                   errors.push("Salida Hotel debe ser posterior al Ingreso Hotel");
                 }
               } else {
-                if (!plan.voucher) {
-                  errors.push("Debe adjuntar el voucher del proveedor");
+                if (!plan.vouchers || plan.vouchers.length === 0) {
+                  if (!plan.voucher) { // Fallback to single voucher check
+                    errors.push("Debe adjuntar el voucher del proveedor");
+                  }
                 }
               }
 

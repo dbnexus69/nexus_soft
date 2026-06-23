@@ -109,9 +109,19 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
 
       {plan.packageType === "supplier" && (
         <VoucherField
-          voucher={plan.voucher}
+          multiple={true}
+          vouchers={plan.vouchers || (plan.voucher ? [plan.voucher] : undefined)}
           sendVoucher={plan.sendVoucher}
-          onChange={(updates) => onChange(updates)}
+          onChange={(updates) => {
+            if (updates.vouchers) {
+              onChange({ vouchers: updates.vouchers, voucher: updates.vouchers[0] });
+            } else if ('vouchers' in updates) {
+              onChange({ vouchers: undefined, voucher: undefined });
+            }
+            if (updates.sendVoucher !== undefined) {
+              onChange({ sendVoucher: updates.sendVoucher });
+            }
+          }}
         />
       )}
 

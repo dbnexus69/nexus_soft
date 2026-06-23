@@ -5,28 +5,59 @@ import { useRef } from "react";
 
 interface VoucherFieldProps {
   voucher?: { name: string; base64: string };
+  vouchers?: Array<{ name: string; base64: string }>;
+  multiple?: boolean;
   sendVoucher?: boolean;
-  onChange: (updates: { voucher?: { name: string; base64: string } | undefined; sendVoucher?: boolean }) => void;
+  onChange: (updates: { 
+    voucher?: { name: string; base64: string } | undefined; 
+    vouchers?: Array<{ name: string; base64: string }> | undefined;
+    sendVoucher?: boolean 
+  }) => void;
 }
 
-export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldProps) {
+export function VoucherField({ voucher, vouchers, multiple, sendVoucher, onChange }: VoucherFieldProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          onChange({ voucher: { name: file.name, base64: reader.result } });
-        }
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      if (multiple) {
+        const newVouchers: Array<{ name: string; base64: string }> = vouchers ? [...vouchers] : [];
+        let filesProcessed = 0;
+        files.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              newVouchers.push({ name: file.name, base64: reader.result });
+            }
+            filesProcessed++;
+            if (filesProcessed === files.length) {
+              onChange({ vouchers: newVouchers });
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      } else {
+        const file = files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            onChange({ voucher: { name: file.name, base64: reader.result } });
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
-  const removeFile = () => {
-    onChange({ voucher: undefined });
+  const removeFile = (index?: number) => {
+    if (multiple && vouchers && index !== undefined) {
+      const newVouchers = vouchers.filter((_, i) => i !== index);
+      onChange({ vouchers: newVouchers });
+    } else {
+      onChange({ voucher: undefined });
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -37,7 +68,7 @@ export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldPro
       </h4>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Documento del Voucher">
+        <FormField label={multiple ? "Documentos del Voucher" : "Documento del Voucher"}>
           <div className="relative">
             <input
               type="file"
@@ -45,9 +76,10 @@ export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldPro
               onChange={handleFileChange}
               className="hidden"
               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              multiple={multiple}
             />
             
-            {!voucher ? (
+            {(!multiple && !voucher) || (multiple && (!vouchers || vouchers.length === 0)) ? (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -57,12 +89,48 @@ export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldPro
                   <LuUpload className="text-accent" size={18} />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-bold text-gray-700">Subir Voucher</p>
+                  <p className="text-sm font-bold text-gray-700">{multiple ? "Subir Vouchers" : "Subir Voucher"}</p>
                   <p className="text-[10px] text-gray-400">PDF, Imágenes o DOC (Máx. 10MB)</p>
                 </div>
               </button>
-            ) : (
-              <div className="flex items-center justify-between p-3 bg-white border border-accent/20 rounded-xl animate-fade-in">
+            ) : null}
+
+            {/* List of Vouchers (Multiple) */}
+            {multiple && vouchers && vouchers.length > 0 && (
+              <div className="space-y-2 mt-2">
+                {vouchers.map((v, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-white border border-accent/20 rounded-xl animate-fade-in">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <LuFileCheck className="text-emerald-600" size={18} />
+                      </div>
+                      <div className="max-w-[150px] md:max-w-[200px]">
+                        <p className="text-sm font-bold text-gray-700 truncate">{v.name}</p>
+                        <p className="text-[10px] text-emerald-600 font-medium">Archivo listo</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(idx)}
+                      className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
+                    >
+                      <LuX size={18} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full mt-2 py-2 text-xs font-bold text-accent border border-accent/20 rounded-lg hover:bg-accent/10 transition-colors"
+                >
+                  + Añadir otro documento
+                </button>
+              </div>
+            )}
+
+            {/* Single Voucher */}
+            {!multiple && voucher && (
+              <div className="flex items-center justify-between p-3 bg-white border border-accent/20 rounded-xl animate-fade-in mt-2">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-emerald-100 rounded-lg">
                     <LuFileCheck className="text-emerald-600" size={18} />
@@ -74,7 +142,7 @@ export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldPro
                 </div>
                 <button
                   type="button"
-                  onClick={removeFile}
+                  onClick={() => removeFile()}
                   className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
                 >
                   <LuX size={18} />
@@ -98,7 +166,7 @@ export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldPro
             </div>
             <div className="flex flex-col">
               <span className={`text-sm font-bold transition-colors ${sendVoucher ? 'text-accent' : 'text-gray-500'}`}>
-                Enviar Voucher al Cliente
+                Enviar {multiple ? "Vouchers" : "Voucher"} al Cliente
               </span>
               <span className="text-[10px] text-gray-400">Se enviará automáticamente al finalizar</span>
             </div>
@@ -106,9 +174,9 @@ export function VoucherField({ voucher, sendVoucher, onChange }: VoucherFieldPro
         </div>
       </div>
 
-      {sendVoucher && voucher && (
+      {sendVoucher && ((!multiple && voucher) || (multiple && vouchers && vouchers.length > 0)) && (
         <div className="mt-3 text-[10px] text-emerald-600 bg-emerald-50 p-2 rounded-lg flex items-center gap-2">
-          <LuSend size={12} /> Confirmado: El archivo <strong>{voucher.name}</strong> se enviará al cliente.
+          <LuSend size={12} /> Confirmado: {multiple ? `${vouchers?.length} documentos listos para enviar.` : `El archivo ${voucher?.name} se enviará al cliente.`}
         </div>
       )}
     </div>

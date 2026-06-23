@@ -208,7 +208,12 @@ const PRODUCT_INCLUDES = {
     prodTiqueteria: {
       include: {
         tramosVuelo: { 
-          include: { aeropuertoOrigen: true, aeropuertoDestino: true },
+          include: {
+            aeropuertoOrigen: true,
+            aeropuertoDestino: true,
+            aerolinea: true,
+            planEquipaje: { include: { aerolinea: true } }
+          },
           orderBy: { orden: 'asc' }
         },
         aerolinea: true,
@@ -275,6 +280,8 @@ function mapLegs(legs) {
       time: formatColombiaTime(l.salida),
       arrivalDate: formatColombiaDate(l.llegada),
       arrivalTime: formatColombiaTime(l.llegada),
+      airline: l.aerolinea?.nombre || null,
+      baggagePlan: l.planEquipaje ? `${l.planEquipaje.aerolinea?.nombre || l.aerolinea?.nombre || ''} - ${l.planEquipaje.tipoTarifa}` : null,
       orden: l.orden
     };
   });
@@ -373,8 +380,8 @@ const PRODUCT_TRANSFORMS = {
       childrenCount: p.menoresCount,
       confirmationNumber: p.numeroConfirmacion,
       observations: p.observaciones,
-      guests: passengers.map(p => ({ name: p.nombreCompleto, docType: String(p.tipoDocumento || ''), docNumber: p.nroDocumento || '' }))
-    ,
+      guests: passengers.map(p => ({ name: p.nombreCompleto, docType: String(p.tipoDocumento || ''), docNumber: p.nroDocumento || '' })),
+      packageType: p.tipoPaquete || 'own',
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
       ta: d.ta || 0
@@ -496,8 +503,12 @@ const PRODUCT_TRANSFORMS = {
       pickupPoint: t.puntoEncuentro,
       medicalConditions: t.condicionesMedicas,
       phone: t.telefonoContacto,
-      observations: t.observaciones
-    ,
+      observations: t.observaciones,
+      guests: passengers.map(p => ({
+        name: p.nombreCompleto,
+        docType: String(p.tipoDocumento || ''),
+        docNumber: p.nroDocumento || ''
+      })),
       supplier: d.proveedor?.nombre || null,
       supplierCost: d.costoProveedor || 0,
       ta: d.ta || 0
@@ -825,7 +836,8 @@ const PRODUCT_HANDLERS = {
         adultosCount: d.adultsCount || 0,
         menoresCount: d.childrenCount || 0,
         numeroConfirmacion: d.confirmationNumber || null,
-        observaciones: d.observations || null
+        observaciones: d.observations || null,
+        tipoPaquete: d.packageType || 'own'
       };
     }
   },
@@ -1205,6 +1217,8 @@ async function createProductItems(tx, ventaId, clienteId, data) {
               console.warn(`[WARN] tramosVuelo leg ${i}: aeropuerto no encontrado (origin=${leg.origin}, dest=${leg.destination}) - saltando`);
               continue;
             }
+            const legAirlineId = (leg.airline || item.airline) ? await resolveAirlineId(tx, leg.airline || item.airline) : null;
+            const legBaggagePlanId = (leg.baggagePlan || item.baggagePlan) ? await resolveBaggagePlanId(tx, leg.baggagePlan || item.baggagePlan) : null;
             await tx.tramosVuelo.create({
               data: {
                 prodTiqueteriaId: product.id,
@@ -1215,6 +1229,8 @@ async function createProductItems(tx, ventaId, clienteId, data) {
                 nroVueloTramo: leg.flightNumber || null,
                 asiento: leg.seat || null,
                 nroTiquete: leg.ticketNumber || null,
+                aerolineaId: legAirlineId,
+                planEquipajeId: legBaggagePlanId,
                 orden: i + 1
               }
             });
@@ -1225,6 +1241,8 @@ async function createProductItems(tx, ventaId, clienteId, data) {
             const rOriginId = await resolveAirportId(tx, rLeg.origin, memCache);
             const rDestId = await resolveAirportId(tx, rLeg.destination, memCache);
             if (rOriginId && rDestId) {
+              const rAirlineId = (rLeg.airline || item.airline) ? await resolveAirlineId(tx, rLeg.airline || item.airline) : null;
+              const rBaggagePlanId = (rLeg.baggagePlan || item.baggagePlan) ? await resolveBaggagePlanId(tx, rLeg.baggagePlan || item.baggagePlan) : null;
               await tx.tramosVuelo.create({
                 data: {
                   prodTiqueteriaId: product.id,
@@ -1234,6 +1252,8 @@ async function createProductItems(tx, ventaId, clienteId, data) {
                   llegada: rLeg.arrivalDate ? new Date(rLeg.arrivalDate) : (rLeg.date ? new Date(rLeg.date) : new Date()),
                   nroVueloTramo: rLeg.flightNumber || null,
                   asiento: rLeg.seat || null,
+                  aerolineaId: rAirlineId,
+                  planEquipajeId: rBaggagePlanId,
                   orden: (item.legs?.length || 0) + 1
                 }
               });
@@ -1361,9 +1381,11 @@ exports.create = async (req, res, next) => {
             for (let i = 0; i < item.legs.length; i++) {
               const leg = item.legs[i];
               if (!leg.origin && !leg.destination) continue;
-              const [originAirportId, destAirportId] = await Promise.all([
+              const [originAirportId, destAirportId, legAirlineId, legBaggagePlanId] = await Promise.all([
                 leg.origin ? resolveAirportId(tx, leg.origin, memCache) : null,
-                leg.destination ? resolveAirportId(tx, leg.destination, memCache) : null
+                leg.destination ? resolveAirportId(tx, leg.destination, memCache) : null,
+                (leg.airline || item.airline) ? resolveAirlineId(tx, leg.airline || item.airline) : null,
+                (leg.baggagePlan || item.baggagePlan) ? resolveBaggagePlanId(tx, leg.baggagePlan || item.baggagePlan) : null
               ]);
               if (originAirportId && destAirportId) {
                 tramosVueloData.push({
@@ -1374,6 +1396,8 @@ exports.create = async (req, res, next) => {
                   nroVueloTramo: leg.flightNumber || null,
                   asiento: leg.seat || null,
                   nroTiquete: leg.ticketNumber || null,
+                  aerolineaId: legAirlineId,
+                  planEquipajeId: legBaggagePlanId,
                   orden: i + 1
                 });
               }
@@ -1381,9 +1405,11 @@ exports.create = async (req, res, next) => {
             if (item.hasStops && item.outboundStops && item.outboundStops.length > 0) {
               for (const stop of item.outboundStops) {
                 if (!stop.origin && !stop.destination) continue;
-                const [sOriginId, sDestId] = await Promise.all([
+                const [sOriginId, sDestId, stopAirlineId, stopBaggagePlanId] = await Promise.all([
                   stop.origin ? resolveAirportId(tx, stop.origin, memCache) : null,
-                  stop.destination ? resolveAirportId(tx, stop.destination, memCache) : null
+                  stop.destination ? resolveAirportId(tx, stop.destination, memCache) : null,
+                  (stop.airline || item.airline) ? resolveAirlineId(tx, stop.airline || item.airline) : null,
+                  (stop.baggagePlan || item.baggagePlan) ? resolveBaggagePlanId(tx, stop.baggagePlan || item.baggagePlan) : null
                 ]);
                 if (sOriginId && sDestId) {
                   tramosVueloData.push({
@@ -1394,6 +1420,8 @@ exports.create = async (req, res, next) => {
                     nroVueloTramo: stop.flightNumber || null,
                     asiento: stop.seat || null,
                     nroTiquete: stop.ticketNumber || null,
+                    aerolineaId: stopAirlineId,
+                    planEquipajeId: stopBaggagePlanId,
                     orden: tramosVueloData.length + 1
                   });
                 }
@@ -1402,9 +1430,11 @@ exports.create = async (req, res, next) => {
 
             if (item.returnLeg && item.returnLeg.origin && item.returnLeg.destination) {
               const rLeg = item.returnLeg;
-              const [rOriginId, rDestId] = await Promise.all([
+              const [rOriginId, rDestId, rAirlineId, rBaggagePlanId] = await Promise.all([
                 resolveAirportId(tx, rLeg.origin, memCache),
-                resolveAirportId(tx, rLeg.destination, memCache)
+                resolveAirportId(tx, rLeg.destination, memCache),
+                (rLeg.airline || item.airline) ? resolveAirlineId(tx, rLeg.airline || item.airline) : null,
+                (rLeg.baggagePlan || item.baggagePlan) ? resolveBaggagePlanId(tx, rLeg.baggagePlan || item.baggagePlan) : null
               ]);
               if (rOriginId && rDestId) {
                 tramosVueloData.push({
@@ -1414,7 +1444,9 @@ exports.create = async (req, res, next) => {
                   llegada: rLeg.arrivalDate ? new Date(rLeg.arrivalDate) : (rLeg.date ? new Date(rLeg.date) : new Date()),
                   nroVueloTramo: rLeg.flightNumber || null,
                   asiento: rLeg.seat || null,
-                  nroTiquete: rLeg.ticketNumber || null, // Even though it's not in the UI anymore, safe mapping
+                  nroTiquete: rLeg.ticketNumber || null,
+                  aerolineaId: rAirlineId,
+                  planEquipajeId: rBaggagePlanId,
                   orden: tramosVueloData.length + 1
                 });
               }
@@ -1423,9 +1455,11 @@ exports.create = async (req, res, next) => {
             if (item.returnHasStops && item.returnStops && item.returnStops.length > 0) {
               for (const stop of item.returnStops) {
                 if (!stop.origin && !stop.destination) continue;
-                const [sOriginId, sDestId] = await Promise.all([
+                const [sOriginId, sDestId, stopAirlineId, stopBaggagePlanId] = await Promise.all([
                   stop.origin ? resolveAirportId(tx, stop.origin, memCache) : null,
-                  stop.destination ? resolveAirportId(tx, stop.destination, memCache) : null
+                  stop.destination ? resolveAirportId(tx, stop.destination, memCache) : null,
+                  (stop.airline || item.airline) ? resolveAirlineId(tx, stop.airline || item.airline) : null,
+                  (stop.baggagePlan || item.baggagePlan) ? resolveBaggagePlanId(tx, stop.baggagePlan || item.baggagePlan) : null
                 ]);
                 if (sOriginId && sDestId) {
                   tramosVueloData.push({
@@ -1436,6 +1470,8 @@ exports.create = async (req, res, next) => {
                     nroVueloTramo: stop.flightNumber || null,
                     asiento: stop.seat || null,
                     nroTiquete: stop.ticketNumber || null,
+                    aerolineaId: stopAirlineId,
+                    planEquipajeId: stopBaggagePlanId,
                     orden: tramosVueloData.length + 1
                   });
                 }
@@ -1522,36 +1558,55 @@ exports.create = async (req, res, next) => {
         console.log(`[VOUCHER] field=${field} items=${items.length}`);
         for (const item of items) {
           console.log(`[VOUCHER] item.sendVoucher=${item.sendVoucher} item.voucher=${JSON.stringify(item.voucher)?.substring(0, 80)}`);
-          if (item.voucher && item.voucher.base64 && item.sendVoucher) {
-            try {
+          if (item.sendVoucher) {
+            const attachments = [];
+            
+            // Single voucher (standard)
+            if (item.voucher && item.voucher.base64) {
               const base64Data = item.voucher.base64.split(',')[1] || item.voucher.base64;
-              const buffer = Buffer.from(base64Data, 'base64');
-              console.log(`[VOUCHER] Sending email to ${clientEmail} for ${handler.nombreServicio}...`);
-              const result = await emailService.sendEmail({
-                to: clientEmail,
-                subject: `Tu voucher de ${handler.nombreServicio} - iTea Travel`,
-                html: `
-                  <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaec; border-radius: 8px; overflow: hidden;">
-                    <div style="background-color: #0f172a; padding: 20px; text-align: center;">
-                      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Tu voucher está listo!</h1>
-                    </div>
-                    <div style="padding: 30px;">
-                      <p style="font-size: 16px;">Hola <strong>${clientName}</strong>,</p>
-                      <p style="font-size: 16px;">Adjunto a este correo encontrarás el comprobante correspondiente a tu servicio de <strong>${handler.nombreServicio}</strong>.</p>
-                      <p style="font-size: 16px; margin-top: 20px;">Gracias por confiar en nosotros.</p>
-                    </div>
-                  </div>
-                `,
-                attachments: [
-                  {
-                    filename: item.voucher.name || 'voucher.pdf',
-                    content: buffer
-                  }
-                ]
+              attachments.push({
+                filename: item.voucher.name || 'voucher.pdf',
+                content: Buffer.from(base64Data, 'base64')
               });
-              console.log(`[VOUCHER] sendEmail result:`, JSON.stringify(result));
-            } catch (err) {
-              console.error('[ERROR] Sending voucher email:', err.message);
+            }
+            
+            // Multiple vouchers (tours or other)
+            if (Array.isArray(item.vouchers)) {
+              for (const v of item.vouchers) {
+                if (v && v.base64) {
+                  const base64Data = v.base64.split(',')[1] || v.base64;
+                  attachments.push({
+                    filename: v.name || 'voucher.pdf',
+                    content: Buffer.from(base64Data, 'base64')
+                  });
+                }
+              }
+            }
+
+            if (attachments.length > 0) {
+              try {
+                console.log(`[VOUCHER] Sending email to ${clientEmail} for ${handler.nombreServicio} with ${attachments.length} attachments...`);
+                const result = await emailService.sendEmail({
+                  to: clientEmail,
+                  subject: `Tu voucher de ${handler.nombreServicio} - iTea Travel`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaec; border-radius: 8px; overflow: hidden;">
+                      <div style="background-color: #0f172a; padding: 20px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Tu voucher está listo!</h1>
+                      </div>
+                      <div style="padding: 30px;">
+                        <p style="font-size: 16px;">Hola <strong>${clientName}</strong>,</p>
+                        <p style="font-size: 16px;">Adjunto a este correo encontrarás el comprobante correspondiente a tu servicio de <strong>${handler.nombreServicio}</strong>.</p>
+                        <p style="font-size: 16px; margin-top: 20px;">Gracias por confiar en nosotros.</p>
+                      </div>
+                    </div>
+                  `,
+                  attachments: attachments
+                });
+                console.log(`[VOUCHER] sendEmail result:`, JSON.stringify(result));
+              } catch (err) {
+                console.error('[ERROR] Sending voucher email:', err.message);
+              }
             }
           }
         }
@@ -1764,6 +1819,8 @@ exports.update = async (req, res, next) => {
                 const originAirportId = leg.origin ? await resolveAirportId(tx, leg.origin) : null;
                 const destAirportId = leg.destination ? await resolveAirportId(tx, leg.destination) : null;
                 if (!originAirportId || !destAirportId) continue;
+                const legAirlineId = (leg.airline || item.airline) ? await resolveAirlineId(tx, leg.airline || item.airline) : null;
+                const legBaggagePlanId = (leg.baggagePlan || item.baggagePlan) ? await resolveBaggagePlanId(tx, leg.baggagePlan || item.baggagePlan) : null;
                 await tx.tramosVuelo.create({
                   data: {
                     prodTiqueteriaId: product.id,
@@ -1773,6 +1830,9 @@ exports.update = async (req, res, next) => {
                     llegada: leg.arrivalDate ? new Date(leg.arrivalDate) : (leg.date ? new Date(leg.date) : new Date()),
                     nroVueloTramo: leg.flightNumber || null,
                     asiento: leg.seat || null,
+                    nroTiquete: leg.ticketNumber || null,
+                    aerolineaId: legAirlineId,
+                    planEquipajeId: legBaggagePlanId,
                     orden: currentOrden++
                   }
                 });
@@ -1785,6 +1845,8 @@ exports.update = async (req, res, next) => {
                 const sOriginId = stop.origin ? await resolveAirportId(tx, stop.origin) : null;
                 const sDestId = stop.destination ? await resolveAirportId(tx, stop.destination) : null;
                 if (!sOriginId || !sDestId) continue;
+                const stopAirlineId = (stop.airline || item.airline) ? await resolveAirlineId(tx, stop.airline || item.airline) : null;
+                const stopBaggagePlanId = (stop.baggagePlan || item.baggagePlan) ? await resolveBaggagePlanId(tx, stop.baggagePlan || item.baggagePlan) : null;
                 await tx.tramosVuelo.create({
                   data: {
                     prodTiqueteriaId: product.id,
@@ -1795,6 +1857,8 @@ exports.update = async (req, res, next) => {
                     nroVueloTramo: stop.flightNumber || null,
                     asiento: stop.seat || null,
                     nroTiquete: stop.ticketNumber || null,
+                    aerolineaId: stopAirlineId,
+                    planEquipajeId: stopBaggagePlanId,
                     orden: currentOrden++
                   }
                 });
@@ -1806,6 +1870,8 @@ exports.update = async (req, res, next) => {
               const rOriginId = await resolveAirportId(tx, rLeg.origin);
               const rDestId = await resolveAirportId(tx, rLeg.destination);
               if (rOriginId && rDestId) {
+                const rAirlineId = (rLeg.airline || item.airline) ? await resolveAirlineId(tx, rLeg.airline || item.airline) : null;
+                const rBaggagePlanId = (rLeg.baggagePlan || item.baggagePlan) ? await resolveBaggagePlanId(tx, rLeg.baggagePlan || item.baggagePlan) : null;
                 await tx.tramosVuelo.create({
                   data: {
                     prodTiqueteriaId: product.id,
@@ -1816,6 +1882,8 @@ exports.update = async (req, res, next) => {
                     nroVueloTramo: rLeg.flightNumber || null,
                     asiento: rLeg.seat || null,
                     nroTiquete: rLeg.ticketNumber || null,
+                    aerolineaId: rAirlineId,
+                    planEquipajeId: rBaggagePlanId,
                     orden: currentOrden++
                   }
                 });
@@ -1828,6 +1896,8 @@ exports.update = async (req, res, next) => {
                 const sOriginId = stop.origin ? await resolveAirportId(tx, stop.origin) : null;
                 const sDestId = stop.destination ? await resolveAirportId(tx, stop.destination) : null;
                 if (!sOriginId || !sDestId) continue;
+                const stopAirlineId = (stop.airline || item.airline) ? await resolveAirlineId(tx, stop.airline || item.airline) : null;
+                const stopBaggagePlanId = (stop.baggagePlan || item.baggagePlan) ? await resolveBaggagePlanId(tx, stop.baggagePlan || item.baggagePlan) : null;
                 await tx.tramosVuelo.create({
                   data: {
                     prodTiqueteriaId: product.id,
@@ -1838,6 +1908,8 @@ exports.update = async (req, res, next) => {
                     nroVueloTramo: stop.flightNumber || null,
                     asiento: stop.seat || null,
                     nroTiquete: stop.ticketNumber || null,
+                    aerolineaId: stopAirlineId,
+                    planEquipajeId: stopBaggagePlanId,
                     orden: currentOrden++
                   }
                 });

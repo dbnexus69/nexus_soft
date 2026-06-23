@@ -98,7 +98,7 @@ export const INITIAL_TICKET = (client?: any): TicketData => ({
   returnHasStops: false,
   outboundStops: [],
   returnStops: [],
-  legs: [{ origin: "", destination: "", flightNumber: "", seat: "", date: "" }],
+  legs: [{ origin: "", destination: "", flightNumber: "", seat: "", date: "", airline: "", baggagePlan: "" }],
   passengers: [
     {
       name: client?.name || "",
@@ -183,6 +183,9 @@ export const INITIAL_PLAN = (client?: any): PlanData => ({
       docNumber: client?.docNumber || "",
     },
   ],
+  packageType: "own",
+  voucher: undefined,
+  sendVoucher: false,
 });
 
 export const INITIAL_CHECKIN = (client?: any): CheckInData => ({
@@ -294,6 +297,8 @@ export const INITIAL_TOUR = (client?: any): TourData => ({
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  guests: [{ name: client?.name || "", docType: client?.docType || "CC", docNumber: client?.docNumber || "" }],
+  vouchers: [],
 });
 
 export const INITIAL_CONVENTION = (client?: any): ConventionData => ({

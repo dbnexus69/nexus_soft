@@ -238,8 +238,16 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                     </span>
                   </div>
                   {outboundLegs.map((leg: any, lIdx: number) => (
-                    <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-gray-150 items-center">
+                    <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-8 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-gray-150 items-center">
                       <div className="font-semibold text-gray-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
+                      <div className="text-gray-600">
+                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Aerolínea</span>
+                        <span className="font-medium text-gray-800">{leg.airline || ticket.airlineName || ticket.airline || "-"}</span>
+                      </div>
+                      <div className="text-gray-600">
+                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Equipaje</span>
+                        <span className="font-medium text-gray-800">{leg.baggagePlan || ticket.baggagePlan || "-"}</span>
+                      </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
                         {leg.date ? `${formatDate(leg.date)} ${formatTimeAMPM(leg.time)}` : "-"}
@@ -278,8 +286,16 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                     </span>
                   </div>
                   {returnLegs.map((leg: any, lIdx: number) => (
-                    <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-blue-50 items-center">
+                    <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-8 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-blue-50 items-center">
                       <div className="font-semibold text-blue-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
+                      <div className="text-gray-600">
+                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Aerolínea</span>
+                        <span className="font-medium text-blue-800">{leg.airline || ticket.airlineName || ticket.airline || "-"}</span>
+                      </div>
+                      <div className="text-gray-600">
+                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Equipaje</span>
+                        <span className="font-medium text-blue-800">{leg.baggagePlan || ticket.baggagePlan || "-"}</span>
+                      </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
                         {leg.date ? `${formatDate(leg.date)} ${formatTimeAMPM(leg.time)}` : "-"}
@@ -358,23 +374,31 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
                 <Package size={16} className="text-accent" /> Paquete #{idx + 1} - {plan.planName || "Sin Nombre"}
               </h4>
-              {renderGrid([
-                ...(plan.packageName ? [{ label: "Paquete Base", value: plan.packageName }] : []),
-                { label: "Hotel", value: plan.hotelName },
-                { label: "Aerolínea", value: plan.airlineName || plan.airline },
-                { label: "Reserva", value: plan.reservationNumber },
-                { label: "Nro Tiquete", value: plan.ticketNumber },
-                { label: "Confirmación", value: plan.confirmationNumber },
-                { label: "Check-in Hotel", value: plan.startDate ? formatDateTime(plan.startDate) : "-" },
-                { label: "Check-out Hotel", value: plan.endDate ? formatDateTime(plan.endDate) : "-" },
-                { label: "Nro Vuelo", value: plan.flightNumber },
-                { label: "Salida Ida", value: plan.flightDepartureDate ? formatDateTime(plan.flightDepartureDate) : "-" },
-                { label: "Llegada Ida", value: plan.flightDepartureArrivalDate ? formatDateTime(plan.flightDepartureArrivalDate) : "-" },
-                { label: "Salida Regreso", value: plan.flightReturnDate ? formatDateTime(plan.flightReturnDate) : "-" },
-                { label: "Llegada Regreso", value: plan.flightReturnArrivalDate ? formatDateTime(plan.flightReturnArrivalDate) : "-" },
-                { label: "Adultos", value: plan.adultsCount },
-                { label: "Menores", value: plan.childrenCount !== undefined && plan.childrenCount !== null ? plan.childrenCount : 0 },
-              ])}
+              {plan.packageType === "supplier" ? (
+                renderGrid([
+                  { label: "Tipo de Paquete", value: "Por Proveedor" },
+                  { label: "Proveedor / Operador", value: plan.supplier || "—" },
+                  ...(plan.packageName ? [{ label: "Paquete Base", value: plan.packageName }] : []),
+                ])
+              ) : (
+                renderGrid([
+                  ...(plan.packageName ? [{ label: "Paquete Base", value: plan.packageName }] : []),
+                  { label: "Hotel", value: plan.hotelName },
+                  { label: "Aerolínea", value: plan.airlineName || plan.airline },
+                  { label: "Reserva", value: plan.reservationNumber },
+                  { label: "Nro Tiquete", value: plan.ticketNumber },
+                  { label: "Confirmación", value: plan.confirmationNumber },
+                  { label: "Check-in Hotel", value: plan.startDate ? formatDateTime(plan.startDate) : "-" },
+                  { label: "Check-out Hotel", value: plan.endDate ? formatDateTime(plan.endDate) : "-" },
+                  { label: "Nro Vuelo", value: plan.flightNumber },
+                  { label: "Salida Ida", value: plan.flightDepartureDate ? formatDateTime(plan.flightDepartureDate) : "-" },
+                  { label: "Llegada Ida", value: plan.flightDepartureArrivalDate ? formatDateTime(plan.flightDepartureArrivalDate) : "-" },
+                  { label: "Salida Regreso", value: plan.flightReturnDate ? formatDateTime(plan.flightReturnDate) : "-" },
+                  { label: "Llegada Regreso", value: plan.flightReturnArrivalDate ? formatDateTime(plan.flightReturnArrivalDate) : "-" },
+                  { label: "Adultos", value: plan.adultsCount },
+                  { label: "Menores", value: plan.childrenCount !== undefined && plan.childrenCount !== null ? plan.childrenCount : 0 },
+                ])
+              )}
               {renderPassengers(plan.guests || plan.passengers || plan.members)}
               {plan.observations && (
                 <p className="text-xs text-gray-500 mt-2 italic">{plan.observations}</p>
@@ -491,8 +515,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <Compass size={16} className="text-accent" /> Actividad o Tour #{idx + 1}
             </h4>
             {renderGrid([
-              { label: "Tour Seleccionado", value: item.selectedTour },
-              { label: "Fecha Preferida", value: item.preferredDate ? formatDate(item.preferredDate) : "-" },
+              { label: "Nombre Pasajero", value: item.passengerName },
               { label: "Adultos", value: item.adultsCount },
               { label: "Menores", value: item.childrenCount },
               { label: "Edades Menores", value: item.childrenAges },
@@ -501,10 +524,17 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Punto de Encuentro", value: item.pickupPoint },
               { label: "Teléfono", value: item.phone },
             ])}
+            {renderPassengers(item.guests)}
             {item.medicalConditions && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100 mb-2">
                 <span className="font-bold block text-[10px] text-gray-400 uppercase">Condiciones Médicas</span>
                 {item.medicalConditions}
+              </div>
+            )}
+            {item.observations && (
+              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                <span className="font-bold block text-[10px] text-gray-400 uppercase">Toures</span>
+                {item.observations}
               </div>
             )}
           </div>

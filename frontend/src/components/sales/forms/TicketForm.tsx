@@ -539,7 +539,7 @@ export function TicketForm({
     onChange({ legs: next });
   };
   const addLeg = () =>
-    onChange({ legs: [...ticket.legs, { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "" }] });
+    onChange({ legs: [...ticket.legs, { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }] });
   const removeLeg = (idx: number) =>
     onChange({ legs: ticket.legs.filter((_, i) => i !== idx) });
 
@@ -550,7 +550,7 @@ export function TicketForm({
     onChange({
       [key]: [
         ...currentStops,
-        { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "" },
+        { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" },
       ],
     });
   };
@@ -694,6 +694,30 @@ export function TicketForm({
                   </FormField>
                 </div>
                 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label="Aerolínea">
+                    <Combobox
+                      value={stop.airline || ticket.airline || ""}
+                      onChange={(val) => updateStop(type, sIdx, { airline: val })}
+                      options={airlines.map((a) => ({ value: a.name, label: a.name }))}
+                      placeholder="Ej: Avianca"
+                    />
+                  </FormField>
+                  <FormField label="Plan de Equipaje">
+                    <Combobox
+                      value={stop.baggagePlan || ticket.baggagePlan || ""}
+                      onChange={(val) => updateStop(type, sIdx, { baggagePlan: val })}
+                      options={baggage
+                        .filter((b) => !(stop.airline || ticket.airline) || b.airlineName.toLowerCase() === (stop.airline || ticket.airline).toLowerCase())
+                        .map((b) => ({
+                          value: `${b.airlineName} - ${b.fareType}`,
+                          label: `${b.airlineName} - ${b.fareType}`,
+                        }))}
+                      placeholder="Seleccionar plan..."
+                    />
+                  </FormField>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <FormField label={<span>Salida <span className="text-red-500">*</span></span>}>
                     <DateTimePicker
@@ -925,6 +949,29 @@ export function TicketForm({
                   </FormField>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label="Aerolínea">
+                    <Combobox
+                      value={leg.airline || ticket.airline || ""}
+                      onChange={(val) => updateLeg(lIdx, { airline: val })}
+                      options={airlines.map((a) => ({ value: a.name, label: a.name }))}
+                      placeholder="Ej: Avianca"
+                    />
+                  </FormField>
+                  <FormField label="Plan de Equipaje">
+                    <Combobox
+                      value={leg.baggagePlan || ticket.baggagePlan || ""}
+                      onChange={(val) => updateLeg(lIdx, { baggagePlan: val })}
+                      options={baggage
+                        .filter((b) => !(leg.airline || ticket.airline) || b.airlineName.toLowerCase() === (leg.airline || ticket.airline).toLowerCase())
+                        .map((b) => ({
+                          value: `${b.airlineName} - ${b.fareType}`,
+                          label: `${b.airlineName} - ${b.fareType}`,
+                        }))}
+                      placeholder="Seleccionar plan..."
+                    />
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField label="Salida">
                     <DateTimePicker
                       value={leg.date}
@@ -1043,6 +1090,29 @@ export function TicketForm({
                     {ticket.returnLeg?.seat && ticket.returnLeg.seat.length < 2 ? (
                       <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">⚠️ Mínimo 2 caracteres.</p>
                     ) : null}
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label="Aerolínea Vuelta">
+                    <Combobox
+                      value={ticket.returnLeg?.airline || ticket.airline || ""}
+                      onChange={(val) => onChange({ returnLeg: { ...ticket.returnLeg!, airline: val } })}
+                      options={airlines.map((a) => ({ value: a.name, label: a.name }))}
+                      placeholder="Ej: Avianca"
+                    />
+                  </FormField>
+                  <FormField label="Plan de Equipaje Vuelta">
+                    <Combobox
+                      value={ticket.returnLeg?.baggagePlan || ticket.baggagePlan || ""}
+                      onChange={(val) => onChange({ returnLeg: { ...ticket.returnLeg!, baggagePlan: val } })}
+                      options={baggage
+                        .filter((b) => !(ticket.returnLeg?.airline || ticket.airline) || b.airlineName.toLowerCase() === (ticket.returnLeg?.airline || ticket.airline).toLowerCase())
+                        .map((b) => ({
+                          value: `${b.airlineName} - ${b.fareType}`,
+                          label: `${b.airlineName} - ${b.fareType}`,
+                        }))}
+                      placeholder="Seleccionar plan..."
+                    />
                   </FormField>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1260,12 +1330,12 @@ export function TicketForm({
         </div>
       </div>
 
-      {/* ── Finanzas y Equipaje ──────────────────────────────── */}
+      {/* ── Detalles Financieros ──────────────────────────────── */}
       <div className="bg-emerald-50/20 p-4 rounded-xl border border-emerald-100">
         <h4 className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Briefcase size={14} /> Detalles Financieros y Equipaje
+          <Briefcase size={14} /> Detalles Financieros
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="Valor Pagado al Proveedor">
             <CurrencyInput
               required
@@ -1289,17 +1359,6 @@ export function TicketForm({
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."
-            />
-          </FormField>
-          <FormField label="Plan de Equipaje">
-            <Combobox
-              value={ticket.baggagePlan}
-              onChange={(val) => onChange({ baggagePlan: val })}
-              options={baggage.map((b) => ({
-                value: `${b.airlineName} - ${b.fareType}`,
-                label: `${b.airlineName} - ${b.fareType}`,
-              }))}
-              placeholder="Buscar plan..."
             />
           </FormField>
         </div>

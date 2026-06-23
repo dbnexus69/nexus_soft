@@ -141,6 +141,47 @@ const productHandler = (category, tableName, transformData) => ({
             const originAirport = await tx.aeropuertos.findFirst({ where: { codigoIata: leg.origin } });
             const destAirport = await tx.aeropuertos.findFirst({ where: { codigoIata: leg.destination } });
             if (!originAirport || !destAirport) continue;
+
+            let aerolineaId = null;
+            const legAirline = leg.airline || data.airline;
+            if (legAirline) {
+              const parsedId = parseInt(legAirline);
+              if (!isNaN(parsedId)) {
+                aerolineaId = parsedId;
+              } else {
+                const match = await tx.aerolineas.findFirst({ where: { nombre: legAirline } });
+                aerolineaId = match?.id || null;
+              }
+            }
+
+            let planEquipajeId = null;
+            const legBaggagePlan = leg.baggagePlan || data.baggagePlan;
+            if (legBaggagePlan) {
+              const parsedId = parseInt(legBaggagePlan);
+              if (!isNaN(parsedId)) {
+                planEquipajeId = parsedId;
+              } else {
+                const parts = legBaggagePlan.split(' - ');
+                if (parts.length >= 2) {
+                  const airlineName = parts[0];
+                  const fareType = parts.slice(1).join(' - ');
+                  const match = await tx.politicasEquipaje.findFirst({
+                    where: {
+                      AND: [
+                        { aerolinea: { nombre: airlineName } },
+                        { tipoTarifa: fareType }
+                      ]
+                    }
+                  });
+                  if (match) planEquipajeId = match.id;
+                }
+                if (!planEquipajeId) {
+                  const match = await tx.politicasEquipaje.findFirst({ where: { tipoTarifa: legBaggagePlan } });
+                  planEquipajeId = match?.id || null;
+                }
+              }
+            }
+
             await tx.tramosVuelo.create({
               data: {
                 prodTiqueteriaId: product.id,
@@ -149,6 +190,10 @@ const productHandler = (category, tableName, transformData) => ({
                 salida: leg.date ? new Date(leg.date) : new Date(),
                 llegada: leg.date ? new Date(leg.date) : new Date(),
                 nroVueloTramo: leg.flightNumber || null,
+                asiento: leg.seat || null,
+                nroTiquete: leg.ticketNumber || null,
+                aerolineaId,
+                planEquipajeId,
                 orden: i + 1
               }
             });

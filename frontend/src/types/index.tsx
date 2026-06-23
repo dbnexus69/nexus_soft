@@ -207,6 +207,8 @@ export interface FlightLeg {
   time?: string;
   arrivalDate?: string;
   ticketNumber?: string;
+  airline?: string;
+  baggagePlan?: string;
 }
 
 export interface GuestInfo {
@@ -257,6 +259,9 @@ export interface PlanData {
   supplier: string;
   airline: string;
   guests: GuestInfo[];
+  packageType?: 'own' | 'supplier';
+  voucher?: { name: string; base64: string };
+  sendVoucher?: boolean;
 }
 
 export interface InsuranceData {
@@ -416,6 +421,8 @@ export interface TourData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  guests: GuestInfo[];
+  vouchers?: Array<{ name: string; base64: string }>;
 }
 
 export interface ConventionData {

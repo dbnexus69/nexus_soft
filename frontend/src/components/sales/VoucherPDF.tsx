@@ -31,17 +31,26 @@ function ProductCard({ emoji, title, children }: { emoji: string; title: string;
 function FlightBlock({ ticket, idx, airportMap, baggageList }: { ticket: TicketData; idx: number; airportMap?: Record<string, AirportInfo>; baggageList?: any[] }) {
   const mainLegs = ticket.legs && ticket.legs.length > 0 ? ticket.legs : [];
   const returnLeg = ticket.returnLeg ? [ticket.returnLeg] : [];
-  const allLegs = [...mainLegs, ...returnLeg];
-
-  const legsToRender = allLegs.length > 0 ? allLegs : [{
-    origin: '—',
-    destination: '—',
-    flightNumber: ticket.flightNumber || '—',
-    seat: ticket.seatNumber || '—',
-    date: ticket.departureDate,
-    time: undefined,
-    arrivalDate: ticket.arrivalDate,
-  }];
+  const hasStopsField = (ticket.outboundStops && ticket.outboundStops.length > 0) || ticket.returnLeg || (ticket.returnStops && ticket.returnStops.length > 0);
+  
+  const legsToRender = mainLegs.length > 0
+    ? (hasStopsField
+        ? [
+            ...mainLegs,
+            ...(ticket.outboundStops || []),
+            ...returnLeg,
+            ...(ticket.returnStops || [])
+          ]
+        : mainLegs)
+    : [{
+        origin: '—',
+        destination: '—',
+        flightNumber: ticket.flightNumber || '—',
+        seat: ticket.seatNumber || '—',
+        date: ticket.departureDate,
+        time: undefined,
+        arrivalDate: ticket.arrivalDate,
+      }];
 
   const formatTimeAMPM = (time24: string) => {
     if (!time24) return '—';
@@ -95,47 +104,52 @@ function FlightBlock({ ticket, idx, airportMap, baggageList }: { ticket: TicketD
                   <div className="v-f-main">{(leg as any).arrivalDate ? formatDate((leg as any).arrivalDate) : (leg.date ? formatDate(leg.date) : '—')}</div>
                   <div className="v-f-sub">Hora: {formatTimeAMPM((leg as any).arrivalTime)}</div>
                 </td>
-                <td><div className="v-f-main">{li === 0 ? (ticket.reservationNumber || '—') : '—'}</div></td>
+                <td><div className="v-f-main">{ticket.reservationNumber || '—'}</div></td>
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      <div className="v-flight-details-box" style={{ alignItems: 'flex-start' }}>
-        <div className="v-fd-col" style={{ minWidth: '150px' }}>
-          <span className="v-fd-label">Aerolínea:</span>
-          <span className="v-badge-orange">{(ticket as any).airlineName || ticket.airline || '—'}</span>
-        </div>
-        <div className="v-fd-col" style={{ flex: 1 }}>
-          <span className="v-fd-label">Equipaje:</span>
-          <span className="v-fd-val">
-            {(() => {
-              const airlineName = (ticket as any).airlineName || ticket.airline;
-              const bg = baggageList?.find(b => b.fareType === ticket.baggagePlan && (b.airlineName === airlineName || !airlineName));
-              return (
-                <>
-                  <strong style={{ display: 'block', color: '#111827' }}>{ticket.baggagePlan || 'No especificado'}</strong>
+      <div className="v-flight-details-box" style={{ flexDirection: 'column', gap: '12px', alignItems: 'stretch' }}>
+        {legsToRender.map((leg, li) => {
+          const legAirlineName = leg.airline || (ticket as any).airlineName || ticket.airline || '—';
+          const legBaggagePlan = leg.baggagePlan || ticket.baggagePlan;
+          const bg = baggageList?.find(b => b.fareType === legBaggagePlan && (b.airlineName === legAirlineName || !legAirlineName));
+          return (
+            <div key={`leg-details-${idx}-${li}`} style={{ display: 'flex', width: '100%', gap: '15px', flexWrap: 'wrap', paddingBottom: li < legsToRender.length - 1 ? '10px' : '0', borderBottom: li < legsToRender.length - 1 ? '1px dashed #e5e7eb' : 'none' }}>
+              <div style={{ minWidth: '150px' }}>
+                <span className="v-fd-label">{leg.origin && leg.destination ? `${leg.origin} → ${leg.destination}` : 'Información'}:</span>
+                <span className="v-badge-orange">{legAirlineName}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <span className="v-fd-label">Equipaje:</span>
+                <span className="v-fd-val">
+                  <strong style={{ display: 'block', color: '#111827' }}>{legBaggagePlan || 'No especificado'}</strong>
                   {bg && (
                     <span style={{ fontSize: '0.85em', color: '#6b7280', display: 'block', marginTop: '2px' }}>
                       Personal: {bg.personalItem || 'N/A'} &bull; Cabina: {bg.carryOn || 'N/A'} &bull; Bodega: {bg.checkedBag || 'N/A'}
                     </span>
                   )}
-                </>
-              );
-            })()}
-          </span>
-        </div>
-        <div className="v-fd-col">
-          <span className="v-fd-label">Asiento:</span>
-          <span className="v-fd-val">{ticket.seatNumber || '—'}</span>
-        </div>
-        {(ticket.ticketNumber || (ticket.passengers && ticket.passengers[0]?.nroTiquete)) && (
-          <div className="v-fd-col">
-            <span className="v-fd-label">N° Tiquete:</span>
-            <span className="v-fd-val"><strong style={{ color: '#111827' }}>{ticket.ticketNumber || (ticket.passengers && ticket.passengers[0]?.nroTiquete)}</strong></span>
-          </div>
-        )}
+                </span>
+              </div>
+              <div style={{ minWidth: '80px' }}>
+                <span className="v-fd-label">Asiento:</span>
+                <span className="v-fd-val">{leg.seat || ticket.seatNumber || '—'}</span>
+              </div>
+              {(leg.ticketNumber || ticket.ticketNumber || (ticket.passengers && ticket.passengers[0]?.nroTiquete)) && (
+                <div style={{ minWidth: '100px' }}>
+                  <span className="v-fd-label">N° Tiquete:</span>
+                  <span className="v-fd-val">
+                    <strong style={{ color: '#111827' }}>
+                      {leg.ticketNumber || ticket.ticketNumber || (ticket.passengers && ticket.passengers[0]?.nroTiquete)}
+                    </strong>
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {ticket.passengers && ticket.passengers.length > 0 && (
@@ -316,42 +330,64 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
               <React.Fragment key={`plan-${i}`}>
                 {i > 0 && <div className="v-item-divider" />}
                 <div className="v-data-grid">
-                  <DataCell label="Nombre del Plan / Paquete" value={plan.planName || plan.packageName} highlight />
-                  <DataCell label="Hotel Incluido" value={plan.hotelName} />
-                  <DataCell label="Proveedor / Operador" value={plan.supplier} />
-                  
-                  <DataCell label="Fecha Inicio Viaje" value={plan.startDate ? formatDate(plan.startDate) : null} />
-                  <DataCell label="Fecha Fin Viaje" value={plan.endDate ? formatDate(plan.endDate) : null} />
-                  <DataCell label="Pasajeros (Resumen)" value={`${plan.adultsCount ?? 0} adulto(s) / ${plan.childrenCount ?? 0} niño(s)`} />
+                  {plan.packageType === "supplier" ? (
+                    <>
+                      <DataCell label="Nombre del Plan / Paquete" value={plan.planName || plan.packageName} highlight />
+                      <DataCell label="Proveedor / Operador" value={plan.supplier} />
+                      <DataCell label="Tipo de Paquete" value="Por Proveedor" />
+                      <DataCell 
+                        label="Lista de Pasajeros / Huéspedes" 
+                        value={(plan.guests || []).map((g: any) => `${g.name} (${g.docType || 'DOC'}: ${g.docNumber})`).join(', ') || '—'} 
+                        fullWidth={true} 
+                      />
+                      {plan.observations && (
+                        <DataCell 
+                          label="Observaciones" 
+                          value={plan.observations} 
+                          fullWidth={true} 
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <DataCell label="Nombre del Plan / Paquete" value={plan.planName || plan.packageName} highlight />
+                      <DataCell label="Hotel Incluido" value={plan.hotelName} />
+                      <DataCell label="Proveedor / Operador" value={plan.supplier} />
+                      
+                      <DataCell label="Fecha Inicio Viaje" value={plan.startDate ? formatDate(plan.startDate) : null} />
+                      <DataCell label="Fecha Fin Viaje" value={plan.endDate ? formatDate(plan.endDate) : null} />
+                      <DataCell label="Pasajeros (Resumen)" value={`${plan.adultsCount ?? 0} adulto(s) / ${plan.childrenCount ?? 0} niño(s)`} />
 
-                  <DataCell label="Aerolínea" value={(plan as any).airlineName || plan.airline} />
-                  <DataCell label="N° Vuelo" value={plan.flightNumber} />
-                  <DataCell label="Localizador / N° Reserva" value={plan.reservationNumber} />
+                      <DataCell label="Aerolínea" value={(plan as any).airlineName || plan.airline} />
+                      <DataCell label="N° Vuelo" value={plan.flightNumber} />
+                      <DataCell label="Localizador / N° Reserva" value={plan.reservationNumber} />
 
-                  <DataCell label="N° Tiquete" value={plan.ticketNumber} />
-                  <DataCell label="N° Confirmación" value={plan.confirmationNumber} />
-                  <DataCell label="" value={<span />} />
+                      <DataCell label="N° Tiquete" value={plan.ticketNumber} />
+                      <DataCell label="N° Confirmación" value={plan.confirmationNumber} />
+                      <DataCell label="" value={<span />} />
 
-                  <DataCell label="Fecha Salida Vuelo (Ida)" value={plan.flightDepartureDate ? formatDateTime(plan.flightDepartureDate) : null} />
-                  <DataCell label="Llegada Vuelo Ida" value={plan.flightDepartureArrivalDate ? formatDateTime(plan.flightDepartureArrivalDate) : null} />
-                  <DataCell label="" value={<span />} />
+                      <DataCell label="Fecha Salida Vuelo (Ida)" value={plan.flightDepartureDate ? formatDateTime(plan.flightDepartureDate) : null} />
+                      <DataCell label="Llegada Vuelo Ida" value={plan.flightDepartureArrivalDate ? formatDateTime(plan.flightDepartureArrivalDate) : null} />
+                      <DataCell label="" value={<span />} />
 
-                  <DataCell label="Fecha Regreso Vuelo (Regreso)" value={plan.flightReturnDate ? formatDateTime(plan.flightReturnDate) : null} />
-                  <DataCell label="Llegada Vuelo Regreso" value={plan.flightReturnArrivalDate ? formatDateTime(plan.flightReturnArrivalDate) : null} />
-                  <DataCell label="" value={<span />} />
+                      <DataCell label="Fecha Regreso Vuelo (Regreso)" value={plan.flightReturnDate ? formatDateTime(plan.flightReturnDate) : null} />
+                      <DataCell label="Llegada Vuelo Regreso" value={plan.flightReturnArrivalDate ? formatDateTime(plan.flightReturnArrivalDate) : null} />
+                      <DataCell label="" value={<span />} />
 
-                  <DataCell 
-                    label="Lista de Pasajeros / Huéspedes" 
-                    value={(plan.guests || []).map((g: any) => `${g.name} (${g.docType || 'DOC'}: ${g.docNumber})`).join(', ') || '—'} 
-                    fullWidth={true} 
-                  />
+                      <DataCell 
+                        label="Lista de Pasajeros / Huéspedes" 
+                        value={(plan.guests || []).map((g: any) => `${g.name} (${g.docType || 'DOC'}: ${g.docNumber})`).join(', ') || '—'} 
+                        fullWidth={true} 
+                      />
 
-                  {plan.observations && (
-                    <DataCell 
-                      label="Observaciones" 
-                      value={plan.observations} 
-                      fullWidth={true} 
-                    />
+                      {plan.observations && (
+                        <DataCell 
+                          label="Observaciones" 
+                          value={plan.observations} 
+                          fullWidth={true} 
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               </React.Fragment>
@@ -467,14 +503,19 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
               <React.Fragment key={`tour-${i}`}>
                 {i > 0 && <div className="v-item-divider" />}
                 <div className="v-data-grid">
-                  <DataCell label="Pasajero" value={tour.passengerName} highlight />
-                  <DataCell label="Tour Seleccionado" value={tour.selectedTour} />
-                  <DataCell label="Fecha Preferida" value={tour.preferredDate ? formatDate(tour.preferredDate) : null} />
                   <DataCell label="Adultos" value={tour.adultsCount?.toString()} />
                   <DataCell label="Niños" value={tour.childrenCount?.toString()} />
                   <DataCell label="Punto de Recogida" value={tour.pickupPoint} />
                   <DataCell label="Idioma Guía" value={tour.guideLanguage} />
                   <DataCell label="Transporte" value={tour.needsTransport ? 'Incluido' : 'No requiere'} />
+                  <DataCell 
+                    label="Integrantes del Tour" 
+                    value={(tour.guests || []).map((g: any) => `${g.name} (${g.docType || 'DOC'}: ${g.docNumber})`).join(', ') || tour.passengerName} 
+                    fullWidth={true} 
+                  />
+                  {tour.observations && (
+                    <DataCell label="Toures" value={tour.observations} fullWidth={true} />
+                  )}
                 </div>
               </React.Fragment>
             ))}

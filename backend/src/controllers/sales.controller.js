@@ -1,7 +1,10 @@
+const fs = require('fs');
+const path = require('path');
 const prisma = require('../config/db');
 const { success, error } = require('../utils/apiResponse');
 const { buildMeta } = require('../utils/paginationHelper');
 const emailService = require('../utils/emailService');
+const { getSamturLogoBase64 } = require('../utils/logoHelper');
 
 exports.list = async (req, res, next) => {
   try {
@@ -2213,13 +2216,17 @@ exports.sendVoucher = async (req, res, next) => {
       day: '2-digit', month: 'long', year: 'numeric'
     });
 
+    // URL pública del logo para el correo (la imagen debe estar accesible via internet)
+    const frontendUrl = process.env.FRONTEND_URL || 'https://itea-soft.onrender.com';
+    const logoUrl = `${frontendUrl}/samtur_nuevo.png.png`;
+
     const html = `
       <!DOCTYPE html>
       <html lang="es">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Voucher de Viaje - iTea Travel Agency</title>
+        <title>Voucher de Viaje - Samtur Travel Agency</title>
       </head>
       <body style="margin:0;padding:0;background:#f4f7fb;font-family:'Segoe UI',Arial,sans-serif;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:32px 0;">
@@ -2229,13 +2236,27 @@ exports.sendVoucher = async (req, res, next) => {
 
                 <!-- HEADER -->
                 <tr>
-                  <td style="background:linear-gradient(135deg,#032650 0%,#0b396b 60%,#021a36 100%);padding:32px 40px;text-align:center;">
-                    <div style="font-size:32px;font-weight:900;color:#ffffff;letter-spacing:3px;font-family:'Montserrat',sans-serif;">
-                      i<span style="color:#07818e;">T</span>ea
-                    </div>
-                    <div style="font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:4px;text-transform:uppercase;margin-top:4px;">
-                      Travel Agency
-                    </div>
+                  <td style="background:linear-gradient(135deg,#032650 0%,#0b396b 60%,#021a36 100%);padding:24px 40px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <!-- Left: Samtur Logo -->
+                        <td align="left" valign="middle" width="50%">
+                          <div style="display:inline-block;background:#ffffff;border-radius:8px;padding:6px 10px;">
+                            <img src="${logoUrl}" alt="Samtur Logo" style="height:52px; display:block;" />
+                          </div>
+                        </td>
+                        <!-- Right: iTea text -->
+                        <td align="right" valign="middle" width="50%" style="text-align: right;">
+                          <div style="font-size:26px;font-weight:900;color:#ffffff;letter-spacing:2px;font-family:'Montserrat',sans-serif;line-height:1;margin-bottom:4px;">
+                            i<span style="color:#07818e;">T</span>ea
+                          </div>
+                          <div style="font-size:10px;color:rgba(255,255,255,0.7);text-transform:uppercase;max-width:180px;line-height:1.2;float:right;text-align:right;">
+                            Sistema exclusivo para agencias de viajes
+                          </div>
+                          <div style="clear:both;"></div>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
 
@@ -2330,7 +2351,7 @@ exports.sendVoucher = async (req, res, next) => {
                       El voucher completo con todos los detalles de tu reserva se encuentra adjunto en este correo en formato PDF.
                     </p>
                     <p style="margin:0;font-size:14px;color:#475569;line-height:1.7;">
-                      Gracias por confiar en <strong style="color:#032650;">iTea Travel Agency</strong>. 
+                      Gracias por confiar en <strong style="color:#032650;">Samtur Travel Agency</strong>. 
                       ¡Te deseamos un excelente viaje! ✈️
                     </p>
                   </td>
@@ -2340,10 +2361,10 @@ exports.sendVoucher = async (req, res, next) => {
                 <tr>
                   <td style="background:linear-gradient(135deg,#021a36 0%,#032650 50%,#0b396b 100%);border-top:4px solid #07818e;padding:20px 40px;text-align:center;">
                     <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:1px;">
-                      iTea Travel Agency &nbsp;|&nbsp; Carrera 65A 13-157, Aeropuerto Olaya Herrera, Medellín
+                      Samtur Travel Agency &nbsp;|&nbsp; Calle 18 # 18 143 mall estación de servicios medrano
                     </p>
                     <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.45);">
-                      info@itea.com.co &nbsp;|&nbsp; +57 (312) 875 15 89
+                      Comercial@samturtravel.com &nbsp;|&nbsp; +57 (312) 633 99 19
                     </p>
                   </td>
                 </tr>
@@ -2358,18 +2379,35 @@ exports.sendVoucher = async (req, res, next) => {
 
     // Convertir base64 a Buffer para adjuntar
     const pdfBuffer = Buffer.from(pdfBase64, 'base64');
-    const fileName = `Voucher_iTea_Orden_${saleId}_${clientName.replace(/\s+/g, '_')}.pdf`;
+    const fileName = `Voucher_Samtur_Orden_${saleId}_${clientName.replace(/\s+/g, '_')}.pdf`;
+    
+    let logoBuffer = null;
+    try {
+      logoBuffer = fs.readFileSync(path.join(__dirname, '../assets/logo.png'));
+    } catch (e) {
+      console.error('[VOUCHER] Logo no encontrado en src/assets/logo.png', e.message);
+    }
+
+    const attachments = [
+      {
+        filename: fileName,
+        content: pdfBuffer
+      }
+    ];
+
+    if (logoBuffer) {
+      attachments.push({
+        filename: 'samtur_nuevo.png.png',
+        content: logoBuffer,
+        cid: 'samturLogo'
+      });
+    }
 
     const emailResult = await emailService.sendEmail({
       to: clientEmail,
-      subject: `✈ Tu Voucher de Viaje - Orden #${saleId} | iTea Travel Agency`,
+      subject: `✈ Tu Voucher de Viaje - Orden #${saleId} | Samtur Travel Agency`,
       html,
-      attachments: [
-        {
-          filename: fileName,
-          content: pdfBuffer
-        }
-      ]
+      attachments
     });
 
     if (!emailResult.success) {

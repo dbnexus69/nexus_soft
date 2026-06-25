@@ -341,6 +341,11 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
                       Sitio Web ↗
                     </a>
                   )}
+                  {supplier.observations && !isOptimistic && (
+                    <p className="text-[10px] text-gray-500 mt-1 leading-relaxed italic border-t border-gray-100 pt-1">
+                      {supplier.observations}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => handleOpenModal(supplier)} className="p-1.5 text-gray-500 hover:text-primary rounded-md hover:bg-gray-100" title="Editar" disabled={isOptimistic}>

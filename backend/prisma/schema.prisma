@@ -170,6 +170,7 @@ model Proveedores {
   emailContacto String?    @map("email_contacto")
   telefono     String?
   web          String?
+  observaciones String?    @map("observaciones")
   status       UserStatus  @default(active)
 
   detalleVentas  DetalleVenta[]   @relation("proveedor_detalle")

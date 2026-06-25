@@ -20,7 +20,7 @@ const SECTION_MAP = {
   },
   'suppliers': {
     model: 'proveedores', idField: 'id',
-    transform: (r) => ({ id: r.id, name: r.nombre, type: r.tipo, email: r.emailContacto, phone: r.telefono, website: r.web })
+    transform: (r) => ({ id: r.id, name: r.nombre, type: r.tipo, email: r.emailContacto, phone: r.telefono, website: r.web, observations: r.observaciones || '' })
   },
   'airports': {
     model: 'aeropuertos', idField: 'id',
@@ -144,6 +144,7 @@ const untransformBody = async (section, body) => {
       data.emailContacto = body.email || '';
       data.telefono = body.phone || '';
       data.web = body.website || null;
+      data.observaciones = body.observations || null;
       break;
 
     case 'airports':

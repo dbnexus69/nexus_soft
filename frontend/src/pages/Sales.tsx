@@ -21,7 +21,7 @@ import { Modal } from "../components/ui/Modal";
 import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionsContext";
-import { formatCurrency, formatDate } from "../utils/formatters";
+import { formatCurrency, formatDate, formatId } from "../utils/formatters";
 import { buildAirportMap } from "../utils/airportInfo";
 import { Sale } from "../types";
 import { DatePicker } from "../components/sales/forms/TicketForm";
@@ -80,7 +80,8 @@ export default function Sales() {
         sale.status.toLowerCase().includes(query) ||
         sale.asesorName.toLowerCase().includes(query) ||
         (sale.commissionAgentName || "").toLowerCase().includes(query) ||
-        String(sale.id).includes(query);
+        String(sale.id).includes(query) ||
+        formatId(sale.id).toLowerCase().includes(query);
 
       // 2. Status Select Filter
       const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;

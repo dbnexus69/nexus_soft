@@ -73,7 +73,7 @@ const STEPS = [
 ] as const;
 
 export default function NewSaleWizard({ onClose, onSuccess }: Props) {
-  const { data, addSale, fetchClients, fetchUsers, fetchCommissionAgents } = useData();
+  const { data, addSale, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables } = useData();
   const { user } = useAuth();
 
   const draftKey = `itea_new_sale_draft_${user?.id || 'unknown'}`;
@@ -241,7 +241,8 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     fetchClients();
     fetchUsers();
     fetchCommissionAgents();
-  }, [fetchClients, fetchUsers, fetchCommissionAgents]);
+    fetchResponsables();
+  }, [fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables]);
 
   // Compute Totals Automatically
   useEffect(() => {

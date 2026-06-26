@@ -121,6 +121,20 @@ export default function Config() {
     }
   };
 
+  const getSingularLabel = (section: SectionId): string => {
+    switch (section) {
+      case 'cards': return 'Tarjeta';
+      case 'paymentMethods': return 'Forma de Pago';
+      case 'documentTypes': return 'Tipo de Documento';
+      case 'airlines': return 'Aerolínea';
+      case 'suppliers': return 'Proveedor';
+      case 'airports': return 'Aeropuerto';
+      case 'baggage': return 'Equipaje';
+      case 'packages': return 'Paquete';
+      default: return 'Elemento';
+    }
+  };
+
   const getRow = (item: any, section: SectionId): string[] => {
     switch (section) {
       case 'cards': return [
@@ -449,7 +463,7 @@ export default function Config() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingItem ? 'Editar Registro' : 'Registrar Elemento'}
+        title={editingItem ? `Editar ${getSingularLabel(currentSection)}` : `Nuevo ${getSingularLabel(currentSection)}`}
         size={currentSection === 'packages' ? 'xl' : 'lg'}
         footer={
           <>

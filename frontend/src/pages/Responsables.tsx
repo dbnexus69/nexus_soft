@@ -493,7 +493,7 @@ export default function Responsables() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
-              <UsersIcon className="text-accent w-8 h-8" /> Gestión de Responsablees
+              <UsersIcon className="text-accent w-8 h-8" /> Gestión de Responsables
             </h1>
             <p className="text-gray-500 text-sm mt-1">Administra la base de datos de tus viajeros y su historial de compras.</p>
           </div>
@@ -538,7 +538,7 @@ export default function Responsables() {
             )}
           </div>
         }>
-          Lista de Responsablees
+          Lista de Responsables
         </CardHeader>
         <Table 
           headers={[
@@ -610,7 +610,7 @@ export default function Responsables() {
 
         <div className="p-4 bg-gray-50/30 border-t border-gray-border flex items-center justify-between">
           <span className="text-xs text-gray-500">
-            Mostrando {Math.min(paginatedResponsables.length + (currentPage - 1) * itemsPerPage, filteredResponsables.length)} de {filteredResponsables.length} responsablees
+            Mostrando {Math.min(paginatedResponsables.length + (currentPage - 1) * itemsPerPage, filteredResponsables.length)} de {filteredResponsables.length} responsables
             {statusFilter !== 'all' && <span className="ml-1 text-primary font-medium">· Filtro: {statusFilter === 'active' ? 'Activos' : 'Inactivos'}</span>}
           </span>
           {totalPages > 1 && (
@@ -639,7 +639,7 @@ export default function Responsables() {
         {filteredResponsables.length === 0 && (
           <div className="flex flex-col items-center justify-center p-12 text-gray-500 bg-white">
             <UserX size={48} className="text-gray-200 mb-4" />
-            <p className="text-lg font-medium">No se encontraron responsablees</p>
+            <p className="text-lg font-medium">No se encontraron responsables</p>
             <p className="text-sm">Prueba ajustando los términos de búsqueda.</p>
           </div>
         )}
@@ -820,4 +820,4 @@ export default function Responsables() {
   );
 }
 
-
+

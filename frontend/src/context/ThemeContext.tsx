@@ -13,7 +13,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (saved !== null) {
       return saved === 'true';
     }
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Default to light mode instead of OS preference to prevent unexpected dark mode behavior
+    return false;
   });
 
   useEffect(() => {

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, ChevronRight, Info, ArrowLeft, Check, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Input, FormField } from '../components/ui/Form';
 import { forgotPassword, verifyCode, resetPassword } from '../api/auth';
 
@@ -13,6 +14,18 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { isDarkMode } = useTheme();
+
+  useEffect(() => {
+    // Force light mode on login page
+    document.documentElement.classList.remove('dark');
+    return () => {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      }
+    };
+  }, [isDarkMode]);
 
   // Password Recovery States
   const [view, setView] = useState<'login' | 'forgot' | 'verify' | 'reset'>('login');
@@ -172,7 +185,7 @@ export default function Login() {
           backgroundImage: 'url("/business_travel_bg.png")',
         }}
       />
-      <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary/90 via-primary/70 to-transparent" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-br from-[#002855]/90 via-[#002855]/70 to-[#00828a]/40" />
       
       {/* Círculos de luz decorativos */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/20 rounded-full blur-[120px] z-10 animate-pulse" />

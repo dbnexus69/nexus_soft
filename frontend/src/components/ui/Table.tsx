@@ -45,15 +45,15 @@ export function Table({ headers, children }: TableProps) {
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="bg-gray-light">
+          <tr className="bg-gray-light dark:bg-slate-800/80">
             {headers.map((header, i) => (
-              <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-primary uppercase tracking-wider">
+              <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-primary dark:text-teal-400 uppercase tracking-wider">
                 {header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-border">{children}</tbody>
+        <tbody className="divide-y divide-gray-border dark:divide-slate-700/50">{children}</tbody>
       </table>
     </div>
   );
@@ -67,7 +67,7 @@ interface TableRowProps {
 
 export function TableRow({ children, onClick, className = '' }: TableRowProps) {
   return (
-    <tr className={`hover:bg-gray-light transition-colors ${onClick ? 'cursor-pointer' : ''} ${className}`} onClick={onClick}>
+    <tr className={`hover:bg-gray-light dark:hover:bg-slate-800/50 transition-colors ${onClick ? 'cursor-pointer' : ''} ${className}`} onClick={onClick}>
       {children}
     </tr>
   );
@@ -79,5 +79,5 @@ interface TableCellProps {
 }
 
 export function TableCell({ children, className = '' }: TableCellProps) {
-  return <td className={`px-4 py-3 text-sm ${className}`}>{children}</td>;
+  return <td className={`px-4 py-3 text-sm dark:text-slate-300 ${className}`}>{children}</td>;
 }

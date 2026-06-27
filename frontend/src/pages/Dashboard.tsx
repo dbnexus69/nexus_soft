@@ -127,15 +127,15 @@ export default function Dashboard() {
         
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 drop-shadow-sm flex items-center gap-3">
+            <h1 className="text-4xl font-extrabold text-[#ffffff] drop-shadow-sm flex items-center gap-3">
               Panel de Control
             </h1>
             <p className="text-blue-100/80 text-sm mt-2 max-w-xl font-medium">
               Supervisa el rendimiento financiero y operativo en tiempo real. Todos los indicadores estratégicos de tu agencia, en un solo vistazo.
             </p>
           </div>
-          <div className="flex items-center bg-white/10 backdrop-blur-md p-1.5 rounded-xl shadow-inner border border-white/20">
-            <div className="w-72">
+          <div className="flex items-center bg-[#ffffff]/10 backdrop-blur-md p-1.5 rounded-xl shadow-inner border border-[#ffffff]/20">
+            <div className="w-72 datepicker-container">
               <Datepicker
                 value={dateRange as any}
                 onChange={(newValue: any) => setDateRange(newValue)}
@@ -144,7 +144,7 @@ export default function Dashboard() {
                 displayFormat={"DD/MMM/YYYY"}
                 placeholder={"Selecciona un periodo"}
                 separator={" - "}
-                inputClassName="w-full text-sm font-semibold text-white bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-white/60"
+                inputClassName="w-full text-sm font-semibold !text-[#ffffff] !bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-[#ffffff]/60 dark:!text-[#ffffff]"
               />
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function Dashboard() {
               detail: `+${formatCurrency(stats.monthIngresos)} mes`,
               icon: <DollarSign size={24} />,
               gradient: "from-emerald-500 to-teal-400",
-              lightBg: "bg-emerald-50 text-emerald-600",
+              lightBg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300",
             },
             {
               label: "CRÉDITO",
@@ -177,7 +177,7 @@ export default function Dashboard() {
               detail: `${stats.PendienteCount} cuentas`,
               icon: <CreditCard size={24} />,
               gradient: "from-orange-500 to-amber-400",
-              lightBg: "bg-orange-50 text-orange-600",
+              lightBg: "bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-300",
               onClick: () => setIsCreditModalOpen(true),
             },
             {
@@ -187,7 +187,7 @@ export default function Dashboard() {
               detail: `${stats.supplierCount} activos`,
               icon: <Briefcase size={24} />,
               gradient: "from-rose-500 to-pink-400",
-              lightBg: "bg-rose-50 text-rose-600",
+              lightBg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300",
             },
             {
               label: "CLIENTES",
@@ -196,7 +196,7 @@ export default function Dashboard() {
               detail: `${stats.activeClients} Activos`,
               icon: <Users size={24} />,
               gradient: "from-blue-600 to-indigo-500",
-              lightBg: "bg-indigo-50 text-indigo-600",
+              lightBg: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300",
             },
             {
               label: "TIQUETES AÉREOS",
@@ -204,7 +204,7 @@ export default function Dashboard() {
               subtitle: "Tramos Emitidos",
               icon: <Plane size={24} />,
               gradient: "from-cyan-500 to-blue-400",
-              lightBg: "bg-cyan-50 text-cyan-600",
+              lightBg: "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-300",
             },
             {
               label: "HOTELES",
@@ -213,7 +213,7 @@ export default function Dashboard() {
               detail: formatCurrency(stats.hotelesIngresos),
               icon: <Building size={24} />,
               gradient: "from-violet-500 to-purple-400",
-              lightBg: "bg-violet-50 text-violet-600",
+              lightBg: "bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-300",
             },
             {
               label: "SEGUROS",
@@ -222,7 +222,7 @@ export default function Dashboard() {
               detail: formatCurrency(stats.segurosIngresos),
               icon: <ShieldCheck size={24} />,
               gradient: "from-fuchsia-500 to-pink-500",
-              lightBg: "bg-fuchsia-50 text-fuchsia-600",
+              lightBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-300",
             },
             {
               label: "PAQUETES",
@@ -231,35 +231,35 @@ export default function Dashboard() {
               detail: formatCurrency(stats.planesIngresos),
               icon: <Map size={24} />,
               gradient: "from-amber-500 to-yellow-400",
-              lightBg: "bg-amber-50 text-amber-600",
+              lightBg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300",
             },
           ].map((kpi, i) => (
             <div
               key={i}
               onClick={kpi.onClick}
-              className={`relative group bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
-                kpi.onClick ? "cursor-pointer hover:border-orange-200" : ""
+              className={`relative group bg-white dark:bg-slate-800/90 border border-gray-100 dark:border-slate-700/60 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
+                kpi.onClick ? "cursor-pointer hover:border-orange-200 dark:hover:border-orange-500/50" : ""
               }`}
             >
               <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${kpi.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <p className="text-[13px] font-black text-gray-700 uppercase tracking-widest">
+                  <p className="text-[13px] font-black text-gray-700 dark:text-slate-300 uppercase tracking-widest">
                     {kpi.label}
                   </p>
                   <div className={`p-3 rounded-2xl ${kpi.lightBg} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
                     {kpi.icon}
                   </div>
                 </div>
-                <h3 className="text-3xl font-black text-gray-800 mb-1 tracking-tight">
+                <h3 className="text-3xl font-black text-gray-800 dark:text-white mb-1 tracking-tight">
                   {kpi.value}
                 </h3>
-                <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-700 font-semibold truncate">
+                <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700/50 flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-700 dark:text-slate-400 font-semibold truncate">
                     {kpi.subtitle}
                   </span>
                   {kpi.detail && (
-                    <span className="text-[10px] font-bold text-gray-600 bg-gray-100/80 px-2 py-1 rounded-lg whitespace-nowrap shadow-sm">
+                    <span className="text-[10px] font-bold text-gray-600 dark:text-slate-300 bg-gray-100/80 dark:bg-slate-700/60 px-2 py-1 rounded-lg whitespace-nowrap shadow-sm">
                       {kpi.detail}
                     </span>
                   )}
@@ -272,12 +272,12 @@ export default function Dashboard() {
 
       {/* Advanced Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 relative overflow-hidden">
-          <div className="absolute -right-20 -top-20 w-40 h-40 bg-blue-50 rounded-full blur-3xl"></div>
-          <h2 className="text-lg font-black text-gray-800 mb-6">Comparativa de Ingresos</h2>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800/90 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-sm p-4 sm:p-6 relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 w-40 h-40 bg-blue-50 dark:bg-blue-950/20 rounded-full blur-3xl"></div>
+          <h2 className="text-lg font-black text-gray-800 dark:text-white mb-6">Comparativa de Ingresos</h2>
           <div className="h-72 w-full">
             {dashboardLoading && !dashboardData ? (
-              <div className="w-full h-full bg-gray-50 rounded-xl animate-pulse" />
+              <div className="w-full h-full bg-gray-50 dark:bg-slate-800 rounded-xl animate-pulse" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
@@ -319,7 +319,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
+        <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-sm p-4 sm:p-6 flex flex-col">
           <h2 className="text-lg font-black text-gray-800 mb-2">Estado de Cartera</h2>
           <div className="flex-grow flex flex-col justify-center">
             <div className="relative h-56 flex items-center justify-center">
@@ -353,12 +353,12 @@ export default function Dashboard() {
                 <></>
               ) : (
                 stats.carteraData.map((item: any, i: number) => (
-                  <div key={i} className="flex flex-col items-center justify-center py-3 px-1 bg-gray-50/80 rounded-xl border border-gray-100/50 shadow-inner">
+                  <div key={i} className="flex flex-col items-center justify-center py-3 px-1 bg-gray-50/80 dark:bg-slate-800/60 rounded-xl border border-gray-100/50 dark:border-slate-700/50 shadow-inner">
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: CARTERA_COLORS[i] }} />
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{item.name}</span>
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">{item.name}</span>
                     </div>
-                    <span className="text-sm font-black text-gray-800">{item.value}%</span>
+                    <span className="text-sm font-black text-gray-800 dark:text-white">{item.value}%</span>
                   </div>
                 ))
               )}
@@ -368,14 +368,14 @@ export default function Dashboard() {
       </div>
 
       {/* Modern Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-lg font-black text-gray-800">Últimas Ventas Aprobadas</h2>
+      <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100 dark:border-slate-700/60 bg-gray-50/50 dark:bg-slate-800/50">
+          <h2 className="text-lg font-black text-gray-800 dark:text-white">Últimas Ventas Aprobadas</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-white text-left text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+              <tr className="bg-white dark:bg-slate-800 text-left text-[11px] font-black text-gray-400 dark:text-slate-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700/60">
                 <th className="px-6 py-4">Cliente</th>
                 <th className="px-6 py-4">Asesor</th>
                 <th className="px-6 py-4">Fecha</th>
@@ -383,34 +383,34 @@ export default function Dashboard() {
                 <th className="px-6 py-4">Estado</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-slate-700/40">
               {dashboardLoading && !dashboardData ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i} className="animate-pulse bg-white">
-                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 rounded-md w-3/4"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 rounded-md w-1/2"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 rounded-md w-1/3"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 rounded-md w-1/2"></div></td>
-                    <td className="px-6 py-5"><div className="h-6 bg-gray-100 rounded-xl w-20"></div></td>
+                  <tr key={i} className="animate-pulse bg-white dark:bg-slate-800">
+                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 dark:bg-slate-700 rounded-md w-3/4"></div></td>
+                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 dark:bg-slate-700 rounded-md w-1/2"></div></td>
+                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 dark:bg-slate-700 rounded-md w-1/3"></div></td>
+                    <td className="px-6 py-5"><div className="h-4 bg-gray-100 dark:bg-slate-700 rounded-md w-1/2"></div></td>
+                    <td className="px-6 py-5"><div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-xl w-20"></div></td>
                   </tr>
                 ))
               ) : (
                 stats.recentSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-6 py-4 font-semibold text-gray-700">{sale.clientName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{sale.asesorName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{formatDate(sale.date)}</td>
-                    <td className="px-6 py-4 font-black text-gray-800">
+                  <tr key={sale.id} className="hover:bg-blue-50/30 dark:hover:bg-slate-700/30 transition-colors group">
+                    <td className="px-6 py-4 font-semibold text-gray-700 dark:text-slate-200">{sale.clientName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{sale.asesorName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{formatDate(sale.date)}</td>
+                    <td className="px-6 py-4 font-black text-gray-800 dark:text-white">
                       {formatCurrency(sale.total)}
                     </td>
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider shadow-sm ${
                           sale.status === "pagado"
-                            ? "bg-green-100/80 text-green-700 border border-green-200/50"
+                            ? "bg-green-100/80 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-800/50"
                             : sale.status === "abonado"
-                              ? "bg-blue-100/80 text-blue-700 border border-blue-200/50"
-                              : "bg-orange-100/80 text-orange-700 border border-orange-200/50"
+                              ? "bg-blue-100/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50"
+                              : "bg-orange-100/80 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200/50 dark:border-orange-800/50"
                         }`}
                       >
                         {sale.status}
@@ -451,12 +451,12 @@ export default function Dashboard() {
           {/* Grid de Desglose */}
           <div className="grid grid-cols-1 gap-4">
             {/* Proveedores */}
-            <div className="p-5 bg-rose-50/50 border border-rose-100 rounded-2xl flex items-start gap-4 hover:shadow-md transition-shadow">
-              <div className="p-3 bg-rose-500 text-white rounded-xl shadow-md shadow-rose-200">
+            <div className="p-5 bg-rose-50/50 border border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30 rounded-2xl flex items-start gap-4 hover:shadow-md transition-shadow">
+              <div className="p-3 bg-rose-500 text-white rounded-xl shadow-md shadow-rose-200 dark:shadow-none">
                 <Briefcase size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-extrabold text-rose-500 uppercase tracking-widest mb-1">
+                <p className="text-[10px] font-extrabold text-rose-500 dark:text-rose-400 uppercase tracking-widest mb-1">
                   Deuda con Proveedores
                 </p>
                 <h4 className="text-xl font-black text-gray-800 mb-1">
@@ -469,12 +469,12 @@ export default function Dashboard() {
             </div>
 
             {/* TA Crédito */}
-            <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex items-start gap-4 hover:shadow-md transition-shadow">
-              <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-md shadow-emerald-200">
+            <div className="p-5 bg-emerald-50/50 border border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30 rounded-2xl flex items-start gap-4 hover:shadow-md transition-shadow">
+              <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-md shadow-emerald-200 dark:shadow-none">
                 <DollarSign size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mb-1">
+                <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">
                   Crédito de T.A. (Comisión de la Agencia)
                 </p>
                 <h4 className="text-xl font-black text-gray-800 mb-1">

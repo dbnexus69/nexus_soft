@@ -5,18 +5,19 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
     "./node_modules/react-tailwindcss-datepicker/dist/index.esm.js",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#032650",
-          dark: "#021a36",
-          light: "#0b396b",
+          DEFAULT: "var(--color-primary)",
+          dark: "var(--color-primary-dark)",
+          light: "var(--color-primary-light)",
         },
-        accent: "#07818e",
-        "accent-dark": "#05646f",
-        "gray-light": "#f5f5f5",
-        "gray-border": "#e0e0e0",
+        accent: "var(--color-accent)",
+        "accent-dark": "var(--color-accent-dark)",
+        "gray-light": "var(--color-bg-base)",
+        "gray-border": "var(--color-border-main)",
         success: "#16a34a",
         warning: "#f59e0b",
         danger: "#dc2626",

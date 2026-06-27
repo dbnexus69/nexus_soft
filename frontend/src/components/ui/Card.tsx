@@ -8,7 +8,7 @@ interface CardProps {
 export function Card({ children, className = '' }: CardProps) {
   const hasBackground = /\bbg-/.test(className);
   return (
-    <div className={`${hasBackground ? '' : 'bg-white'} rounded-lg border border-gray-border shadow-sm ${className}`}>
+    <div className={`card ${hasBackground ? '' : 'bg-white'} rounded-lg border border-gray-border shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -22,13 +22,13 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, actions, className = '' }: CardHeaderProps) {
   return (
-    <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border-b border-gray-border ${className}`}>
-      <div className="flex-1">{children}</div>
+    <div className={`card-header flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border-b border-gray-border ${className}`}>
+      <div className="flex-1 text-base md:text-lg font-bold">{children}</div>
       {actions}
     </div>
   );
 }
 
 export function CardBody({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`p-4 ${className}`}>{children}</div>;
+  return <div className={`card-body p-4 ${className}`}>{children}</div>;
 }

@@ -2,6 +2,169 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --color-bg-base: #f3f4f6;
+    --color-bg-card: #ffffff;
+    --color-bg-hover: #f3f4f6;
+    --color-bg-subtle: #f9fafb;
+    
+    --color-text-main: #1f2937;
+    --color-text-muted: #6b7280;
+    --color-text-light: #9ca3af;
+    
+    --color-border-main: #e5e7eb;
+    
+    --color-primary: #032650;
+    --color-primary-dark: #021a36;
+    --color-primary-light: #0b396b;
+    
+    --color-accent: #07818e;
+    --color-accent-dark: #05646f;
+  }
+
+  .dark {
+    --color-bg-base: #0f172a;
+    --color-bg-card: #1e293b;
+    --color-bg-hover: #334155;
+    --color-bg-subtle: #0f172a;
+    
+    --color-text-main: #f8fafc;
+    --color-text-muted: #94a3b8;
+    --color-text-light: #64748b;
+    
+    --color-border-main: #334155;
+    
+    --color-primary: #3b82f6;
+    --color-primary-dark: #2563eb;
+    --color-primary-light: #60a5fa;
+    
+    --color-accent: #2dd4bf;
+    --color-accent-dark: #14b8a6;
+  }
+  
+  body {
+    @apply bg-[var(--color-bg-base)] text-[var(--color-text-main)] transition-colors duration-200;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    @apply bg-white text-gray-900 transition-colors duration-200;
+  }
+}
+
+@layer utilities {
+  .dark .bg-white:not(aside *),
+  .dark .bg-gray-light:not(aside *),
+  .dark .bg-gray-50:not(aside *),
+  .dark .bg-gray-100:not(aside *),
+  .dark .bg-slate-50:not(aside *),
+  .dark .bg-slate-100:not(aside *) { background-color: var(--color-bg-card) !important; }
+
+  .dark .text-gray-900:not(aside *), 
+  .dark .text-gray-800:not(aside *), 
+  .dark .text-gray-700:not(aside *) { color: var(--color-text-main) !important; }
+  
+  .dark .text-gray-600:not(aside *), 
+  .dark .text-gray-500:not(aside *) { color: var(--color-text-muted) !important; }
+  
+  .dark .text-gray-400:not(aside *), 
+  .dark .text-gray-300:not(aside *) { color: var(--color-text-light) !important; }
+  
+  .dark .text-gray-200:not(aside *),
+  .dark .text-gray-100:not(aside *) { color: #f1f5f9 !important; }
+  
+  .dark .border-gray-50,
+  .dark .border-gray-100,
+  .dark .border-gray-200, 
+  .dark .border-gray-300 { border-color: var(--color-border-main) !important; }
+}
+
+/* Fix for react-tailwindcss-datepicker in dark mode */
+.datepicker-container input {
+  background-color: transparent !important;
+}
+.dark .datepicker-container {
+  color: #ffffff;
+}
+.dark .datepicker-container span,
+.dark .datepicker-container button,
+.dark .datepicker-container strong {
+  color: #f8fafc !important;
+}
+.dark .datepicker-container .text-gray-400,
+.dark .datepicker-container .text-gray-500 {
+  color: #94a3b8 !important; /* Muted text for disabled dates/days */
+}
+.dark .datepicker-container .bg-white,
+.dark .datepicker-container .bg-gray-50,
+.dark .datepicker-container .bg-gray-100 {
+  background-color: #1e293b !important;
+}
+/* Estilo para el rango de fechas seleccionado (días intermedios) */
+.dark .datepicker-container button[class*="bg-indigo-"],
+.dark .datepicker-container button[class*="bg-blue-"] {
+  /* Si el fondo es el seleccionado activo (solid), mantén el color primario, pero para el rango intermedio (usualmente bg-indigo-100 o similar) lo hacemos más oscuro */
+}
+.dark .datepicker-container button.bg-indigo-100,
+.dark .datepicker-container button.bg-blue-100,
+.dark .datepicker-container button.bg-indigo-50,
+.dark .datepicker-container button.bg-blue-50,
+.dark .datepicker-container button[class*="bg-opacity-"],
+.dark .datepicker-container button[class*="/10"],
+.dark .datepicker-container button[class*="/20"] {
+  background-color: #334155 !important; /* Slate 700 para contraste con texto blanco */
+}
+.dark .datepicker-container .border,
+.dark .datepicker-container .border-gray-100,
+.dark .datepicker-container .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+
+/* Fix para gráficos de Recharts en modo oscuro */
+.dark .recharts-legend-item-text {
+  color: #f8fafc !important;
+}
+.dark .recharts-default-tooltip {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+.dark .recharts-tooltip-item {
+  color: #f8fafc !important;
+}
+.dark .recharts-tooltip-label {
+  color: #f8fafc !important;
+}
+
+/* Fixes globales de contraste para tablas, títulos y tarjetas en modo oscuro */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6,
+.dark th, .dark td {
+  color: #f8fafc !important;
+}
+
+.dark [class*="CardHeader"] *,
+.dark [class*="card-header"] *,
+.dark [class*="CardHeader"],
+.dark [class*="card-header"] {
+  color: #f8fafc !important;
+}
+
+/* Fix para inputs, selects y textareas en modo oscuro */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: var(--color-bg-card) !important;
+  color: var(--color-text-main) !important;
+  border-color: var(--color-border-main) !important;
+}
+
+.dark option {
+  background-color: var(--color-bg-card);
+  color: var(--color-text-main);
+}
+
 @keyframes slide-in-right {
   0% {
     transform: translateX(100%);

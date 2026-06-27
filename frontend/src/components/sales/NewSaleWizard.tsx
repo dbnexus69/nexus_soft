@@ -1757,7 +1757,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       {activeForm ? renderActiveForm() : (
         <>
           {/* Header / Stepper */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b bg-gray-50/50">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-border bg-gray-50">
             <div className="flex justify-between items-center max-w-2xl mx-auto relative">
               <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -translate-y-1/2 -z-10" />
               {STEPS.map((s) => {
@@ -1795,7 +1795,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4 bg-gray-light/30">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4 bg-white">
             {step === 1 && <Step1Client form={form} set={set} data={data} errors={errors} />}
             {step === 2 && <Step2Products form={form} set={set} data={data} errors={errors} toggleProduct={toggleProduct} actions={actions} />}
             {step === 3 && <Step3Payment form={form} set={set} data={data} errors={errors} />}
@@ -1804,7 +1804,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       )}
 
       {/* Footer */}
-      <div className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-white flex gap-2 sm:gap-3 flex-shrink-0">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-border bg-white flex gap-2 sm:gap-3 flex-shrink-0">
         {activeForm ? (
           <div className="flex justify-between items-center w-full gap-2">
             <Button

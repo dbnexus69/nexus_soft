@@ -24,10 +24,10 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredData.map((card) => {
           const gradients = [
-            'from-[#0f2027] via-[#203a43] to-[#2c5364] shadow-slate-500/10',
-            'from-[#141e30] to-[#243b55] shadow-blue-500/10',
-            'from-[#2c3e50] to-[#3498db] shadow-indigo-500/10',
-            'from-[#11998e] to-[#38ef7d] shadow-emerald-500/10'
+            'from-slate-700 via-slate-800 to-slate-900 border border-slate-600/40 shadow-slate-900/50',
+            'from-blue-700 via-indigo-900 to-slate-900 border border-blue-500/40 shadow-blue-900/50',
+            'from-purple-700 via-indigo-900 to-slate-900 border border-purple-500/40 shadow-purple-900/50',
+            'from-teal-600 via-emerald-800 to-slate-900 border border-teal-400/40 shadow-emerald-900/50'
           ];
           const isOptimistic = isOptimisticId(card);
           const gradIndex = Math.abs(Number(card.id)) % gradients.length;
@@ -35,14 +35,14 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
           
           return (
             <div key={card.id} className={`relative bg-gradient-to-br ${grad} text-white p-6 rounded-2xl shadow-lg hover:scale-[1.01] hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between min-h-[220px] ${isOptimistic ? 'opacity-75 animate-pulse' : ''}`}>
-              <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4 pointer-events-none select-none">
+              <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4 pointer-events-none select-none text-white">
                 <CreditCard size={180} />
               </div>
               <div>
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest opacity-70">Nombre Tarjeta</p>
-                    <h3 className="font-heading font-bold text-base">{card.name || card.bank || 'Tarjeta Sin Nombre'}</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-white/70 font-semibold">Nombre Tarjeta</p>
+                    <h3 className="font-heading font-bold text-base text-white">{card.name || card.bank || 'Tarjeta Sin Nombre'}</h3>
                   </div>
                   <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                     isOptimistic ? 'bg-amber-500/20 text-amber-200 border border-amber-500/30' :
@@ -52,38 +52,38 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
                   </span>
                 </div>
                 <div className="mb-2">
-                  <p className="text-[9px] uppercase tracking-widest opacity-60">Método de Pago</p>
-                  <p className="text-xs font-semibold">{card.paymentMethod || card.type || 'No especificado'}</p>
+                  <p className="text-[9px] uppercase tracking-widest text-white/70 font-semibold">Método de Pago</p>
+                  <p className="text-xs font-semibold text-white">{card.paymentMethod || card.type || 'No especificado'}</p>
                 </div>
               </div>
               <div>
                 <div className="flex gap-2.5 items-center mb-4">
-                  <div className="w-9 h-6 bg-amber-400/80 rounded-md border border-amber-500/30 flex flex-col justify-between p-0.5">
-                    <div className="h-full border-r border-b border-amber-700/20"></div>
+                  <div className="w-9 h-6 bg-amber-400/90 rounded-md border border-amber-300/40 flex flex-col justify-between p-0.5 shadow-sm">
+                    <div className="h-full border-r border-b border-amber-700/30"></div>
                   </div>
-                  <div className="text-sm opacity-80 font-mono tracking-widest">•••• •••• •••• {card.lastFourDigits || '••••'}</div>
+                  <div className="text-sm text-white/90 font-mono tracking-widest font-bold">•••• •••• •••• {card.lastFourDigits || '••••'}</div>
                 </div>
-                <p className="text-[11px] opacity-75 italic mb-4 line-clamp-2 min-h-[2rem]">
+                <p className="text-[11px] text-white/80 italic mb-4 line-clamp-2 min-h-[2rem]">
                   {card.description || 'Sin descripción corporativa.'}
                 </p>
-                <div className="flex justify-between items-center border-t border-white/10 pt-3">
-                  <span className="text-[9px] font-mono opacity-60">{isOptimistic ? 'PROCESANDO EN BASE DE DATOS...' : 'SISTEMA DE FACTURACIÓN ITEA'}</span>
-                  <div className="flex gap-1.5 relative z-10">
+                <div className="flex justify-between items-center border-t border-white/20 pt-3">
+                  <span className="text-[9px] font-mono text-white/60">{isOptimistic ? 'PROCESANDO EN BASE DE DATOS...' : 'SISTEMA DE FACTURACIÓN ITEA'}</span>
+                  <div className="flex gap-2 relative z-10">
                     <button 
                       onClick={() => handleOpenModal(card)}
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors cursor-pointer"
+                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-lg backdrop-blur-md transition-all duration-200 cursor-pointer flex items-center justify-center"
                       title="Editar"
                       disabled={isOptimistic}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={14} />
                     </button>
                     <button 
                       onClick={() => handleDelete(card.id)}
-                      className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-100 transition-colors cursor-pointer"
+                      className="p-2 rounded-xl bg-red-600/60 hover:bg-red-600/80 text-white border border-red-400/30 shadow-lg backdrop-blur-md transition-all duration-200 cursor-pointer flex items-center justify-center"
                       title="Eliminar"
                       disabled={isOptimistic}
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>

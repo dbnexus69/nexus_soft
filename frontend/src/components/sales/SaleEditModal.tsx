@@ -28,21 +28,21 @@ interface SaleEditModalProps {
 
 // ── Mapa de iconos y colores por tipo de servicio ──────────────────────────
 const SERVICE_CONFIG: Record<string, { icon: React.ReactNode; bg: string; text: string; border: string }> = {
-  tiqueteria:   { icon: <Plane size={13} />,       bg: 'bg-sky-50',      text: 'text-sky-700',      border: 'border-sky-200' },
-  hoteleria:    { icon: <Hotel size={13} />,        bg: 'bg-amber-50',    text: 'text-amber-700',    border: 'border-amber-200' },
-  seguros:      { icon: <Shield size={13} />,       bg: 'bg-green-50',    text: 'text-green-700',    border: 'border-green-200' },
-  planes:       { icon: <Package size={13} />,      bg: 'bg-purple-50',   text: 'text-purple-700',   border: 'border-purple-200' },
-  checkin:      { icon: <CheckSquare size={13} />,  bg: 'bg-teal-50',     text: 'text-teal-700',     border: 'border-teal-200' },
-  migracion:    { icon: <Globe size={13} />,        bg: 'bg-blue-50',     text: 'text-blue-700',     border: 'border-blue-200' },
-  simcard:      { icon: <Smartphone size={13} />,   bg: 'bg-indigo-50',   text: 'text-indigo-700',   border: 'border-indigo-200' },
-  autos:        { icon: <Car size={13} />,          bg: 'bg-orange-50',   text: 'text-orange-700',   border: 'border-orange-200' },
-  fincas:       { icon: <Home size={13} />,         bg: 'bg-lime-50',     text: 'text-lime-700',     border: 'border-lime-200' },
-  tours:        { icon: <Compass size={13} />,      bg: 'bg-cyan-50',     text: 'text-cyan-700',     border: 'border-cyan-200' },
-  eventos:      { icon: <Star size={13} />,         bg: 'bg-yellow-50',   text: 'text-yellow-700',   border: 'border-yellow-200' },
-  restaurantes: { icon: <Utensils size={13} />,     bg: 'bg-rose-50',     text: 'text-rose-700',     border: 'border-rose-200' },
-  visas:        { icon: <FileCheck size={13} />,    bg: 'bg-violet-50',   text: 'text-violet-700',   border: 'border-violet-200' },
-  pasaportes:   { icon: <BookOpen size={13} />,     bg: 'bg-fuchsia-50',  text: 'text-fuchsia-700',  border: 'border-fuchsia-200' },
-  mascotas:     { icon: <PawPrint size={13} />,     bg: 'bg-pink-50',     text: 'text-pink-700',     border: 'border-pink-200' },
+  tiqueteria:   { icon: <Plane size={13} />,       bg: 'bg-sky-50 dark:bg-sky-950/40',      text: 'text-sky-700 dark:text-sky-300',      border: 'border-sky-200 dark:border-sky-800/50' },
+  hoteleria:    { icon: <Hotel size={13} />,        bg: 'bg-amber-50 dark:bg-amber-950/40',    text: 'text-amber-700 dark:text-amber-300',    border: 'border-amber-200 dark:border-amber-800/50' },
+  seguros:      { icon: <Shield size={13} />,       bg: 'bg-green-50 dark:bg-green-950/40',    text: 'text-green-700 dark:text-green-300',    border: 'border-green-200 dark:border-green-800/50' },
+  planes:       { icon: <Package size={13} />,      bg: 'bg-purple-50 dark:bg-purple-950/40',   text: 'text-purple-700 dark:text-purple-300',   border: 'border-purple-200 dark:border-purple-800/50' },
+  checkin:      { icon: <CheckSquare size={13} />,  bg: 'bg-teal-50 dark:bg-teal-950/40',     text: 'text-teal-700 dark:text-teal-300',     border: 'border-teal-200 dark:border-teal-800/50' },
+  migracion:    { icon: <Globe size={13} />,        bg: 'bg-blue-50 dark:bg-blue-950/40',     text: 'text-blue-700 dark:text-blue-300',     border: 'border-blue-200 dark:border-blue-800/50' },
+  simcard:      { icon: <Smartphone size={13} />,   bg: 'bg-indigo-50 dark:bg-indigo-950/40',   text: 'text-indigo-700 dark:text-indigo-300',   border: 'border-indigo-200 dark:border-indigo-800/50' },
+  autos:        { icon: <Car size={13} />,          bg: 'bg-orange-50 dark:bg-orange-950/40',   text: 'text-orange-700 dark:text-orange-300',   border: 'border-orange-200 dark:border-orange-800/50' },
+  fincas:       { icon: <Home size={13} />,         bg: 'bg-lime-50 dark:bg-lime-950/40',     text: 'text-lime-700 dark:text-lime-300',     border: 'border-lime-200 dark:border-lime-800/50' },
+  tours:        { icon: <Compass size={13} />,      bg: 'bg-cyan-50 dark:bg-cyan-950/40',     text: 'text-cyan-700 dark:text-cyan-300',     border: 'border-cyan-200 dark:border-cyan-800/50' },
+  eventos:      { icon: <Star size={13} />,         bg: 'bg-yellow-50 dark:bg-yellow-950/40',   text: 'text-yellow-700 dark:text-yellow-300',   border: 'border-yellow-200 dark:border-yellow-800/50' },
+  restaurantes: { icon: <Utensils size={13} />,     bg: 'bg-rose-50 dark:bg-rose-950/40',     text: 'text-rose-700 dark:text-rose-300',     border: 'border-rose-200 dark:border-rose-800/50' },
+  visas:        { icon: <FileCheck size={13} />,    bg: 'bg-violet-50 dark:bg-violet-950/40',   text: 'text-violet-700 dark:text-violet-300',   border: 'border-violet-200 dark:border-violet-800/50' },
+  pasaportes:   { icon: <BookOpen size={13} />,     bg: 'bg-fuchsia-50 dark:bg-fuchsia-950/40',  text: 'text-fuchsia-700 dark:text-fuchsia-300',  border: 'border-fuchsia-200 dark:border-fuchsia-800/50' },
+  mascotas:     { icon: <PawPrint size={13} />,     bg: 'bg-pink-50 dark:bg-pink-950/40',     text: 'text-pink-700 dark:text-pink-300',     border: 'border-pink-200 dark:border-pink-800/50' },
 };
 
 function ServicesList({ sale }: { sale: Sale }) {
@@ -313,28 +313,28 @@ export default function SaleEditModal({
           </div>
 
           {/* Fila de Finanzas */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white dark:bg-slate-800/80 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
             <div>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Valor Final
               </p>
-              <p className="text-lg font-black text-gray-800">
+              <p className="text-lg font-black text-gray-800 dark:text-white">
                 {formatCurrency(sale.total)}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Pago Proveedores
               </p>
-              <p className="text-lg font-black text-rose-600">
+              <p className="text-lg font-black text-rose-600 dark:text-rose-400">
                 {formatCurrency(sale.supplierCost || 0)}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Ganancias Oficina
               </p>
-              <p className="text-lg font-black text-emerald-600">
+              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(
                   sale.total -
                     (sale.supplierCost || 0) -
@@ -343,51 +343,47 @@ export default function SaleEditModal({
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Pagado por Cliente
               </p>
-              <p className="text-lg font-black text-blue-600">
+              <p className="text-lg font-black text-blue-600 dark:text-blue-400">
                 {formatCurrency(totalPaidAmount)}
               </p>
             </div>
           </div>
 
 
-          <div className="mt-2 border-t border-gray-200 pt-6 space-y-6">
-            <h3 className="text-lg font-black text-primary flex items-center gap-2">
-              <Wallet className="text-accent" size={20} />
+          <div className="mt-2 border-t border-gray-200 dark:border-slate-700 pt-6 space-y-6">
+            <h3 className="text-lg font-black text-primary dark:text-white flex items-center gap-2">
+              <Wallet className="text-accent dark:text-teal-400" size={20} />
               Gestión de Pagos y Abonos
             </h3>
 
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <div className="bg-gray-50 dark:bg-slate-800/80 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                   Valor a Pagar
                 </p>
-                <p className="text-xl font-black text-gray-800 mt-1">
+                <p className="text-xl font-black text-gray-800 dark:text-white mt-1">
                   {formatCurrency(totalSaleAmount)}
                 </p>
               </div>
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
-                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">
+              <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-100 dark:border-blue-900/40 shadow-sm">
+                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
                   Total Pagado
                 </p>
-                <p className="text-xl font-black text-blue-700 mt-1">
+                <p className="text-xl font-black text-blue-700 dark:text-blue-300 mt-1">
                   {formatCurrency(totalPaidAmount)}
                 </p>
               </div>
               <div
-                className={`p-4 rounded-xl border shadow-sm ${remainingBalance > 0 ? "bg-red-50 border-red-100" : "bg-green-50 border-green-100"}`}
+                className={`p-4 rounded-xl border shadow-sm ${remainingBalance > 0 ? "bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/40" : "bg-green-50 dark:bg-green-950/30 border-green-100 dark:border-green-900/40"}`}
               >
-                <p
-                  className={`text-[10px] font-bold uppercase tracking-widest ${remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}
-                >
-                  Pendiente por Pagar
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${remainingBalance > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                  {remainingBalance > 0 ? "Pendiente por Pagar" : "Estado de Cobro"}
                 </p>
-                <p
-                  className={`text-xl font-black mt-1 ${remainingBalance > 0 ? "text-red-700" : "text-green-700"}`}
-                >
-                  {formatCurrency(Math.max(0, remainingBalance))}
+                <p className={`text-xl font-black mt-1 ${remainingBalance > 0 ? "text-red-700 dark:text-red-300" : "text-green-700 dark:text-green-300"}`}>
+                  {remainingBalance > 0 ? formatCurrency(remainingBalance) : "Totalmente Pagado"}
                 </p>
               </div>
             </div>

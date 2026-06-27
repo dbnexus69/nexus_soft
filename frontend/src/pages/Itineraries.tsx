@@ -352,12 +352,12 @@ export default function Itineraries() {
                               key={flight.id}
                               title={`${isPlan ? '📦 ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}${isPlan && flight.additionalPassengers ? `\nAcompañantes: ${flight.additionalPassengers}` : ''}`}
                               className={`px-2 py-1 rounded-md text-[10px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
-                                isPlan
-                                  ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                                  : flight.type === 'ida' 
-                                    ? 'bg-blue-50 border-blue-100 text-blue-700' 
-                                    : 'bg-indigo-50 border-indigo-100 text-indigo-800'
-                              }`}
+                                 isPlan
+                                   ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
+                                   : flight.type === 'ida' 
+                                     ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-800/50 text-blue-700 dark:text-blue-300' 
+                                     : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-800/50 text-indigo-800 dark:text-indigo-300'
+                               }`}
                             >
                               {isPlan ? <Package size={10} className="shrink-0" /> : flight.type === 'ida' ? <PlaneTakeoff size={10} className="shrink-0" /> : <PlaneLanding size={10} className="shrink-0" />}
                               <span className="truncate flex-1">{flight.passenger}</span>
@@ -581,26 +581,26 @@ export default function Itineraries() {
               <Card className="border-none shadow-lg">
                 <CardHeader>Resumen de Vuelos</CardHeader>
                 <CardBody className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><PlaneTakeoff size={18} /></div>
-                      <span className="text-sm font-medium text-gray-600">Salidas</span>
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-lg"><PlaneTakeoff size={18} /></div>
+                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Salidas</span>
                     </div>
-                    <span className="font-bold text-primary">{data.flights.filter(f => f.type === 'ida').length}</span>
+                    <span className="font-bold text-primary dark:text-white">{data.flights.filter(f => f.type === 'ida').length}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><PlaneLanding size={18} /></div>
-                      <span className="text-sm font-medium text-gray-600">Regresos</span>
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded-lg"><PlaneLanding size={18} /></div>
+                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Regresos</span>
                     </div>
-                    <span className="font-bold text-primary">{data.flights.filter(f => f.type === 'regreso').length}</span>
+                    <span className="font-bold text-primary dark:text-white">{data.flights.filter(f => f.type === 'regreso').length}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 text-green-600 rounded-lg"><CheckCircle2 size={18} /></div>
-                      <span className="text-sm font-medium text-gray-600">Completados</span>
+                      <div className="p-2 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300 rounded-lg"><CheckCircle2 size={18} /></div>
+                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Completados</span>
                     </div>
-                    <span className="font-bold text-primary">{data.flights.filter(f => f.checkin === 'realizado').length}</span>
+                    <span className="font-bold text-primary dark:text-white">{data.flights.filter(f => f.checkin === 'realizado').length}</span>
                   </div>
                 </CardBody>
               </Card>
@@ -638,12 +638,12 @@ export default function Itineraries() {
         }
       >
         <div className="space-y-4">
-          <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-            <p className="text-xs text-blue-700 font-medium mb-1">Pasajero:</p>
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">Pasajero:</p>
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-primary">{selectedFlightForCheckin?.passenger}</p>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff]">{selectedFlightForCheckin?.passenger}</p>
               {modalClient && (
-                <span className="text-[10px] bg-white/50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 font-bold">
+                <span className="text-[10px] bg-white/50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800/50 font-bold">
                   {modalClient.docType}: {modalClient.docNumber}
                 </span>
               )}
@@ -651,20 +651,20 @@ export default function Itineraries() {
           </div>
           
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-1">Ruta:</p>
-              <p className="text-sm font-bold text-primary">{selectedFlightForCheckin?.route}</p>
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Ruta:</p>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff]">{selectedFlightForCheckin?.route}</p>
             </div>
-            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-1">Fecha y Hora:</p>
-              <p className="text-sm font-bold text-primary">
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Fecha y Hora:</p>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff]">
                 {selectedFlightForCheckin ? formatDate(selectedFlightForCheckin.date) : ''} {selectedFlightForCheckin?.time}
               </p>
             </div>
-            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-1">Aerolínea:</p>
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Aerolínea:</p>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-primary">{selectedFlightForCheckin?.airline}</p>
+                <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff]">{selectedFlightForCheckin?.airline}</p>
                 {(() => {
                   const airlineInfo = data.config?.airlines?.find((a: any) => a.name === selectedFlightForCheckin?.airline);
                   if (airlineInfo && airlineInfo.website) {
@@ -674,7 +674,7 @@ export default function Itineraries() {
                         href={url} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-[10px] text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1 font-bold transition-colors"
+                        className="text-[10px] text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 hover:underline bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/40 flex items-center gap-1 font-bold transition-colors"
                         title="Ir al sitio web de la aerolínea para Check-in"
                       >
                         <ExternalLink size={10} /> Link Check-in
@@ -685,19 +685,19 @@ export default function Itineraries() {
                 })()}
               </div>
             </div>
-            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-1">Enviar a:</p>
-              <p className="text-sm font-bold text-primary truncate" title={selectedFlightForCheckin?.email || modalClient?.email}>
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Enviar a:</p>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff] truncate" title={selectedFlightForCheckin?.email || modalClient?.email}>
                 {selectedFlightForCheckin?.email || modalClient?.email || 'Sin correo registrado'}
               </p>
             </div>
-            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-1">Nº Vuelo:</p>
-              <p className="text-sm font-bold text-primary">{selectedFlightForCheckin?.flightNumber || 'No registrado'}</p>
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Nº Vuelo:</p>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff]">{selectedFlightForCheckin?.flightNumber || 'No registrado'}</p>
             </div>
-            <div className="p-3 bg-gray-50 border border-gray-border rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-1">Código Reserva (PNR):</p>
-              <p className="text-sm font-bold text-primary font-mono select-all" title="Click para copiar">{selectedFlightForCheckin?.reservationNumber || 'No registrado'}</p>
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Código Reserva (PNR):</p>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff] font-mono select-all" title="Click para copiar">{selectedFlightForCheckin?.reservationNumber || 'No registrado'}</p>
             </div>
           </div>
 
@@ -714,7 +714,7 @@ export default function Itineraries() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 accept=".pdf,.jpg,.jpeg,.png"
               />
-              <div className="p-6 border-2 border-dashed border-gray-300 bg-white rounded-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:border-primary group-hover:bg-primary/5">
+              <div className="p-6 border-2 border-dashed border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800/50 rounded-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:border-primary group-hover:bg-primary/5">
                 <UploadCloud size={28} className="text-gray-300 group-hover:text-primary transition-colors" />
                 <p className="text-xs font-bold text-gray-500 uppercase">Seleccionar PDF o Imagen</p>
                 <p className="text-[10px] text-gray-400">Haz clic o arrastra aquí (Soporta múltiples archivos)</p>

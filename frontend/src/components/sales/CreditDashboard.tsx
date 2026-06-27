@@ -95,16 +95,16 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
                     </button>
                   )}
                 </div>
-                <button onClick={() => setCreditFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                <button onClick={() => setCreditFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>
                   Todos ({clientsWithCredit.length})
                 </button>
-                <button onClick={() => setCreditFilter('overdue')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'overdue' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
+                <button onClick={() => setCreditFilter('overdue')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'overdue' ? 'bg-red-500 text-white' : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50'}`}>
                   Vencidos ({clientsWithCredit.filter(c => c.status === 'overdue').length})
                 </button>
-                <button onClick={() => setCreditFilter('urgent')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'urgent' ? 'bg-orange-500 text-white' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
+                <button onClick={() => setCreditFilter('urgent')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'urgent' ? 'bg-orange-500 text-white' : 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50'}`}>
                   Pronto ({clientsWithCredit.filter(c => c.status === 'urgent').length})
                 </button>
-                <button onClick={() => setCreditFilter('pending')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'}`}>
+                <button onClick={() => setCreditFilter('pending')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 dark:bg-yellow-950/40 text-yellow-600 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50'}`}>
                   Pendiente ({clientsWithCredit.filter(c => c.status === 'pending').length})
                 </button>
               </div>
@@ -191,32 +191,32 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Total Crédito</p>
-                    <p className="text-sm font-bold text-primary">{formatCurrency(selectedCreditClient.totalCredit)}</p>
+                    <p className="text-sm font-bold text-primary dark:text-white">{formatCurrency(selectedCreditClient.totalCredit)}</p>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Pendiente</p>
-                    <p className="text-sm font-bold text-orange-600">{formatCurrency(selectedCreditClient.pendingAmount)}</p>
+                    <p className="text-sm font-bold text-orange-600 dark:text-orange-400">{formatCurrency(selectedCreditClient.pendingAmount)}</p>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Pagado</p>
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(selectedCreditClient.paidAmount)}</p>
+                    <p className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(selectedCreditClient.paidAmount)}</p>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Vencido</p>
-                    <p className="text-sm font-bold text-red-600">{formatCurrency(selectedCreditClient.overdueAmount)}</p>
+                    <p className="text-sm font-bold text-red-600 dark:text-red-400">{formatCurrency(selectedCreditClient.overdueAmount)}</p>
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <p className="text-xs font-bold text-gray-500 uppercase mb-3">Ventas a Crédito</p>
+                <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
+                  <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-3">Ventas a Crédito</p>
                   <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
                     {selectedClientCreditSales.map(saleInfo => {
                       const saleStatusColors = getStatusColor(saleInfo.status);
                       return (
-                        <div key={saleInfo.sale.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div key={saleInfo.sale.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 dark:border-slate-700">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <p className="text-sm font-bold text-primary">Venta #{saleInfo.sale.id}</p>
+                              <p className="text-sm font-bold text-primary dark:text-white">Venta #{saleInfo.sale.id}</p>
                               <p className="text-xs text-gray-500">{formatDate(saleInfo.sale.date)} · Vence: {saleInfo.sale.creditDueDate ? formatDate(saleInfo.sale.creditDueDate) : 'N/A'}</p>
                             </div>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${saleStatusColors}`}>
@@ -224,8 +224,8 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
                             </span>
                           </div>
                           <div className="flex justify-between text-[11px] mt-2">
-                            <span className="text-gray-500">Total: <span className="font-semibold text-gray-700">{formatCurrency(saleInfo.sale.total)}</span></span>
-                            <span className="text-gray-500">Pendiente: <span className="font-semibold text-orange-600">{formatCurrency(saleInfo.pendingAmount)}</span></span>
+                            <span className="text-gray-500">Total: <span className="font-semibold text-gray-700 dark:text-slate-200">{formatCurrency(saleInfo.sale.total)}</span></span>
+                            <span className="text-gray-500">Pendiente: <span className="font-semibold text-orange-600 dark:text-orange-400">{formatCurrency(saleInfo.pendingAmount)}</span></span>
                           </div>
                           {saleInfo.daysUntilDue <= 3 && saleInfo.daysUntilDue >= 0 && (
                             <div className="mt-2 flex items-center gap-1 text-[10px] text-orange-600 font-medium bg-orange-50 p-1 rounded"><Clock size={10} /> Vence en {saleInfo.daysUntilDue} día(s)</div>

@@ -61,7 +61,10 @@ export default function Config() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    const saved = localStorage.getItem('catalog_view_mode');
+    return (saved === 'grid' || saved === 'table') ? saved : 'grid';
+  });
   const [formData, setFormData] = useState<any>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
@@ -74,7 +77,16 @@ export default function Config() {
 
   const currentData = ((data.config[currentSection as keyof ConfigData] || []) as any[])
     .slice()
-    .sort((a, b) => Number(b.id) - Number(a.id));
+    .sort((a, b) => {
+      const idA = a.id ?? a._id ?? 0;
+      const idB = b.id ?? b._id ?? 0;
+      const numA = Number(idA);
+      const numB = Number(idB);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(idB).localeCompare(String(idA));
+    });
 
   // Dynamic filter based on search input
   const filteredData = currentData.filter(item => {
@@ -357,17 +369,17 @@ export default function Config() {
                 </div>
 
                 {/* Grid/List View switcher */}
-                <div className="flex items-center border border-gray-border rounded-lg p-0.5 bg-gray-50">
+                <div className="flex items-center border border-gray-border dark:border-slate-700 rounded-lg p-0.5 bg-gray-50 dark:bg-slate-800">
                   <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    onClick={() => { setViewMode('grid'); localStorage.setItem('catalog_view_mode', 'grid'); }}
+                    className={`p-1 rounded transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-primary dark:text-teal-400 shadow-sm font-bold' : 'text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200'}`}
                     title="Vista de Cuadrículas"
                   >
                     <Grid size={13} />
                   </button>
                   <button
-                    onClick={() => setViewMode('table')}
-                    className={`p-1 rounded ${viewMode === 'table' ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    onClick={() => { setViewMode('table'); localStorage.setItem('catalog_view_mode', 'table'); }}
+                    className={`p-1 rounded transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 text-primary dark:text-teal-400 shadow-sm font-bold' : 'text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200'}`}
                     title="Vista de Tabla"
                   >
                     <List size={13} />
@@ -407,7 +419,8 @@ export default function Config() {
                 ) : (
                   <div className="overflow-x-auto w-full">
                     <Table headers={getHeaders(currentSection)}>
-                      {filteredData.map((item: any) => {
+                      {filteredData
+                        .map((item: any) => {
                         const isOptimistic = isOptimisticId(item);
                         return (
                           <TableRow key={item.id}>

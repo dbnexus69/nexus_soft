@@ -330,16 +330,24 @@ export function Step3Payment({ form, set, data, errors }: any) {
       </div>
 
       {/* Sección Comisionista */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50/70 border border-blue-200 dark:bg-blue-950/40 dark:border-blue-800/50 p-4 rounded-xl shadow-sm transition-all">
         {form.commissionAgentId ? (
           <div className="col-span-2 flex items-center gap-2 mb-1">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
               <Coins size={16} />
             </div>
-            <p className="text-sm font-bold text-primary">Comisionista: {form.commissionAgentName}</p>
+            <p className="text-sm font-bold text-primary dark:text-blue-300">Comisionista: {form.commissionAgentName}</p>
           </div>
         ) : (
-          <p className="col-span-2 text-xs text-gray-400 italic">Venta directa (sin comisionista asignado)</p>
+          <div className="col-span-2 flex items-center gap-2.5 py-1">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-blue-400/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <Coins size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-blue-900 dark:text-blue-200">Venta Directa</p>
+              <p className="text-[11px] text-blue-700/80 dark:text-blue-300/80 font-medium">Sin comisionista externo asignado a esta operación</p>
+            </div>
+          </div>
         )}
 
         {form.commissionAgentId && (

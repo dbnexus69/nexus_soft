@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Menu, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Menu, RefreshCw, Moon, Sun } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -28,6 +29,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const title = pageTitles[location.pathname] || 'iTea';
   const isRootPath = location.pathname === '/' || location.pathname === '/stats';
   const activeNav = location.pathname === '/stats' ? '/stats' : '/';
+  
+  const { isDarkMode, toggleDarkMode } = useTheme();
   
   const { 
     refreshData,
@@ -83,6 +86,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors"
+              title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            >
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <button
               onClick={handleRefresh}
               disabled={isSpinning}

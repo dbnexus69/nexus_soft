@@ -599,10 +599,10 @@ export default function Clients() {
           ))}
         </Table>
 
-        <div className="p-4 bg-gray-50/30 border-t border-gray-border flex items-center justify-between">
-          <span className="text-xs text-gray-500">
+        <div className="p-4 bg-gray-50/30 dark:bg-slate-800/50 border-t border-gray-border dark:border-slate-700/50 flex items-center justify-between">
+          <span className="text-xs text-gray-500 dark:text-slate-400">
             Mostrando {Math.min(paginatedClients.length + (currentPage - 1) * itemsPerPage, filteredClients.length)} de {filteredClients.length} clientes
-            {statusFilter !== 'all' && <span className="ml-1 text-primary font-medium">· Filtro: {statusFilter === 'active' ? 'Activos' : 'Inactivos'}</span>}
+            {statusFilter !== 'all' && <span className="ml-1 text-primary dark:text-teal-400 font-medium">· Filtro: {statusFilter === 'active' ? 'Activos' : 'Inactivos'}</span>}
           </span>
           {totalPages > 1 && (
             <div className="flex gap-2">
@@ -613,7 +613,7 @@ export default function Clients() {
               >
                 <ChevronLeft size={16} /> Anterior
               </Button>
-              <div className="flex items-center px-3 text-xs font-bold text-primary bg-white border border-gray-border rounded-lg">
+              <div className="flex items-center px-3 text-xs font-bold text-primary dark:text-teal-400 bg-white dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
                 {currentPage} / {totalPages}
               </div>
               <Button 

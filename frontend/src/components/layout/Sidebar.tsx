@@ -78,7 +78,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       `}
     >
       <div className={`p-5 border-b border-[#032650] overflow-hidden transition-all duration-300 flex justify-between md:justify-center items-center ${isExpanded ? "px-6" : "px-4"}`}>
-        <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-white rounded-2xl shadow-lg border border-slate-100 p-1 hover:scale-110 hover:-rotate-3 hover:shadow-xl transition-all duration-300 cursor-pointer">
+        <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-[#ffffff] rounded-2xl shadow-lg border border-slate-100 p-1 hover:scale-110 hover:-rotate-3 hover:shadow-xl transition-all duration-300 cursor-pointer">
           <img src="/samtur_nuevo.png.png" alt="Samtur Travel Agency" className="w-full h-full object-contain drop-shadow-sm" />
         </div>
         {/* Mobile Close Button */}
@@ -102,8 +102,8 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                       isExpanded ? "px-4 py-3 gap-3" : "px-0 py-3 justify-center"
                     } ${
                       isActive
-                        ? "bg-white/10 text-white shadow-sm"
-                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                        ? "bg-[#ffffff]/10 text-[#ffffff] shadow-sm"
+                        : "text-[#d1d5db] hover:bg-[#ffffff]/5 hover:text-[#ffffff]"
                     }`
                   }
                 >
@@ -119,7 +119,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                       </div>
                       <span className={`font-medium whitespace-nowrap transition-all duration-300 origin-left ${
                         isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"
-                      } ${isActive ? 'text-white font-bold' : ''}`}>
+                      } ${isActive ? 'text-[#ffffff] font-bold' : ''}`}>
                         {link.label}
                       </span>
                     </>
@@ -132,7 +132,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           {isAdmin && filteredAdminLinks.length > 0 && (
             <div className="mt-8">
               <div className={`px-4 py-2 transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 h-0 py-0"}`}>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
+                <span className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-[0.2em] whitespace-nowrap">
                   Administración
                 </span>
               </div>
@@ -146,8 +146,8 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                           isExpanded ? "px-4 py-3 gap-3" : "px-0 py-3 justify-center"
                         } ${
                           isActive
-                            ? "bg-white/10 text-white shadow-sm"
-                            : "text-gray-300 hover:bg-white/5 hover:text-white"
+                            ? "bg-[#ffffff]/10 text-[#ffffff] shadow-sm"
+                            : "text-[#d1d5db] hover:bg-[#ffffff]/5 hover:text-[#ffffff]"
                         }`
                       }
                     >
@@ -163,7 +163,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                           </div>
                           <span className={`font-medium whitespace-nowrap transition-all duration-300 origin-left ${
                             isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"
-                          } ${isActive ? 'text-white font-bold' : ''}`}>
+                          } ${isActive ? 'text-[#ffffff] font-bold' : ''}`}>
                             {link.label}
                           </span>
                         </>
@@ -179,21 +179,21 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
       <div className={`p-4 border-t border-[#032650] transition-all duration-300 ${isExpanded ? "" : "items-center"}`}>
         <div className={`flex items-center gap-3 mb-4 transition-all duration-300 ${isExpanded ? "" : "justify-center"}`}>
-          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#032650] flex items-center justify-center font-bold text-white shadow-lg">
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#032650] flex items-center justify-center font-bold text-[#ffffff] shadow-lg">
             {user ? getInitials(user.name) : "??"}
           </div>
           <div className={`transition-all duration-300 origin-left ${isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"}`}>
-            <p className="text-sm font-bold truncate text-white max-w-[130px]" title={user?.name}>
+            <p className="text-sm font-bold truncate text-[#ffffff] max-w-[130px]" title={user?.name}>
               {getShortName(user?.name)}
             </p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider truncate max-w-[130px]">
+            <p className="text-[10px] text-[#9ca3af] uppercase tracking-wider truncate max-w-[130px]">
               {user?.role === "admin" ? "Administrador" : "Asesor"}
             </p>
           </div>
         </div>
         <button
           onClick={() => setIsConfirmOpen(true)}
-          className={`flex items-center transition-all duration-300 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl group ${
+          className={`flex items-center transition-all duration-300 text-[#9ca3af] hover:text-red-400 hover:bg-red-400/10 rounded-xl group ${
             isExpanded ? "px-4 py-3 gap-3 w-full" : "px-0 py-3 w-12 mx-auto justify-center"
           }`}
           title="Cerrar Sesión"

@@ -493,7 +493,7 @@ export default function Sales() {
                     {(startDate || endDate) && (
                       <button 
                         onClick={() => { setStartDate(""); setEndDate(""); }}
-                        className="text-red-400 hover:text-red-600 p-2 rounded bg-red-50 hover:bg-red-100 flex items-center justify-center h-[34px] w-[34px] shrink-0 self-end sm:self-auto border border-red-100"
+                        className="text-red-500 dark:text-red-300 hover:text-red-600 p-2 rounded bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center h-[34px] w-[34px] shrink-0 self-end sm:self-auto border border-red-100 dark:border-red-900/40 transition-colors"
                         title="Limpiar fechas"
                       >
                         <X size={14} />

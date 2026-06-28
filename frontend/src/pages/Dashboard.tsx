@@ -135,7 +135,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center bg-[#ffffff]/10 backdrop-blur-md p-1.5 rounded-xl shadow-inner border border-[#ffffff]/20">
-            <div className="w-72 datepicker-container">
+            <div className="w-72 datepicker-container datepicker-transparent">
               <Datepicker
                 value={dateRange as any}
                 onChange={(newValue: any) => setDateRange(newValue)}
@@ -144,6 +144,7 @@ export default function Dashboard() {
                 displayFormat={"DD/MMM/YYYY"}
                 placeholder={"Selecciona un periodo"}
                 separator={" - "}
+                containerClassName="relative !bg-transparent"
                 inputClassName="w-full text-sm font-semibold !text-[#ffffff] !bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-[#ffffff]/60 dark:!text-[#ffffff]"
               />
             </div>

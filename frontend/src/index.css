@@ -47,7 +47,7 @@
     @apply bg-[var(--color-bg-base)] text-[var(--color-text-main)] transition-colors duration-200;
   }
 
-  input:not([type="checkbox"]):not([type="radio"]),
+  input:not([type="checkbox"]):not([type="radio"]):not(.datepicker-transparent input):not(.datepicker-transparent *),
   select,
   textarea {
     @apply bg-white text-gray-900 transition-colors duration-200;
@@ -102,6 +102,22 @@
 .dark .datepicker-container .bg-gray-100 {
   background-color: #1e293b !important;
 }
+
+/* Solo hacer transparente el INPUT dentro del datepicker del banner (no el popup del calendario) */
+.datepicker-transparent input,
+.datepicker-transparent input:focus,
+.datepicker-transparent input:hover,
+.datepicker-transparent input:active,
+.datepicker-transparent > div > div > input,
+.datepicker-transparent > div > div > div > input {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+/* El popup flotante del calendario mantiene su fondo oscuro */
+.dark .datepicker-transparent div[class*="absolute"],
+.dark .datepicker-transparent div[class*="z-"] {
+  background-color: #1e293b !important;
+}
 /* Estilo para el rango de fechas seleccionado (días intermedios) */
 .dark .datepicker-container button[class*="bg-indigo-"],
 .dark .datepicker-container button[class*="bg-blue-"] {
@@ -152,7 +168,7 @@
 }
 
 /* Fix para inputs, selects y textareas en modo oscuro */
-.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark input:not([type="checkbox"]):not([type="radio"]):not(.datepicker-transparent *),
 .dark select,
 .dark textarea {
   background-color: var(--color-bg-card) !important;
@@ -389,4 +405,20 @@ body {
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(7, 129, 142, 0.3) transparent;
+}
+
+/* ============================================================
+   REGLA FINAL - MAYOR PRIORIDAD DE CASCADE (debe estar al final)
+   Fuerza el fondo transparente en el input del datepicker del banner,
+   independientemente de cualquier otra regla de dark mode o base.
+   ============================================================ */
+.datepicker-transparent input {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+.dark .datepicker-transparent input {
+  background-color: transparent !important;
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
 }

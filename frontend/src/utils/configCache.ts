@@ -60,13 +60,13 @@ export function saveConfigCache(config: Record<string, any>): void {
   // Guardamos solo las listas de catálogos, excluyendo permisos de rol si estuviesen presentes
   const cacheData = { ...config };
   delete cacheData.rolePermissions; // Los permisos de roles siempre deben consultarse frescos
-  writeCache(getCacheKey('itea_config_cache'), cacheData);
+  writeCache(getCacheKey('itea_config_cache_v2'), cacheData);
 }
 
 export function loadConfigCache(): Record<string, any[]> | null {
-  return readCache<Record<string, any[]>>(getCacheKey('itea_config_cache'));
+  return readCache<Record<string, any[]>>(getCacheKey('itea_config_cache_v2'));
 }
 
 export function invalidateConfigCache(): void {
-  deleteCache(getCacheKey('itea_config_cache'));
+  deleteCache(getCacheKey('itea_config_cache_v2'));
 }

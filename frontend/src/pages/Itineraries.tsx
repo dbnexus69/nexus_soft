@@ -63,8 +63,8 @@ export default function Itineraries() {
 
   const filteredPending = useMemo(() => {
     return pendingCheckins.filter(f => 
-      f.passenger.toLowerCase().includes(checkinSearch.toLowerCase()) ||
-      f.route.toLowerCase().includes(checkinSearch.toLowerCase())
+      (f.passenger && f.passenger.toLowerCase().includes(checkinSearch.toLowerCase())) ||
+      (f.route && f.route.toLowerCase().includes(checkinSearch.toLowerCase()))
     );
   }, [pendingCheckins, checkinSearch]);
 

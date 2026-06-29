@@ -1,11 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { randomUUID } = require('crypto');
 
 const prisma = new PrismaClient();
 
 const SALT_ROUNDS = 12;
 
-// ── Helpers idempotentes ──────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Helpers idempotentes Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 async function upsertByUnique(model, where, data) {
   return prisma[model].upsert({ where, update: {}, create: data });
 }
@@ -21,31 +22,31 @@ async function createIfNotExists(model, where, data) {
 }
 
 async function main() {
-  console.log('🌱 Iniciando seed...');
+  console.log('Ã°Å¸Å’Â± Iniciando seed...');
   const SALT = await bcrypt.genSalt(SALT_ROUNDS);
 
   // =========================================================
-  // 1. CATÁLOGOS BASE
+  // 1. CATÃƒÂLOGOS BASE
   // =========================================================
 
-  const tipoCC   = await upsertByUnique('tiposDocumento', { abreviatura: 'CC' }, { nombre: 'Cédula de Ciudadanía', abreviatura: 'CC' });
-  const tipoCE   = await upsertByUnique('tiposDocumento', { abreviatura: 'CE' }, { nombre: 'Cédula de Extranjería', abreviatura: 'CE' });
-  const tipoPasaporte = await upsertByUnique('tiposDocumento', { abreviatura: 'Pasaporte' }, { nombre: 'Pasaporte', abreviatura: 'Pasaporte' });
-  const tipoNIT  = await upsertByUnique('tiposDocumento', { abreviatura: 'NIT' }, { nombre: 'NIT', abreviatura: 'NIT' });
-  console.log('  ✓ Tipos de documento');
+  const tipoCC   = await upsertByUnique('tipos_documento', { abreviatura: 'CC' }, { nombre: 'CÃƒÂ©dula de CiudadanÃƒÂ­a', abreviatura: 'CC' });
+  const tipoCE   = await upsertByUnique('tipos_documento', { abreviatura: 'CE' }, { nombre: 'CÃƒÂ©dula de ExtranjerÃƒÂ­a', abreviatura: 'CE' });
+  const tipoPasaporte = await upsertByUnique('tipos_documento', { abreviatura: 'Pasaporte' }, { nombre: 'Pasaporte', abreviatura: 'Pasaporte' });
+  const tipoNIT  = await upsertByUnique('tipos_documento', { abreviatura: 'NIT' }, { nombre: 'NIT', abreviatura: 'NIT' });
+  console.log('  Ã¢Å“â€œ Tipos de documento');
 
-  const mpEfectivo       = await upsertByUnique('metodosPago', { nombre: 'Efectivo' }, { nombre: 'Efectivo' });
-  const mpTransferencia  = await upsertByUnique('metodosPago', { nombre: 'Transferencia' }, { nombre: 'Transferencia' });
-  const mpTarjetaCredito = await upsertByUnique('metodosPago', { nombre: 'Tarjeta de Crédito' }, { nombre: 'Tarjeta de Crédito' });
-  const mpTarjetaDebito  = await upsertByUnique('metodosPago', { nombre: 'Tarjeta Débito' }, { nombre: 'Tarjeta Débito' });
-  const mpPSE            = await upsertByUnique('metodosPago', { nombre: 'PSE' }, { nombre: 'PSE' });
-  const mpConsignacion   = await upsertByUnique('metodosPago', { nombre: 'Consignación' }, { nombre: 'Consignación' });
-  console.log('  ✓ Métodos de pago');
+  const mpEfectivo       = await upsertByUnique('metodos_pago', { nombre: 'Efectivo' }, { nombre: 'Efectivo' });
+  const mpTransferencia  = await upsertByUnique('metodos_pago', { nombre: 'Transferencia' }, { nombre: 'Transferencia' });
+  const mpTarjetaCredito = await upsertByUnique('metodos_pago', { nombre: 'Tarjeta de CrÃƒÂ©dito' }, { nombre: 'Tarjeta de CrÃƒÂ©dito' });
+  const mpTarjetaDebito  = await upsertByUnique('metodos_pago', { nombre: 'Tarjeta DÃƒÂ©bito' }, { nombre: 'Tarjeta DÃƒÂ©bito' });
+  const mpPSE            = await upsertByUnique('metodos_pago', { nombre: 'PSE' }, { nombre: 'PSE' });
+  const mpConsignacion   = await upsertByUnique('metodos_pago', { nombre: 'ConsignaciÃƒÂ³n' }, { nombre: 'ConsignaciÃƒÂ³n' });
+  console.log('  Ã¢Å“â€œ MÃƒÂ©todos de pago');
 
   const rolAdmin      = await upsertByUnique('roles', { nombre: 'admin' }, { nombre: 'admin', descripcion: 'Administrador del sistema' });
   const rolAsesor     = await upsertByUnique('roles', { nombre: 'asesor' }, { nombre: 'asesor', descripcion: 'Asesor de ventas' });
   const rolFreelancer = await upsertByUnique('roles', { nombre: 'freelancer' }, { nombre: 'freelancer', descripcion: 'Vendedor independiente' });
-  console.log('  ✓ Roles');
+  console.log('  Ã¢Å“â€œ Roles');
 
   // =========================================================
   // 2. PERMISOS
@@ -65,13 +66,13 @@ async function main() {
       permisosCreados.push(permiso);
     }
   }
-  console.log('  ✓ Permisos');
+  console.log('  Ã¢Å“â€œ Permisos');
 
   // Asignar todos los permisos a admin
   for (const permiso of permisosCreados) {
-    await upsertByUnique('permisosRol', { rolId_permisoId: { rolId: rolAdmin.id, permisoId: permiso.id } }, { rolId: rolAdmin.id, permisoId: permiso.id });
+    await upsertByUnique('permisos_rol', { rol_id_permiso_id: { rol_id: rolAdmin.id, permiso_id: permiso.id } }, { rol_id: rolAdmin.id, permiso_id: permiso.id });
   }
-  console.log('  ✓ Permisos admin');
+  console.log('  Ã¢Å“â€œ Permisos admin');
 
   // Permisos para asesor
   const asesorAcciones = {
@@ -86,11 +87,11 @@ async function main() {
     for (const accion of accs) {
       const p = permisosCreados.find(p => p.modulo === modulo && p.accion === accion);
       if (p) {
-        await upsertByUnique('permisosRol', { rolId_permisoId: { rolId: rolAsesor.id, permisoId: p.id } }, { rolId: rolAsesor.id, permisoId: p.id });
+        await upsertByUnique('permisos_rol', { rol_id_permiso_id: { rol_id: rolAsesor.id, permiso_id: p.id } }, { rol_id: rolAsesor.id, permiso_id: p.id });
       }
     }
   }
-  console.log('  ✓ Permisos asesor');
+  console.log('  Ã¢Å“â€œ Permisos asesor');
 
   // Permisos para freelancer
   const freelancerAcciones = {
@@ -105,195 +106,195 @@ async function main() {
     for (const accion of accs) {
       const p = permisosCreados.find(p => p.modulo === modulo && p.accion === accion);
       if (p) {
-        await upsertByUnique('permisosRol', { rolId_permisoId: { rolId: rolFreelancer.id, permisoId: p.id } }, { rolId: rolFreelancer.id, permisoId: p.id });
+        await upsertByUnique('permisos_rol', { rol_id_permiso_id: { rol_id: rolFreelancer.id, permiso_id: p.id } }, { rol_id: rolFreelancer.id, permiso_id: p.id });
       }
     }
   }
-  console.log('  ✓ Permisos freelancer');
+  console.log('  Ã¢Å“â€œ Permisos freelancer');
 
   // =========================================================
-  // 3. AEROLÍNEAS
+  // 3. AEROLÃƒÂNEAS
   // =========================================================
 
   const aerolineasData = [
-    { nombre: 'Avianca', codigoIata: 'AV', tipo: 'Nacional', web: 'https://www.avianca.com' },
-    { nombre: 'LATAM', codigoIata: 'LA', tipo: 'Internacional', web: 'https://www.latam.com' },
-    { nombre: 'Copa Airlines', codigoIata: 'CM', tipo: 'Internacional', web: 'https://www.copaair.com' },
-    { nombre: 'American Airlines', codigoIata: 'AA', tipo: 'Internacional', web: 'https://www.aa.com' },
-    { nombre: 'Iberia', codigoIata: 'IB', tipo: 'Internacional', web: 'https://www.iberia.com' },
-    { nombre: 'Delta', codigoIata: 'DL', tipo: 'Internacional', web: 'https://www.delta.com' },
-    { nombre: 'United Airlines', codigoIata: 'UA', tipo: 'Internacional', web: 'https://www.united.com' },
-    { nombre: 'Air France', codigoIata: 'AF', tipo: 'Internacional', web: 'https://www.airfrance.com' },
-    { nombre: 'KLM', codigoIata: 'KL', tipo: 'Internacional', web: 'https://www.klm.com' },
-    { nombre: 'JetBlue', codigoIata: 'B6', tipo: 'Internacional', web: 'https://www.jetblue.com' },
-    { nombre: 'Spirit Airlines', codigoIata: 'NK', tipo: 'Internacional', web: 'https://www.spirit.com' },
-    { nombre: 'Wingo', codigoIata: 'P5', tipo: 'Nacional', web: 'https://www.wingo.com' },
-    { nombre: 'EasyFly', codigoIata: 'VE', tipo: 'Nacional', web: 'https://www.easyfly.com.co' },
-    { nombre: 'Satena', codigoIata: '9R', tipo: 'Nacional', web: 'https://www.satena.com' },
-    { nombre: 'Viva Air', codigoIata: 'VH', tipo: 'Nacional', web: null },
-    { nombre: 'Emirates', codigoIata: 'EK', tipo: 'Internacional', web: 'https://www.emirates.com' },
-    { nombre: 'Turkish Airlines', codigoIata: 'TK', tipo: 'Internacional', web: 'https://www.turkishairlines.com' },
-    { nombre: 'Air Europa', codigoIata: 'UX', tipo: 'Internacional', web: 'https://www.aireuropa.com' },
+    { nombre: 'Avianca', codigo_iata: 'AV', tipo: 'Nacional', web: 'https://www.avianca.com' },
+    { nombre: 'LATAM', codigo_iata: 'LA', tipo: 'Internacional', web: 'https://www.latam.com' },
+    { nombre: 'Copa Airlines', codigo_iata: 'CM', tipo: 'Internacional', web: 'https://www.copaair.com' },
+    { nombre: 'American Airlines', codigo_iata: 'AA', tipo: 'Internacional', web: 'https://www.aa.com' },
+    { nombre: 'Iberia', codigo_iata: 'IB', tipo: 'Internacional', web: 'https://www.iberia.com' },
+    { nombre: 'Delta', codigo_iata: 'DL', tipo: 'Internacional', web: 'https://www.delta.com' },
+    { nombre: 'United Airlines', codigo_iata: 'UA', tipo: 'Internacional', web: 'https://www.united.com' },
+    { nombre: 'Air France', codigo_iata: 'AF', tipo: 'Internacional', web: 'https://www.airfrance.com' },
+    { nombre: 'KLM', codigo_iata: 'KL', tipo: 'Internacional', web: 'https://www.klm.com' },
+    { nombre: 'JetBlue', codigo_iata: 'B6', tipo: 'Internacional', web: 'https://www.jetblue.com' },
+    { nombre: 'Spirit Airlines', codigo_iata: 'NK', tipo: 'Internacional', web: 'https://www.spirit.com' },
+    { nombre: 'Wingo', codigo_iata: 'P5', tipo: 'Nacional', web: 'https://www.wingo.com' },
+    { nombre: 'EasyFly', codigo_iata: 'VE', tipo: 'Nacional', web: 'https://www.easyfly.com.co' },
+    { nombre: 'Satena', codigo_iata: '9R', tipo: 'Nacional', web: 'https://www.satena.com' },
+    { nombre: 'Viva Air', codigo_iata: 'VH', tipo: 'Nacional', web: null },
+    { nombre: 'Emirates', codigo_iata: 'EK', tipo: 'Internacional', web: 'https://www.emirates.com' },
+    { nombre: 'Turkish Airlines', codigo_iata: 'TK', tipo: 'Internacional', web: 'https://www.turkishairlines.com' },
+    { nombre: 'Air Europa', codigo_iata: 'UX', tipo: 'Internacional', web: 'https://www.aireuropa.com' },
   ];
   const aerolineasMap = {};
   for (const a of aerolineasData) {
-    const aerolinea = await upsertByUnique('aerolineas', { codigoIata: a.codigoIata }, a);
-    aerolineasMap[a.codigoIata] = aerolinea;
+    const aerolinea = await upsertByUnique('aerolineas', { codigo_iata: a.codigo_iata }, a);
+    aerolineasMap[a.codigo_iata] = aerolinea;
   }
-  console.log('  ✓ Aerolíneas');
+  console.log('  Ã¢Å“â€œ AerolÃƒÂ­neas');
 
   // =========================================================
   // 4. AEROPUERTOS
   // =========================================================
 
   const aeropuertosData = [
-    { nombre: 'El Dorado', codigoIata: 'BOG', ciudad: 'Bogotá', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'José María Córdova', codigoIata: 'MDE', ciudad: 'Medellín', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Olaya Herrera', codigoIata: 'EOH', ciudad: 'Medellín', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Rafael Núñez', codigoIata: 'CTG', ciudad: 'Cartagena', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Alfonso Bonilla Aragón', codigoIata: 'CLO', ciudad: 'Cali', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Gustavo Rojas Pinilla', codigoIata: 'ADZ', ciudad: 'San Andrés', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Ernesto Cortissoz', codigoIata: 'BAQ', ciudad: 'Barranquilla', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Matecaña', codigoIata: 'PEI', ciudad: 'Pereira', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Palonegro', codigoIata: 'BGA', ciudad: 'Bucaramanga', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Simón Bolívar', codigoIata: 'SMR', ciudad: 'Santa Marta', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'El Edén', codigoIata: 'AXM', ciudad: 'Armenia', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'La Nubia', codigoIata: 'MZL', ciudad: 'Manizales', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Camilo Daza', codigoIata: 'CUC', ciudad: 'Cúcuta', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Almirante Padilla', codigoIata: 'RCH', ciudad: 'Riohacha', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Alfonso López Pumarejo', codigoIata: 'VUP', ciudad: 'Valledupar', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Los Garzones', codigoIata: 'MTR', ciudad: 'Montería', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Antonio Roldán Betancourt', codigoIata: 'APO', ciudad: 'Apartadó', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Las Brujas', codigoIata: 'CZU', ciudad: 'Sincelejo', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Perales', codigoIata: 'IBE', ciudad: 'Ibagué', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Benito Salas', codigoIata: 'NVA', ciudad: 'Neiva', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Guillermo León Valencia', codigoIata: 'PPN', ciudad: 'Popayán', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'San Luis', codigoIata: 'IPI', ciudad: 'Ipiales', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Antonio Nariño', codigoIata: 'PSO', ciudad: 'Pasto', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Vanguardia', codigoIata: 'VVC', ciudad: 'Villavicencio', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'El Alcaraván', codigoIata: 'EYP', ciudad: 'Yopal', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Santiago Pérez Quiroz', codigoIata: 'AUC', ciudad: 'Arauca', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'El Caraño', codigoIata: 'UIB', ciudad: 'Quibdó', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Yariguíes', codigoIata: 'EJA', ciudad: 'Barrancabermeja', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Reyes Murillo', codigoIata: 'NQU', ciudad: 'Nuquí', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'José Celestino Mutis', codigoIata: 'BSC', ciudad: 'Bahía Solano', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Germán Olano', codigoIata: 'PCR', ciudad: 'Puerto Carreño', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Fabio Alberto León Bentley', codigoIata: 'MVP', ciudad: 'Mitú', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Jorge Enrique González', codigoIata: 'SJE', ciudad: 'San José del Guaviare', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Tres de Mayo', codigoIata: 'PUU', ciudad: 'Puerto Asís', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Alfredo Vásquez Cobo', codigoIata: 'LET', ciudad: 'Leticia', pais: 'Colombia', tipo: 'Ambos' },
-    { nombre: 'Golfo de Morrosquillo', codigoIata: 'TLU', ciudad: 'Tolú', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Gerardo Tobar López', codigoIata: 'BUN', ciudad: 'Buenaventura', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'San Bernardo', codigoIata: 'MMP', ciudad: 'Mompox', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Cacique Aramare', codigoIata: 'PDA', ciudad: 'Puerto Inírida', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'La Florida', codigoIata: 'TCO', ciudad: 'Tumaco', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Eduardo Falla Solano', codigoIata: 'SVI', ciudad: 'San Vicente del Caguán', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Gustavo Artunduaga', codigoIata: 'FLA', ciudad: 'Florencia', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Contador', codigoIata: 'PTX', ciudad: 'Pitalito', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Mandinga', codigoIata: 'COG', ciudad: 'Condoto', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Capurganá', codigoIata: 'CPB', ciudad: 'Capurganá', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Alcides Fernández', codigoIata: 'ACD', ciudad: 'Acandí', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Jorge Isaacs', codigoIata: 'MCJ', ciudad: 'Maicao', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Los Colonizadores', codigoIata: 'RVE', ciudad: 'Saravena', pais: 'Colombia', tipo: 'Nacional' },
-    { nombre: 'Miami', codigoIata: 'MIA', ciudad: 'Miami', pais: 'Estados Unidos', tipo: 'Internacional' },
-    { nombre: 'John F. Kennedy', codigoIata: 'JFK', ciudad: 'New York', pais: 'Estados Unidos', tipo: 'Internacional' },
-    { nombre: 'Adolfo Suárez Madrid-Barajas', codigoIata: 'MAD', ciudad: 'Madrid', pais: 'España', tipo: 'Internacional' },
-    { nombre: 'Charles de Gaulle', codigoIata: 'CDG', ciudad: 'París', pais: 'Francia', tipo: 'Internacional' },
-    { nombre: 'Tocumen', codigoIata: 'PTY', ciudad: 'Ciudad de Panamá', pais: 'Panamá', tipo: 'Internacional' },
-    { nombre: 'Benito Juárez', codigoIata: 'MEX', ciudad: 'Ciudad de México', pais: 'México', tipo: 'Internacional' },
-    { nombre: 'Jorge Chávez', codigoIata: 'LIM', ciudad: 'Lima', pais: 'Perú', tipo: 'Internacional' },
-    { nombre: 'Dubai', codigoIata: 'DXB', ciudad: 'Dubai', pais: 'Emiratos Árabes Unidos', tipo: 'Internacional' },
-    { nombre: 'Estambul', codigoIata: 'IST', ciudad: 'Estambul', pais: 'Turquía', tipo: 'Internacional' },
+    { nombre: 'El Dorado', codigo_iata: 'BOG', ciudad: 'BogotÃƒÂ¡', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'JosÃƒÂ© MarÃƒÂ­a CÃƒÂ³rdova', codigo_iata: 'MDE', ciudad: 'MedellÃƒÂ­n', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Olaya Herrera', codigo_iata: 'EOH', ciudad: 'MedellÃƒÂ­n', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Rafael NÃƒÂºÃƒÂ±ez', codigo_iata: 'CTG', ciudad: 'Cartagena', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Alfonso Bonilla AragÃƒÂ³n', codigo_iata: 'CLO', ciudad: 'Cali', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Gustavo Rojas Pinilla', codigo_iata: 'ADZ', ciudad: 'San AndrÃƒÂ©s', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Ernesto Cortissoz', codigo_iata: 'BAQ', ciudad: 'Barranquilla', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'MatecaÃƒÂ±a', codigo_iata: 'PEI', ciudad: 'Pereira', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Palonegro', codigo_iata: 'BGA', ciudad: 'Bucaramanga', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'SimÃƒÂ³n BolÃƒÂ­var', codigo_iata: 'SMR', ciudad: 'Santa Marta', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'El EdÃƒÂ©n', codigo_iata: 'AXM', ciudad: 'Armenia', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'La Nubia', codigo_iata: 'MZL', ciudad: 'Manizales', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Camilo Daza', codigo_iata: 'CUC', ciudad: 'CÃƒÂºcuta', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Almirante Padilla', codigo_iata: 'RCH', ciudad: 'Riohacha', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Alfonso LÃƒÂ³pez Pumarejo', codigo_iata: 'VUP', ciudad: 'Valledupar', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Los Garzones', codigo_iata: 'MTR', ciudad: 'MonterÃƒÂ­a', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Antonio RoldÃƒÂ¡n Betancourt', codigo_iata: 'APO', ciudad: 'ApartadÃƒÂ³', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Las Brujas', codigo_iata: 'CZU', ciudad: 'Sincelejo', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Perales', codigo_iata: 'IBE', ciudad: 'IbaguÃƒÂ©', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Benito Salas', codigo_iata: 'NVA', ciudad: 'Neiva', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Guillermo LeÃƒÂ³n Valencia', codigo_iata: 'PPN', ciudad: 'PopayÃƒÂ¡n', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'San Luis', codigo_iata: 'IPI', ciudad: 'Ipiales', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Antonio NariÃƒÂ±o', codigo_iata: 'PSO', ciudad: 'Pasto', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Vanguardia', codigo_iata: 'VVC', ciudad: 'Villavicencio', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'El AlcaravÃƒÂ¡n', codigo_iata: 'EYP', ciudad: 'Yopal', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Santiago PÃƒÂ©rez Quiroz', codigo_iata: 'AUC', ciudad: 'Arauca', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'El CaraÃƒÂ±o', codigo_iata: 'UIB', ciudad: 'QuibdÃƒÂ³', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'YariguÃƒÂ­es', codigo_iata: 'EJA', ciudad: 'Barrancabermeja', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Reyes Murillo', codigo_iata: 'NQU', ciudad: 'NuquÃƒÂ­', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'JosÃƒÂ© Celestino Mutis', codigo_iata: 'BSC', ciudad: 'BahÃƒÂ­a Solano', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'GermÃƒÂ¡n Olano', codigo_iata: 'PCR', ciudad: 'Puerto CarreÃƒÂ±o', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Fabio Alberto LeÃƒÂ³n Bentley', codigo_iata: 'MVP', ciudad: 'MitÃƒÂº', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Jorge Enrique GonzÃƒÂ¡lez', codigo_iata: 'SJE', ciudad: 'San JosÃƒÂ© del Guaviare', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Tres de Mayo', codigo_iata: 'PUU', ciudad: 'Puerto AsÃƒÂ­s', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Alfredo VÃƒÂ¡squez Cobo', codigo_iata: 'LET', ciudad: 'Leticia', pais: 'Colombia', tipo: 'Ambos' },
+    { nombre: 'Golfo de Morrosquillo', codigo_iata: 'TLU', ciudad: 'TolÃƒÂº', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Gerardo Tobar LÃƒÂ³pez', codigo_iata: 'BUN', ciudad: 'Buenaventura', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'San Bernardo', codigo_iata: 'MMP', ciudad: 'Mompox', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Cacique Aramare', codigo_iata: 'PDA', ciudad: 'Puerto InÃƒÂ­rida', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'La Florida', codigo_iata: 'TCO', ciudad: 'Tumaco', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Eduardo Falla Solano', codigo_iata: 'SVI', ciudad: 'San Vicente del CaguÃƒÂ¡n', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Gustavo Artunduaga', codigo_iata: 'FLA', ciudad: 'Florencia', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Contador', codigo_iata: 'PTX', ciudad: 'Pitalito', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Mandinga', codigo_iata: 'COG', ciudad: 'Condoto', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'CapurganÃƒÂ¡', codigo_iata: 'CPB', ciudad: 'CapurganÃƒÂ¡', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Alcides FernÃƒÂ¡ndez', codigo_iata: 'ACD', ciudad: 'AcandÃƒÂ­', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Jorge Isaacs', codigo_iata: 'MCJ', ciudad: 'Maicao', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Los Colonizadores', codigo_iata: 'RVE', ciudad: 'Saravena', pais: 'Colombia', tipo: 'Nacional' },
+    { nombre: 'Miami', codigo_iata: 'MIA', ciudad: 'Miami', pais: 'Estados Unidos', tipo: 'Internacional' },
+    { nombre: 'John F. Kennedy', codigo_iata: 'JFK', ciudad: 'New York', pais: 'Estados Unidos', tipo: 'Internacional' },
+    { nombre: 'Adolfo SuÃƒÂ¡rez Madrid-Barajas', codigo_iata: 'MAD', ciudad: 'Madrid', pais: 'EspaÃƒÂ±a', tipo: 'Internacional' },
+    { nombre: 'Charles de Gaulle', codigo_iata: 'CDG', ciudad: 'ParÃƒÂ­s', pais: 'Francia', tipo: 'Internacional' },
+    { nombre: 'Tocumen', codigo_iata: 'PTY', ciudad: 'Ciudad de PanamÃƒÂ¡', pais: 'PanamÃƒÂ¡', tipo: 'Internacional' },
+    { nombre: 'Benito JuÃƒÂ¡rez', codigo_iata: 'MEX', ciudad: 'Ciudad de MÃƒÂ©xico', pais: 'MÃƒÂ©xico', tipo: 'Internacional' },
+    { nombre: 'Jorge ChÃƒÂ¡vez', codigo_iata: 'LIM', ciudad: 'Lima', pais: 'PerÃƒÂº', tipo: 'Internacional' },
+    { nombre: 'Dubai', codigo_iata: 'DXB', ciudad: 'Dubai', pais: 'Emiratos ÃƒÂrabes Unidos', tipo: 'Internacional' },
+    { nombre: 'Estambul', codigo_iata: 'IST', ciudad: 'Estambul', pais: 'TurquÃƒÂ­a', tipo: 'Internacional' },
   ];
   const aeropuertosMap = {};
   for (const a of aeropuertosData) {
-    const aeropuerto = await upsertByUnique('aeropuertos', { codigoIata: a.codigoIata }, a);
-    aeropuertosMap[a.codigoIata] = aeropuerto;
+    const aeropuerto = await upsertByUnique('aeropuertos', { codigo_iata: a.codigo_iata }, a);
+    aeropuertosMap[a.codigo_iata] = aeropuerto;
   }
-  console.log('  ✓ Aeropuertos');
+  console.log('  Ã¢Å“â€œ Aeropuertos');
 
   // =========================================================
-  // 5. POLÍTICAS DE EQUIPAJE
+  // 5. POLÃƒÂTICAS DE EQUIPAJE
   // =========================================================
 
   const equipajeData = [
-    { aerolineaId: aerolineasMap['CM'].id, tipoTarifa: 'Basic', articuloPersonal: '1 bolso (43x32x22 cm)', equipajeMano: 'No incluido', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['CM'].id, tipoTarifa: 'Classic / Economy', articuloPersonal: '1 bolso (43x32x22 cm)', equipajeMano: '1 maleta hasta 10kg (56x36x26 cm)', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['CM'].id, tipoTarifa: 'Business', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 10kg', equipajeBodega: '2 maletas hasta 32kg c/u' },
-    { aerolineaId: aerolineasMap['AA'].id, tipoTarifa: 'Basic Economy', articuloPersonal: '1 bolso (45x35x20 cm)', equipajeMano: '1 maleta (56x36x23 cm)', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['AA'].id, tipoTarifa: 'Main Cabin', articuloPersonal: '1 bolso', equipajeMano: '1 maleta de mano', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['IB'].id, tipoTarifa: 'Básica', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 10kg (56x40x25 cm)', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['IB'].id, tipoTarifa: 'Óptima', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 10kg', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['DL'].id, tipoTarifa: 'Basic Economy', articuloPersonal: '1 artículo personal', equipajeMano: '1 maleta de mano', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['DL'].id, tipoTarifa: 'Main Cabin', articuloPersonal: '1 artículo personal', equipajeMano: '1 maleta de mano', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['UA'].id, tipoTarifa: 'Basic Economy', articuloPersonal: '1 bolso (43x25x22 cm)', equipajeMano: 'No incluido', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['UA'].id, tipoTarifa: 'Economy', articuloPersonal: '1 bolso', equipajeMano: '1 maleta de mano', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['AF'].id, tipoTarifa: 'Light', articuloPersonal: '1 bolso (40x30x15 cm)', equipajeMano: '1 maleta hasta 12kg (55x35x25 cm)', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['AF'].id, tipoTarifa: 'Standard', articuloPersonal: '1 bolso', equipajeMano: '1 maleta hasta 12kg', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['KL'].id, tipoTarifa: 'Light', articuloPersonal: '1 accesorio pequeño', equipajeMano: '1 maleta (total máx. 12kg)', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['KL'].id, tipoTarifa: 'Standard', articuloPersonal: '1 accesorio pequeño', equipajeMano: '1 maleta de mano', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['B6'].id, tipoTarifa: 'Blue Basic', articuloPersonal: '1 bolso personal (43x33x20 cm)', equipajeMano: '1 maleta de mano', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['B6'].id, tipoTarifa: 'Blue', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta de mano', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['NK'].id, tipoTarifa: 'Standard', articuloPersonal: '1 bolso personal (45x35x20 cm)', equipajeMano: 'No incluido', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['P5'].id, tipoTarifa: 'Go Basic', articuloPersonal: '1 bolso personal (40x30x20 cm)', equipajeMano: 'No incluido', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['P5'].id, tipoTarifa: 'Go Plus', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta de mano hasta 12kg', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['VE'].id, tipoTarifa: 'Económica', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 5kg', equipajeBodega: '1 maleta hasta 15kg' },
-    { aerolineaId: aerolineasMap['9R'].id, tipoTarifa: 'Básica', articuloPersonal: '1 bolso personal', equipajeMano: '1 equipaje hasta 5kg', equipajeBodega: '1 maleta hasta 15kg' },
-    { aerolineaId: aerolineasMap['EK'].id, tipoTarifa: 'Economy Special', articuloPersonal: '1 bolso', equipajeMano: '1 pieza hasta 7kg', equipajeBodega: '1 maleta hasta 20kg' },
-    { aerolineaId: aerolineasMap['EK'].id, tipoTarifa: 'Economy Flex', articuloPersonal: '1 bolso', equipajeMano: '1 pieza hasta 7kg', equipajeBodega: 'Hasta 30kg' },
-    { aerolineaId: aerolineasMap['TK'].id, tipoTarifa: 'EcoFly', articuloPersonal: '1 accesorio personal', equipajeMano: '1 pieza hasta 8kg', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['UX'].id, tipoTarifa: 'Lite', articuloPersonal: '1 accesorio (20x35x30 cm)', equipajeMano: '1 maleta hasta 10kg', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['UX'].id, tipoTarifa: 'Standard', articuloPersonal: '1 accesorio', equipajeMano: '1 maleta hasta 10kg', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['AV'].id, tipoTarifa: 'Basic / XS', articuloPersonal: '1 bolso personal (45x35x20 cm)', equipajeMano: 'No incluido', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['AV'].id, tipoTarifa: 'Classic / M', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 10kg (55x35x25 cm)', equipajeBodega: '1 maleta hasta 23kg' },
-    { aerolineaId: aerolineasMap['LA'].id, tipoTarifa: 'Basic', articuloPersonal: '1 bolso personal (45x35x20 cm)', equipajeMano: 'No incluido', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['LA'].id, tipoTarifa: 'Light', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 10kg (55x35x25 cm)', equipajeBodega: 'No incluido' },
-    { aerolineaId: aerolineasMap['LA'].id, tipoTarifa: 'Plus', articuloPersonal: '1 bolso personal', equipajeMano: '1 maleta hasta 10kg', equipajeBodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['CM'].id, tipo_tarifa: 'Basic', articulo_personal: '1 bolso (43x32x22 cm)', equipaje_mano: 'No incluido', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['CM'].id, tipo_tarifa: 'Classic / Economy', articulo_personal: '1 bolso (43x32x22 cm)', equipaje_mano: '1 maleta hasta 10kg (56x36x26 cm)', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['CM'].id, tipo_tarifa: 'Business', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 10kg', equipaje_bodega: '2 maletas hasta 32kg c/u' },
+    { aerolinea_id: aerolineasMap['AA'].id, tipo_tarifa: 'Basic Economy', articulo_personal: '1 bolso (45x35x20 cm)', equipaje_mano: '1 maleta (56x36x23 cm)', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['AA'].id, tipo_tarifa: 'Main Cabin', articulo_personal: '1 bolso', equipaje_mano: '1 maleta de mano', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['IB'].id, tipo_tarifa: 'BÃƒÂ¡sica', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 10kg (56x40x25 cm)', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['IB'].id, tipo_tarifa: 'Ãƒâ€œptima', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 10kg', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['DL'].id, tipo_tarifa: 'Basic Economy', articulo_personal: '1 artÃƒÂ­culo personal', equipaje_mano: '1 maleta de mano', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['DL'].id, tipo_tarifa: 'Main Cabin', articulo_personal: '1 artÃƒÂ­culo personal', equipaje_mano: '1 maleta de mano', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['UA'].id, tipo_tarifa: 'Basic Economy', articulo_personal: '1 bolso (43x25x22 cm)', equipaje_mano: 'No incluido', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['UA'].id, tipo_tarifa: 'Economy', articulo_personal: '1 bolso', equipaje_mano: '1 maleta de mano', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['AF'].id, tipo_tarifa: 'Light', articulo_personal: '1 bolso (40x30x15 cm)', equipaje_mano: '1 maleta hasta 12kg (55x35x25 cm)', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['AF'].id, tipo_tarifa: 'Standard', articulo_personal: '1 bolso', equipaje_mano: '1 maleta hasta 12kg', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['KL'].id, tipo_tarifa: 'Light', articulo_personal: '1 accesorio pequeÃƒÂ±o', equipaje_mano: '1 maleta (total mÃƒÂ¡x. 12kg)', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['KL'].id, tipo_tarifa: 'Standard', articulo_personal: '1 accesorio pequeÃƒÂ±o', equipaje_mano: '1 maleta de mano', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['B6'].id, tipo_tarifa: 'Blue Basic', articulo_personal: '1 bolso personal (43x33x20 cm)', equipaje_mano: '1 maleta de mano', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['B6'].id, tipo_tarifa: 'Blue', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta de mano', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['NK'].id, tipo_tarifa: 'Standard', articulo_personal: '1 bolso personal (45x35x20 cm)', equipaje_mano: 'No incluido', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['P5'].id, tipo_tarifa: 'Go Basic', articulo_personal: '1 bolso personal (40x30x20 cm)', equipaje_mano: 'No incluido', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['P5'].id, tipo_tarifa: 'Go Plus', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta de mano hasta 12kg', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['VE'].id, tipo_tarifa: 'EconÃƒÂ³mica', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 5kg', equipaje_bodega: '1 maleta hasta 15kg' },
+    { aerolinea_id: aerolineasMap['9R'].id, tipo_tarifa: 'BÃƒÂ¡sica', articulo_personal: '1 bolso personal', equipaje_mano: '1 equipaje hasta 5kg', equipaje_bodega: '1 maleta hasta 15kg' },
+    { aerolinea_id: aerolineasMap['EK'].id, tipo_tarifa: 'Economy Special', articulo_personal: '1 bolso', equipaje_mano: '1 pieza hasta 7kg', equipaje_bodega: '1 maleta hasta 20kg' },
+    { aerolinea_id: aerolineasMap['EK'].id, tipo_tarifa: 'Economy Flex', articulo_personal: '1 bolso', equipaje_mano: '1 pieza hasta 7kg', equipaje_bodega: 'Hasta 30kg' },
+    { aerolinea_id: aerolineasMap['TK'].id, tipo_tarifa: 'EcoFly', articulo_personal: '1 accesorio personal', equipaje_mano: '1 pieza hasta 8kg', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['UX'].id, tipo_tarifa: 'Lite', articulo_personal: '1 accesorio (20x35x30 cm)', equipaje_mano: '1 maleta hasta 10kg', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['UX'].id, tipo_tarifa: 'Standard', articulo_personal: '1 accesorio', equipaje_mano: '1 maleta hasta 10kg', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['AV'].id, tipo_tarifa: 'Basic / XS', articulo_personal: '1 bolso personal (45x35x20 cm)', equipaje_mano: 'No incluido', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['AV'].id, tipo_tarifa: 'Classic / M', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 10kg (55x35x25 cm)', equipaje_bodega: '1 maleta hasta 23kg' },
+    { aerolinea_id: aerolineasMap['LA'].id, tipo_tarifa: 'Basic', articulo_personal: '1 bolso personal (45x35x20 cm)', equipaje_mano: 'No incluido', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['LA'].id, tipo_tarifa: 'Light', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 10kg (55x35x25 cm)', equipaje_bodega: 'No incluido' },
+    { aerolinea_id: aerolineasMap['LA'].id, tipo_tarifa: 'Plus', articulo_personal: '1 bolso personal', equipaje_mano: '1 maleta hasta 10kg', equipaje_bodega: '1 maleta hasta 23kg' },
   ];
   const equipajeMap = {};
   for (const e of equipajeData) {
     const eq = await createIfNotExists(
-      'politicasEquipaje',
-      { aerolineaId: e.aerolineaId, tipoTarifa: e.tipoTarifa },
+      'politicas_equipaje',
+      { aerolinea_id: e.aerolineaId, tipo_tarifa: e.tipo_tarifa },
       e
     );
     const key = `${e.aerolineaId}-${e.tipoTarifa}`;
     equipajeMap[key] = eq;
   }
-  console.log('  ✓ Políticas de equipaje');
+  console.log('  Ã¢Å“â€œ PolÃƒÂ­ticas de equipaje');
 
   // =========================================================
   // 6. PROVEEDORES
   // =========================================================
 
   const proveedoresData = [
-    { nombre: 'Decameron Hotels', tipo: 'Hotel', emailContacto: 'reservas@decameron.com', telefono: '+5712345678', web: 'https://www.decameron.com' },
-    { nombre: 'Dann Carlton', tipo: 'Hotel', emailContacto: 'reservas@danncarlton.com', telefono: '+5723456789', web: 'https://www.danncarlton.com' },
-    { nombre: 'Despegar', tipo: 'Proveedor', emailContacto: 'ventas@despegar.com', telefono: '+5734567890', web: 'https://www.despegar.com' },
-    { nombre: 'Hotel Estelar', tipo: 'Hotel', emailContacto: 'reservas@hotelestelar.com', telefono: '+5745678901', web: 'https://www.hotelestelar.com' },
-    { nombre: 'GHL Hotels', tipo: 'Hotel', emailContacto: 'reservas@ghlhoteles.com', telefono: '+5756789012', web: 'https://www.ghlhoteles.com' },
-    { nombre: 'Viajes Falabella', tipo: 'Proveedor', emailContacto: 'ventas@viajesfalabella.com', telefono: '+5767890123', web: 'https://www.viajesfalabella.com' },
+    { nombre: 'Decameron Hotels', tipo: 'Hotel', email_contacto: 'reservas@decameron.com', telefono: '+5712345678', web: 'https://www.decameron.com' },
+    { nombre: 'Dann Carlton', tipo: 'Hotel', email_contacto: 'reservas@danncarlton.com', telefono: '+5723456789', web: 'https://www.danncarlton.com' },
+    { nombre: 'Despegar', tipo: 'Proveedor', email_contacto: 'ventas@despegar.com', telefono: '+5734567890', web: 'https://www.despegar.com' },
+    { nombre: 'Hotel Estelar', tipo: 'Hotel', email_contacto: 'reservas@hotelestelar.com', telefono: '+5745678901', web: 'https://www.hotelestelar.com' },
+    { nombre: 'GHL Hotels', tipo: 'Hotel', email_contacto: 'reservas@ghlhoteles.com', telefono: '+5756789012', web: 'https://www.ghlhoteles.com' },
+    { nombre: 'Viajes Falabella', tipo: 'Proveedor', email_contacto: 'ventas@viajesfalabella.com', telefono: '+5767890123', web: 'https://www.viajesfalabella.com' },
   ];
   for (const p of proveedoresData) {
     await createIfNotExists('proveedores', { nombre: p.nombre }, p);
   }
-  console.log('  ✓ Proveedores');
+  console.log('  Ã¢Å“â€œ Proveedores');
 
   // =========================================================
   // 7. TARJETAS DE AGENCIA
   // =========================================================
 
   const tarjetasData = [
-    { nombre: 'Bancolombia Principal', metodoPagoId: mpTransferencia.id, ultimosCuatro: '1234', status: 'active' },
-    { nombre: 'Davivienda Empresarial', metodoPagoId: mpTransferencia.id, ultimosCuatro: '5678', status: 'active' },
-    { nombre: 'Visa Corporativa', metodoPagoId: mpTarjetaCredito.id, ultimosCuatro: '9012', status: 'active' },
-    { nombre: 'Mastercard Negocios', metodoPagoId: mpTarjetaCredito.id, ultimosCuatro: '3456', status: 'active' },
-    { nombre: 'Nequi Empresarial', metodoPagoId: mpTransferencia.id, ultimosCuatro: '7890', status: 'active' },
+    { nombre: 'Bancolombia Principal', metodo_pago_id: mpTransferencia.id, ultimos_cuatro: '1234', status: 'active' },
+    { nombre: 'Davivienda Empresarial', metodo_pago_id: mpTransferencia.id, ultimos_cuatro: '5678', status: 'active' },
+    { nombre: 'Visa Corporativa', metodo_pago_id: mpTarjetaCredito.id, ultimos_cuatro: '9012', status: 'active' },
+    { nombre: 'Mastercard Negocios', metodo_pago_id: mpTarjetaCredito.id, ultimos_cuatro: '3456', status: 'active' },
+    { nombre: 'Nequi Empresarial', metodo_pago_id: mpTransferencia.id, ultimos_cuatro: '7890', status: 'active' },
   ];
   for (const t of tarjetasData) {
-    await createIfNotExists('tarjetasAgencia', { nombre: t.nombre }, t);
+    await createIfNotExists('tarjetas_agencia', { nombre: t.nombre }, t);
   }
-  console.log('  ✓ Tarjetas de agencia');
+  console.log('  Ã¢Å“â€œ Tarjetas de agencia');
 
   // =========================================================
   // 8. PERSONAS + USUARIOS
@@ -301,23 +302,23 @@ async function main() {
 
   const usuariosData = [
     {
-      nombres: 'Admin', apellidos: 'iTea', tipoDocumentoId: tipoCC.id, documento: '123456789',
-      email: 'admin@itea.com', telefono: '3001234567', birthDate: new Date('1990-01-15'),
+      nombres: 'Admin', apellidos: 'iTea', tipo_documento_id: tipoCC.id, documento: '123456789',
+      email: 'admin@itea.com', telefono: '3001234567', birth_date: new Date('1990-01-15'),
       role: 'admin', password: 'Admin123'
     },
     {
-      nombres: 'Juan', apellidos: 'Perez', tipoDocumentoId: tipoCC.id, documento: '987654321',
-      email: 'juan@itea.com', telefono: '3002345678', birthDate: new Date('1985-06-20'),
+      nombres: 'Juan', apellidos: 'Perez', tipo_documento_id: tipoCC.id, documento: '987654321',
+      email: 'juan@itea.com', telefono: '3002345678', birth_date: new Date('1985-06-20'),
       role: 'asesor', password: 'Vendor123'
     },
     {
-      nombres: 'Maria', apellidos: 'Garcia', tipoDocumentoId: tipoCE.id, documento: '5555555',
-      email: 'maria@itea.com', telefono: '3003456789', birthDate: new Date('1992-03-10'),
+      nombres: 'Maria', apellidos: 'Garcia', tipo_documento_id: tipoCE.id, documento: '5555555',
+      email: 'maria@itea.com', telefono: '3003456789', birth_date: new Date('1992-03-10'),
       role: 'asesor', password: 'Vendor123'
     },
     {
-      nombres: 'Carlos', apellidos: 'Lopez', tipoDocumentoId: tipoPasaporte.id, documento: 'XY789654',
-      email: 'carlos@itea.com', telefono: '3004567890', birthDate: new Date('1988-11-25'),
+      nombres: 'Carlos', apellidos: 'Lopez', tipo_documento_id: tipoPasaporte.id, documento: 'XY789654',
+      email: 'carlos@itea.com', telefono: '3004567890', birth_date: new Date('1988-11-25'),
       role: 'asesor', password: 'Vendor123', status: 'inactive'
     },
   ];
@@ -329,9 +330,9 @@ async function main() {
       { documento: u.documento },
       {
         nombres: u.nombres, apellidos: u.apellidos,
-        tipoDocumentoId: u.tipoDocumentoId, documento: u.documento,
-        email: u.email, telefono: u.telefono, birthDate: u.birthDate,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.nombres}`,
+        tipo_documento_id: u.tipoDocumentoId, documento: u.documento,
+        email: u.email, telefono: u.telefono, birth_date: u.birthDate,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.nombres}`,
         status: u.status || 'active'
       }
     );
@@ -340,37 +341,37 @@ async function main() {
       'usuarios',
       { email: u.email },
       {
-        personaId: persona.id, email: u.email,
-        passwordHash: await bcrypt.hash(u.password, SALT),
-        rolId: rol.id, status: u.status || 'active'
+        persona_id: persona.id, email: u.email,
+        password_hash: await bcrypt.hash(u.password, SALT),
+        rol_id: rol.id, status: u.status || 'active'
       }
     );
     usuariosMap[u.email] = usuario;
   }
-  console.log('  ✓ Usuarios');
+  console.log('  Ã¢Å“â€œ Usuarios');
 
   // =========================================================
   // 9. PERSONAS + CLIENTES
   // =========================================================
 
   const clientesData = [
-    { nombres: 'Ana Maria', apellidos: 'Torres', tipoDocumentoId: tipoCC.id, documento: '12345678', email: 'ana@email.com', telefono: '3001234567', birthDate: new Date('1992-05-15') },
-    { nombres: 'Roberto', apellidos: 'Sanchez', tipoDocumentoId: tipoCC.id, documento: '87654321', email: 'roberto@email.com', telefono: '3002345678', birthDate: new Date('1988-08-20') },
-    { nombres: 'Laura', apellidos: 'Martinez', tipoDocumentoId: tipoPasaporte.id, documento: 'AB123456', email: 'laura@email.com', telefono: '3003456789', birthDate: new Date('1995-03-10') },
-    { nombres: 'Miguel Angel', apellidos: 'Rodriguez', tipoDocumentoId: tipoCC.id, documento: '11223344', email: 'miguel@email.com', telefono: '3004567890', birthDate: new Date('1990-11-25') },
-    { nombres: 'Sofia', apellidos: 'Hernandez', tipoDocumentoId: tipoCE.id, documento: 'CE5555555', email: 'sofia@email.com', telefono: '3005678901', birthDate: new Date('1993-07-01') },
-    { nombres: 'Diego', apellidos: 'Fernandez', tipoDocumentoId: tipoCC.id, documento: '99887766', email: 'diego@email.com', telefono: '3006789012', birthDate: new Date('1987-04-15') },
-    { nombres: 'Carmen', apellidos: 'Lopez', tipoDocumentoId: tipoPasaporte.id, documento: 'PAS-XY789654', email: 'carmen@email.com', telefono: '3007890123', birthDate: new Date('1991-12-01') },
-    { nombres: 'Jose Manuel', apellidos: 'Gil', tipoDocumentoId: tipoCC.id, documento: '44556677', email: 'jose@email.com', telefono: '3008901234', birthDate: new Date('1989-09-20') },
-    { nombres: 'Isabella', apellidos: 'Diaz', tipoDocumentoId: tipoCC.id, documento: '66778899', email: 'isabella@email.com', telefono: '3009012345', birthDate: new Date('1994-06-05') },
-    { nombres: 'Fernando', apellidos: 'Morales', tipoDocumentoId: tipoCE.id, documento: '1234888', email: 'fernando@email.com', telefono: '3010123456', birthDate: new Date('1986-06-18') },
-    { nombres: 'Patricia', apellidos: 'Ruiz', tipoDocumentoId: tipoPasaporte.id, documento: 'ZZ555555', email: 'patricia@email.com', telefono: '3011234567', birthDate: new Date('1997-07-01') },
-    { nombres: 'Alejandro', apellidos: 'Castro', tipoDocumentoId: tipoCC.id, documento: '33445566', email: 'alejandro@email.com', telefono: '3012345678', birthDate: new Date('1991-07-15') },
-    { nombres: 'Carlos Eduardo', apellidos: 'Gomez', tipoDocumentoId: tipoCC.id, documento: '10101010', email: 'carlos.gomez@email.com', telefono: '3000000001', birthDate: new Date('1990-01-01') },
-    { nombres: 'Maria Fernanda', apellidos: 'Lopez', tipoDocumentoId: tipoCC.id, documento: '20202020', email: 'maria.lopez@email.com', telefono: '3000000002', birthDate: new Date('1990-02-02') },
-    { nombres: 'Pedro Antonio', apellidos: 'Ruiz', tipoDocumentoId: tipoCC.id, documento: '30303030', email: 'pedro.ruiz@email.com', telefono: '3000000003', birthDate: new Date('1990-03-03') },
-    { nombres: 'Lucia Daniela', apellidos: 'Peña', tipoDocumentoId: tipoCC.id, documento: '40404040', email: 'lucia.pena@email.com', telefono: '3000000004', birthDate: new Date('1990-04-04') },
-    { nombres: 'Andres Felipe', apellidos: 'Castro', tipoDocumentoId: tipoCC.id, documento: '50505050', email: 'andres.castro@email.com', telefono: '3000000005', birthDate: new Date('1990-05-05') },
+    { nombres: 'Ana Maria', apellidos: 'Torres', tipo_documento_id: tipoCC.id, documento: '12345678', email: 'ana@email.com', telefono: '3001234567', birth_date: new Date('1992-05-15') },
+    { nombres: 'Roberto', apellidos: 'Sanchez', tipo_documento_id: tipoCC.id, documento: '87654321', email: 'roberto@email.com', telefono: '3002345678', birth_date: new Date('1988-08-20') },
+    { nombres: 'Laura', apellidos: 'Martinez', tipo_documento_id: tipoPasaporte.id, documento: 'AB123456', email: 'laura@email.com', telefono: '3003456789', birth_date: new Date('1995-03-10') },
+    { nombres: 'Miguel Angel', apellidos: 'Rodriguez', tipo_documento_id: tipoCC.id, documento: '11223344', email: 'miguel@email.com', telefono: '3004567890', birth_date: new Date('1990-11-25') },
+    { nombres: 'Sofia', apellidos: 'Hernandez', tipo_documento_id: tipoCE.id, documento: 'CE5555555', email: 'sofia@email.com', telefono: '3005678901', birth_date: new Date('1993-07-01') },
+    { nombres: 'Diego', apellidos: 'Fernandez', tipo_documento_id: tipoCC.id, documento: '99887766', email: 'diego@email.com', telefono: '3006789012', birth_date: new Date('1987-04-15') },
+    { nombres: 'Carmen', apellidos: 'Lopez', tipo_documento_id: tipoPasaporte.id, documento: 'PAS-XY789654', email: 'carmen@email.com', telefono: '3007890123', birth_date: new Date('1991-12-01') },
+    { nombres: 'Jose Manuel', apellidos: 'Gil', tipo_documento_id: tipoCC.id, documento: '44556677', email: 'jose@email.com', telefono: '3008901234', birth_date: new Date('1989-09-20') },
+    { nombres: 'Isabella', apellidos: 'Diaz', tipo_documento_id: tipoCC.id, documento: '66778899', email: 'isabella@email.com', telefono: '3009012345', birth_date: new Date('1994-06-05') },
+    { nombres: 'Fernando', apellidos: 'Morales', tipo_documento_id: tipoCE.id, documento: '1234888', email: 'fernando@email.com', telefono: '3010123456', birth_date: new Date('1986-06-18') },
+    { nombres: 'Patricia', apellidos: 'Ruiz', tipo_documento_id: tipoPasaporte.id, documento: 'ZZ555555', email: 'patricia@email.com', telefono: '3011234567', birth_date: new Date('1997-07-01') },
+    { nombres: 'Alejandro', apellidos: 'Castro', tipo_documento_id: tipoCC.id, documento: '33445566', email: 'alejandro@email.com', telefono: '3012345678', birth_date: new Date('1991-07-15') },
+    { nombres: 'Carlos Eduardo', apellidos: 'Gomez', tipo_documento_id: tipoCC.id, documento: '10101010', email: 'carlos.gomez@email.com', telefono: '3000000001', birth_date: new Date('1990-01-01') },
+    { nombres: 'Maria Fernanda', apellidos: 'Lopez', tipo_documento_id: tipoCC.id, documento: '20202020', email: 'maria.lopez@email.com', telefono: '3000000002', birth_date: new Date('1990-02-02') },
+    { nombres: 'Pedro Antonio', apellidos: 'Ruiz', tipo_documento_id: tipoCC.id, documento: '30303030', email: 'pedro.ruiz@email.com', telefono: '3000000003', birth_date: new Date('1990-03-03') },
+    { nombres: 'Lucia Daniela', apellidos: 'PeÃƒÂ±a', tipo_documento_id: tipoCC.id, documento: '40404040', email: 'lucia.pena@email.com', telefono: '3000000004', birth_date: new Date('1990-04-04') },
+    { nombres: 'Andres Felipe', apellidos: 'Castro', tipo_documento_id: tipoCC.id, documento: '50505050', email: 'andres.castro@email.com', telefono: '3000000005', birth_date: new Date('1990-05-05') },
   ];
   const clientesMap = {};
   for (const c of clientesData) {
@@ -379,29 +380,29 @@ async function main() {
       { documento: c.documento },
       {
         nombres: c.nombres, apellidos: c.apellidos,
-        tipoDocumentoId: c.tipoDocumentoId, documento: c.documento,
-        email: c.email, telefono: c.telefono, birthDate: c.birthDate,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.nombres.split(' ')[0]}`
+        tipo_documento_id: c.tipoDocumentoId, documento: c.documento,
+        email: c.email, telefono: c.telefono, birth_date: c.birthDate,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.nombres.split(' ')[0]}`
       }
     );
     const cliente = await upsertByUnique(
       'clientes',
-      { personaId: persona.id },
-      { personaId: persona.id, creadoPorId: usuariosMap['admin@itea.com'].id }
+      { persona_id: persona.id },
+      { persona_id: persona.id, creado_por_id: usuariosMap['admin@itea.com'].id }
     );
     clientesMap[`${c.nombres} ${c.apellidos}`] = cliente;
   }
-  console.log('  ✓ Clientes');
+  console.log('  Ã¢Å“â€œ Clientes');
 
   // =========================================================
   // 10. COMISIONISTAS
   // =========================================================
 
   const comisionistasData = [
-    { nombres: 'Agencia', apellidos: 'Viajes Plus', tipoDocumentoId: tipoNIT.id, documento: '900123456', tipo: 'Agencia Externa' },
-    { nombres: 'Asesor', apellidos: 'Independiente', tipoDocumentoId: tipoCC.id, documento: '111111111', tipo: 'Comisionista' },
-    { nombres: 'Global Travel', apellidos: 'Solutions', tipoDocumentoId: tipoNIT.id, documento: '900789012', tipo: 'Empresa' },
-    { nombres: 'Beatriz', apellidos: 'Herrera', tipoDocumentoId: tipoCC.id, documento: '222222222', tipo: 'Comisionista' },
+    { nombres: 'Agencia', apellidos: 'Viajes Plus', tipo_documento_id: tipoNIT.id, documento: '900123456', tipo: 'Agencia Externa' },
+    { nombres: 'Asesor', apellidos: 'Independiente', tipo_documento_id: tipoCC.id, documento: '111111111', tipo: 'Comisionista' },
+    { nombres: 'Global Travel', apellidos: 'Solutions', tipo_documento_id: tipoNIT.id, documento: '900789012', tipo: 'Empresa' },
+    { nombres: 'Beatriz', apellidos: 'Herrera', tipo_documento_id: tipoCC.id, documento: '222222222', tipo: 'Comisionista' },
   ];
   const comisionistasMap = {};
   for (const c of comisionistasData) {
@@ -410,49 +411,49 @@ async function main() {
       { documento: c.documento },
       {
         nombres: c.nombres, apellidos: c.apellidos,
-        tipoDocumentoId: c.tipoDocumentoId, documento: c.documento
+        tipo_documento_id: c.tipoDocumentoId, documento: c.documento
       }
     );
     const comisionista = await upsertByUnique(
       'comisionistas',
-      { personaId: persona.id },
-      { personaId: persona.id, tipo: c.tipo, umbralPago: 500000, acumulado: 0, status: 'Activo' }
+      { persona_id: persona.id },
+      { persona_id: persona.id, tipo: c.tipo, umbral_pago: 500000, acumulado: 0, status: 'Activo' }
     );
     comisionistasMap[c.documento] = comisionista;
   }
-  console.log('  ✓ Comisionistas');
+  console.log('  Ã¢Å“â€œ Comisionistas');
 
   // =========================================================
-  // 11. PAQUETES TURÍSTICOS
+  // 11. PAQUETES TURÃƒÂSTICOS
   // =========================================================
 
   const paquetesData = [
     {
-      nombre: 'San Andrés All Inclusive', destino: 'San Andrés', status: 'activo',
-      serviciosIncluidos: 'Vuelo ida y vuelta, Hotel 5 estrellas, Alimentación completa, Tour Acuario, Tour Jhonny Cay, Seguro de viaje',
-      noIncluido: 'Gastos personales, Compras, Excursiones adicionales',
-      hotelNombre: 'Decameron San Andrés', tipoHotel: 'resort', regimen: 'todo_incluido', noches: 4,
-      aerolineaIata: 'AV', nroVuelo: 'AV204', modoVuelo: 'round_trip',
-      tarifaAdulto: 2500000, tarifaMenor: 1800000,
-      coberturaUsd: 50000, diasCobertura: 7
+      nombre: 'San AndrÃƒÂ©s All Inclusive', destino: 'San AndrÃƒÂ©s', status: 'activo',
+      servicios_incluidos: 'Vuelo ida y vuelta, Hotel 5 estrellas, AlimentaciÃƒÂ³n completa, Tour Acuario, Tour Jhonny Cay, Seguro de viaje',
+      no_incluido: 'Gastos personales, Compras, Excursiones adicionales',
+      hotel_nombre: 'Decameron San AndrÃƒÂ©s', tipo_hotel: 'resort', regimen: 'todo_incluido', noches: 4,
+      aerolinea_iata: 'AV', nro_vuelo: 'AV204', modo_vuelo: 'round_trip',
+      tarifa_adulto: 2500000, tarifa_menor: 1800000,
+      cobertura_usd: 50000, dias_cobertura: 7
     },
     {
       nombre: 'Cartagena Boutique', destino: 'Cartagena', status: 'activo',
-      serviciosIncluidos: 'Vuelo ida y vuelta, Hotel Boutique, Desayunos, City Tour, Tour Castillo San Felipe',
-      noIncluido: 'Almuerzos y cenas, Gastos personales, Propinas',
-      hotelNombre: 'Dann Carlton Cartagena', tipoHotel: 'boutique', regimen: 'solo_desayuno', noches: 3,
-      aerolineaIata: 'LA', nroVuelo: 'LA123', modoVuelo: 'round_trip',
-      tarifaAdulto: 1800000, tarifaMenor: 1300000,
-      coberturaUsd: 30000, diasCobertura: 5
+      servicios_incluidos: 'Vuelo ida y vuelta, Hotel Boutique, Desayunos, City Tour, Tour Castillo San Felipe',
+      no_incluido: 'Almuerzos y cenas, Gastos personales, Propinas',
+      hotel_nombre: 'Dann Carlton Cartagena', tipo_hotel: 'boutique', regimen: 'solo_desayuno', noches: 3,
+      aerolinea_iata: 'LA', nro_vuelo: 'LA123', modo_vuelo: 'round_trip',
+      tarifa_adulto: 1800000, tarifa_menor: 1300000,
+      cobertura_usd: 30000, dias_cobertura: 5
     },
     {
-      nombre: 'Medellín Aventura', destino: 'Medellín', status: 'activo',
-      serviciosIncluidos: 'Vuelo ida y vuelta, Hotel, Tour Comuna 13, Tour Guatapé, Seguro de viaje',
-      noIncluido: 'Alimentación, Gastos personales',
-      hotelNombre: 'Hotel Estelar', tipoHotel: 'hotel', regimen: 'sin_alimentacion', noches: 3,
-      aerolineaIata: 'AV', nroVuelo: 'AV412', modoVuelo: 'round_trip',
-      tarifaAdulto: 1200000, tarifaMenor: 900000,
-      coberturaUsd: 25000, diasCobertura: 4
+      nombre: 'MedellÃƒÂ­n Aventura', destino: 'MedellÃƒÂ­n', status: 'activo',
+      servicios_incluidos: 'Vuelo ida y vuelta, Hotel, Tour Comuna 13, Tour GuatapÃƒÂ©, Seguro de viaje',
+      no_incluido: 'AlimentaciÃƒÂ³n, Gastos personales',
+      hotel_nombre: 'Hotel Estelar', tipo_hotel: 'hotel', regimen: 'sin_alimentacion', noches: 3,
+      aerolinea_iata: 'AV', nro_vuelo: 'AV412', modo_vuelo: 'round_trip',
+      tarifa_adulto: 1200000, tarifa_menor: 900000,
+      cobertura_usd: 25000, dias_cobertura: 4
     },
   ];
 
@@ -462,50 +463,50 @@ async function main() {
       { nombre: p.nombre, destino: p.destino },
       {
         nombre: p.nombre, destino: p.destino, status: p.status,
-        serviciosIncluidos: p.serviciosIncluidos, noIncluido: p.noIncluido,
-        creadoPorId: usuariosMap['admin@itea.com'].id
+        servicios_incluidos: p.servicios_incluidos, no_incluido: p.no_incluido,
+        creado_por_id: usuariosMap['admin@itea.com'].id
       }
     );
-    // Solo crear relaciones si el paquete es nuevo (no existía)
-    const existingVuelo = await prisma.paqueteVuelo.findFirst({ where: { paqueteId: paquete.id } });
+    // Solo crear relaciones si el paquete es nuevo (no existÃƒÂ­a)
+    const existingVuelo = await prisma.paquete_vuelo.findFirst({ where: { paquete_id: paquete.id } });
     if (!existingVuelo) {
-      await prisma.paqueteVuelo.create({
+      await prisma.paquete_vuelo.create({
         data: {
-          paqueteId: paquete.id, aerolineaId: aerolineasMap[p.aerolineaIata].id,
-          nroVuelo: p.nroVuelo, modoVuelo: p.modoVuelo
+          paquete_id: paquete.id, aerolinea_id: aerolineasMap[p.aerolinea_iata].id,
+          nro_vuelo: p.nro_vuelo, modo_vuelo: p.modo_vuelo
         }
       });
     }
 
-    const existingHotel = await prisma.paqueteHotel.findFirst({ where: { paqueteId: paquete.id } });
+    const existingHotel = await prisma.paquete_hotel.findFirst({ where: { paquete_id: paquete.id } });
     if (!existingHotel) {
-      await prisma.paqueteHotel.create({
+      await prisma.paquete_hotel.create({
         data: {
-          paqueteId: paquete.id, hotelNombre: p.hotelNombre,
-          tipoHotel: p.tipoHotel, regimen: p.regimen, noches: p.noches
+          paquete_id: paquete.id, hotel_nombre: p.hotel_nombre,
+          tipo_hotel: p.tipo_hotel, regimen: p.regimen, noches: p.noches
         }
       });
     }
 
-    const existingTarifa = await prisma.paqueteTarifas.findFirst({ where: { paqueteId: paquete.id } });
+    const existingTarifa = await prisma.paquete_tarifas.findFirst({ where: { paquete_id: paquete.id } });
     if (!existingTarifa) {
-      await prisma.paqueteTarifas.create({
+      await prisma.paquete_tarifas.create({
         data: {
-          paqueteId: paquete.id, tarifaAdulto: p.tarifaAdulto, tarifaMenor: p.tarifaMenor
+          paquete_id: paquete.id, tarifa_adulto: p.tarifa_adulto, tarifa_menor: p.tarifa_menor
         }
       });
     }
 
-    const existingAsistencia = await prisma.paqueteAsistenciaMedica.findFirst({ where: { paqueteId: paquete.id } });
+    const existingAsistencia = await prisma.paquete_asistencia_medica.findFirst({ where: { paquete_id: paquete.id } });
     if (!existingAsistencia) {
-      await prisma.paqueteAsistenciaMedica.create({
+      await prisma.paquete_asistencia_medica.create({
         data: {
-          paqueteId: paquete.id, coberturaUsd: p.coberturaUsd, diasCobertura: p.diasCobertura
+          paquete_id: paquete.id, cobertura_usd: p.cobertura_usd, dias_cobertura: p.dias_cobertura
         }
       });
     }
   }
-  console.log('  ✓ Paquetes turísticos');
+  console.log('  Ã¢Å“â€œ Paquetes turÃƒÂ­sticos');
 
   // =========================================================
   // 12. VENTAS DE EJEMPLO
@@ -514,41 +515,41 @@ async function main() {
   const adminUser = usuariosMap['admin@itea.com'];
   const juanUser = usuariosMap['juan@itea.com'];
   const mariaUser = usuariosMap['maria@itea.com'];
-  const clientes = await prisma.clientes.findMany({ include: { persona: true } });
+  const clientes = await prisma.clientes.findMany({ include: { personas: true } });
   const getCliente = (index) => clientes[index % clientes.length];
 
   const allProveedores = await prisma.proveedores.findMany();
 
   const ventasEjemplo = [
     {
-      clienteIndex: 0, asesorId: adminUser.id, montoTotal: 2500000, status: 'pagado',
-      metodoPagoId: mpTarjetaCredito.id, comisionistaDoc: '900123456',
-      montoComisionBruto: 150000, porcentajeRetencion: 0, montoComisionNeto: 150000,
-      costoProveedor: 2100000, observaciones: 'Reserva de hotel en Santa Marta\n- 4 noches, 3 días\n- Incluye desayunos\n- Habitación con vista al mar.',
-      categoria: 'hoteleria', hotelNombre: 'Decameron Santa Marta', destino: 'Santa Marta',
+      clienteIndex: 0, asesorId: adminUser.id, monto_total: 2500000, status: 'pagado',
+      metodo_pago_id: mpTarjetaCredito.id, comisionistaDoc: '900123456',
+      monto_comision_bruto: 150000, porcentajeRetencion: 0, monto_comision_neto: 150000,
+      costo_proveedor: 2100000, observaciones: 'Reserva de hotel en Santa Marta\n- 4 noches, 3 dÃƒÂ­as\n- Incluye desayunos\n- HabitaciÃƒÂ³n con vista al mar.',
+      categoria: 'hoteleria', hotel_nombre: 'Decameron Santa Marta', destino: 'Santa Marta',
       fechaInicio: new Date('2026-05-01'), fechaFin: new Date('2026-05-04')
     },
     {
-      clienteIndex: 1, asesorId: juanUser.id, montoTotal: 800000, status: 'credito',
-      metodoPagoId: mpTransferencia.id, comisionistaDoc: '111111111',
-      montoComisionBruto: 20000, porcentajeRetencion: 0, montoComisionNeto: 20000,
-      costoProveedor: 730000, observaciones: 'Vuelo redondo Bogotá - Medellín\n- Ida: 10AM (Avianca)\n- Regreso: 6PM (Avianca)\n- Equipaje de mano de 10kg.',
+      clienteIndex: 1, asesorId: juanUser.id, monto_total: 800000, status: 'credito',
+      metodo_pago_id: mpTransferencia.id, comisionistaDoc: '111111111',
+      monto_comision_bruto: 20000, porcentajeRetencion: 0, monto_comision_neto: 20000,
+      costo_proveedor: 730000, observaciones: 'Vuelo redondo BogotÃƒÂ¡ - MedellÃƒÂ­n\n- Ida: 10AM (Avianca)\n- Regreso: 6PM (Avianca)\n- Equipaje de mano de 10kg.',
       categoria: 'tiqueteria',
-      esCredito: true, fechaVenceCredito: new Date('2026-06-15')
+      es_credito: true, fecha_vence_credito: new Date('2026-06-15')
     },
     {
-      clienteIndex: 2, asesorId: adminUser.id, montoTotal: 4500000, status: 'abonado',
-      metodoPagoId: mpEfectivo.id, comisionistaDoc: '222222222',
-      montoComisionBruto: 300000, porcentajeRetencion: 0, montoComisionNeto: 300000,
-      costoProveedor: 3700000, observaciones: 'Paquete turístico a San Andrés (Vuelo + Hotel + Tours)\n- 5 Días / 4 Noches\n- Vuelo directo\n- Hotel All Inclusive\n- Tour Acuario y Jhonny Cay.',
+      clienteIndex: 2, asesorId: adminUser.id, monto_total: 4500000, status: 'abonado',
+      metodo_pago_id: mpEfectivo.id, comisionistaDoc: '222222222',
+      monto_comision_bruto: 300000, porcentajeRetencion: 0, monto_comision_neto: 300000,
+      costo_proveedor: 3700000, observaciones: 'Paquete turÃƒÂ­stico a San AndrÃƒÂ©s (Vuelo + Hotel + Tours)\n- 5 DÃƒÂ­as / 4 Noches\n- Vuelo directo\n- Hotel All Inclusive\n- Tour Acuario y Jhonny Cay.',
       categoria: 'planes',
-      esCredito: true, fechaVenceCredito: new Date('2026-07-15'), montoPagadoCredito: 2000000
+      es_credito: true, fecha_vence_credito: new Date('2026-07-15'), monto_pagado_credito: 2000000
     },
     {
-      clienteIndex: 3, asesorId: mariaUser.id, montoTotal: 1200000, status: 'pagado',
-      metodoPagoId: mpPSE.id, comisionistaDoc: '900789012',
-      montoComisionBruto: 85000, porcentajeRetencion: 0, montoComisionNeto: 85000,
-      costoProveedor: 950000, observaciones: 'Seguro de viaje internacional cobertura 100k USD.',
+      clienteIndex: 3, asesorId: mariaUser.id, monto_total: 1200000, status: 'pagado',
+      metodo_pago_id: mpPSE.id, comisionistaDoc: '900789012',
+      monto_comision_bruto: 85000, porcentajeRetencion: 0, monto_comision_neto: 85000,
+      costo_proveedor: 950000, observaciones: 'Seguro de viaje internacional cobertura 100k USD.',
       categoria: 'seguros_viaje'
     },
   ];
@@ -560,43 +561,45 @@ async function main() {
     const venta = await createIfNotExists(
       'ventas',
       {
-        clienteId: cliente.id,
-        usuarioId: v.asesorId,
-        montoTotal: v.montoTotal,
+        cliente_id: cliente.id,
+        usuario_id: v.asesorId,
+        monto_total: v.monto_total,
         status: v.status
       },
       {
-        clienteId: cliente.id,
-        usuarioId: v.asesorId,
-        montoTotal: v.montoTotal,
-        costoProveedorTotal: v.costoProveedor || 0,
-        taTotal: v.montoTotal - (v.costoProveedor || 0),
-        comisionistaId: comisionista?.id,
-        montoComisionBruto: v.montoComisionBruto,
-        porcentajeRetencionComision: v.porcentajeRetencion,
-        montoComisionNeto: v.montoComisionNeto,
-        metodoPagoPrincipalId: v.metodoPagoId,
+        cliente_id: cliente.id,
+        usuario_id: v.asesorId,
+        monto_total: v.monto_total,
+        costo_proveedor_total: v.costo_proveedor || 0,
+        ta_total: v.monto_total - (v.costo_proveedor || 0),
+        comisionista_id: comisionista?.id,
+        monto_comision_bruto: v.monto_comision_bruto,
+        porcentaje_retencion_comision: v.porcentajeRetencion,
+        monto_comision_neto: v.monto_comision_neto,
+        metodo_pago_principal_id: v.metodo_pago_id,
         status: v.status,
-        esCredito: v.esCredito || false,
-        fechaVenceCredito: v.fechaVenceCredito || null,
-        montoPagadoCredito: v.montoPagadoCredito || 0,
+        es_credito: v.es_credito || false,
+        fecha_vence_credito: v.fecha_vence_credito || null,
+        monto_pagado_credito: v.monto_pagado_credito || 0,
         observaciones: v.observaciones || ''
       }
     );
 
-    const existingDetalle = await prisma.detalleVenta.findFirst({ where: { ventaId: venta.id } });
+    const existingDetalle = await prisma.detalle_venta.findFirst({ where: { venta_id: venta.id } });
     if (!existingDetalle) {
-      const detalle = await prisma.detalleVenta.create({
+      const detalleId = randomUUID();
+      const detalle = await prisma.detalle_venta.create({
         data: {
-          ventaId: venta.id,
+          id: detalleId,
+          venta_id: venta.id,
           categoria: v.categoria,
-          nombreServicio: v.hotelNombre || `Servicio de ${v.categoria}`,
-          subtotal: v.costoProveedor,
-          ta: v.montoTotal - v.costoProveedor,
-          costoProveedor: v.costoProveedor || 0,
-          proveedorId: allProveedores[0]?.id,
-          fechaInicioViaje: v.fechaInicio,
-          fechaFinViaje: v.fechaFin,
+          nombre_servicio: v.hotel_nombre || `Servicio de ${v.categoria}`,
+          subtotal: v.costo_proveedor,
+          ta: v.monto_total - v.costo_proveedor,
+          costo_proveedor: v.costo_proveedor || 0,
+          proveedor_id: allProveedores[0]?.id,
+          fecha_inicio_viaje: v.fechaInicio,
+          fecha_fin_viaje: v.fechaFin,
           origen: v.categoria === 'tiqueteria' ? 'Bogotá' : null,
           destino: v.destino || null
         }
@@ -604,69 +607,72 @@ async function main() {
 
       switch (v.categoria) {
         case 'hoteleria':
-          await prisma.prodHoteleria.create({
+          await prisma.prod_hoteleria.create({
             data: {
-              detalleVentaId: detalle.id,
-              hotelNombre: v.hotelNombre,
+              id: randomUUID(),
+              detalle_venta_id: detalle.id,
+              hotel_nombre: v.hotel_nombre,
               destino: v.destino,
-              tipoHotel: 'hotel',
-              fechaEntrada: v.fechaInicio,
-              fechaSalida: v.fechaFin
+              tipo_hotel: 'hotel',
+              fecha_entrada: v.fechaInicio,
+              fecha_salida: v.fechaFin
             }
           });
           break;
         case 'tiqueteria': {
-          const prodTicket = await prisma.prodTiqueteria.create({
+          const prodTicket = await prisma.prod_tiqueteria.create({
             data: {
-              detalleVentaId: detalle.id,
+              id: randomUUID(),
+              detalle_venta_id: detalle.id,
               aerolineaId: aerolineasMap['AV'].id,
-              nroReserva: `RES-${venta.id}`,
-              nroVuelo: `AV${100 + venta.id}`,
-              modoVuelo: 'round_trip',
+              nro_reserva: `RES-${venta.id}`,
+              nro_vuelo: `AV${100 + venta.id}`,
+              modo_vuelo: 'round_trip',
               planEquipajeId: equipajeMap[`${aerolineasMap['AV'].id}-Económica`]?.id
             }
           });
-          await prisma.tramosVuelo.create({
+          await prisma.tramos_vuelo.create({
             data: {
-              prodTiqueteriaId: prodTicket.id,
-              aeropuertoOrigenId: aeropuertosMap['BOG'].id,
-              aeropuertoDestinoId: aeropuertosMap['MDE'].id,
+              prod_tiqueteria_id: prodTicket.id,
+              aeropuerto_origen_id: aeropuertosMap['BOG'].id,
+              aeropuerto_destino_id: aeropuertosMap['MDE'].id,
               salida: new Date('2026-05-15T10:00:00'),
               llegada: new Date('2026-05-15T11:00:00'),
-              nroVueloTramo: `AV${100 + venta.id}`,
+              nro_vuelo_tramo: `AV${100 + venta.id}`,
               orden: 1
             }
           });
           break;
         }
         case 'planes':
-          await prisma.prodPlanes.create({
+          await prisma.prod_planes.create({
             data: {
-              detalleVentaId: detalle.id,
-              nombrePlan: 'Plan San Andrés',
+              id: randomUUID(),
+              detalle_venta_id: detalle.id,
+              nombre_plan: 'Plan San Andrés',
               aerolineaId: aerolineasMap['AV'].id,
-              adultosCount: 2, menoresCount: 0,
-              fechaViajeInicio: new Date('2026-06-01'),
-              fechaViajeFin: new Date('2026-06-05')
+              adultos_count: 2, menores_count: 0,
+              fecha_viaje_inicio: new Date('2026-06-01'),
+              fecha_viaje_fin: new Date('2026-06-05')
             }
           });
           break;
         case 'seguros_viaje':
-          await prisma.prodSeguros.create({
+          await prisma.prod_seguros.create({
             data: {
-              detalleVentaId: detalle.id,
-              tipoSeguro: 'todo_riesgo',
-              coberturaUsd: 100000,
-              diasCobertura: 15,
-              contactoEmergencia: 'Contacto de emergencia',
-              telefonoEmergencia: '3000000000'
+              id: randomUUID(),
+              detalle_venta_id: detalle.id,
+              tipo_seguro: 'todo_riesgo',
+              cobertura_usd: 100000,
+              dias_cobertura: 15,
+              telefono_contacto: '3000000000'
             }
           });
           break;
       }
     }
   }
-  console.log('  ✓ Ventas de ejemplo');
+  console.log('  Ã¢Å“â€œ Ventas de ejemplo');
 
   // =========================================================
   // 13. VENTAS MENSUALES (historial para stats)
@@ -688,7 +694,7 @@ async function main() {
       const hotelShare = 0.32, flightShare = 0.28, packageShare = 0.22, insuranceShare = 0.1, transferShare = 0.08;
 
       await upsertByUniqueWithData(
-        'ventasMensuales',
+        'ventas_mensuales',
         { year_month: { year, month } },
         {
           year, month, total, count,
@@ -701,14 +707,14 @@ async function main() {
       );
     }
   }
-  console.log('  ✓ Ventas mensuales (historial)');
+  console.log('  Ã¢Å“â€œ Ventas mensuales (historial)');
 
-  console.log('\n✅ Seed completado exitosamente!');
+  console.log('\nÃ¢Å“â€¦ Seed completado exitosamente!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error durante el seed:', e);
+    console.error('Ã¢ÂÅ’ Error durante el seed:', e);
     process.exit(1);
   })
   .finally(async () => {

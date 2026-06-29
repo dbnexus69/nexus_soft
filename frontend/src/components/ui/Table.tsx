@@ -36,13 +36,24 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
 }
 
 interface TableProps {
-  headers: React.ReactNode[];
+  headers?: React.ReactNode[];
   children: React.ReactNode;
+  className?: string;
 }
 
-export function Table({ headers, children }: TableProps) {
+export function Table({ headers, children, className = '' }: TableProps) {
+  if (!headers) {
+    return (
+      <div className={`overflow-x-auto ${className}`}>
+        <table className="w-full">
+          {children}
+        </table>
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
+    <div className={`overflow-x-auto ${className}`}>
       <table className="w-full">
         <thead>
           <tr className="bg-gray-light dark:bg-slate-800/80">
@@ -73,11 +84,11 @@ export function TableRow({ children, onClick, className = '' }: TableRowProps) {
   );
 }
 
-interface TableCellProps {
+interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   children: React.ReactNode;
   className?: string;
 }
 
-export function TableCell({ children, className = '' }: TableCellProps) {
-  return <td className={`px-4 py-3 text-sm dark:text-slate-300 ${className}`}>{children}</td>;
+export function TableCell({ children, className = '', ...props }: TableCellProps) {
+  return <td className={`px-4 py-3 text-sm dark:text-slate-300 ${className}`} {...props}>{children}</td>;
 }

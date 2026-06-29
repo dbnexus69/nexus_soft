@@ -1,20 +1,12 @@
+import React from "react";
+
 interface BadgeProps {
-  variant:
-    | "pagado"
-    | "abonado"
-    | "credito"
-    | "active"
-    | "inactive"
-    | "realizado"
-    | "pendiente-check"
-    | "accent"
-    | "danger"
-    | "anulado";
+  variant: string;
   children: React.ReactNode;
   className?: string;
 }
 
-export function Badge({ variant, children, className = "" }: BadgeProps) {
+export const Badge = React.memo(function Badge({ variant, children, className = "" }: BadgeProps) {
   const variants: Record<string, string> = {
     pagado: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400",
     abonado: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400",
@@ -36,4 +28,4 @@ export function Badge({ variant, children, className = "" }: BadgeProps) {
       {children}
     </span>
   );
-}
+});

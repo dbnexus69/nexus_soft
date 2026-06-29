@@ -3,6 +3,7 @@ import {
   CreditCard, Pencil, Trash2, Coins, IdCard, 
   PlaneTakeoff, Building2, Compass, Luggage, Boxes, MapPin, Moon, ShieldCheck, Eye
 } from 'lucide-react';
+import { formatMealPlan } from '../../utils/formatters';
 
 interface ConfigGridsProps {
   section: string;
@@ -22,7 +23,7 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
   if (section === 'cards') {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredData.map((card) => {
+        {filteredData.map((card, idx) => {
           const gradients = [
             'from-slate-700 via-slate-800 to-slate-900 border border-slate-600/40 shadow-slate-900/50',
             'from-blue-700 via-indigo-900 to-slate-900 border border-blue-500/40 shadow-blue-900/50',
@@ -30,11 +31,11 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
             'from-teal-600 via-emerald-800 to-slate-900 border border-teal-400/40 shadow-emerald-900/50'
           ];
           const isOptimistic = isOptimisticId(card);
-          const gradIndex = Math.abs(Number(card.id)) % gradients.length;
+          const gradIndex = Math.abs(Number(card.id || idx)) % gradients.length;
           const grad = gradients[gradIndex];
           
           return (
-            <div key={card.id} className={`relative bg-gradient-to-br ${grad} text-white p-6 rounded-2xl shadow-lg hover:scale-[1.01] hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between min-h-[220px] ${isOptimistic ? 'opacity-75 animate-pulse' : ''}`}>
+            <div key={card.id ?? `card-${idx}`} className={`relative bg-gradient-to-br ${grad} text-white p-6 rounded-2xl shadow-lg hover:scale-[1.01] hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between min-h-[220px] ${isOptimistic ? 'opacity-75 animate-pulse' : ''}`}>
               <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4 pointer-events-none select-none text-white">
                 <CreditCard size={180} />
               </div>
@@ -98,9 +99,10 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
   if (section === 'paymentMethods') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredData.map((method) => {
-          const isCard = method.name.toLowerCase().includes('tarjeta') || method.name.toLowerCase().includes('crédito');
-          const isTransfer = method.name.toLowerCase().includes('transfe') || method.name.toLowerCase().includes('banco') || method.name.toLowerCase().includes('llaves');
+        {filteredData.map((method, idx) => {
+          const methodName = method.name || method.nombre || '';
+          const isCard = methodName.toLowerCase().includes('tarjeta') || methodName.toLowerCase().includes('crédito');
+          const isTransfer = methodName.toLowerCase().includes('transfe') || methodName.toLowerCase().includes('banco') || methodName.toLowerCase().includes('llaves');
           const isOptimistic = isOptimisticId(method);
           const theme = isCard ? {
             border: 'border-purple-200 hover:border-purple-400 dark:border-purple-500/30 dark:hover:border-purple-400/50',
@@ -119,19 +121,19 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
             bg: 'from-amber-50/40 via-white to-amber-50/10 dark:from-slate-800 dark:via-slate-800/90 dark:to-slate-900 shadow-amber-500/5 dark:shadow-amber-500/10',
             iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
             tagBg: 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
-            label: 'Efectivo / Llave'
+            label: 'Efectivo / Otros'
           };
 
           return (
-            <div key={method.id} className={`bg-gradient-to-br ${theme.bg} border ${theme.border} rounded-2xl p-5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between group relative overflow-hidden min-h-[130px] ${isOptimistic ? 'opacity-70 animate-pulse' : ''}`}>
+            <div key={method.id ?? `pm-${idx}`} className={`bg-gradient-to-br ${theme.bg} border ${theme.border} rounded-2xl p-5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between group relative overflow-hidden min-h-[130px] ${isOptimistic ? 'opacity-70 animate-pulse' : ''}`}>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl ${theme.iconBg} flex items-center justify-center transition-transform group-hover:rotate-6 duration-300 shadow-sm`}>
                     <Coins size={18} />
                   </div>
                   <div>
-                    <span className="font-heading font-bold text-gray-800 dark:text-slate-100 text-xs block group-hover:text-primary dark:group-hover:text-teal-400 transition-colors">{method.name}</span>
-                    <span className="text-[9px] text-gray-400 dark:text-slate-400 font-mono tracking-wider">{isOptimistic ? '⏳ Guardando...' : `REF ID: #${method.id.toString().padStart(3, '0')}`}</span>
+                    <span className="font-heading font-bold text-gray-800 dark:text-slate-100 text-xs block group-hover:text-primary dark:group-hover:text-teal-400 transition-colors">{methodName}</span>
+                    <span className="text-[9px] text-gray-400 dark:text-slate-400 font-mono tracking-wider">{isOptimistic ? '⏳ Guardando...' : `REF ID: #${method.id != null ? method.id.toString().padStart(3, '0') : '---'}`}</span>
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-4">
@@ -161,8 +163,9 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
   if (section === 'documentTypes') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredData.map((doc) => {
-          const isNational = doc.name.toLowerCase().includes('cédula') || doc.name.toLowerCase().includes('cc') || doc.name.toLowerCase().includes('nit');
+        {filteredData.map((doc, idx) => {
+          const docName = doc.name || doc.nombre || '';
+          const isNational = docName.toLowerCase().includes('cédula') || docName.toLowerCase().includes('cc') || docName.toLowerCase().includes('nit');
           const isOptimistic = isOptimisticId(doc);
           const theme = isNational ? {
             border: 'border-blue-200 hover:border-blue-400 dark:border-blue-500/30 dark:hover:border-blue-400/50',
@@ -179,15 +182,15 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
           };
 
           return (
-            <div key={doc.id} className={`bg-gradient-to-br ${theme.bg} border ${theme.border} rounded-2xl p-5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between group relative overflow-hidden min-h-[130px] ${isOptimistic ? 'opacity-70 animate-pulse' : ''}`}>
+            <div key={doc.id ?? `doc-${idx}`} className={`bg-gradient-to-br ${theme.bg} border ${theme.border} rounded-2xl p-5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between group relative overflow-hidden min-h-[130px] ${isOptimistic ? 'opacity-70 animate-pulse' : ''}`}>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl ${theme.iconBg} flex items-center justify-center transition-transform group-hover:rotate-6 duration-300 shadow-sm`}>
                     <IdCard size={18} />
                   </div>
                   <div>
-                    <span className="font-heading font-bold text-gray-800 dark:text-slate-100 text-xs block group-hover:text-primary dark:group-hover:text-teal-400 transition-colors">{doc.name}</span>
-                    <span className="text-[9px] text-gray-400 dark:text-slate-400 font-mono tracking-wider">{isOptimistic ? '⏳ Guardando...' : `REF ID: #${doc.id.toString().padStart(3, '0')}`}</span>
+                    <span className="font-heading font-bold text-gray-800 dark:text-slate-100 text-xs block group-hover:text-primary dark:group-hover:text-teal-400 transition-colors">{docName}</span>
+                    <span className="text-[9px] text-gray-400 dark:text-slate-400 font-mono tracking-wider">{isOptimistic ? '⏳ Guardando...' : `REF ID: #${doc.id != null ? doc.id.toString().padStart(3, '0') : '---'}`}</span>
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-4">
@@ -530,7 +533,7 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
                       <Building2 size={10} /> Hotel
                     </span>
                     <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 truncate">{pkg.accommodation?.hotel || '-'}</p>
-                    <p className="text-[10px] text-accent dark:text-teal-400 font-medium">{pkg.accommodation?.mealPlan || '-'}</p>
+                    <p className="text-[10px] text-accent dark:text-teal-400 font-medium">{formatMealPlan(pkg.accommodation?.mealPlan)}</p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
@@ -563,7 +566,7 @@ export default function ConfigGrids({ section, filteredData, handleOpenModal, ha
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center">
-                  <span className="text-[10px] text-gray-400 dark:text-slate-500 font-mono tracking-tighter">{isOptimistic ? '⏳ Guardando...' : `PKG-ID: #${pkg.id.toString().padStart(4, '0')}`}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-slate-500 font-mono tracking-tighter">{isOptimistic ? '⏳ Guardando...' : `PKG-ID: #${pkg.id != null ? pkg.id.toString().padStart(4, '0') : '----'}`}</span>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => setViewingPackage(pkg)}

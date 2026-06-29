@@ -2,8 +2,9 @@ const { Router } = require('express');
 const router = Router();
 const controller = require('../controllers/responsables.controller');
 const auth = require('../middleware/auth');
-const { authorize } = require('../middleware/authorize');
 const paginate = require('../middleware/paginate');
+const { validate } = require('../middleware/validate');
+const { createResponsableSchema, updateResponsableSchema } = require('../schemas/responsables.schema');
 
 const requireAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
@@ -16,9 +17,9 @@ router.use(auth);
 router.use(requireAdmin);
 
 router.get('/', paginate, controller.list);
-router.post('/', controller.create);
+router.post('/', validate(createResponsableSchema), controller.create);
 router.get('/:id', controller.getById);
-router.put('/:id', controller.update);
+router.put('/:id', validate(updateResponsableSchema), controller.update);
 router.delete('/:id', controller.delete);
 
 module.exports = router;

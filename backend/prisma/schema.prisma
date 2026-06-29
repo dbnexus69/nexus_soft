@@ -9,25 +9,703 @@ datasource db {
   relationMode = "foreignKeys"
 }
 
-// =========================================================
-// ENUMS
-// =========================================================
+model aerolineas {
+  id                 Int                  @id @default(autoincrement())
+  nombre             String
+  codigo_iata        String?              @unique
+  tipo               Cobertura            @default(Internacional)
+  web                String?
+  paquete_vuelo      paquete_vuelo[]
+  politicas_equipaje politicas_equipaje[]
+  prod_planes        prod_planes[]
+  prod_tiqueteria    prod_tiqueteria[]
+  tramos_vuelo       tramos_vuelo[]
+}
 
-enum UserStatus {
-  active
-  inactive
+model aeropuertos {
+  id                                                           Int            @id @default(autoincrement())
+  nombre                                                       String
+  codigo_iata                                                  String         @unique
+  ciudad                                                       String?
+  pais                                                         String?
+  tipo                                                         Cobertura      @default(Ambos)
+  status                                                       UserStatus     @default(active)
+  tramos_vuelo_tramos_vuelo_aeropuerto_destino_idToaeropuertos tramos_vuelo[] @relation("tramos_vuelo_aeropuerto_destino_idToaeropuertos")
+  tramos_vuelo_tramos_vuelo_aeropuerto_origen_idToaeropuertos  tramos_vuelo[] @relation("tramos_vuelo_aeropuerto_origen_idToaeropuertos")
+}
+
+model clientes {
+  id             Int       @id @default(autoincrement())
+  persona_id     Int       @unique
+  creado_por_id  Int?
+  fecha_registro DateTime  @default(now())
+  deleted_at     DateTime?
+  usuarios       usuarios? @relation(fields: [creado_por_id], references: [id])
+  personas       personas  @relation(fields: [persona_id], references: [id])
+  ventas         ventas[]
+}
+
+model comisionistas {
+  id                     Int                      @id @default(autoincrement())
+  persona_id             Int                      @unique
+  tipo                   String?
+  umbral_pago            Float?                   @default(0)
+  acumulado              Float?                   @default(0)
+  status                 AgentStatus              @default(Activo)
+  creado_at              DateTime                 @default(now())
+  personas               personas                 @relation(fields: [persona_id], references: [id])
+  liquidaciones_comision liquidaciones_comision[]
+  ventas                 ventas[]
+}
+
+model detalle_venta {
+  id                       String              @id
+  venta_id                 Int
+  categoria                String
+  nombre_servicio          String?
+  subtotal                 Float?              @default(0)
+  ta                       Float?              @default(0)
+  costo_proveedor          Float?              @default(0)
+  proveedor_id             Int?
+  metodo_pago_proveedor_id Int?
+  voucher_url              String?
+  fecha_inicio_viaje       DateTime?
+  fecha_fin_viaje          DateTime?
+  origen                   String?
+  destino                  String?
+  observaciones            String?
+  creado_at                DateTime?           @default(now())
+  metodos_pago             metodos_pago?       @relation(fields: [metodo_pago_proveedor_id], references: [id])
+  proveedores              proveedores?        @relation(fields: [proveedor_id], references: [id])
+  ventas                   ventas              @relation(fields: [venta_id], references: [id])
+  pasajeros_detalle        pasajeros_detalle[]
+  prod_autos               prod_autos?
+  prod_checkins            prod_checkins?
+  prod_eventos             prod_eventos?
+  prod_fincas              prod_fincas?
+  prod_hoteleria           prod_hoteleria?
+  prod_mascotas            prod_mascotas?
+  prod_migracion           prod_migracion?
+  prod_pasaportes          prod_pasaportes?
+  prod_planes              prod_planes?
+  prod_restaurantes        prod_restaurantes?
+  prod_seguros             prod_seguros?
+  prod_simcards            prod_simcards?
+  prod_tiqueteria          prod_tiqueteria?
+  prod_tours               prod_tours?
+  prod_visas               prod_visas?
+
+  @@index([metodo_pago_proveedor_id])
+  @@index([proveedor_id])
+  @@index([venta_id])
+}
+
+model liquidacion_ventas {
+  id                     Int                    @id @default(autoincrement())
+  liquidacion_id         Int
+  venta_id               Int
+  liquidaciones_comision liquidaciones_comision @relation(fields: [liquidacion_id], references: [id])
+  ventas                 ventas                 @relation(fields: [venta_id], references: [id])
+
+  @@unique([liquidacion_id, venta_id])
+}
+
+model liquidaciones_comision {
+  id                 Int                  @id @default(autoincrement())
+  comisionista_id    Int
+  fecha              DateTime
+  monto              Float
+  metodo_pago_id     Int?
+  referencia         String?
+  notas              String?
+  creado_at          DateTime             @default(now())
+  liquidacion_ventas liquidacion_ventas[]
+  comisionistas      comisionistas        @relation(fields: [comisionista_id], references: [id])
+  metodos_pago       metodos_pago?        @relation(fields: [metodo_pago_id], references: [id])
+}
+
+model logs_usuarios {
+  id          Int      @id @default(autoincrement())
+  usuario_id  Int
+  accion      String?
+  modulo      String?
+  descripcion String?
+  fecha       DateTime @default(now())
+  usuarios    usuarios @relation(fields: [usuario_id], references: [id])
+}
+
+model metodos_pago {
+  id                     Int                      @id @default(autoincrement())
+  nombre                 String                   @unique
+  detalle_venta          detalle_venta[]
+  liquidaciones_comision liquidaciones_comision[]
+  pagos_venta            pagos_venta[]
+  tarjetas_agencia       tarjetas_agencia[]
+  ventas                 ventas[]
+}
+
+model pagos_venta {
+  id             String        @id
+  venta_id       Int
+  monto          Float
+  metodo_pago_id Int?
+  referencia     String?
+  fecha_pago     DateTime      @default(now())
+  metodos_pago   metodos_pago? @relation(fields: [metodo_pago_id], references: [id])
+  ventas         ventas        @relation(fields: [venta_id], references: [id])
+
+  @@index([venta_id])
+}
+
+model paquete_asistencia_medica {
+  id             Int      @id @default(autoincrement())
+  paquete_id     Int      @unique
+  cobertura_usd  Float    @default(0)
+  dias_cobertura Int      @default(0)
+  paquetes       paquetes @relation(fields: [paquete_id], references: [id])
+}
+
+model paquete_hotel {
+  id           Int                 @id @default(autoincrement())
+  paquete_id   Int
+  hotel_nombre String
+  tipo_hotel   TipoHotel?          @default(hotel)
+  regimen      RegimenAlimenticio? @default(full)
+  noches       Int?
+  paquetes     paquetes            @relation(fields: [paquete_id], references: [id])
+}
+
+model paquete_proveedor {
+  id           Int         @id @default(autoincrement())
+  paquete_id   Int
+  proveedor_id Int
+  paquetes     paquetes    @relation(fields: [paquete_id], references: [id])
+  proveedores  proveedores @relation(fields: [proveedor_id], references: [id])
+}
+
+model paquete_tarifas {
+  id             Int           @id @default(autoincrement())
+  paquete_id     Int
+  tarifa_adulto  Float         @default(0)
+  tarifa_menor   Float?
+  vigencia_desde DateTime?
+  vigencia_hasta DateTime?
+  paquetes       paquetes      @relation(fields: [paquete_id], references: [id])
+  prod_planes    prod_planes[]
+}
+
+model paquete_vuelo {
+  id            Int         @id @default(autoincrement())
+  paquete_id    Int
+  aerolinea_id  Int?
+  nro_vuelo     String?
+  modo_vuelo    FlightMode? @default(round_trip)
+  trayectos     Json?
+  plan_equipaje String?
+  aerolineas    aerolineas? @relation(fields: [aerolinea_id], references: [id])
+  paquetes      paquetes    @relation(fields: [paquete_id], references: [id])
+}
+
+model paquetes {
+  id                        Int                        @id @default(autoincrement())
+  nombre                    String
+  destino                   String
+  servicios_incluidos       String?
+  no_incluido               String?
+  status                    EstadoPaquete              @default(activo)
+  creado_por_id             Int?
+  creado_at                 DateTime                   @default(now())
+  deleted_at                DateTime?
+  paquete_asistencia_medica paquete_asistencia_medica?
+  paquete_hotel             paquete_hotel[]
+  paquete_proveedor         paquete_proveedor[]
+  paquete_tarifas           paquete_tarifas[]
+  paquete_vuelo             paquete_vuelo[]
+  usuarios                  usuarios?                  @relation(fields: [creado_por_id], references: [id])
+  prod_planes               prod_planes[]
+}
+
+model pasajeros_detalle {
+  id               String        @id
+  detalle_venta_id String
+  persona_id       Int
+  es_titular       Boolean?      @default(false)
+  asiento          String?
+  nro_reserva      String?
+  nro_tiquete      String?
+  nota             String?
+  detalle_venta    detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  personas         personas      @relation(fields: [persona_id], references: [id])
+
+  @@index([detalle_venta_id])
+  @@index([persona_id])
+}
+
+model permisos {
+  id               Int                @id @default(autoincrement())
+  modulo           String
+  accion           String
+  descripcion      String?
+  permisos_rol     permisos_rol[]
+  permisos_usuario permisos_usuario[]
+}
+
+model permisos_rol {
+  id         Int      @id @default(autoincrement())
+  rol_id     Int
+  permiso_id Int
+  valor      String   @default("true")
+  permisos   permisos @relation(fields: [permiso_id], references: [id])
+  roles      roles    @relation(fields: [rol_id], references: [id])
+
+  @@unique([rol_id, permiso_id])
+}
+
+model permisos_usuario {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int
+  permiso_id Int
+  permitido  Boolean  @default(true)
+  valor      String   @default("true")
+  permisos   permisos @relation(fields: [permiso_id], references: [id])
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id])
+
+  @@unique([usuario_id, permiso_id])
+}
+
+model personas {
+  id                Int                 @id @default(autoincrement())
+  nombres           String
+  apellidos         String
+  tipo_documento_id Int?
+  documento         String?             @unique
+  email             String?
+  telefono          String?
+  birth_date        DateTime?
+  nacionalidad      String?
+  avatar_url        String?
+  status            UserStatus          @default(active)
+  creado_at         DateTime            @default(now())
+  updated_at        DateTime?
+  deleted_at        DateTime?
+  clientes          clientes?
+  comisionistas     comisionistas?
+  pasajeros_detalle pasajeros_detalle[]
+  tipos_documento   tipos_documento?    @relation(fields: [tipo_documento_id], references: [id])
+  responsables      responsables?
+  usuarios          usuarios?
+}
+
+model politicas_equipaje {
+  id                Int               @id @default(autoincrement())
+  aerolinea_id      Int
+  tipo_tarifa       String
+  articulo_personal String?
+  equipaje_mano     String?
+  equipaje_bodega   String?
+  notas             String?
+  aerolineas        aerolineas        @relation(fields: [aerolinea_id], references: [id])
+  prod_tiqueteria   prod_tiqueteria[]
+  tramos_vuelo      tramos_vuelo[]
+}
+
+model prod_autos {
+  id                      String        @id
+  detalle_venta_id        String        @unique
+  conductor_nombre        String?
+  licencia_nro            String?
+  fecha_recogida          DateTime?
+  fecha_devolucion        DateTime?
+  lugar_recogida          String?
+  categoria_auto          String?
+  conductores_adicionales Int?          @default(0)
+  tipo_seguro             String?
+  tarjeta_garantia_info   String?
+  detalle_venta           detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_checkins {
+  id                     String        @id
+  detalle_venta_id       String        @unique
+  nro_vuelo_reserva      String?
+  fecha_viaje            DateTime?
+  asiento                String?
+  maletas_contadas       String?
+  telefono_contacto      String?
+  necesidades_especiales String?
+  usa_silla_ruedas       Boolean?      @default(false)
+  detalle_venta          detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_eventos {
+  id                  String        @id
+  detalle_venta_id    String        @unique
+  organizacion        String?
+  nombre_contacto     String?
+  email_contacto      String?
+  fechaInicio         DateTime?
+  fechaFin            DateTime?
+  asistencia_estimada Int?
+  espacio_requerido   String?
+  tipo_evento         String?
+  equipos_av          String?
+  requiere_catering   Boolean?      @default(false)
+  notas_catering      String?
+  ciudad              String?       @db.VarChar(40)
+  direccion           String?       @db.VarChar(40)
+  nombre_lugar        String?       @db.VarChar(40)
+  detalle_venta       detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_fincas {
+  id                    String        @id
+  detalle_venta_id      String        @unique
+  responsable_nombre    String?
+  documento_responsable String?
+  fecha_entrada         DateTime?
+  fecha_salida          DateTime?
+  adultos_count         Int?
+  ninos_count           Int?
+  tiene_mascotas        Boolean?      @default(false)
+  tipo_mascota          String?
+  servicios_extra       String?
+  nombre_finca          String?
+  direccion_finca       String?
+  ciudad_pueblo         String?
+  observaciones         String?
+  detalle_venta         detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_hoteleria {
+  id               String        @id
+  detalle_venta_id String        @unique
+  hotel_nombre     String?
+  tipo_hotel       TipoHotel?    @default(hotel)
+  destino          String?
+  nro_reserva      String?
+  fecha_entrada    DateTime?
+  fecha_salida     DateTime?
+  observaciones    String?
+  detalle_venta    detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_mascotas {
+  id                  String         @id
+  detalle_venta_id    String         @unique
+  mascota_nombre      String?
+  especie             String?
+  raza                String?
+  peso_kg             Float?
+  tamanoMascota       TamanoMascota?
+  transporte_tipo     String?
+  fecha_viaje         DateTime?
+  pais_destino        String?
+  condiciones_medicas String?
+  telefono_contacto   String?
+  empresa_transporte  String?
+  observaciones       String?
+  detalle_venta       detalle_venta  @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_migracion {
+  id                      String        @id
+  detalle_venta_id        String        @unique
+  tipo_tramite_migratorio String?
+  nacionalidad            String?
+  tipo_documento          String?       @default("Pasaporte")
+  pasaporte_nro           String?
+  pasaporte_vence         DateTime?
+  pais_destino            String?
+  detalle_venta           detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_pasaportes {
+  id                   String        @id
+  detalle_venta_id     String        @unique
+  nombre_completo      String?
+  nro_documento        String?
+  fecha_nacimiento     DateTime?
+  ciudad_residencia    String?
+  tipo_tramite         String?
+  fecha_estimada_viaje DateTime?
+  telefono_contacto    String?
+  detalle_venta        detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_planes {
+  id                          String           @id
+  detalle_venta_id            String           @unique
+  paqueteId                   Int?
+  paquete_tarifa_id           Int?
+  nombre_plan                 String?
+  nombre_hotel                String?
+  aerolineaId                 Int?
+  nro_vuelo                   String?
+  nro_reserva                 String?
+  nro_tiquete                 String?
+  fecha_viaje_inicio          DateTime?
+  fecha_viaje_fin             DateTime?
+  fecha_salida_vuelo          DateTime?
+  fecha_llegada_vuelo         DateTime?
+  fecha_regreso_vuelo         DateTime?
+  fecha_llegada_regreso_vuelo DateTime?
+  adultos_count               Int?
+  menores_count               Int?
+  numero_confirmacion         String?
+  observaciones               String?
+  checkin_status_ida          CheckinStatus?   @default(pendiente)
+  checkin_status_regreso      CheckinStatus?   @default(pendiente)
+  tipo_paquete                String?          @default("own")
+  aerolineas                  aerolineas?      @relation(fields: [aerolineaId], references: [id])
+  detalle_venta               detalle_venta    @relation(fields: [detalle_venta_id], references: [id])
+  paquetes                    paquetes?        @relation(fields: [paqueteId], references: [id])
+  paquete_tarifas             paquete_tarifas? @relation(fields: [paquete_tarifa_id], references: [id])
+}
+
+model prod_restaurantes {
+  id                  String        @id
+  detalle_venta_id    String        @unique
+  nombre_reserva      String?
+  fecha_hora_reserva  DateTime?
+  personas_count      Int?
+  preferencia_mesa    String?
+  tipo_menu           String?
+  restricciones_dieta String?
+  ocasion_especial    String?
+  telefono_contacto   String?
+  detalle_venta       detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_seguros {
+  id                    String        @id
+  detalle_venta_id      String        @unique
+  tipo_seguro           String?
+  cobertura_usd         Float?        @default(0)
+  dias_cobertura        Int?          @default(0)
+  fecha_inicio_vigencia DateTime?
+  fecha_fin_vigencia    DateTime?
+  telefono_contacto     String?
+  detalle_venta         detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_simcards {
+  id               String        @id
+  detalle_venta_id String        @unique
+  pais_destino     String?
+  fecha_llegada    DateTime?
+  duracion_viaje   String?
+  plan_datos       String?
+  tipo_sim         String?
+  metodo_entrega   String?
+  detalle_venta    detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_tiqueteria {
+  id                 String              @id
+  detalle_venta_id   String              @unique
+  aerolineaId        Int?
+  nro_reserva        String?
+  nro_vuelo          String?
+  nro_tiquete        String?
+  modo_vuelo         FlightMode?         @default(one_way)
+  planEquipajeId     Int?
+  checkin_status     CheckinStatus?      @default(pendiente)
+  aerolineas         aerolineas?         @relation(fields: [aerolineaId], references: [id])
+  detalle_venta      detalle_venta       @relation(fields: [detalle_venta_id], references: [id])
+  politicas_equipaje politicas_equipaje? @relation(fields: [planEquipajeId], references: [id])
+  tramos_vuelo       tramos_vuelo[]
+}
+
+model prod_tours {
+  id                  String        @id
+  detalle_venta_id    String        @unique
+  tour_nombre         String?
+  fecha_preferida     DateTime?
+  adultos_count       Int?          @default(1)
+  menores_count       Int?          @default(0)
+  edades_menores      String?
+  idioma_guia         String?
+  requiere_transporte Boolean?      @default(false)
+  punto_encuentro     String?
+  condiciones_medicas String?
+  telefono_contacto   String?
+  observaciones       String?
+  detalle_venta       detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model prod_visas {
+  id                    String        @id
+  detalle_venta_id      String        @unique
+  nombre_completo       String?
+  fecha_nacimiento      DateTime?
+  nacionalidad          String?
+  tipo_documento        String?       @default("Pasaporte")
+  nro_pasaporte         String?
+  vencimiento_pasaporte DateTime?
+  pais_aplicacion       String?
+  tipo_visa             String?
+  fecha_estimada_viaje  DateTime?
+  email_contacto        String?
+  detalle_venta         detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+}
+
+model proveedores {
+  id                Int                 @id @default(autoincrement())
+  nombre            String
+  tipo              String?
+  email_contacto    String?
+  telefono          String?
+  web               String?
+  observaciones     String?
+  status            UserStatus          @default(active)
+  detalle_venta     detalle_venta[]
+  paquete_proveedor paquete_proveedor[]
+}
+
+model responsables {
+  id         Int        @id @default(autoincrement())
+  persona_id Int        @unique
+  status     UserStatus @default(active)
+  creado_at  DateTime   @default(now())
+  deleted_at DateTime?
+  personas   personas   @relation(fields: [persona_id], references: [id])
+  ventas     ventas[]
+}
+
+model roles {
+  id           Int            @id @default(autoincrement())
+  nombre       String         @unique
+  descripcion  String?
+  permisos_rol permisos_rol[]
+  usuarios     usuarios[]
+}
+
+model sesiones {
+  id         String   @id
+  usuario_id Int
+  token_hash String
+  expires_at DateTime
+  creado_at  DateTime @default(now())
+  user_agent String?
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id])
+}
+
+model tarjetas_agencia {
+  id             Int           @id @default(autoincrement())
+  nombre         String
+  metodo_pago_id Int?
+  ultimos_cuatro String?
+  descripcion    String?
+  status         UserStatus    @default(active)
+  creado_at      DateTime      @default(now())
+  metodos_pago   metodos_pago? @relation(fields: [metodo_pago_id], references: [id])
+}
+
+model tipos_documento {
+  id          Int        @id @default(autoincrement())
+  nombre      String
+  abreviatura String     @unique
+  personas    personas[]
+}
+
+model tramos_vuelo {
+  id                                                          String              @id
+  prod_tiqueteria_id                                          String
+  aeropuerto_origen_id                                        Int
+  aeropuerto_destino_id                                       Int
+  salida                                                      DateTime
+  llegada                                                     DateTime
+  nro_vuelo_tramo                                             String?
+  asiento                                                     String?
+  orden                                                       Int                 @default(1)
+  checkin_status                                              CheckinStatus?      @default(pendiente)
+  nro_tiquete                                                 String?
+  aerolinea_id                                                Int?
+  plan_equipaje_id                                            Int?
+  aerolineas                                                  aerolineas?         @relation(fields: [aerolinea_id], references: [id])
+  aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos aeropuertos         @relation("tramos_vuelo_aeropuerto_destino_idToaeropuertos", fields: [aeropuerto_destino_id], references: [id])
+  aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos  aeropuertos         @relation("tramos_vuelo_aeropuerto_origen_idToaeropuertos", fields: [aeropuerto_origen_id], references: [id])
+  politicas_equipaje                                          politicas_equipaje? @relation(fields: [plan_equipaje_id], references: [id])
+  prod_tiqueteria                                             prod_tiqueteria     @relation(fields: [prod_tiqueteria_id], references: [id])
+
+  @@index([aeropuerto_destino_id])
+  @@index([aeropuerto_origen_id])
+  @@index([prod_tiqueteria_id])
+}
+
+model usuarios {
+  id               Int                @id @default(autoincrement())
+  persona_id       Int                @unique
+  email            String             @unique
+  password_hash    String
+  rol_id           Int
+  status           UserStatus         @default(active)
+  ultimo_login     DateTime?
+  creado_at        DateTime           @default(now())
+  clientes         clientes[]
+  logs_usuarios    logs_usuarios[]
+  paquetes         paquetes[]
+  permisos_usuario permisos_usuario[]
+  sesiones         sesiones[]
+  personas         personas           @relation(fields: [persona_id], references: [id])
+  roles            roles              @relation(fields: [rol_id], references: [id])
+  ventas           ventas[]
+}
+
+model ventas {
+  id                            Int                  @id @default(autoincrement())
+  cliente_id                    Int
+  usuario_id                    Int
+  monto_total                   Float                @default(0)
+  costo_proveedor_total         Float?               @default(0)
+  ta_total                      Float?               @default(0)
+  comisionista_id               Int?
+  responsable_id                Int?
+  monto_comision_bruto          Float?               @default(0)
+  porcentaje_retencion_comision Float?               @default(0)
+  monto_comision_neto           Float?               @default(0)
+  comision_liquidada            Boolean?             @default(false)
+  metodo_pago_principal_id      Int?
+  status                        SaleStatus           @default(credito)
+  es_credito                    Boolean?             @default(false)
+  fecha_vence_credito           DateTime?
+  monto_pagado_credito          Float?               @default(0)
+  is_reviewed                   Boolean?             @default(false)
+  observaciones                 String?
+  creado_at                     DateTime             @default(now())
+  deleted_at                    DateTime?
+  detalle_venta                 detalle_venta[]
+  liquidacion_ventas            liquidacion_ventas[]
+  pagos_venta                   pagos_venta[]
+  clientes                      clientes             @relation(fields: [cliente_id], references: [id])
+  comisionistas                 comisionistas?       @relation(fields: [comisionista_id], references: [id])
+  metodos_pago                  metodos_pago?        @relation(fields: [metodo_pago_principal_id], references: [id])
+  responsables                  responsables?        @relation(fields: [responsable_id], references: [id])
+  usuarios                      usuarios             @relation(fields: [usuario_id], references: [id])
+
+  @@index([cliente_id])
+  @@index([comisionista_id])
+  @@index([usuario_id])
+}
+
+model ventas_mensuales {
+  id             Int    @id @default(autoincrement())
+  year           Int
+  month          Int
+  total          Float
+  count          Int
+  hoteles        Float?
+  vuelos         Float?
+  paquetes       Float?
+  seguros        Float?
+  transferencias Float?
+
+  @@unique([year, month])
 }
 
 enum AgentStatus {
   Activo
   Inactivo
-}
-
-enum SaleStatus {
-  credito
-  abonado
-  pagado
-  anulado
 }
 
 enum CheckinStatus {
@@ -42,7 +720,31 @@ enum Cobertura {
   Ambos
 }
 
+enum EstadoPaquete {
+  activo
+  inactivo
+  agotado
+}
 
+enum FlightMode {
+  one_way
+  round_trip
+}
+
+enum RegimenAlimenticio {
+  solo_desayuno
+  media_pension
+  todo_incluido
+  full
+  sin_alimentacion
+}
+
+enum SaleStatus {
+  credito
+  abonado
+  pagado
+  anulado
+}
 
 enum TamanoMascota {
   pequeno
@@ -60,868 +762,7 @@ enum TipoHotel {
   fincas
 }
 
-enum RegimenAlimenticio {
-  solo_desayuno
-  media_pension
-  todo_incluido
-  full
-  sin_alimentacion
-}
-
-enum EstadoPaquete {
-  activo
-  inactivo
-  agotado
-}
-
-enum FlightMode {
-  one_way
-  round_trip
-}
-
-// =========================================================
-// TABLAS MAESTRAS / CATÁLOGOS BASE
-// =========================================================
-
-model TiposDocumento {
-  id        Int        @id @default(autoincrement())
-  nombre    String
-  abreviatura String  @unique
-
-  personas  Personas[]
-
-  @@map("tipos_documento")
-}
-
-model MetodosPago {
-  id       Int       @id @default(autoincrement())
-  nombre   String    @unique
-
-  tarjetasAgencia     TarjetasAgencia[]
-  pagosVenta          PagosVenta[]
-  ventas              Ventas[]          @relation("metodo_pago_principal")
-  detalleVentas       DetalleVenta[]    @relation("metodo_pago_proveedor")
-  liquidaciones       LiquidacionesComision[]
-
-  @@map("metodos_pago")
-}
-
-model Roles {
-  id          Int            @id @default(autoincrement())
-  nombre      String         @unique
-  descripcion String?
-
-  usuarios    Usuarios[]
-  permisosRol PermisosRol[]
-
-  @@map("roles")
-}
-
-model Permisos {
-  id          Int            @id @default(autoincrement())
-  modulo      String
-  accion      String
-  descripcion String?
-
-  permisosRol    PermisosRol[]
-  permisosUsuario PermisosUsuario[]
-
-  @@map("permisos")
-}
-
-model PermisosRol {
-  id         Int     @id @default(autoincrement())
-  rolId      Int     @map("rol_id")
-  permisoId  Int     @map("permiso_id")
-  valor      String  @default("true") @map("valor")
-
-  rol        Roles   @relation(fields: [rolId], references: [id])
-  permiso    Permisos @relation(fields: [permisoId], references: [id])
-
-  @@unique([rolId, permisoId])
-  @@map("permisos_rol")
-}
-
-// =========================================================
-// TARJETAS / INSTRUMENTOS DE PAGO DE LA AGENCIA
-// =========================================================
-
-model TarjetasAgencia {
-  id            Int        @id @default(autoincrement())
-  nombre        String
-  metodoPagoId  Int?       @map("metodo_pago_id")
-  metodoPago    MetodosPago? @relation(fields: [metodoPagoId], references: [id])
-  ultimosCuatro String?    @map("ultimos_cuatro")
-  descripcion   String?
-  status        UserStatus @default(active)
-  creadoAt      DateTime   @default(now()) @map("creado_at")
-
-  @@map("tarjetas_agencia")
-}
-
-// =========================================================
-// PROVEEDORES
-// =========================================================
-
-model Proveedores {
-  id           Int         @id @default(autoincrement())
-  nombre       String
-  tipo         String?
-  emailContacto String?    @map("email_contacto")
-  telefono     String?
-  web          String?
-  observaciones String?    @map("observaciones")
-  status       UserStatus  @default(active)
-
-  detalleVentas  DetalleVenta[]   @relation("proveedor_detalle")
-  paqueteProveedor PaqueteProveedor[]
-
-  @@map("proveedores")
-}
-
-// =========================================================
-// PERSONAS Y USUARIOS
-// =========================================================
-
-model Personas {
-  id              Int             @id @default(autoincrement())
-  nombres         String
-  apellidos       String
-  tipoDocumentoId Int?            @map("tipo_documento_id")
-  tipoDocumento   TiposDocumento? @relation(fields: [tipoDocumentoId], references: [id])
-  documento       String?         @unique
-  email           String?
-  telefono        String?
-  birthDate       DateTime?       @map("birth_date")
-  nacionalidad    String?
-  avatarUrl       String?         @map("avatar_url")
-  status          UserStatus      @default(active)
-  creadoAt        DateTime        @default(now()) @map("creado_at")
-  updatedAt       DateTime?       @map("updated_at")
-  deletedAt       DateTime?       @map("deleted_at")
-
-  usuario           Usuarios?
-  cliente           Clientes?
-  comisionista      Comisionistas?
-  responsable       Responsables?
-  pasajerosDetalle  PasajerosDetalle[]
-
-  @@map("personas")
-}
-
-model Usuarios {
-  id           Int        @id @default(autoincrement())
-  personaId    Int        @unique @map("persona_id")
-  persona      Personas   @relation(fields: [personaId], references: [id])
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  rolId        Int        @map("rol_id")
-  rol          Roles      @relation(fields: [rolId], references: [id])
-  status       UserStatus @default(active)
-  ultimoLogin  DateTime?  @map("ultimo_login")
-  creadoAt     DateTime   @default(now()) @map("creado_at")
-
-  permisosUsuario PermisosUsuario[]
-  sesiones        Sesiones[]
-  logs            LogsUsuarios[]
-  ventas          Ventas[]        @relation("ventas_asesor")
-  clientesCreados Clientes[]      @relation("cliente_creado_por")
-  paquetesCreados Paquetes[]      @relation("paquete_creado_por")
-
-  @@map("usuarios")
-}
-
-model PermisosUsuario {
-  id         Int      @id @default(autoincrement())
-  usuarioId  Int      @map("usuario_id")
-  usuario    Usuarios @relation(fields: [usuarioId], references: [id])
-  permisoId  Int      @map("permiso_id")
-  permiso    Permisos @relation(fields: [permisoId], references: [id])
-  permitido  Boolean  @default(true)
-  valor      String   @default("true") @map("valor")
-
-  @@unique([usuarioId, permisoId])
-  @@map("permisos_usuario")
-}
-
-model Sesiones {
-  id         String   @id @default(uuid())
-  usuarioId  Int      @map("usuario_id")
-  usuario    Usuarios @relation(fields: [usuarioId], references: [id])
-  tokenHash  String   @map("token_hash")
-  expiresAt  DateTime @map("expires_at")
-  creadoAt   DateTime @default(now()) @map("creado_at")
-  userAgent  String?  @map("user_agent")
-
-  @@map("sesiones")
-}
-
-model LogsUsuarios {
-  id          Int      @id @default(autoincrement())
-  usuarioId   Int      @map("usuario_id")
-  usuario     Usuarios @relation(fields: [usuarioId], references: [id])
-  accion      String?
-  modulo      String?
-  descripcion String?
-  fecha       DateTime @default(now())
-
-  @@map("logs_usuarios")
-}
-
-// =========================================================
-// CLIENTES, COMISIONISTAS
-// =========================================================
-
-model Clientes {
-  id          Int       @id @default(autoincrement())
-  personaId   Int       @unique @map("persona_id")
-  persona     Personas  @relation(fields: [personaId], references: [id])
-  creadoPorId Int?      @map("creado_por_id")
-  creadoPor   Usuarios? @relation("cliente_creado_por", fields: [creadoPorId], references: [id])
-  fechaRegistro DateTime @default(now()) @map("fecha_registro")
-  deletedAt   DateTime? @map("deleted_at")
-
-  ventas Ventas[]
-
-  @@map("clientes")
-}
-
-model Comisionistas {
-  id            Int         @id @default(autoincrement())
-  personaId     Int         @unique @map("persona_id")
-  persona       Personas    @relation(fields: [personaId], references: [id])
-  tipo          String?
-  umbralPago    Float?      @default(0) @map("umbral_pago")
-  acumulado     Float?      @default(0)
-  status        AgentStatus @default(Activo)
-  creadoAt      DateTime    @default(now()) @map("creado_at")
-
-  ventas              Ventas[]
-  liquidacionesComision LiquidacionesComision[]
-
-  @@map("comisionistas")
-}
-
-model Responsables {
-  id            Int         @id @default(autoincrement())
-  personaId     Int         @unique @map("persona_id")
-  persona       Personas    @relation(fields: [personaId], references: [id])
-  status        UserStatus  @default(active)
-  creadoAt      DateTime    @default(now()) @map("creado_at")
-  deletedAt     DateTime?   @map("deleted_at")
-
-  ventas        Ventas[]    @relation("venta_responsable")
-
-  @@map("responsables")
-}
-
-// =========================================================
-// VENTAS Y COBROS
-// =========================================================
-
-model Ventas {
-  id                      Int         @id @default(autoincrement())
-  clienteId               Int         @map("cliente_id")
-  cliente                 Clientes    @relation(fields: [clienteId], references: [id])
-  usuarioId               Int         @map("usuario_id")
-  usuario                 Usuarios    @relation("ventas_asesor", fields: [usuarioId], references: [id])
-  montoTotal              Float       @default(0) @map("monto_total")
-  costoProveedorTotal     Float?      @default(0) @map("costo_proveedor_total")
-  taTotal                 Float?      @default(0) @map("ta_total")
-  comisionistaId          Int?        @map("comisionista_id")
-  comisionista            Comisionistas? @relation(fields: [comisionistaId], references: [id])
-  responsableId           Int?        @map("responsable_id")
-  responsable             Responsables? @relation("venta_responsable", fields: [responsableId], references: [id])
-  montoComisionBruto      Float?      @default(0) @map("monto_comision_bruto")
-  porcentajeRetencionComision Float?   @default(0) @map("porcentaje_retencion_comision")
-  montoComisionNeto       Float?      @default(0) @map("monto_comision_neto")
-  comisionLiquidada       Boolean?    @default(false) @map("comision_liquidada")
-  metodoPagoPrincipalId   Int?        @map("metodo_pago_principal_id")
-  metodoPagoPrincipal     MetodosPago? @relation("metodo_pago_principal", fields: [metodoPagoPrincipalId], references: [id])
-  status                  SaleStatus  @default(credito)
-  esCredito               Boolean?    @default(false) @map("es_credito")
-  fechaVenceCredito       DateTime?   @map("fecha_vence_credito")
-  montoPagadoCredito      Float?      @default(0) @map("monto_pagado_credito")
-  isReviewed              Boolean?    @default(false) @map("is_reviewed")
-  observaciones           String?
-  creadoAt                DateTime    @default(now()) @map("creado_at")
-  deletedAt               DateTime?   @map("deleted_at")
-
-  pagosVenta    PagosVenta[]
-  detalleVentas DetalleVenta[]
-  liquidacionVentas LiquidacionVentas[]
-
-  @@map("ventas")
-  @@index([clienteId])
-  @@index([usuarioId])
-  @@index([comisionistaId])
-}
-
-model PagosVenta {
-  id           String      @id @default(uuid())
-  ventaId      Int         @map("venta_id")
-  venta        Ventas      @relation(fields: [ventaId], references: [id])
-  monto        Float
-  metodoPagoId Int?        @map("metodo_pago_id")
-  metodoPago   MetodosPago? @relation(fields: [metodoPagoId], references: [id])
-  referencia   String?
-  fechaPago    DateTime    @default(now()) @map("fecha_pago")
-
-  @@map("pagos_venta")
-  @@index([ventaId])
-}
-
-// =========================================================
-// DETALLE VENTA Y PASAJEROS
-// =========================================================
-
-model DetalleVenta {
-  id                    String         @id @default(uuid())
-  ventaId               Int            @map("venta_id")
-  venta                 Ventas         @relation(fields: [ventaId], references: [id])
-  categoria             String
-  nombreServicio        String?        @map("nombre_servicio")
-  subtotal              Float?         @default(0)
-  ta                    Float?         @default(0)
-  costoProveedor        Float?         @default(0) @map("costo_proveedor")
-  proveedorId           Int?           @map("proveedor_id")
-  proveedor             Proveedores?   @relation("proveedor_detalle", fields: [proveedorId], references: [id])
-  metodoPagoProveedorId Int?           @map("metodo_pago_proveedor_id")
-  metodoPagoProveedor   MetodosPago?   @relation("metodo_pago_proveedor", fields: [metodoPagoProveedorId], references: [id])
-  voucherUrl            String?        @map("voucher_url")
-  fechaInicioViaje      DateTime?      @map("fecha_inicio_viaje")
-  fechaFinViaje         DateTime?      @map("fecha_fin_viaje")
-  origen                String?
-  destino               String?
-  observaciones         String?
-  creadoAt              DateTime?      @default(now()) @map("creado_at")
-
-  pasajerosDetalle   PasajerosDetalle[]
-  prodTiqueteria     ProdTiqueteria?
-  prodHoteleria      ProdHoteleria?
-  prodPlanes         ProdPlanes?
-  prodSeguros        ProdSeguros?
-  prodCheckins       ProdCheckins?
-  prodMigracion      ProdMigracion?
-  prodSimcards       ProdSimcards?
-  prodAutos          ProdAutos?
-  prodFincas         ProdFincas?
-  prodTours          ProdTours?
-  prodEventos        ProdEventos?
-  prodRestaurantes   ProdRestaurantes?
-  prodVisas          ProdVisas?
-  prodPasaportes     ProdPasaportes?
-  prodMascotas       ProdMascotas?
-
-  @@map("detalle_venta")
-  @@index([ventaId])
-  @@index([proveedorId])
-  @@index([metodoPagoProveedorId])
-}
-
-model PasajerosDetalle {
-  id              String      @id @default(uuid())
-  detalleVentaId  String      @map("detalle_venta_id")
-  detalleVenta    DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  personaId       Int         @map("persona_id")
-  persona         Personas    @relation(fields: [personaId], references: [id])
-  esTitular       Boolean?    @default(false) @map("es_titular")
-  asiento         String?
-  nroReserva      String?     @map("nro_reserva")
-  nroTiquete      String?     @map("nro_tiquete")
-  nota            String?
-
-  @@map("pasajeros_detalle")
-  @@index([detalleVentaId])
-  @@index([personaId])
-}
-
-// =========================================================
-// AEROLÍNEAS Y AEROPUERTOS
-// =========================================================
-
-model Aerolineas {
-  id        Int        @id @default(autoincrement())
-  nombre    String
-  codigoIata String?   @unique @map("codigo_iata")
-  tipo      Cobertura  @default(Internacional)
-  web       String?
-
-  politicasEquipaje PoliticasEquipaje[]
-  prodTiqueteria    ProdTiqueteria[]
-  prodPlanes        ProdPlanes[]
-  paqueteVuelo      PaqueteVuelo[]
-  tramosVuelo       TramosVuelo[]  @relation("tramo_aerolinea")
-
-  @@map("aerolineas")
-}
-
-model Aeropuertos {
-  id         Int        @id @default(autoincrement())
-  nombre     String
-  codigoIata String     @unique @map("codigo_iata")
-  ciudad     String?
-  pais       String?
-  tipo       Cobertura  @default(Ambos)
-  status     UserStatus @default(active)
-
-  tramosOrigen  TramosVuelo[] @relation("origen")
-  tramosDestino TramosVuelo[] @relation("destino")
-
-  @@map("aeropuertos")
-}
-
-model PoliticasEquipaje {
-  id             Int    @id @default(autoincrement())
-  aerolineaId    Int    @map("aerolinea_id")
-  aerolinea      Aerolineas @relation(fields: [aerolineaId], references: [id])
-  tipoTarifa     String @map("tipo_tarifa")
-  articuloPersonal String? @map("articulo_personal")
-  equipajeMano   String? @map("equipaje_mano")
-  equipajeBodega String? @map("equipaje_bodega")
-  notas          String?
-
-  prodTiqueteria ProdTiqueteria[]
-  tramosVuelo    TramosVuelo[] @relation("tramo_equipaje")
-
-  @@map("politicas_equipaje")
-}
-
-// =========================================================
-// CATÁLOGO DE PAQUETES
-// =========================================================
-
-model Paquetes {
-  id                Int            @id @default(autoincrement())
-  nombre            String
-  destino           String
-  serviciosIncluidos String?       @map("servicios_incluidos")
-  noIncluido        String?        @map("no_incluido")
-  status            EstadoPaquete  @default(activo)
-  creadoPorId       Int?           @map("creado_por_id")
-  creadoPor         Usuarios?      @relation("paquete_creado_por", fields: [creadoPorId], references: [id])
-  creadoAt          DateTime       @default(now()) @map("creado_at")
-  deletedAt         DateTime?      @map("deleted_at")
-
-  paqueteVuelo           PaqueteVuelo[]
-  paqueteHotel           PaqueteHotel[]
-  paqueteProveedor       PaqueteProveedor[]
-  paqueteTarifas         PaqueteTarifas[]
-  paqueteAsistenciaMedica PaqueteAsistenciaMedica?
-  prodPlanes             ProdPlanes[]
-
-  @@map("paquetes")
-}
-
-model PaqueteVuelo {
-  id          Int        @id @default(autoincrement())
-  paqueteId   Int        @map("paquete_id")
-  paquete     Paquetes   @relation(fields: [paqueteId], references: [id])
-  aerolineaId Int?       @map("aerolinea_id")
-  aerolinea   Aerolineas? @relation(fields: [aerolineaId], references: [id])
-  nroVuelo    String?    @map("nro_vuelo")
-  modoVuelo   FlightMode? @default(round_trip) @map("modo_vuelo")
-  trayectos   Json?
-  planEquipaje String?   @map("plan_equipaje")
-
-  @@map("paquete_vuelo")
-}
-
-model PaqueteHotel {
-  id          Int                @id @default(autoincrement())
-  paqueteId   Int                @map("paquete_id")
-  paquete     Paquetes           @relation(fields: [paqueteId], references: [id])
-  hotelNombre String             @map("hotel_nombre")
-  tipoHotel   TipoHotel?         @default(hotel) @map("tipo_hotel")
-  regimen     RegimenAlimenticio? @default(full)
-  noches      Int?
-
-  @@map("paquete_hotel")
-}
-
-model PaqueteProveedor {
-  id          Int        @id @default(autoincrement())
-  paqueteId   Int        @map("paquete_id")
-  paquete     Paquetes   @relation(fields: [paqueteId], references: [id])
-  proveedorId Int        @map("proveedor_id")
-  proveedor   Proveedores @relation(fields: [proveedorId], references: [id])
-
-  @@map("paquete_proveedor")
-}
-
-model PaqueteTarifas {
-  id            Int      @id @default(autoincrement())
-  paqueteId     Int      @map("paquete_id")
-  paquete       Paquetes @relation(fields: [paqueteId], references: [id])
-  tarifaAdulto  Float    @default(0) @map("tarifa_adulto")
-  tarifaMenor   Float?   @map("tarifa_menor")
-  vigenciaDesde DateTime? @map("vigencia_desde")
-  vigenciaHasta DateTime? @map("vigencia_hasta")
-
-  prodPlanes ProdPlanes[]
-
-  @@map("paquete_tarifas")
-}
-
-model PaqueteAsistenciaMedica {
-  id              Int      @id @default(autoincrement())
-  paqueteId       Int      @unique @map("paquete_id")
-  paquete         Paquetes @relation(fields: [paqueteId], references: [id])
-  coberturaUsd    Float    @default(0) @map("cobertura_usd")
-  diasCobertura   Int      @default(0) @map("dias_cobertura")
-
-  @@map("paquete_asistencia_medica")
-}
-
-// =========================================================
-// PRODUCTOS ESPECIALIZADOS
-// =========================================================
-
-model ProdTiqueteria {
-  id             String         @id @default(uuid())
-  detalleVentaId String         @unique @map("detalle_venta_id")
-  detalleVenta   DetalleVenta   @relation(fields: [detalleVentaId], references: [id])
-  aerolineaId    Int?
-  aerolinea      Aerolineas?    @relation(fields: [aerolineaId], references: [id])
-  nroReserva     String?        @map("nro_reserva")
-  nroVuelo       String?        @map("nro_vuelo")
-  nroTiquete     String?        @map("nro_tiquete")
-  modoVuelo      FlightMode?    @default(one_way) @map("modo_vuelo")
-  planEquipajeId Int?
-  planEquipaje   PoliticasEquipaje? @relation(fields: [planEquipajeId], references: [id])
-  checkinStatus  CheckinStatus? @default(pendiente) @map("checkin_status")
-
-  tramosVuelo TramosVuelo[]
-
-  @@map("prod_tiqueteria")
-}
-
-model TramosVuelo {
-  id                 String         @id @default(uuid())
-  prodTiqueteriaId   String         @map("prod_tiqueteria_id")
-  prodTiqueteria     ProdTiqueteria @relation(fields: [prodTiqueteriaId], references: [id])
-  aeropuertoOrigenId Int            @map("aeropuerto_origen_id")
-  aeropuertoOrigen   Aeropuertos    @relation("origen", fields: [aeropuertoOrigenId], references: [id])
-  aeropuertoDestinoId Int           @map("aeropuerto_destino_id")
-  aeropuertoDestino  Aeropuertos    @relation("destino", fields: [aeropuertoDestinoId], references: [id])
-  salida             DateTime
-  llegada            DateTime
-  nroVueloTramo      String?        @map("nro_vuelo_tramo")
-  asiento            String?
-  orden              Int            @default(1)
-  checkinStatus      CheckinStatus? @default(pendiente) @map("checkin_status")
-  nroTiquete         String?        @map("nro_tiquete")
-  aerolineaId        Int?           @map("aerolinea_id")
-  aerolinea          Aerolineas?    @relation("tramo_aerolinea", fields: [aerolineaId], references: [id])
-  planEquipajeId     Int?           @map("plan_equipaje_id")
-  planEquipaje       PoliticasEquipaje? @relation("tramo_equipaje", fields: [planEquipajeId], references: [id])
-
-  @@map("tramos_vuelo")
-  @@index([prodTiqueteriaId])
-  @@index([aeropuertoOrigenId])
-  @@index([aeropuertoDestinoId])
-}
-
-model ProdHoteleria {
-  id             String        @id @default(uuid())
-  detalleVentaId String        @unique @map("detalle_venta_id")
-  detalleVenta   DetalleVenta  @relation(fields: [detalleVentaId], references: [id])
-  hotelNombre    String?       @map("hotel_nombre")
-  tipoHotel      TipoHotel?    @default(hotel) @map("tipo_hotel")
-  destino        String?
-  nroReserva     String?       @map("nro_reserva")
-  fechaEntrada   DateTime?     @map("fecha_entrada")
-  fechaSalida    DateTime?     @map("fecha_salida")
-  observaciones  String?
-
-  @@map("prod_hoteleria")
-}
-
-model ProdPlanes {
-  id               String             @id @default(uuid())
-  detalleVentaId   String             @unique @map("detalle_venta_id")
-  detalleVenta     DetalleVenta       @relation(fields: [detalleVentaId], references: [id])
-  paqueteId        Int?
-  paquete          Paquetes?          @relation(fields: [paqueteId], references: [id])
-  paqueteTarifaId  Int?               @map("paquete_tarifa_id")
-  paqueteTarifa    PaqueteTarifas?    @relation(fields: [paqueteTarifaId], references: [id])
-  nombrePlan       String?            @map("nombre_plan")
-  nombreHotel      String?            @map("nombre_hotel")
-  aerolineaId      Int?
-  aerolinea        Aerolineas?        @relation(fields: [aerolineaId], references: [id])
-  nroVuelo         String?            @map("nro_vuelo")
-  nroReserva       String?            @map("nro_reserva")
-  nroTiquete       String?            @map("nro_tiquete")
-  fechaViajeInicio DateTime?          @map("fecha_viaje_inicio")
-  fechaViajeFin    DateTime?          @map("fecha_viaje_fin")
-  fechaSalidaVuelo DateTime?          @map("fecha_salida_vuelo")
-  fechaLlegadaVuelo DateTime?         @map("fecha_llegada_vuelo")
-  fechaRegresoVuelo DateTime?         @map("fecha_regreso_vuelo")
-  fechaLlegadaRegresoVuelo DateTime?  @map("fecha_llegada_regreso_vuelo")
-  adultosCount     Int?               @map("adultos_count")
-  menoresCount     Int?               @map("menores_count")
-  numeroConfirmacion String?          @map("numero_confirmacion")
-  observaciones    String?
-  checkinStatusIda CheckinStatus?     @default(pendiente) @map("checkin_status_ida")
-  checkinStatusRegreso CheckinStatus? @default(pendiente) @map("checkin_status_regreso")
-  tipoPaquete      String?            @default("own") @map("tipo_paquete")
-
-  @@map("prod_planes")
-}
-
-model ProdSeguros {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  tipoSeguro          String?      @map("tipo_seguro")
-  coberturaUsd        Float?       @default(0) @map("cobertura_usd")
-  diasCobertura       Int?         @default(0) @map("dias_cobertura")
-  fechaInicioVigencia DateTime?    @map("fecha_inicio_vigencia")
-  fechaFinVigencia    DateTime?    @map("fecha_fin_vigencia")
-  telefonoContacto    String?      @map("telefono_contacto")
-
-  @@map("prod_seguros")
-}
-
-model ProdCheckins {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  nroVueloReserva     String?      @map("nro_vuelo_reserva")
-  fechaViaje          DateTime?    @map("fecha_viaje")
-  asiento             String?
-  maletasContadas     String?      @map("maletas_contadas")
-  telefonoContacto    String?      @map("telefono_contacto")
-  necesidadesEspeciales String?    @map("necesidades_especiales")
-  usaSillaRuedas      Boolean?     @default(false) @map("usa_silla_ruedas")
-
-  @@map("prod_checkins")
-}
-
-model ProdMigracion {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  tipoTramiteMigratorio String?    @map("tipo_tramite_migratorio")
-  nacionalidad        String?
-  tipoDocumento       String?      @default("Pasaporte") @map("tipo_documento")
-  pasaporteNro        String?      @map("pasaporte_nro")
-  pasaporteVence      DateTime?    @map("pasaporte_vence")
-  paisDestino         String?      @map("pais_destino")
-
-  @@map("prod_migracion")
-}
-
-model ProdSimcards {
-  id              String       @id @default(uuid())
-  detalleVentaId  String       @unique @map("detalle_venta_id")
-  detalleVenta    DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  paisDestino     String?      @map("pais_destino")
-  fechaLlegada    DateTime?    @map("fecha_llegada")
-  duracionViaje   String?      @map("duracion_viaje")
-  planDatos       String?      @map("plan_datos")
-  tipoSim         String?      @map("tipo_sim")
-  metodoEntrega   String?      @map("metodo_entrega")
-
-  @@map("prod_simcards")
-}
-
-model ProdAutos {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  conductorNombre     String?      @map("conductor_nombre")
-  licenciaNro         String?      @map("licencia_nro")
-  fechaRecogida       DateTime?    @map("fecha_recogida")
-  fechaDevolucion     DateTime?    @map("fecha_devolucion")
-  lugarRecogida       String?      @map("lugar_recogida")
-  categoriaAuto       String?      @map("categoria_auto")
-  conductoresAdicionales Int?      @default(0) @map("conductores_adicionales")
-  tipoSeguro          String?      @map("tipo_seguro")
-  tarjetaGarantiaInfo String?      @map("tarjeta_garantia_info")
-
-  @@map("prod_autos")
-}
-
-model ProdFincas {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  responsableNombre   String?      @map("responsable_nombre")
-  documentoResponsable String?     @map("documento_responsable")
-  fechaEntrada        DateTime?    @map("fecha_entrada")
-  fechaSalida         DateTime?    @map("fecha_salida")
-  adultosCount        Int?         @map("adultos_count")
-  ninosCount          Int?         @map("ninos_count")
-  tieneMascotas       Boolean?     @default(false) @map("tiene_mascotas")
-  tipoMascota         String?      @map("tipo_mascota")
-  serviciosExtra      String?      @map("servicios_extra")
-  nombreFinca         String?      @map("nombre_finca")
-  direccionFinca      String?      @map("direccion_finca")
-  ciudadPueblo        String?      @map("ciudad_pueblo")
-  observaciones       String?
-
-  @@map("prod_fincas")
-}
-
-model ProdTours {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  tourNombre          String?      @map("tour_nombre")
-  fechaPreferida      DateTime?    @map("fecha_preferida")
-  adultosCount        Int?         @default(1) @map("adultos_count")
-  menoresCount        Int?         @default(0) @map("menores_count")
-  edadesMenores       String?      @map("edades_menores")
-  idiomaGuia          String?      @map("idioma_guia")
-  requiereTransporte  Boolean?     @default(false) @map("requiere_transporte")
-  puntoEncuentro      String?      @map("punto_encuentro")
-  condicionesMedicas  String?      @map("condiciones_medicas")
-  telefonoContacto    String?      @map("telefono_contacto")
-  observaciones       String?
-
-  @@map("prod_tours")
-}
-
-model ProdEventos {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  organizacion        String?
-  nombreContacto      String?      @map("nombre_contacto")
-  emailContacto       String?      @map("email_contacto")
-  fechaInicio         DateTime?
-  fechaFin            DateTime?
-  asistenciaEstimada  Int?         @map("asistencia_estimada")
-  espacioRequerido    String?      @map("espacio_requerido")
-  tipoEvento          String?      @map("tipo_evento")
-  equiposAv           String?      @map("equipos_av")
-  requiereCatering    Boolean?     @default(false) @map("requiere_catering")
-  notasCatering       String?      @map("notas_catering")
-  ciudad              String?      @db.VarChar(40)
-  direccion           String?      @db.VarChar(40)
-  nombreLugar         String?      @map("nombre_lugar") @db.VarChar(40)
-
-  @@map("prod_eventos")
-}
-
-model ProdRestaurantes {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  nombreReserva       String?      @map("nombre_reserva")
-  fechaHoraReserva    DateTime?    @map("fecha_hora_reserva")
-  personasCount       Int?         @map("personas_count")
-  preferenciaMesa     String?      @map("preferencia_mesa")
-  tipoMenu            String?      @map("tipo_menu")
-  restriccionesDieta  String?      @map("restricciones_dieta")
-  ocasionEspecial     String?      @map("ocasion_especial")
-  telefonoContacto    String?      @map("telefono_contacto")
-
-  @@map("prod_restaurantes")
-}
-
-model ProdVisas {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  nombreCompleto      String?      @map("nombre_completo")
-  fechaNacimiento     DateTime?    @map("fecha_nacimiento")
-  nacionalidad        String?
-  tipoDocumento       String?      @default("Pasaporte") @map("tipo_documento")
-  nroPasaporte        String?      @map("nro_pasaporte")
-  vencimientoPasaporte DateTime?   @map("vencimiento_pasaporte")
-  paisAplicacion      String?      @map("pais_aplicacion")
-  tipoVisa            String?      @map("tipo_visa")
-  fechaEstimadaViaje  DateTime?    @map("fecha_estimada_viaje")
-  emailContacto       String?      @map("email_contacto")
-
-  @@map("prod_visas")
-}
-
-model ProdPasaportes {
-  id                  String       @id @default(uuid())
-  detalleVentaId      String       @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta @relation(fields: [detalleVentaId], references: [id])
-  nombreCompleto      String?      @map("nombre_completo")
-  nroDocumento        String?      @map("nro_documento")
-  fechaNacimiento     DateTime?    @map("fecha_nacimiento")
-  ciudadResidencia    String?      @map("ciudad_residencia")
-  tipoTramite         String?      @map("tipo_tramite")
-  fechaEstimadaViaje  DateTime?    @map("fecha_estimada_viaje")
-  telefonoContacto    String?      @map("telefono_contacto")
-
-  @@map("prod_pasaportes")
-}
-
-model ProdMascotas {
-  id                  String        @id @default(uuid())
-  detalleVentaId      String        @unique @map("detalle_venta_id")
-  detalleVenta        DetalleVenta  @relation(fields: [detalleVentaId], references: [id])
-  mascotaNombre       String?       @map("mascota_nombre")
-  especie             String?
-  raza                String?
-  pesoKg              Float?        @map("peso_kg")
-  tamanoMascota       TamanoMascota?
-  transporteTipo      String?       @map("transporte_tipo")
-  fechaViaje          DateTime?     @map("fecha_viaje")
-  paisDestino         String?       @map("pais_destino")
-  condicionesMedicas  String?       @map("condiciones_medicas")
-  telefonoContacto    String?       @map("telefono_contacto")
-  empresaTransporte   String?       @map("empresa_transporte")
-  observaciones       String?
-
-  @@map("prod_mascotas")
-}
-
-// =========================================================
-// COMISIONES Y LIQUIDACIONES
-// =========================================================
-
-model LiquidacionesComision {
-  id              Int           @id @default(autoincrement())
-  comisionistaId  Int           @map("comisionista_id")
-  comisionista    Comisionistas @relation(fields: [comisionistaId], references: [id])
-  fecha           DateTime
-  monto           Float
-  metodoPagoId    Int?          @map("metodo_pago_id")
-  metodoPago      MetodosPago?  @relation(fields: [metodoPagoId], references: [id])
-  referencia      String?
-  notas           String?
-  creadoAt        DateTime      @default(now()) @map("creado_at")
-
-  liquidacionVentas LiquidacionVentas[]
-
-  @@map("liquidaciones_comision")
-}
-
-model LiquidacionVentas {
-  id             Int      @id @default(autoincrement())
-  liquidacionId  Int      @map("liquidacion_id")
-  liquidacion    LiquidacionesComision @relation(fields: [liquidacionId], references: [id])
-  ventaId        Int      @map("venta_id")
-  venta          Ventas   @relation(fields: [ventaId], references: [id])
-
-  @@unique([liquidacionId, ventaId])
-  @@map("liquidacion_ventas")
-}
-
-// =========================================================
-// VENTAS MENSUALES (para historial/stats)
-// =========================================================
-
-model VentasMensuales {
-  id          Int    @id @default(autoincrement())
-  year        Int
-  month       Int
-  total       Float
-  count       Int
-  hoteles     Float?
-  vuelos      Float?
-  paquetes    Float?
-  seguros     Float?
-  transferencias Float?
-
-  @@unique([year, month])
-  @@map("ventas_mensuales")
+enum UserStatus {
+  active
+  inactive
 }

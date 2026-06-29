@@ -115,4 +115,16 @@ export function formatSaleId(id: number | string): string {
 export function formatId(id: number | string): string {
   return String(id).padStart(4, '0');
 }
+
+export function formatMealPlan(plan: string): string {
+  if (!plan) return '-';
+  const plans: Record<string, string> = {
+    'solo_desayuno': 'Solo Desayuno',
+    'media_pension': 'Media Pensión',
+    'todo_incluido': 'Todo Incluido',
+    'full': 'Pensión Completa',
+    'sin_alimentacion': 'Solo Alojamiento'
+  };
+  return plans[plan] || plan;
+}
 

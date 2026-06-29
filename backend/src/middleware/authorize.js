@@ -39,8 +39,8 @@ function getEffectivePermissions(user) {
   const rolePerms = ROLE_DEFAULT_PERMISSIONS[user.role] || ROLE_DEFAULT_PERMISSIONS.asesor;
   const permissions = JSON.parse(JSON.stringify(rolePerms));
 
-  if (user.permisosRol) {
-    for (const pr of user.permisosRol) {
+  if (user.permisos_rol) {
+    for (const pr of user.permisos_rol) {
       const mod = permissions[pr.modulo];
       if (mod && pr.accion in mod) {
         const currentVal = mod[pr.accion];
@@ -53,8 +53,8 @@ function getEffectivePermissions(user) {
     }
   }
 
-  if (user.permisosUsuario) {
-    for (const pu of user.permisosUsuario) {
+  if (user.permisos_usuario) {
+    for (const pu of user.permisos_usuario) {
       const mod = permissions[pu.modulo];
       if (mod && pu.accion in mod) {
         const currentVal = mod[pu.accion];
@@ -68,7 +68,7 @@ function getEffectivePermissions(user) {
   }
 
   // Regla de negocio: los no-admin nunca pueden tener scope 'all' en el dashboard.
-  // Los módulos de ventas y clientes SÍ son configurables por rol.
+  // Los módulos de ventas y clientes SÍ son configurables por roles.
   if (permissions['dashboard'] && permissions['dashboard'].view === 'all') {
     permissions['dashboard'].view = 'own';
   }

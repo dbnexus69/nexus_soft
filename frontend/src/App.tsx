@@ -1,6 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
+import { ClientsProvider } from './context/ClientsContext';
+import { UsersProvider } from './context/UsersContext';
+import { SalesProvider } from './context/SalesContext';
+import { ConfigProvider } from './context/ConfigContext';
+import { CommissionsProvider } from './context/CommissionsContext';
 import { PermissionsProvider } from './context/PermissionsContext';
 import { Layout } from './components/layout/Layout';
 import Login from './pages/Login';
@@ -54,16 +59,29 @@ function AppRoutes() {
 }
 
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <DataProvider>
-            <AppRoutes />
-          </DataProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <UsersProvider>
+              <ClientsProvider>
+                <SalesProvider>
+                  <ConfigProvider>
+                    <CommissionsProvider>
+                      <DataProvider>
+                        <AppRoutes />
+                      </DataProvider>
+                    </CommissionsProvider>
+                  </ConfigProvider>
+                </SalesProvider>
+              </ClientsProvider>
+            </UsersProvider>
+          </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

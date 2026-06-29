@@ -32,13 +32,13 @@ async function auth(req, res, next) {
     const usuario = await prisma.usuarios.findUnique({
       where: { id: decoded.userId },
       include: {
-        persona: true,
-        rol: {
+        personas: true,
+        roles: {
           include: {
-            permisosRol: { include: { permiso: true } }
+            permisos_rol: { include: { permisos: true } }
           }
         },
-        permisosUsuario: { include: { permiso: true } }
+        permisos_usuario: { include: { permisos: true } }
       }
     });
 
@@ -48,19 +48,19 @@ async function auth(req, res, next) {
 
     const userData = {
       id: usuario.id,
-      personaId: usuario.personaId,
+      persona_id: usuario.persona_id,
       email: usuario.email,
-      nombre: `${usuario.persona.nombres} ${usuario.persona.apellidos}`,
-      avatarUrl: usuario.persona.avatarUrl,
-      role: usuario.rol.nombre,
-      permisosRol: usuario.rol.permisosRol.map(pr => ({
-        modulo: pr.permiso.modulo,
-        accion: pr.permiso.accion,
+      nombre: `${usuario.personas.nombres} ${usuario.personas.apellidos}`,
+      avatar_url: usuario.personas.avatar_url,
+      role: usuario.roles.nombre,
+      permisos_rol: usuario.roles.permisos_rol.map(pr => ({
+        modulo: pr.permisos.modulo,
+        accion: pr.permisos.accion,
         valor: pr.valor
       })),
-      permisosUsuario: usuario.permisosUsuario.filter(pu => pu.permitido).map(pu => ({
-        modulo: pu.permiso.modulo,
-        accion: pu.permiso.accion,
+      permisos_usuario: usuario.permisos_usuario.filter(pu => pu.permitido).map(pu => ({
+        modulo: pu.permisos.modulo,
+        accion: pu.permisos.accion,
         valor: pu.valor
       }))
     };

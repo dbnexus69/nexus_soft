@@ -27,11 +27,14 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { FormField, Input, Select } from '../components/ui/Form';
 import { Table, TableRow, TableCell } from '../components/ui/Table';
-import { useData } from '../context/DataContext';
-import { ConfigData } from '../types';
+import { useConfigContext } from '../context/ConfigContext';
+import { usePermissions } from '../context/PermissionsContext';
+import { ConfigSection, ConfigSectionMap } from '../types';
 import ConfigForms from '../components/config/ConfigForms';
 import ConfigGrids from '../components/config/ConfigGrids';
-import { formatCurrency } from '../utils/formatters';
+
+import { updateConfigItem, addConfigItem, deleteConfigItem } from '../api/config';
+import { formatCurrency, formatMealPlan } from '../utils/formatters';
 import LoadingScreen from '../components/ui/LoadingScreen';
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
@@ -55,8 +58,7 @@ const isOptimisticId = (item: any): boolean => {
 };
 
 export default function Config() {
-  const { data, addConfigItem, updateConfigItem, deleteConfigItem, fetchConfig } = useData();
-  const [isLoading, setIsLoading] = useState(true);
+  const { config, addConfigItem, updateConfigItem, deleteConfigItem, fetchConfig, loading: isLoading } = useConfigContext();
   const [currentSection, setCurrentSection] = useState<SectionId>('cards');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -69,13 +71,15 @@ export default function Config() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [viewingPackage, setViewingPackage] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Lazy Load Fetch
   useEffect(() => {
-    fetchConfig().finally(() => setIsLoading(false));
+    fetchConfig();
   }, [fetchConfig]);
 
-  const currentData = ((data.config[currentSection as keyof ConfigData] || []) as any[])
+  const currentData = ((config[currentSection as keyof ConfigData] || []) as any[])
     .slice()
     .sort((a, b) => {
       const idA = a.id ?? a._id ?? 0;
@@ -148,22 +152,23 @@ export default function Config() {
   };
 
   const getRow = (item: any, section: SectionId): string[] => {
+    const itemName = item.name || item.nombre || item.bank || item.nombre_plan || item.hotel_nombre || 'Sin Nombre';
     switch (section) {
       case 'cards': return [
-        item.name || item.bank || 'Tarjeta Sin Nombre', 
+        itemName, 
         item.paymentMethod || item.type || 'No especificado', 
-        `•••• ${item.lastFourDigits || item.id?.toString().padStart(4, '0')}`, 
+        `•••• ${item.lastFourDigits || (item.id != null ? item.id.toString().padStart(4, '0') : '0000')}`, 
         item.status || 'Activo', 
         item.description || 'Sin descripción'
       ];
-      case 'paymentMethods': return [item.name];
-      case 'documentTypes': return [item.name];
-      case 'airlines': return [item.name, item.code, item.type || 'Internacional', item.website || 'No especificado'];
-      case 'suppliers': return [item.name, item.type, item.email, item.phone, item.website || 'No especificado'];
-      case 'airports': return [item.name, item.abbreviation, item.location, item.type || 'Ambos', item.status || 'Activo'];
-      case 'baggage': return [item.airlineName, item.fareType, item.personalItem || 'No incluido', item.carryOn || 'No incluido', item.checkedBag || 'No incluido'];
-      case 'packages': return [item.name, item.destination, item.nights?.toString(), item.accommodation?.hotel || '-', formatCurrency(item.rates?.adult || 0)];
-      default: return [item.name];
+      case 'paymentMethods': return [itemName];
+      case 'documentTypes': return [itemName];
+      case 'airlines': return [itemName, item.code || item.codigoIata || item.codigo_iata || '-', item.type || 'Internacional', item.website || 'No especificado'];
+      case 'suppliers': return [itemName, item.type || '-', item.email || '-', item.phone || '-', item.website || 'No especificado'];
+      case 'airports': return [itemName, item.abbreviation || item.codigoIata || item.codigo_iata || '-', item.location || item.ciudad || '-', item.type || 'Ambos', item.status || 'Activo'];
+      case 'baggage': return [item.airlineName || item.aerolinea || '-', item.fareType || item.tipoTarifa || '-', item.personalItem || 'No incluido', item.carryOn || 'No incluido', item.checkedBag || 'No incluido'];
+      case 'packages': return [itemName, item.destination || item.destino || '-', item.nights?.toString() || '-', item.accommodation?.hotel || item.hotel || '-', formatCurrency(item.rates?.adult || item.tarifaAdulto || 0)];
+      default: return [itemName];
     }
   };
 
@@ -182,13 +187,14 @@ export default function Config() {
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (currentSection === 'cards') {
-      if (!formData.name || formData.name.trim().length < 3) {
+      if (!formData.name || String(formData.name).trim().length < 3) {
         newErrors.name = 'El nombre debe tener al menos 3 caracteres.';
       }
       if (!formData.paymentMethod) {
         newErrors.paymentMethod = 'Debe seleccionar un método de pago.';
       }
-      if (!formData.lastFourDigits || formData.lastFourDigits.length !== 4 || !/^\d{4}$/.test(formData.lastFourDigits)) {
+      const lastFourStr = String(formData.lastFourDigits || '');
+      if (lastFourStr.length !== 4 || !/^\d{4}$/.test(lastFourStr)) {
         newErrors.lastFourDigits = 'Debe ingresar exactamente los últimos 4 dígitos numéricos.';
       }
       if (!formData.status) {
@@ -239,25 +245,44 @@ export default function Config() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validate()) return;
-    
-    if (editingItem) {
-      updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
-    } else {
-      addConfigItem(currentSection as ConfigSection, formData);
+  const handleSubmit = async () => {
+    if (!validate()) {
+      alert("Por favor corrige los errores del formulario antes de guardar.");
+      return;
     }
-    setIsModalOpen(false);
+    
+    setIsSaving(true);
+    try {
+      if (editingItem) {
+        await updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
+      } else {
+        await addConfigItem(currentSection as ConfigSection, formData);
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      alert("Error al guardar: " + (err?.response?.data?.message || err.message || "Error desconocido"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = (id: number) => {
     setDeleteItemId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteItemId !== null) {
-      deleteConfigItem(currentSection as ConfigSection, deleteItemId);
-      setDeleteItemId(null);
+      setIsDeleting(true);
+      try {
+        await deleteConfigItem(currentSection as ConfigSection, deleteItemId);
+        setDeleteItemId(null);
+      } catch (err: any) {
+        console.error(err);
+        alert("Error al eliminar: " + (err?.response?.data?.message || err.message || "Error desconocido"));
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -265,15 +290,14 @@ export default function Config() {
 
 
 
-  // Static statistics based on actual active config lengths
   const stats = [
-    { label: 'Proveedores Activos', count: data.config.suppliers?.length || 0, icon: <Building2 className="text-primary" size={18} /> },
-    { label: 'Aeropuertos Base', count: data.config.airports?.length || 0, icon: <Compass className="text-accent" size={18} /> },
-    { label: 'Aerolíneas de Viaje', count: data.config.airlines?.length || 0, icon: <PlaneTakeoff className="text-success" size={18} /> },
-    { label: 'Formas de Pago', count: data.config.paymentMethods?.length || 0, icon: <Coins className="text-warning" size={18} /> },
+    { label: 'Proveedores Activos', count: config.suppliers?.length || 0, icon: <Building2 className="text-primary" size={18} /> },
+    { label: 'Aeropuertos Base', count: config.airports?.length || 0, icon: <Compass className="text-accent" size={18} /> },
+    { label: 'Aerolíneas de Viaje', count: config.airlines?.length || 0, icon: <PlaneTakeoff className="text-success" size={18} /> },
+    { label: 'Formas de Pago', count: config.paymentMethods?.length || 0, icon: <Coins className="text-warning" size={18} /> },
   ];
 
-  if (isLoading && (!data.config.suppliers || data.config.suppliers.length === 0)) {
+  if (isLoading && (!config.suppliers || config.suppliers.length === 0)) {
     return <LoadingScreen fullScreen={false} />;
   }
 
@@ -317,7 +341,7 @@ export default function Config() {
             <div className="flex flex-row overflow-x-auto lg:flex-col gap-1.5 lg:gap-0 lg:space-y-1 pb-1 lg:pb-0 scrollbar-none">
               {SECTIONS.map(section => {
                 const isActive = currentSection === section.id;
-                const count = (data.config[section.id as keyof ConfigData] as any[])?.length || 0;
+                const count = (config[section.id as keyof ConfigData] as any[])?.length || 0;
                 return (
                   <button
                     key={section.id}
@@ -480,8 +504,10 @@ export default function Config() {
         size={currentSection === 'packages' ? 'xl' : 'lg'}
         footer={
           <>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit}>Guardar Cambios</Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={isSaving}>
+              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
           </>
         }
       >
@@ -492,7 +518,7 @@ export default function Config() {
             setFormData={setFormData} 
             errors={errors} 
             setErrors={setErrors} 
-            data={data} 
+            data={{ config }} 
           />
         </div>
       </Modal>
@@ -504,11 +530,11 @@ export default function Config() {
         title="Confirmar Eliminación"
         footer={
           <div className="flex gap-2 w-full justify-end">
-            <Button variant="outline" onClick={() => setDeleteItemId(null)}>
+            <Button variant="outline" onClick={() => setDeleteItemId(null)} disabled={isDeleting}>
               No, cancelar
             </Button>
-            <Button variant="danger" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
-              Sí, eliminar registro
+            <Button variant="danger" onClick={confirmDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
+              {isDeleting ? 'Eliminando...' : 'Sí, eliminar registro'}
             </Button>
           </div>
         }
@@ -593,7 +619,7 @@ export default function Config() {
                       </div>
                       <div>
                         <p className="text-[10px] text-emerald-400 uppercase font-bold">Régimen</p>
-                        <p className="text-xs font-semibold text-emerald-800">{viewingPackage.accommodation?.mealPlan || '-'}</p>
+                        <p className="text-xs font-semibold text-emerald-800">{formatMealPlan(viewingPackage.accommodation?.mealPlan)}</p>
                       </div>
                     </div>
                   </div>

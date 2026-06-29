@@ -24,13 +24,24 @@ import { Modal } from "../components/ui/Modal";
 import { FormField, Input, Select } from "../components/ui/Form";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import { useData } from "../context/DataContext";
+import { useCommissionsContext } from "../context/CommissionsContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, capitalizeName, todayStr } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
 import LoadingScreen from "../components/ui/LoadingScreen";
 
 export default function CommissionAgents() {
-  const { data, addCommissionAgent, updateCommissionAgent, deleteCommissionAgent, settleCommissions, refreshSettlements, fetchCommissionAgents, fetchSettlements } = useData();
+  const { data } = useData();
+  const { 
+    agents: commissionAgents, 
+    settlements,
+    handleCreateAgent: addCommissionAgent,
+    handleUpdateAgent: updateCommissionAgent,
+    handleDeleteAgent: deleteCommissionAgent,
+    handleCreateSettlement: settleCommissions,
+    fetchCommissionAgents,
+    fetchSettlements
+  } = useCommissionsContext();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -90,17 +101,17 @@ export default function CommissionAgents() {
     ).sort((a: any, b: any) => b.id - a.id);
     console.log("Debug - FilteredAgents:", result);
     return result;
-  }, [data.commissionAgents, data.sales, searchTerm]);
+  }, [commissionAgents, data.sales, searchTerm]);
 
   const stats = useMemo(() => {
     const totalAccumulated = filteredAgents.reduce((s: number, a: any) => s + (a.accumulated || 0), 0);
     const pendingLiquidation = filteredAgents.filter((a: any) => a.accumulated >= 50000).length;
     return {
-      total: data.commissionAgents?.length || 0,
+      total: commissionAgents?.length || 0,
       totalAccumulated,
       pendingLiquidation,
     };
-  }, [filteredAgents, data.commissionAgents]);
+  }, [filteredAgents, commissionAgents]);
 
   const handleOpenModal = (agent?: any) => {
     setErrors({});
@@ -109,7 +120,7 @@ export default function CommissionAgents() {
       setFormData({ ...agent });
     } else {
       setEditingAgent(null);
-      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.abreviatura || "" });
+      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.abbreviation || "" });
     }
     setIsModalOpen(true);
   };
@@ -130,7 +141,7 @@ export default function CommissionAgents() {
       return "El documento no puede exceder 15 caracteres";
     }
     // Duplicate check against existing agents
-    const isDuplicate = (data.commissionAgents || []).some(
+    const isDuplicate = (commissionAgents || []).some(
       (a: any) => a.docNumber === value && (!editingAgent || a.id !== editingAgent.id)
     );
     if (isDuplicate) return "Este número de documento ya está registrado";
@@ -203,7 +214,7 @@ export default function CommissionAgents() {
     setIsSaving(true);
     try {
       await settleCommissions(selectedAgent.id, { ...settleData, agentName: selectedAgent.name });
-      await refreshSettlements();
+      await fetchSettlements();
       notifySuccess(`Liquidación de ${formatCurrency(selectedAgent.accumulated)} procesada`);
       setIsSettleModalOpen(false);
       setActiveTab("history");
@@ -222,7 +233,7 @@ export default function CommissionAgents() {
     { id: "history", label: "Historial", icon: History },
   ] as const;
 
-  if (isLoading && data.commissionAgents.length === 0) {
+  if (isLoading && commissionAgents.length === 0) {
     return <LoadingScreen fullScreen={false} />;
   }
 
@@ -646,7 +657,11 @@ export default function CommissionAgents() {
                 }}
                 options={[
                   { value: "", label: "Seleccione" },
-                  ...(data.config.documentTypes || []).map((dt: any) => ({ value: dt.abreviatura, label: dt.abreviatura })),
+                  ...(data.config.documentTypes || []).map((dt: any) => {
+                    const code = dt.abbreviation || dt.abreviatura || dt.name || '';
+                    const labelStr = code;
+                    return { value: code, label: labelStr };
+                  }),
                 ]}
                 error={errors.docType}
               />

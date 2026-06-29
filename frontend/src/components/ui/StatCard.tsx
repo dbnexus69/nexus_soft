@@ -8,7 +8,7 @@ interface StatCardProps {
   color: string;
 }
 
-export default function StatCard({ icon, label, value, color }: StatCardProps) {
+const StatCard = React.memo(function StatCard({ icon, label, value, color }: StatCardProps) {
   return (
     <Card className={`text-white ${color} border-none shadow-lg shadow-gray-200`}>
       <CardBody className="flex items-center gap-4 py-4">
@@ -24,4 +24,6 @@ export default function StatCard({ icon, label, value, color }: StatCardProps) {
       </CardBody>
     </Card>
   );
-}
+});
+
+export default StatCard;

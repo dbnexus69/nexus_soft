@@ -18,6 +18,7 @@ import { usePermissions } from "../../context/PermissionsContext";
 import { getInitials } from "../../utils/formatters";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
+import { SidebarUserProfile } from "./SidebarUserProfile";
 
 interface SidebarProps {
   isMobileOpen?: boolean;
@@ -177,35 +178,11 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         </div>
       </nav>
 
-      <div className={`p-4 border-t border-[#032650] transition-all duration-300 ${isExpanded ? "" : "items-center"}`}>
-        <div className={`flex items-center gap-3 mb-4 transition-all duration-300 ${isExpanded ? "" : "justify-center"}`}>
-          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#032650] flex items-center justify-center font-bold text-[#ffffff] shadow-lg">
-            {user ? getInitials(user.name) : "??"}
-          </div>
-          <div className={`transition-all duration-300 origin-left ${isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"}`}>
-            <p className="text-sm font-bold truncate text-[#ffffff] max-w-[130px]" title={user?.name}>
-              {getShortName(user?.name)}
-            </p>
-            <p className="text-[10px] text-[#9ca3af] uppercase tracking-wider truncate max-w-[130px]">
-              {user?.role === "admin" ? "Administrador" : "Asesor"}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setIsConfirmOpen(true)}
-          className={`flex items-center transition-all duration-300 text-[#9ca3af] hover:text-red-400 hover:bg-red-400/10 rounded-xl group ${
-            isExpanded ? "px-4 py-3 gap-3 w-full" : "px-0 py-3 w-12 mx-auto justify-center"
-          }`}
-          title="Cerrar Sesión"
-        >
-          <LogOut size={20} className="transition-transform group-hover:rotate-12" />
-          <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 origin-left ${
-            isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"
-          }`}>
-            Cerrar Sesión
-          </span>
-        </button>
-      </div>
+      <SidebarUserProfile
+        user={user}
+        isExpanded={isExpanded}
+        onLogoutClick={() => setIsConfirmOpen(true)}
+      />
 
       <Modal
         isOpen={isConfirmOpen}

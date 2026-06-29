@@ -571,7 +571,7 @@ export default function Responsables() {
                   <span className="text-xs text-gray-500">{responsable.email}</span>
                 </div>
               </TableCell>
-              <TableCell>{responsable.docType}</TableCell>
+              <TableCell>{responsable.docType || <span className="text-slate-400 italic">N/A</span>}</TableCell>
               <TableCell>{responsable.docNumber}</TableCell>
               <TableCell>{responsable.phone}</TableCell>
               <TableCell>
@@ -706,7 +706,11 @@ export default function Responsables() {
                     if (errors.docType) setErrors(prev => ({ ...prev, docType: '' }));
                     validateField('docType', e.target.value);
                   }}
-                  options={[{ value: '', label: 'Seleccionar...' }, ...data.config.documentTypes.map(d => ({ value: d.abreviatura, label: d.abreviatura }))]}
+                  options={[{ value: '', label: 'Seleccionar...' }, ...data.config.documentTypes.map(d => {
+                    const code = d.abbreviation || d.abreviatura || d.name || '';
+                    const labelStr = code;
+                    return { value: code, label: labelStr };
+                  })]}
                   error={errors.docType}
                 />
               </FormField>

@@ -19,6 +19,8 @@ import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useData } from "../context/DataContext";
+import { useSalesContext } from "../context/SalesContext";
+import { useClientsContext } from "../context/ClientsContext";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, formatDate, formatId } from "../utils/formatters";
@@ -37,7 +39,19 @@ import { useRef } from "react";
 import LoadingScreen from "../components/ui/LoadingScreen";
 
 export default function Sales() {
-  const { data, addSale, updateSale, voidSale, registerCreditPayment, deleteSalePayment, updateReviewStatus, salesLoading, fetchSales, fetchClients } = useData();
+  const { data } = useData(); // para airports, config, etc.
+  const { 
+    sales, 
+    loading: salesLoading,
+    fetchSales,
+    handleCreateSale: addSale,
+    handleUpdateSale: updateSale,
+    handleVoidSale: voidSale,
+    handleRegisterPayment: registerCreditPayment,
+    handleDeletePayment: deleteSalePayment,
+    handleToggleReviewStatus: updateReviewStatus
+  } = useSalesContext();
+  const { fetchClients } = useClientsContext();
   const { user, isAdmin } = useAuth();
   const { canCreate, canEdit } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,14 +85,14 @@ export default function Sales() {
   const [endDate, setEndDate] = useState("");
 
   const filteredSales = useMemo(() => {
-    const list = isAdmin ? data.sales : data.sales.filter((s) => s.asesorId === user?.id);
+    const list = isAdmin ? sales : sales.filter((s) => s.asesorId === user?.id);
     return list.filter((sale) => {
       // 1. Text Search Filter (client name, status, asesor, commissionAgent, id)
       const query = searchTerm.toLowerCase().trim();
       const matchesText = !query || 
-        sale.clientName.toLowerCase().includes(query) ||
-        sale.status.toLowerCase().includes(query) ||
-        sale.asesorName.toLowerCase().includes(query) ||
+        (sale.clientName && sale.clientName.toLowerCase().includes(query)) ||
+        (sale.status && sale.status.toLowerCase().includes(query)) ||
+        (sale.asesorName && sale.asesorName.toLowerCase().includes(query)) ||
         (sale.commissionAgentName || "").toLowerCase().includes(query) ||
         String(sale.id).includes(query) ||
         formatId(sale.id).toLowerCase().includes(query);
@@ -97,7 +111,7 @@ export default function Sales() {
 
       return matchesText && matchesStatus && matchesDate;
     }).sort((a, b) => b.id - a.id);
-  }, [data.sales, isAdmin, user?.id, searchTerm, statusFilter, startDate, endDate]);
+  }, [sales, isAdmin, user?.id, searchTerm, statusFilter, startDate, endDate]);
 
   // Lazy Load Fetch
   useEffect(() => {
@@ -212,7 +226,6 @@ export default function Sales() {
       day: '2-digit', month: '2-digit', year: 'numeric',
     });
 
-    // 4. Crear contenedor temporal para renderizar las páginas paginadas
     const tempContainer = document.createElement('div');
     tempContainer.className = 'itea-voucher';
     tempContainer.style.position = 'absolute';
@@ -223,7 +236,6 @@ export default function Sales() {
 
     const pageElements: HTMLDivElement[] = [];
 
-    // Construir cada página
     for (let i = 0; i < totalPages; i++) {
       const pageDiv = document.createElement('div');
       pageDiv.className = 'v-page v-page-temp';
@@ -237,7 +249,6 @@ export default function Sales() {
       
       pageDiv.appendChild(contentDiv);
 
-      // Agregar el footer personalizado con paginación
       if (footerElement) {
         const clonedFooter = footerElement.cloneNode(true) as HTMLElement;
         const footerRight = clonedFooter.querySelector('.v-footer-right');
@@ -251,15 +262,13 @@ export default function Sales() {
       pageElements.push(pageDiv);
     }
 
-    // Esperar un instante para que el navegador termine de renderizar el contenedor temporal
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // 5. Capturar canvas por cada página y armar el jsPDF
     const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF('p', 'mm', 'a4');
     const imgWidth = 210;
-    const imgHeight = 297; // exact A4 height in mm
+    const imgHeight = 297; 
 
     for (let i = 0; i < totalPages; i++) {
       if (i > 0) doc.addPage();
@@ -275,7 +284,6 @@ export default function Sales() {
       doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgWidth, imgHeight);
     }
 
-    // Limpiar contenedor temporal
     document.body.removeChild(tempContainer);
 
     return { doc, fullSale };
@@ -313,7 +321,6 @@ export default function Sales() {
 
       const { doc } = await buildVoucherPdf(voucherSale);
 
-      // Extraer base64 limpio (sin prefijo data URI)
       const pdfBase64 = doc.output('datauristring').split(',')[1];
 
       setSuccessMessage(`Enviando al cliente...`);
@@ -352,7 +359,7 @@ export default function Sales() {
     }
   };
 
-  if (salesLoading && data.sales.length === 0) {
+  if (salesLoading && sales.length === 0) {
     return <LoadingScreen fullScreen={false} />;
   }
 
@@ -390,7 +397,6 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Header de Sección */}
       <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
@@ -410,7 +416,6 @@ export default function Sales() {
         </a>
       </div>
 
-      {/* TABS SELECTOR */}
       <div className="gap-2 bg-white p-1 rounded-xl border border-gray-100 shadow-sm inline-flex animate-fade-in">
         <button
           onClick={() => setActiveTab('list')}
@@ -436,8 +441,6 @@ export default function Sales() {
 
       {activeTab === 'list' ? (
         <>
-
-
           <Card className="animate-fade-in">
             <CardHeader
               actions={
@@ -512,7 +515,6 @@ export default function Sales() {
               Lista de Ventas {isAdmin ? "(Todas)" : "(Mis Ventas)"}
             </CardHeader>
 
-            {/* Skeleton de carga — solo se muestra en el primer fetch sin caché */}
             {salesLoading && filteredSales.length === 0 ? (
               <div className="p-4 space-y-3 animate-pulse">
                 {[...Array(7)].map((_, i) => (

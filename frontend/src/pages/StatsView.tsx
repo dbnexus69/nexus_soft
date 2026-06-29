@@ -71,8 +71,8 @@ function TopClients() {
       .then((res) => {
         if (!cancelled) {
           setData((res as any[]).map((c: any) => ({
-            name: c.clientName,
-            total: c.totalPagado,
+            name: c.name,
+            total: c.total,
           })));
         }
       })

@@ -28,12 +28,10 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
               }}
               options={[
                 { value: '', label: 'Seleccione un método de pago' },
-                { value: 'Llaves', label: 'Llaves' },
-                { value: 'Tarjeta de Bancolombia', label: 'Tarjeta de Bancolombia' },
-                { value: 'Tarjeta Davivienda', label: 'Tarjeta Davivienda' },
-                { value: 'Tarjeta de Crédito', label: 'Tarjeta de Crédito' },
-                { value: 'Tarjeta de Débito', label: 'Tarjeta de Débito' },
-                { value: 'Transferencia', label: 'Transferencia' }
+                ...(data?.config?.paymentMethods || []).map((pm: any) => ({
+                  value: pm.name,
+                  label: pm.name
+                }))
               ]}
               error={errors.paymentMethod}
             />
@@ -618,8 +616,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                   onChange={(e) => setFormData({ ...formData, accommodation: { ...formData.accommodation, hotelType: e.target.value } })}
                   options={[
                     { value: "", label: "Seleccionar tipo..." },
-                    { value: "hotel", label: "Hotel" },
-                    { value: "hotel_turistico", label: "Hotel Turístico" },
+                    { value: "hotel", label: "Hotel Turístico" },
                     { value: "resort", label: "Resort / Todo Incluido" },
                     { value: "boutique", label: "Hotel Boutique" },
                     { value: "apartamento", label: "Apartamento / AirBnB" },

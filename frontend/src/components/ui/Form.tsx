@@ -28,12 +28,12 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-export function Input({ className = '', error, onBlur, ...props }: InputProps) {
+export function Input({ className = '', error, onBlur, value, ...props }: InputProps) {
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if ((props.type === 'date' || props.type === 'datetime-local') && props.min && value) {
+    const val = e.target.value;
+    if ((props.type === 'date' || props.type === 'datetime-local') && props.min && val) {
       const minDate = new Date(props.min);
-      const inputDate = new Date(value);
+      const inputDate = new Date(val);
 
       if (!isNaN(minDate.getTime()) && !isNaN(inputDate.getTime())) {
         if (inputDate < minDate) {
@@ -55,12 +55,15 @@ export function Input({ className = '', error, onBlur, ...props }: InputProps) {
     }
   };
 
+  const safeValue = props.type === 'file' ? undefined : (value ?? '');
+
   return (
     <input
       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 ${
         error ? 'border-red-500' : 'border-gray-border'
       } ${className}`}
       onBlur={handleBlur}
+      value={safeValue}
       {...props}
     />
   );
@@ -217,31 +220,33 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
 }
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
   error?: string;
 }
 
-export function Select({ options, error, className = '', ...props }: SelectProps) {
+export function Select({ options, error, className = '', children, value, ...props }: SelectProps) {
   return (
     <select
       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 ${
         error ? 'border-red-500' : 'border-gray-border'
       } ${className}`}
+      value={value ?? ''}
       {...props}
     >
-      {options.map(opt => (
+      {Array.isArray(options) ? options.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
-      ))}
+      )) : children}
     </select>
   );
 }
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
-export function Textarea({ className = '', ...props }: TextareaProps) {
+export function Textarea({ className = '', value, ...props }: TextareaProps) {
   return (
     <textarea
       className={`w-full px-3 py-2 border border-gray-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 ${className}`}
+      value={value ?? ''}
       {...props}
     />
   );

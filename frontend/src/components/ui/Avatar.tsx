@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface AvatarProps {
   src?: string | null;
+  avatarUrl?: string | null;
   name: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -24,13 +25,14 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export default function Avatar({ src, name, size = 'sm', className = '' }: AvatarProps) {
+const Avatar = React.memo(function Avatar({ src, avatarUrl, name, size = 'sm', className = '' }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
+  const finalSrc = src || avatarUrl;
 
-  if (src && !imgError) {
+  if (finalSrc && !imgError) {
     return (
       <img
-        src={src}
+        src={finalSrc}
         alt={name}
         title={name}
         onError={() => setImgError(true)}
@@ -47,4 +49,6 @@ export default function Avatar({ src, name, size = 'sm', className = '' }: Avata
       {getInitials(name)}
     </div>
   );
-}
+});
+
+export default Avatar;

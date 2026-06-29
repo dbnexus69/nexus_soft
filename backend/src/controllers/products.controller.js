@@ -25,19 +25,19 @@ async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaI
   const nombres = nameParts[0] || 'Pasajero';
   const apellidos = nameParts.slice(1).join(' ') || 'Temporal';
 
-  let tipoDocumentoId = null;
+  let tipo_documento_id = null;
   if (docType) {
-    const td = await tx.tiposDocumento.findUnique({
+    const td = await tx.tipos_documento.findUnique({
       where: { abreviatura: String(docType) }
     });
-    if (td) tipoDocumentoId = td.id;
+    if (td) tipo_documento_id = td.id;
   }
 
   const newPersona = await tx.personas.create({
     data: {
       nombres,
       apellidos,
-      tipoDocumentoId,
+      tipo_documento_id,
       documento: docNumber ? String(docNumber) : null,
       status: 'active'
     }
@@ -50,10 +50,10 @@ async function getSale(saleId) {
   return prisma.ventas.findUnique({ where: { id } });
 }
 
-async function createDetalleProducto(tx, ventaId, categoria, data) {
+async function createDetalleProducto(tx, venta_id, categoria, data) {
   return tx.detalleVenta.create({
     data: {
-      ventaId,
+      venta_id,
       categoria,
       nombreServicio: data.nombreServicio || null,
       subtotal: data.subtotal || 0,
@@ -85,17 +85,17 @@ const productHandler = (category, tableName, transformData) => ({
 
         const pasajerosDetalleData = [];
         const cliente = await tx.clientes.findUnique({
-          where: { id: venta.clienteId },
-          select: { personaId: true }
+          where: { id: venta.cliente_id },
+          select: { persona_id: true }
         });
-        const defaultPersonaId = cliente?.personaId;
+        const defaultPersonaId = cliente?.persona_id;
 
         if (data.passengers || data.passengerInfo || data.guests) {
           const passengers = data.passengers ? data.passengers : (data.passengerInfo ? [data.passengerInfo] : (data.guests || []));
           for (const p of passengers) {
             const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, defaultPersonaId);
             pasajerosDetalleData.push({
-              personaId: resolvedPid,
+              persona_id: resolvedPid,
               esTitular: p.esTitular ?? true,
               asiento: p.asiento || p.seat || null,
               nroReserva: p.nroReserva || null,
@@ -110,7 +110,7 @@ const productHandler = (category, tableName, transformData) => ({
           if (passengerName || docNumber || ['checkin', 'documentacion_migratoria', 'simcard', 'tours', 'servicio_mascotas', 'renta_vehiculos'].includes(category)) {
             const resolvedPid = await findOrCreatePersona(tx, passengerName, docType, docNumber, defaultPersonaId);
             pasajerosDetalleData.push({
-              personaId: resolvedPid,
+              persona_id: resolvedPid,
               esTitular: true,
               asiento: data.seat || data.seatNumber || null,
               nroReserva: null,
@@ -123,7 +123,7 @@ const productHandler = (category, tableName, transformData) => ({
           await tx.pasajerosDetalle.create({
             data: {
               detalleVentaId: detalle.id,
-              personaId: passengerData.personaId,
+              persona_id: passengerData.persona_id,
               esTitular: passengerData.esTitular,
               asiento: passengerData.asiento,
               nroReserva: passengerData.nroReserva,
@@ -142,15 +142,15 @@ const productHandler = (category, tableName, transformData) => ({
             const destAirport = await tx.aeropuertos.findFirst({ where: { codigoIata: leg.destination } });
             if (!originAirport || !destAirport) continue;
 
-            let aerolineaId = null;
+            let aerolinea_id = null;
             const legAirline = leg.airline || data.airline;
             if (legAirline) {
               const parsedId = parseInt(legAirline);
               if (!isNaN(parsedId)) {
-                aerolineaId = parsedId;
+                aerolinea_id = parsedId;
               } else {
                 const match = await tx.aerolineas.findFirst({ where: { nombre: legAirline } });
-                aerolineaId = match?.id || null;
+                aerolinea_id = match?.id || null;
               }
             }
 
@@ -192,7 +192,7 @@ const productHandler = (category, tableName, transformData) => ({
                 nroVueloTramo: leg.flightNumber || null,
                 asiento: leg.seat || null,
                 nroTiquete: leg.ticketNumber || null,
-                aerolineaId,
+                aerolinea_id,
                 planEquipajeId,
                 orden: i + 1
               }
@@ -210,10 +210,10 @@ const productHandler = (category, tableName, transformData) => ({
   },
   update: async (req, res, next) => {
     try {
-      const ventaId = parseInt(req.params.saleId);
+      const venta_id = parseInt(req.params.saleId);
       const id = req.params.id;
 
-      const venta = await getSale(ventaId);
+      const venta = await getSale(venta_id);
       if (!venta) return error(res, 'Venta no encontrada', 404);
 
       const data = req.body;
@@ -229,16 +229,16 @@ const productHandler = (category, tableName, transformData) => ({
           await tx.pasajerosDetalle.deleteMany({ where: { detalleVentaId: prod.detalleVentaId } });
 
           const cliente = await tx.clientes.findUnique({
-            where: { id: venta.clienteId },
-            select: { personaId: true }
+            where: { id: venta.cliente_id },
+            select: { persona_id: true }
           });
-          const defaultPersonaId = cliente?.personaId;
+          const defaultPersonaId = cliente?.persona_id;
 
           const pasajerosDetalleData = [];
           for (const p of passengers) {
             const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, defaultPersonaId);
             pasajerosDetalleData.push({
-              personaId: resolvedPid,
+              persona_id: resolvedPid,
               esTitular: p.esTitular ?? true,
               asiento: p.asiento || p.seat || null,
               nroReserva: p.nroReserva || null,
@@ -250,7 +250,7 @@ const productHandler = (category, tableName, transformData) => ({
             await tx.pasajerosDetalle.create({
               data: {
                 detalleVentaId: prod.detalleVentaId,
-                personaId: passengerData.personaId,
+                persona_id: passengerData.persona_id,
                 esTitular: passengerData.esTitular,
                 asiento: passengerData.asiento,
                 nroReserva: passengerData.nroReserva,
@@ -294,7 +294,7 @@ const H = productHandler;
 // =========================================================
 exports.createTicket = H(CATEGORIES.ticket, 'prodTiqueteria', (d, detalleId) => ({
   detalleVentaId: detalleId,
-  aerolineaId: d.airline ? parseInt(d.airline) : null,
+  aerolinea_id: d.airline ? parseInt(d.airline) : null,
   nroReserva: d.reservationNumber || null,
   nroVuelo: d.flightNumber || null,
   nroTiquete: d.ticketNumber || null,
@@ -316,7 +316,7 @@ exports.createHotel = H(CATEGORIES.hotel, 'prodHoteleria', (d, detalleId) => ({
   destino: d.destination || null,
   nroReserva: d.reservationNumber || null,
   fechaEntrada: d.startDate ? new Date(d.startDate) : null,
-  fechaSalida: d.endDate ? new Date(d.endDate) : null,
+  fecha_salida: d.endDate ? new Date(d.endDate) : null,
   observaciones: d.observations || null
 })).create;
 
@@ -346,7 +346,7 @@ exports.createPlan = H(CATEGORIES.plan, 'prodPlanes', (d, detalleId) => ({
   detalleVentaId: detalleId,
   paqueteId: d.packageId ? parseInt(d.packageId) : null,
   nombrePlan: d.planName || null,
-  aerolineaId: d.airline ? parseInt(d.airline) : null,
+  aerolinea_id: d.airline ? parseInt(d.airline) : null,
   nroReserva: d.reservationNumber || null,
   nroTiquete: d.ticketNumber || null,
   fechaViajeInicio: d.startDate ? new Date(d.startDate) : null,
@@ -437,7 +437,7 @@ exports.createFinca = H(CATEGORIES.finca, 'prodFincas', (d, detalleId) => ({
   responsableNombre: d.responsibleName || null,
   documentoResponsable: d.docNumber || null,
   fechaEntrada: d.checkInDate ? new Date(d.checkInDate) : null,
-  fechaSalida: d.checkOutDate ? new Date(d.checkOutDate) : null,
+  fecha_salida: d.checkOutDate ? new Date(d.checkOutDate) : null,
   adultosCount: d.adultsCount || 0,
   ninosCount: d.childrenCount || 0,
   tieneMascotas: d.hasPets || false,

@@ -11,7 +11,7 @@ export function useCommissions() {
     setLoadingAgents(true);
     try {
       const data = await api.listCommissionAgents();
-      setAgents(data);
+      setAgents(data.data || []);
     } catch (err) {
       console.error("Error fetching commission agents:", err);
     } finally {
@@ -23,7 +23,7 @@ export function useCommissions() {
     setLoadingSettlements(true);
     try {
       const data = await api.listSettlements();
-      setSettlements(data);
+      setSettlements(data.data || []);
     } catch (err) {
       console.error("Error fetching settlements:", err);
     } finally {

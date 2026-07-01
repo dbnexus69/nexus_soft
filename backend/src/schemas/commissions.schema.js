@@ -8,7 +8,8 @@ const createAgentSchema = z.object({
   phone: z.string().nullable().optional(),
   email: z.string().email('Email inválido').nullable().optional().or(z.literal('')),
   paymentThreshold: z.union([z.number(), z.string()]).optional(),
-  status: z.string().optional()
+  status: z.string().optional(),
+  avatar: z.string().nullable().optional()
 });
 
 const updateAgentSchema = z.object({
@@ -19,7 +20,8 @@ const updateAgentSchema = z.object({
   phone: z.string().nullable().optional(),
   email: z.string().email('Email inválido').nullable().optional().or(z.literal('')),
   paymentThreshold: z.union([z.number(), z.string()]).optional(),
-  status: z.string().optional()
+  status: z.string().optional(),
+  avatar: z.string().nullable().optional()
 });
 
 const createSettlementSchema = z.object({

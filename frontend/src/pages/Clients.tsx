@@ -113,9 +113,9 @@ export default function Clients() {
   return (
     <div className="space-y-6 relative animate-fade-in">
       <div className="mb-6 animate-fade-in">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
+        <div className="flex flex-col items-center justify-center gap-4 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-3xl font-bold text-primary flex items-center justify-center gap-3">
               <UsersIcon className="text-accent w-8 h-8" /> Gestión de Clientes
             </h1>
             <p className="text-gray-500 text-sm mt-1">Administra la base de datos de tus viajeros y su historial de compras.</p>
@@ -150,8 +150,11 @@ export default function Clients() {
               <option value="inactive">Solo Inactivos</option>
             </select>
             {canCreate('clients') && (
-              <Button onClick={() => handleOpenModal()}>
-                <Plus size={18} /> Nuevo Cliente
+              <Button 
+                onClick={() => handleOpenModal()}
+                className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/30 rounded-xl px-6 h-11 transition-all hover:scale-105 active:scale-95 ml-auto"
+              >
+                <Plus size={20} className="mr-1" /> Nuevo Cliente
               </Button>
             )}
           </div>

@@ -115,117 +115,149 @@ export const UserModal: React.FC<UserModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={editingUser ? "Editar Usuario" : "Registrar Nuevo Usuario"}
+      size="xl"
     >
-      <div className="space-y-4 p-1">
-        <div className="flex justify-center mb-4">
-          <AvatarPicker 
-            value={formData.avatar || AVATARS[0]}
-            onChange={(avatar) => setFormData(prev => ({ ...prev, avatar }))}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombres" error={errors.firstName} required>
-            <Input
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              placeholder="Ej: Juan"
+      <div className="flex flex-col md:flex-row min-h-[500px]">
+        {/* Panel Izquierdo - Avatar */}
+        <div className="w-full md:w-1/3 bg-gray-50/50 dark:bg-slate-800/30 p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-700/50 flex flex-col items-center justify-start relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+          
+          <div className="relative z-10 w-full flex flex-col items-center">
+            <AvatarPicker 
+              value={formData.avatar || AVATARS[0]}
+              onChange={(avatar) => setFormData(prev => ({ ...prev, avatar }))}
             />
-          </FormField>
-
-          <FormField label="Apellidos" error={errors.lastName} required>
-            <Input
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              placeholder="Ej: Pérez"
-            />
-          </FormField>
-        </div>
-
-        <FormField label="Correo Electrónico" error={errors.email} required>
-          <Input
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="juan.perez@samtur.com"
-          />
-        </FormField>
-
-        {!editingUser && (
-          <FormField label="Contraseña Temporal" error={errors.password} required>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="mt-6 text-center text-sm text-gray-500 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+              <p>Selecciona un avatar moderno y premium para representar a este usuario en la plataforma.</p>
             </div>
-          </FormField>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Rol del Sistema" required>
-            <Select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            >
-              <option value="asesor">Asesor</option>
-              <option value="freelancer">Freelancer</option>
-              <option value="admin">Administrador</option>
-            </Select>
-          </FormField>
-
-          <FormField label="Tipo de Documento">
-            <Select
-              value={formData.docType}
-              onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
-            >
-              {documentTypes.map((dt: any) => {
-                const code = dt.abbreviation || dt.abreviatura || dt.name;
-                const name = dt.name || dt.nombre || code;
-                return (
-                  <option key={dt.id} value={code}>
-                    {code}
-                  </option>
-                );
-              })}
-            </Select>
-          </FormField>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Número de Documento" error={errors.docNumber} required>
-            <Input
-              value={formData.docNumber}
-              onChange={(e) => setFormData({ ...formData, docNumber: e.target.value })}
-              placeholder="Ej: 1098765432"
-            />
-          </FormField>
+        {/* Panel Derecho - Formulario */}
+        <div className="w-full md:w-2/3 p-6 md:p-8 flex flex-col">
+          <div className="flex-1 space-y-6">
+            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white shadow-inner">
+                <Shield size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-primary">Información de la Cuenta</h4>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Credenciales y configuración de acceso.</p>
+              </div>
+            </div>
 
-          <FormField label="Teléfono / WhatsApp">
-            <Input
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="300 123 4567"
-            />
-          </FormField>
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField label="Nombres" error={errors.firstName} required>
+                <Input
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  placeholder="Ej: Juan"
+                />
+              </FormField>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSaving}>
-            {editingUser ? "Guardar Cambios" : "Registrar Usuario"}
-          </Button>
+              <FormField label="Apellidos" error={errors.lastName} required>
+                <Input
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  placeholder="Ej: Pérez"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Correo Electrónico" error={errors.email} required>
+              <Input
+                className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="juan.perez@nexus.com"
+              />
+            </FormField>
+
+            {!editingUser && (
+              <FormField label="Contraseña Temporal" error={errors.password} required>
+                <div className="relative">
+                  <Input
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors pr-10"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-3.5 text-slate-400 hover:text-primary transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </FormField>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField label="Rol del Sistema" required>
+                <Select
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value="asesor">Asesor</option>
+                  <option value="freelancer">Freelancer</option>
+                  <option value="admin">Administrador</option>
+                </Select>
+              </FormField>
+
+              <FormField label="Tipo de Documento">
+                <Select
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.docType}
+                  onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
+                >
+                  {documentTypes.map((dt: any) => {
+                    const code = dt.abbreviation || dt.abreviatura || dt.name;
+                    return (
+                      <option key={dt.id} value={code}>
+                        {code}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </FormField>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField label="Número de Documento" error={errors.docNumber} required>
+                <Input
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.docNumber}
+                  onChange={(e) => setFormData({ ...formData, docNumber: e.target.value })}
+                  placeholder="Ej: 1098765432"
+                />
+              </FormField>
+
+              <FormField label="Teléfono / WhatsApp">
+                <Input
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="300 123 4567"
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex gap-4 justify-end pt-8 mt-4 border-t border-gray-100 dark:border-slate-800">
+            <Button variant="outline" onClick={onClose} disabled={isSaving} className="h-12 px-8 rounded-xl font-bold border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800">
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSaving} className="bg-primary hover:bg-primary/90 px-10 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 text-white hover:scale-105 active:scale-95 transition-all">
+              {isSaving ? "Guardando..." : editingUser ? "Guardar Cambios" : "Registrar Usuario"}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

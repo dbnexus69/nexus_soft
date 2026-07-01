@@ -88,9 +88,9 @@ export default function Dashboard() {
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#2B2D42] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-5 dark:opacity-20"></div>
         </div>
         
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight">
+        <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-4xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center justify-center">
               Panel de Control
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 max-w-xl font-medium">

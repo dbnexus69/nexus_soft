@@ -388,9 +388,9 @@ export default function Sales() {
         </div>
       )}
 
-      <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center gap-3">
+      <div className="mb-6 animate-fade-in flex flex-col items-center justify-center gap-4 text-center">
+        <div className="flex flex-col items-center justify-center">
+          <h1 className="text-3xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center justify-center gap-3">
             <Wallet className="text-[#8D99AE] w-8 h-8 shrink-0" /> Gestión de Ventas
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">

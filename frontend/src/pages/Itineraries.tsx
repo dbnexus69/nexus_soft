@@ -224,9 +224,9 @@ export default function Itineraries() {
       )}
 
       {/* Header y Navegación Principal */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
-        <div>
-          <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
+      <div className="flex flex-col items-center justify-center gap-4 animate-fade-in text-center mb-4">
+        <div className="flex flex-col items-center justify-center">
+          <h1 className="text-3xl font-bold text-primary flex items-center justify-center gap-3">
             <CalendarIcon className="text-accent w-8 h-8" /> Itinerarios de Vuelo
           </h1>
           <p className="text-gray-500 text-sm mt-1">Seguimiento de salidas, regresos y gestión de check-in.</p>

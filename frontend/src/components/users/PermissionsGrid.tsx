@@ -10,7 +10,7 @@ interface PermissionsGridProps {
 export default function PermissionsGrid({ permissions, onChange }: PermissionsGridProps) {
   const toggle = (module: keyof RolePermissions, type: string) => {
     const next = { ...permissions };
-    const modulePerms = { ...next[module] } as any;
+    const modulePerms = { ...(next[module] || {}) } as any;
     if (type in modulePerms) {
       if (typeof modulePerms[type] === 'boolean') {
         modulePerms[type] = !modulePerms[type];
@@ -40,8 +40,8 @@ export default function PermissionsGrid({ permissions, onChange }: PermissionsGr
             <span className="font-bold text-base text-gray-800 dark:text-slate-100">{mod.label}</span>
           </div>
           <div className="flex flex-col gap-3">
-            {Object.keys(permissions[mod.id]).map(permKey => {
-              const val = (permissions[mod.id] as any)[permKey];
+            {Object.keys(permissions[mod.id] || {}).map(permKey => {
+              const val = (permissions[mod.id] as any)?.[permKey];
               const permLabels: Record<string, string> = {
                 view: 'Ver', create: 'Crear', edit: 'Editar', delete: 'Eliminar'
               };

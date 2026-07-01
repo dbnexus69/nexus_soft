@@ -50,6 +50,7 @@ class CommissionsService {
           p.telefono as "phone",
           p.email,
           p.documento as "docNumber",
+          p.avatar_url as "avatar",
           td.abreviatura as "docType"
         FROM comisionistas c
         JOIN personas p ON c.persona_id = p.id
@@ -70,7 +71,8 @@ class CommissionsService {
       accumulated: a.accumulated,
       paymentThreshold: a.paymentThreshold,
       phone: a.phone,
-      email: a.email
+      email: a.email,
+      avatar: a.avatar || null
     }));
 
     return {
@@ -110,6 +112,7 @@ class CommissionsService {
             tipo_documento_id: tipo_documento_id || existingPersona.tipo_documento_id,
             email: data.email || existingPersona.email,
             telefono: data.phone || existingPersona.telefono,
+            avatar_url: data.avatar || existingPersona.avatar_url,
             status: 'active',
             deleted_at: null
           }
@@ -117,7 +120,7 @@ class CommissionsService {
       }
     }
 
-    if (!personas) {
+    if (!persona) {
       const { firstName, lastName } = splitFullName(data.name);
       persona = await prisma.personas.create({
         data: {
@@ -126,14 +129,15 @@ class CommissionsService {
           tipo_documento_id: tipo_documento_id,
           documento: data.docNumber || null,
           email: data.email || null,
-          telefono: data.phone || null
+          telefono: data.phone || null,
+          avatar_url: data.avatar || null
         }
       });
     }
 
     const agent = await prisma.comisionistas.create({
       data: {
-        persona_id: personas.id,
+        persona_id: persona.id,
         tipo: data.type || null,
         umbral_pago: parseFloat(data.paymentThreshold) || 0,
         acumulado: 0,
@@ -152,7 +156,8 @@ class CommissionsService {
       accumulated: agent.acumulado,
       paymentThreshold: agent.umbral_pago,
       phone: agent.personas.telefono,
-      email: agent.personas.email
+      email: agent.personas.email,
+      avatar: agent.personas.avatar_url || null
     };
   }
 
@@ -186,6 +191,7 @@ class CommissionsService {
 
     if (data.phone !== undefined) personaUpdate.telefono = data.phone;
     if (data.email !== undefined) personaUpdate.email = data.email;
+    if (data.avatar !== undefined) personaUpdate.avatar_url = data.avatar;
 
     if (data.docType) {
       const dt = await prisma.tipos_documento.findUnique({ where: { abreviatura: data.docType } });

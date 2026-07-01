@@ -22,6 +22,7 @@ import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { FormField, Input, Select } from "../components/ui/Form";
+import AvatarPicker, { AVATARS } from "../components/ui/AvatarPicker";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import { useData } from "../context/DataContext";
 import { useCommissionsContext } from "../context/CommissionsContext";
@@ -83,7 +84,7 @@ export default function CommissionAgents() {
 
   // Calcular acumulados (solo ventas no liquidadas)
   const filteredAgents = useMemo(() => {
-    const agents = data.commissionAgents || [];
+    const agents = commissionAgents || [];
     const sales = data.sales || [];
     console.log("Debug - CommissionAgents:", { agentsCount: agents.length, salesCount: sales.length });
     
@@ -96,8 +97,8 @@ export default function CommissionAgents() {
 
     const result = mapped.filter(
       (a: any) =>
-        a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.docNumber?.includes(searchTerm)
+        (a.name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+        (a.docNumber || "").includes(searchTerm)
     ).sort((a: any, b: any) => b.id - a.id);
     console.log("Debug - FilteredAgents:", result);
     return result;
@@ -120,7 +121,7 @@ export default function CommissionAgents() {
       setFormData({ ...agent });
     } else {
       setEditingAgent(null);
-      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.abreviatura || "" });
+      setFormData({ status: "Activo", type: "Comisionista", avatar: AVATARS[0], docType: data.config.documentTypes?.[0]?.abreviatura || "" });
     }
     setIsModalOpen(true);
   };
@@ -268,9 +269,9 @@ export default function CommissionAgents() {
       <div className="absolute top-1/2 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in relative z-10">
-        <div>
-          <h1 className="text-2xl sm:text-4xl font-black text-primary tracking-tight flex items-center gap-3 sm:gap-4">
+      <div className="flex flex-col items-center justify-center gap-4 animate-fade-in relative z-10 text-center">
+        <div className="flex flex-col items-center justify-center">
+          <h1 className="text-2xl sm:text-4xl font-black text-primary tracking-tight flex items-center justify-center gap-3 sm:gap-4">
             <div className="p-2.5 sm:p-3 bg-primary rounded-xl sm:rounded-2xl shadow-xl shadow-primary/20 text-white shrink-0">
               <Coins size={24} className="sm:hidden" />
               <Coins size={32} className="hidden sm:block" />
@@ -342,7 +343,7 @@ export default function CommissionAgents() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-4">
                   {filteredAgents.map((agent: any) => {
                     const progress = Math.min((agent.accumulated / 50000) * 100, 100);
                     const isReady = agent.accumulated >= 50000;
@@ -350,80 +351,75 @@ export default function CommissionAgents() {
                     return (
                       <div
                         key={agent.id}
-                        className="group bg-white border border-gray-100 rounded-[2rem] p-6 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+                        className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 md:p-5 hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col md:flex-row items-center gap-6"
                       >
-                        {/* Background Decor */}
-                        <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none ${isReady ? 'bg-amber-500' : 'bg-primary'}`} />
-
-                        <div className="flex items-start justify-between mb-6">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg transition-transform group-hover:scale-110 duration-500 ${
-                              isReady ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-primary text-white shadow-primary/20'
-                            }`}>
-                              {agent.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-gray-800 text-lg leading-tight group-hover:text-primary transition-colors">{agent.name}</h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
-                                <span className={`w-1.5 h-1.5 rounded-full ${agent.status === "Activo" ? 'bg-green-500' : 'bg-gray-300'}`} />
-                              </div>
-                            </div>
+                        {/* 1. Avatar & Info */}
+                        <div className="flex items-center gap-4 min-w-[280px] w-full md:w-auto">
+                          <div className={`w-14 h-14 rounded-full flex flex-shrink-0 items-center justify-center font-black text-xl shadow-inner overflow-hidden transition-transform group-hover:scale-110 duration-500 ${
+                            isReady ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-50 text-gray-500 dark:bg-slate-700 dark:text-slate-300'
+                          }`}>
+                            {agent.avatar ? (
+                              <img src={agent.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              (agent.name || "C").charAt(0).toUpperCase()
+                            )}
                           </div>
-                          <div className="flex flex-col gap-1 relative z-10">
-                             {canEdit('commissions') && (
-                               <button onClick={() => handleOpenModal(agent)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
-                                  <Pencil size={16} />
-                               </button>
-                             )}
-                             {canDelete('commissions') && (
-                               <button onClick={() => setDeleteConfirm(agent)} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                                  <Trash2 size={16} />
-                               </button>
-                             )}
+                          <div>
+                            <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight group-hover:text-primary transition-colors">{agent.name || "Comisionista"}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
+                              <span className="text-[11px] font-medium text-gray-400">{agent.docType} {agent.docNumber}</span>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Acumulado</p>
-                              <p className={`text-2xl font-black ${isReady ? 'text-amber-600' : 'text-primary'}`}>
-                                {formatCurrency(agent.accumulated)}
-                              </p>
-                            </div>
-                            <p className="text-[10px] font-black text-gray-400 uppercase">Meta $50k</p>
+                        {/* 2. Progress Bar (Center) */}
+                        <div className="flex-1 w-full flex flex-col justify-center min-w-[200px]">
+                          <div className="flex justify-between items-end mb-2">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Progreso Meta</span>
+                            <span className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase">$50k</span>
                           </div>
-
-                          {/* Progress Bar */}
-                          <div className="space-y-2">
-                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full transition-all duration-1000 ease-out ${isReady ? 'bg-amber-500' : 'bg-accent'}`} 
-                                style={{ width: `${progress}%` }} 
-                              />
-                            </div>
-                            {isReady && (
-                              <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 p-2 rounded-xl border border-amber-100 animate-pulse">
-                                <AlertCircle size={12} />
-                                <span className="text-[10px] font-bold uppercase tracking-tight">Listo para liquidar</span>
-                              </div>
-                            )}
+                          <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden relative">
+                            <div 
+                              className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out rounded-full ${isReady ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-primary'}`} 
+                              style={{ width: `${progress}%` }} 
+                            />
                           </div>
+                        </div>
 
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                            <div className="flex flex-col">
-                              <span className="text-[9px] text-gray-400 font-bold uppercase">Documento</span>
-                              <span className="text-xs font-medium text-gray-600">{agent.docType} {agent.docNumber}</span>
-                            </div>
-                            {isReady && (
+                        {/* 3. Stats & Actions (Right) */}
+                        <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto mt-4 md:mt-0">
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Acumulado</p>
+                            <p className={`text-xl font-black ${isReady ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
+                              {formatCurrency(agent.accumulated)}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 border-l border-gray-100 dark:border-slate-700 pl-6">
+                            {isReady ? (
                               <button 
                                 onClick={() => openSettleModal(agent)}
-                                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all hover:shadow-lg shadow-amber-200"
+                                className="flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-amber-200 dark:hover:shadow-amber-900/20 mr-2"
                               >
-                                Liquidar <ChevronRight size={14} />
+                                Liquidar
                               </button>
+                            ) : (
+                               <span className={`w-2.5 h-2.5 rounded-full mr-3 ${agent.status === "Activo" ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-gray-300'}`} title={agent.status} />
                             )}
+                            
+                            <div className="flex flex-row gap-1">
+                              {canEdit('commissions') && (
+                                <button onClick={() => handleOpenModal(agent)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Editar">
+                                  <Pencil size={16} />
+                                </button>
+                              )}
+                              {canDelete('commissions') && (
+                                <button onClick={() => setDeleteConfirm(agent)} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors" title="Eliminar">
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -454,10 +450,14 @@ export default function CommissionAgents() {
                       <div key={agent.id} className="relative group p-6 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-800 border border-amber-100 dark:border-amber-900/30 rounded-3xl hover:shadow-xl transition-all duration-300">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                           <div className="flex items-center gap-3">
-                             <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center font-bold">
-                               {agent.name.charAt(0)}
+                             <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center font-bold overflow-hidden shadow-inner">
+                               {agent.avatar ? (
+                                 <img src={agent.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                               ) : (
+                                 (agent.name || "C").charAt(0).toUpperCase()
+                               )}
                              </div>
-                             <span className="font-bold text-gray-800 dark:text-white">{agent.name}</span>
+                             <span className="font-bold text-gray-800 dark:text-white">{agent.name || "Comisionista"}</span>
                           </div>
                           <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-white dark:bg-amber-900/30 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800/50 uppercase self-start sm:self-auto">Saldo Pendiente</span>
                         </div>
@@ -594,124 +594,145 @@ export default function CommissionAgents() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingAgent ? "Editar Perfil de Comisionista" : "Registrar Nuevo Comisionista Estratégico"}
-        size="lg"
+        size="xl"
       >
-        <div className="py-4 space-y-6">
-          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-4">
-             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white">
-                <User size={24} />
-             </div>
-             <div>
-                <h4 className="font-bold text-primary">Información General</h4>
-                <p className="text-xs text-gray-500">Completa los datos básicos para el seguimiento de comisiones.</p>
-             </div>
+        <div className="flex flex-col md:flex-row min-h-[500px]">
+          {/* Panel Izquierdo - Avatar */}
+          <div className="w-full md:w-1/3 bg-gray-50/50 dark:bg-slate-800/30 p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-700/50 flex flex-col items-center justify-start relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+            
+            <div className="relative z-10 w-full">
+              <AvatarPicker
+                value={formData.avatar || AVATARS[0]}
+                onChange={(avatar) => setFormData((prev: any) => ({ ...prev, avatar }))}
+              />
+              <div className="mt-6 text-center text-sm text-gray-500 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                <p>Selecciona un avatar premium para identificar a este comisionista en tu directorio y listados de pagos.</p>
+              </div>
+            </div>
           </div>
 
-          <FormField label="Nombre Completo / Razón Social" error={errors.name}>
-            <Input
-              className="h-12 rounded-xl"
-              value={formData.name || ""}
-              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: "" }); }}
-              placeholder="Ej. Juan Asesor o Agencia Viajes Plus"
-              error={errors.name}
-            />
-          </FormField>
+          {/* Panel Derecho - Formulario */}
+          <div className="w-full md:w-2/3 p-6 md:p-8 flex flex-col">
+            <div className="flex-1 space-y-6">
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-4">
+                 <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white shadow-inner">
+                    <User size={24} />
+                 </div>
+                 <div>
+                    <h4 className="font-bold text-primary">Información General</h4>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Completa los datos básicos para el seguimiento de comisiones.</p>
+                 </div>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField label="Categoría de Comisionista">
-              <Select
-                className="h-12 rounded-xl"
-                value={formData.type || ""}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                options={[
-                  { value: "", label: "Seleccione un tipo" },
-                  { value: "Comisionista", label: "Comisionista Independiente" },
-                  { value: "Agencia Externa", label: "Agencia de Viajes Externa" },
-                  { value: "Referido", label: "Referido / Amigo" },
-                  { value: "Otro", label: "Otro Comisionista" },
-                ]}
-              />
-            </FormField>
-            <FormField label="Estado de la Cuenta">
-              <Select
-                className="h-12 rounded-xl"
-                value={formData.status || "Activo"}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                options={[
-                  { value: "Activo", label: "Activo - Recibe Comisiones" },
-                  { value: "Inactivo", label: "Inactivo - Suspendido" },
-                ]}
-              />
-            </FormField>
-          </div>
+              <FormField label="Nombre Completo / Razón Social" error={errors.name}>
+                <Input
+                  className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                  value={formData.name || ""}
+                  onChange={(e) => { setFormData({ ...formData, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: "" }); }}
+                  placeholder="Ej. Juan Asesor o Agencia Viajes Plus"
+                  error={errors.name}
+                />
+              </FormField>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField label="Tipo de Documento" error={errors.docType}>
-              <Select
-                className="h-12 rounded-xl"
-                value={formData.docType || ""}
-                onChange={(e) => {
-                  setFormData({ ...formData, docType: e.target.value, docNumber: "" });
-                  if (errors.docType) setErrors({ ...errors, docType: "" });
-                  if (errors.docNumber) setErrors((p) => ({ ...p, docNumber: "" }));
-                }}
-                options={[
-                  { value: "", label: "Seleccione" },
-                  ...(data.config.documentTypes || []).map((dt: any) => {
-                    const code = dt.abbreviation || dt.abreviatura || dt.name || '';
-                    const labelStr = code;
-                    return { value: code, label: labelStr };
-                  }),
-                ]}
-                error={errors.docType}
-              />
-            </FormField>
-            <FormField label="Número de Identificación" error={errors.docNumber}>
-              <Input
-                className="h-12 rounded-xl"
-                value={formData.docNumber || ""}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  const typeUpper = formData.docType ? formData.docType.toUpperCase() : "";
-                  if (typeUpper === "CC") {
-                    val = val.replace(/\D/g, "");
-                  } else if (typeUpper === "PASAPORTE" || typeUpper === "PP" || typeUpper === "PAS") {
-                    val = val.replace(/[^a-zA-Z0-9]/g, "");
-                  } else if (typeUpper === "NIT" || typeUpper === "RUT") {
-                    val = val.replace(/[^0-9-]/g, "");
-                  } else {
-                    val = val.replace(/[^\w-]/gi, "");
-                  }
-                  setFormData({ ...formData, docNumber: val });
-                  if (errors.docNumber) setErrors((p) => ({ ...p, docNumber: "" }));
-                }}
-                onBlur={(e) => {
-                  const err = validateDocNumber(e.target.value, formData.docType || "");
-                  if (err) setErrors((p) => ({ ...p, docNumber: err }));
-                }}
-                maxLength={
-                  formData.docType ? (
-                    formData.docType.toUpperCase() === "CC" ? 10 :
-                    ["PASAPORTE", "PP", "PAS"].includes(formData.docType.toUpperCase()) ? 12 :
-                    ["NIT", "RUT"].includes(formData.docType.toUpperCase()) ? 11 : 15
-                  ) : 15
-                }
-                placeholder={
-                  formData.docType?.toUpperCase() === "CC" ? "Ej. 1234567890" :
-                  ["NIT", "RUT"].includes(formData.docType?.toUpperCase() || "") ? "Ej. 123456789-0" :
-                  ["PASAPORTE", "PP", "PAS"].includes(formData.docType?.toUpperCase() || "") ? "Ej. AB1234567" :
-                  "Ej. 1234567890"
-                }
-                error={errors.docNumber}
-              />
-            </FormField>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField label="Categoría de Comisionista">
+                  <Select
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.type || ""}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    options={[
+                      { value: "", label: "Seleccione un tipo" },
+                      { value: "Comisionista", label: "Comisionista Independiente" },
+                      { value: "Agencia Externa", label: "Agencia de Viajes Externa" },
+                      { value: "Referido", label: "Referido / Amigo" },
+                      { value: "Otro", label: "Otro Comisionista" },
+                    ]}
+                  />
+                </FormField>
+                <FormField label="Estado de la Cuenta">
+                  <Select
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.status || "Activo"}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    options={[
+                      { value: "Activo", label: "Activo - Recibe Comisiones" },
+                      { value: "Inactivo", label: "Inactivo - Suspendido" },
+                    ]}
+                  />
+                </FormField>
+              </div>
 
-          <div className="flex gap-4 justify-end pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="h-12 px-8 rounded-xl font-bold" disabled={isSaving}>Cancelar</Button>
-            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 px-10 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 text-white" disabled={isSaving}>
-              {isSaving ? "Guardando..." : editingAgent ? "Guardar Cambios" : "Confirmar Registro"}
-            </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField label="Tipo de Documento" error={errors.docType}>
+                  <Select
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.docType || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, docType: e.target.value, docNumber: "" });
+                      if (errors.docType) setErrors({ ...errors, docType: "" });
+                      if (errors.docNumber) setErrors((p) => ({ ...p, docNumber: "" }));
+                    }}
+                    options={[
+                      { value: "", label: "Seleccione" },
+                      ...(data.config.documentTypes || []).map((dt: any) => {
+                        const code = dt.abbreviation || dt.abreviatura || dt.name || '';
+                        const labelStr = code;
+                        return { value: code, label: labelStr };
+                      }),
+                    ]}
+                    error={errors.docType}
+                  />
+                </FormField>
+                <FormField label="Número de Identificación" error={errors.docNumber}>
+                  <Input
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.docNumber || ""}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      const typeUpper = formData.docType ? formData.docType.toUpperCase() : "";
+                      if (typeUpper === "CC") {
+                        val = val.replace(/\D/g, "");
+                      } else if (typeUpper === "PASAPORTE" || typeUpper === "PP" || typeUpper === "PAS") {
+                        val = val.replace(/[^a-zA-Z0-9]/g, "");
+                      } else if (typeUpper === "NIT" || typeUpper === "RUT") {
+                        val = val.replace(/[^0-9-]/g, "");
+                      } else {
+                        val = val.replace(/[^\w-]/gi, "");
+                      }
+                      setFormData({ ...formData, docNumber: val });
+                      if (errors.docNumber) setErrors((p) => ({ ...p, docNumber: "" }));
+                    }}
+                    onBlur={(e) => {
+                      const err = validateDocNumber(e.target.value, formData.docType || "");
+                      if (err) setErrors((p) => ({ ...p, docNumber: err }));
+                    }}
+                    maxLength={
+                      formData.docType ? (
+                        formData.docType.toUpperCase() === "CC" ? 10 :
+                        ["PASAPORTE", "PP", "PAS"].includes(formData.docType.toUpperCase()) ? 12 :
+                        ["NIT", "RUT"].includes(formData.docType.toUpperCase()) ? 11 : 15
+                      ) : 15
+                    }
+                    placeholder={
+                      formData.docType?.toUpperCase() === "CC" ? "Ej. 1234567890" :
+                      ["NIT", "RUT"].includes(formData.docType?.toUpperCase() || "") ? "Ej. 123456789-0" :
+                      ["PASAPORTE", "PP", "PAS"].includes(formData.docType?.toUpperCase() || "") ? "Ej. AB1234567" :
+                      "Ej. 1234567890"
+                    }
+                    error={errors.docNumber}
+                  />
+                </FormField>
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-end pt-8 mt-4 border-t border-gray-100 dark:border-slate-800">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)} className="h-12 px-8 rounded-xl font-bold border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800" disabled={isSaving}>Cancelar</Button>
+              <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 px-10 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 text-white hover:scale-105 active:scale-95 transition-all" disabled={isSaving}>
+                {isSaving ? "Guardando..." : editingAgent ? "Guardar Cambios" : "Confirmar Registro"}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

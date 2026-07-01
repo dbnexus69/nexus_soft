@@ -558,7 +558,7 @@ export default function Responsables() {
               onClick={() => header.key && requestSort(header.key as any)}
             >
               {header.label}
-              {header.key && <SortIcon active={sortConfig.key === header.key} direction={sortConfig.direction} />}
+              {header.key && <SortIcon field={header.key} currentSort={sortConfig.key || ''} sortOrder={sortConfig.direction} />}
             </div>
           ))}
         >
@@ -707,7 +707,7 @@ export default function Responsables() {
                     validateField('docType', e.target.value);
                   }}
                   options={[{ value: '', label: 'Seleccionar...' }, ...data.config.documentTypes.map(d => {
-                    const code = d.abbreviation || d.abreviatura || d.name || '';
+                    const code = d.abreviatura || d.name || '';
                     const labelStr = code;
                     return { value: code, label: labelStr };
                   })]}

@@ -501,6 +501,7 @@ export function TicketForm({
   mainClient,
   triggerError,
 }: TicketFormProps & { mainClient?: any }) {
+  const { data } = useData();
   const airportOptions = airports.map((a) => ({
     value: a.abbreviation,
     label: `${a.abbreviation} - ${a.name} (${a.location})`,
@@ -786,14 +787,6 @@ export function TicketForm({
           <Plane size={14} /> Información General del Vuelo
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField label="Aerolínea">
-            <Combobox
-              value={ticket.airline}
-              onChange={(val) => onChange({ airline: val })}
-              options={airlines.map((a) => ({ value: a.name, label: a.name }))}
-              placeholder="Ej: Avianca"
-            />
-          </FormField>
           <FormField label="Proveedor">
             <Combobox
               value={ticket.supplier}
@@ -802,46 +795,508 @@ export function TicketForm({
               placeholder="Ej: Viajes Éxito"
             />
           </FormField>
-          <FormField label="Código de Reserva">
-            <Input
-              required
-              maxLength={6}
-              value={ticket.reservationNumber}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
-                onChange({ reservationNumber: cleaned });
-              }}
-              placeholder="6 caracteres exactos"
-            />
-            {ticket.reservationNumber?.length > 0 && ticket.reservationNumber.length < 6 && (
-              <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">
-                ⚠️ Faltan {6 - ticket.reservationNumber.length} caracteres (debe tener exactamente 6).
-              </p>
-            )}
-          </FormField>
         </div>
       </div>
 
-      {/* ── Itinerario de Vuelos (Delegado a Submódulo) ── */}
-        <FlightLegsManager
-          flightMode={ticket.flightMode}
-          hasStops={ticket.hasStops}
-          returnHasStops={ticket.returnHasStops}
-          legs={ticket.legs}
-          outboundStops={ticket.outboundStops}
-          returnLeg={ticket.returnLeg}
-          returnStops={ticket.returnStops}
-          airports={airports}
-          onChange={(field, value) => onChange({ [field]: value })}
-        />
+      {/* ── Modo de Vuelo ─────────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+        <h4 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+          <Plane size={14} /> Tipo de Trayecto
+        </h4>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {FLIGHT_MODE_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = ticket.flightMode === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFlightMode(tab.id)}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+                  active
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                }`}
+              >
+                <div className={`p-2 rounded-lg ${active ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-400"}`}>
+                  <Icon size={18} />
+                </div>
+                <div>
+                  <p className={`text-sm font-bold ${active ? "text-primary" : "text-gray-700"}`}>{tab.label}</p>
+                  <p className="text-[10px] text-gray-500">{tab.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Tipo de Paradas (Ida) ── */}
+        <div className="mb-4">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Paradas de Ida</p>
+          <div className="flex gap-2">
+            {STOP_TYPE_PILLS.map((pill) => (
+              <button
+                key={String(pill.id)}
+                type="button"
+                onClick={() => onChange({ hasStops: pill.id })}
+                className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
+                  ticket.hasStops === pill.id
+                    ? "border-primary bg-primary/5 text-primary shadow-sm"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                }`}
+              >
+                {pill.label}
+                <span className="block text-[9px] font-normal mt-0.5 opacity-70">{pill.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Tipo de Paradas (Vuelta) ── */}
+        {isRoundTrip && (
+          <div className="mb-4">
+            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">Paradas de Vuelta</p>
+            <div className="flex gap-2">
+              {STOP_TYPE_PILLS.map((pill) => (
+                <button
+                  key={String(pill.id)}
+                  type="button"
+                  onClick={() => onChange({ returnHasStops: pill.id })}
+                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
+                    ticket.returnHasStops === pill.id
+                      ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  {pill.label}
+                  <span className="block text-[9px] font-normal mt-0.5 opacity-70">{pill.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Tramos de Ida ──────────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+            <ArrowRight size={14} /> Trayecto de Ida
+          </h4>
+          <button
+            type="button"
+            onClick={addLeg}
+            className="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/10 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            <PlusCircle size={12} /> Añadir Tramo
+          </button>
+        </div>
+        <div className="space-y-4">
+          {ticket.legs.map((leg, idx) => (
+            <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100 relative group">
+              <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-150 shadow-sm">
+                <span className="text-[9px] font-extrabold uppercase tracking-wide text-primary">Tramo #{idx + 1}</span>
+              </div>
+              {ticket.legs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeLeg(idx)}
+                  className="absolute -top-2.5 right-3 bg-red-50 text-red-500 border border-red-100 rounded-full p-1 hover:bg-red-100 transition-colors shadow-sm"
+                  title="Eliminar Tramo"
+                >
+                  <Trash2 size={11} />
+                </button>
+              )}
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <FormField label={<span>Origen <span className="text-red-500">*</span></span>}>
+                    <Combobox
+                      value={leg.origin || ""}
+                      onChange={(val) => updateLeg(idx, { origin: val })}
+                      options={airportOptions}
+                      placeholder="BOG"
+                      className="text-xs"
+                    />
+                  </FormField>
+                  <FormField label={<span>Destino <span className="text-red-500">*</span></span>}>
+                    <Combobox
+                      value={leg.destination || ""}
+                      onChange={(val) => updateLeg(idx, { destination: val })}
+                      options={airportOptions}
+                      placeholder="MDE"
+                      className="text-xs"
+                    />
+                  </FormField>
+                  <FormField label={<span>N° Vuelo <span className="text-red-500">*</span></span>}>
+                    <Input
+                      required
+                      maxLength={6}
+                      value={leg.flightNumber || ""}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
+                        updateLeg(idx, { flightNumber: cleaned });
+                      }}
+                      placeholder="AV93"
+                      className="text-xs"
+                    />
+                    {leg.flightNumber?.length > 0 && leg.flightNumber.length < 3 && (
+                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">⚠️ Mínimo 3 caracteres.</p>
+                    )}
+                  </FormField>
+                  <FormField label="Asiento">
+                    <Input
+                      maxLength={5}
+                      value={leg.seat || ""}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 5);
+                        updateLeg(idx, { seat: cleaned });
+                      }}
+                      placeholder="12A"
+                      className="text-xs"
+                    />
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label="Aerolínea">
+                    <Combobox
+                      value={leg.airline || ticket.airline || ""}
+                      onChange={(val) => updateLeg(idx, { airline: val })}
+                      options={airlines.map((a) => ({ value: a.name, label: a.name }))}
+                      placeholder="Ej: Avianca"
+                    />
+                  </FormField>
+                  <FormField label="Plan de Equipaje">
+                    <Combobox
+                      value={leg.baggagePlan || ticket.baggagePlan || ""}
+                      onChange={(val) => updateLeg(idx, { baggagePlan: val })}
+                      options={baggage
+                        .filter((b) => !(leg.airline || ticket.airline) || b.airlineName.toLowerCase() === (leg.airline || ticket.airline).toLowerCase())
+                        .map((b) => ({
+                          value: `${b.airlineName} - ${b.fareType}`,
+                          label: `${b.airlineName} - ${b.fareType}`,
+                        }))}
+                      placeholder="Seleccionar plan..."
+                    />
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label={<span>Fecha y Hora Salida <span className="text-red-500">*</span></span>}>
+                    <DateTimePicker
+                      value={leg.date || ""}
+                      onChange={(val) => updateLeg(idx, { date: val })}
+                      min={minDateTime}
+                      triggerError={triggerError}
+                      fieldName="Salida"
+                    />
+                  </FormField>
+                  <FormField label={<span>Fecha y Hora Llegada <span className="text-red-500">*</span></span>}>
+                    <DateTimePicker
+                      value={leg.arrivalDate || ""}
+                      onChange={(val) => updateLeg(idx, { arrivalDate: val })}
+                      min={minDateTime}
+                      triggerError={triggerError}
+                      fieldName="Llegada"
+                    />
+                  </FormField>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Escalas de Ida ── */}
+        {ticket.hasStops && (
+          <div className="mt-4">
+            {renderStopList({ type: "outbound", color: "primary" })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Tramo de Vuelta ────────────────────────────────────── */}
+      {isRoundTrip && (
+        <div className="bg-blue-50/30 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-500/30">
+          <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <ArrowLeft size={14} /> Trayecto de Vuelta
+          </h4>
+          <div className="p-4 bg-white rounded-xl border border-blue-100 relative">
+            <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-sm">
+              <span className="text-[9px] font-extrabold uppercase tracking-wide text-blue-600">Retorno</span>
+            </div>
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <FormField label={<span>Origen <span className="text-red-500">*</span></span>}>
+                  <Combobox
+                    value={ticket.returnLeg?.origin || ""}
+                    onChange={(val) => onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), origin: val } })}
+                    options={airportOptions}
+                    placeholder="MDE"
+                    className="text-xs"
+                  />
+                </FormField>
+                <FormField label={<span>Destino <span className="text-red-500">*</span></span>}>
+                  <Combobox
+                    value={ticket.returnLeg?.destination || ""}
+                    onChange={(val) => onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), destination: val } })}
+                    options={airportOptions}
+                    placeholder="BOG"
+                    className="text-xs"
+                  />
+                </FormField>
+                <FormField label={<span>N° Vuelo <span className="text-red-500">*</span></span>}>
+                  <Input
+                    required
+                    maxLength={6}
+                    value={ticket.returnLeg?.flightNumber || ""}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
+                      onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), flightNumber: cleaned } });
+                    }}
+                    placeholder="AV94"
+                    className="text-xs"
+                  />
+                </FormField>
+                <FormField label="Asiento">
+                  <Input
+                    maxLength={5}
+                    value={ticket.returnLeg?.seat || ""}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 5);
+                      onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), seat: cleaned } });
+                    }}
+                    placeholder="12A"
+                    className="text-xs"
+                  />
+                </FormField>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Aerolínea">
+                  <Combobox
+                    value={ticket.returnLeg?.airline || ticket.airline || ""}
+                    onChange={(val) => onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), airline: val } })}
+                    options={airlines.map((a) => ({ value: a.name, label: a.name }))}
+                    placeholder="Ej: Avianca"
+                  />
+                </FormField>
+                <FormField label="Plan de Equipaje">
+                  <Combobox
+                    value={ticket.returnLeg?.baggagePlan || ticket.baggagePlan || ""}
+                    onChange={(val) => onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), baggagePlan: val } })}
+                    options={baggage
+                      .filter((b) => !(ticket.returnLeg?.airline || ticket.airline) || b.airlineName.toLowerCase() === (ticket.returnLeg?.airline || ticket.airline).toLowerCase())
+                      .map((b) => ({
+                        value: `${b.airlineName} - ${b.fareType}`,
+                        label: `${b.airlineName} - ${b.fareType}`,
+                      }))}
+                    placeholder="Seleccionar plan..."
+                  />
+                </FormField>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label={<span>Fecha y Hora Salida <span className="text-red-500">*</span></span>}>
+                  <DateTimePicker
+                    value={ticket.returnLeg?.date || ""}
+                    onChange={(val) => onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), date: val } })}
+                    min={minDateTime}
+                    triggerError={triggerError}
+                    fieldName="Salida Vuelta"
+                  />
+                </FormField>
+                <FormField label={<span>Fecha y Hora Llegada <span className="text-red-500">*</span></span>}>
+                  <DateTimePicker
+                    value={ticket.returnLeg?.arrivalDate || ""}
+                    onChange={(val) => onChange({ returnLeg: { ...(ticket.returnLeg || { origin: "", destination: "", flightNumber: "", seat: "", date: "", arrivalDate: "", airline: "", baggagePlan: "" }), arrivalDate: val } })}
+                    min={minDateTime}
+                    triggerError={triggerError}
+                    fieldName="Llegada Vuelta"
+                  />
+                </FormField>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Escalas de Vuelta ── */}
+          {ticket.returnHasStops && (
+            <div className="mt-4">
+              {renderStopList({ type: "return", color: "blue" })}
+            </div>
+          )}
+        </div>
+      )}
         
-      {/* ── Información de Pasajeros (Delegado a Submódulo) ── */}
-        <PassengerManager 
-          passengers={ticket.passengers || (ticket as any).passengerInfo ? [{ ...(ticket as any).passengerInfo, esTitular: true, asiento: '', nroReserva: '', nroTiquete: '' }] : []}
-          clients={clients}
-          documentTypes={data?.config?.documentTypes || []}
-          onChange={(pax) => onChange({ passengers: pax })}
-        />
+      {/* ── Información de Pasajeros ─────────────────────────── */}
+      <div className="bg-violet-50/30 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-500/30">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-widest flex items-center gap-2">
+            <User size={14} /> Información de Pasajeros
+          </h4>
+          <button
+            type="button"
+            onClick={() => {
+              const currentPax = ticket.passengers || [];
+              onChange({
+                passengers: [...currentPax, { name: "", docType: "", docNumber: "", birthDate: "", esTitular: currentPax.length === 0, asiento: "", nroReserva: "", nroTiquete: "" }],
+              });
+            }}
+            className="flex items-center gap-1 text-[10px] font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            <PlusCircle size={12} /> Añadir Pasajero
+          </button>
+        </div>
+        <div className="space-y-4">
+          {(ticket.passengers || []).map((pax: any, pIdx: number) => (
+            <div key={pIdx} className="p-4 bg-white rounded-xl border border-violet-100 relative group">
+              <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-violet-200 shadow-sm flex items-center gap-1.5">
+                <span className="text-[9px] font-extrabold uppercase tracking-wide text-violet-600">
+                  Pasajero #{pIdx + 1}
+                </span>
+                {pax.esTitular && (
+                  <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">Titular</span>
+                )}
+              </div>
+              {(ticket.passengers || []).length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPax = (ticket.passengers || []).filter((_: any, i: number) => i !== pIdx);
+                    if (pax.esTitular && newPax.length > 0) newPax[0].esTitular = true;
+                    onChange({ passengers: newPax });
+                  }}
+                  className="absolute -top-2.5 right-3 bg-red-50 text-red-500 border border-red-100 rounded-full p-1 hover:bg-red-100 transition-colors shadow-sm"
+                  title="Eliminar Pasajero"
+                >
+                  <Trash2 size={11} />
+                </button>
+              )}
+              <div className="space-y-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <FormField label={<span>Nombre Completo <span className="text-red-500">*</span></span>}>
+                    <Combobox
+                      value={pax.name || ""}
+                      onChange={(val) => {
+                        const cl = clients.find((c: any) => c.name === val || `${c.firstName} ${c.lastName || ''}`.trim() === val);
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = {
+                          ...updatedPax[pIdx],
+                          name: val,
+                          ...(cl ? { docType: cl.docType || "", docNumber: cl.docNumber || "", birthDate: cl.birthDate ? cl.birthDate.split("T")[0] : "" } : {}),
+                        };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      options={(clients || []).filter((c: any) => c.name || c.firstName).map((c: any) => ({
+                        value: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
+                        label: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
+                      }))}
+                      placeholder="Nombre del pasajero"
+                    />
+                  </FormField>
+                  <FormField label="Tipo de Documento">
+                    <Combobox
+                      value={pax.docType || ""}
+                      onChange={(val) => {
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = { ...updatedPax[pIdx], docType: val, docNumber: "" };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      options={(data?.config?.documentTypes || []).map((d: any) => ({
+                        value: d.code || d.name,
+                        label: d.name || d.code,
+                      }))}
+                      placeholder="Seleccionar..."
+                    />
+                  </FormField>
+                  <FormField label="Número de Documento">
+                    <Input
+                      value={pax.docNumber || ""}
+                      onChange={(e) => {
+                        let cleaned = e.target.value;
+                        if (pax.docType === "CC" || pax.docType === "TI") {
+                          cleaned = cleaned.replace(/[^0-9]/g, "");
+                        } else {
+                          cleaned = cleaned.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                        }
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = { ...updatedPax[pIdx], docNumber: cleaned };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      placeholder="Número de documento"
+                      maxLength={20}
+                    />
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <FormField label="Fecha de Nacimiento">
+                    <DatePicker
+                      value={pax.birthDate || ""}
+                      onChange={(val) => {
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = { ...updatedPax[pIdx], birthDate: val };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      max={new Date().toISOString().split("T")[0]}
+                      triggerError={triggerError}
+                      fieldName="Fecha de nacimiento"
+                    />
+                  </FormField>
+                  <FormField label="N° Reserva">
+                    <Input
+                      value={pax.nroReserva || ""}
+                      onChange={(e) => {
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = { ...updatedPax[pIdx], nroReserva: e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      placeholder="Código reserva"
+                      maxLength={10}
+                    />
+                  </FormField>
+                  <FormField label="N° Tiquete">
+                    <Input
+                      value={pax.nroTiquete || ""}
+                      onChange={(e) => {
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = { ...updatedPax[pIdx], nroTiquete: e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      placeholder="Número tiquete"
+                      maxLength={16}
+                    />
+                  </FormField>
+                  <FormField label="Asiento">
+                    <Input
+                      value={pax.asiento || ""}
+                      onChange={(e) => {
+                        const updatedPax = [...(ticket.passengers || [])];
+                        updatedPax[pIdx] = { ...updatedPax[pIdx], asiento: e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() };
+                        onChange({ passengers: updatedPax });
+                      }}
+                      placeholder="12A"
+                      maxLength={5}
+                    />
+                  </FormField>
+                </div>
+                {!pax.esTitular && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedPax = (ticket.passengers || []).map((p: any, i: number) => ({
+                        ...p,
+                        esTitular: i === pIdx,
+                      }));
+                      onChange({ passengers: updatedPax });
+                    }}
+                    className="text-[10px] text-violet-600 hover:text-violet-800 font-medium underline"
+                  >
+                    Marcar como titular
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {(ticket.passengers || []).length === 0 && (
+            <p className="text-[10px] italic text-gray-400 text-center py-2">No hay pasajeros registrados.</p>
+          )}
+        </div>
+      </div>
         
       {/* ── Detalles Financieros ──────────────────────────────── */}
       <div className="bg-emerald-50/20 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">

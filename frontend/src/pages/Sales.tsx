@@ -119,16 +119,7 @@ export default function Sales() {
     fetchClients();
   }, [fetchSales, fetchClients]);
 
-  const totals = useMemo(() => {
-    return filteredSales.reduce(
-      (acc, s) => ({
-        total: acc.total + s.total,
-        pagado: acc.pagado + (s.status === "pagado" ? s.total : 0),
-        pendiente: acc.pendiente + (s.status === "credito" ? s.total : 0),
-      }),
-      { total: 0, pagado: 0, pendiente: 0 },
-    );
-  }, [filteredSales]);
+
 
   // Eliminamos el prefetch silencioso para evitar peticiones "fantasma" que colapsan la red y el backend.
   // La carga detallada se hará estrictamente "On Demand" (bajo demanda) cuando el usuario pase el mouse o haga click.
@@ -399,62 +390,64 @@ export default function Sales() {
 
       <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
-            <ShoppingBag className="text-accent w-8 h-8" /> Gestión de Ventas
+          <h1 className="text-3xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center gap-3">
+            <Wallet className="text-[#8D99AE] w-8 h-8 shrink-0" /> Gestión de Ventas
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Control de ingresos, facturación y estados de pago de tus clientes.
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
+            Control de ingresos, facturación y estados de pago de tus clientes en tiempo real.
           </p>
         </div>
         <a 
           href="https://siigonube.siigo.com/#/sales-management/2044" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-blue-200 transition-all shadow-sm shrink-0"
+          className="bg-[#2B2D42]/5 hover:bg-[#2B2D42]/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#2B2D42] dark:text-[#b2bccb] px-4.5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-slate-350/20 dark:border-white/10 transition-all shadow-sm shrink-0"
         >
           <ExternalLink size={16} /> Ir a Siigo Nube
         </a>
       </div>
 
-      <div className="gap-2 bg-white p-1 rounded-xl border border-gray-100 shadow-sm inline-flex animate-fade-in">
-        <button
-          onClick={() => setActiveTab('list')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            activeTab === 'list' 
-              ? 'bg-primary text-white shadow-md' 
-              : 'text-gray-500 hover:bg-gray-50 hover:text-primary'
-          }`}
-        >
-          <FileText size={18} /> Listado de Ventas
-        </button>
-        <button
-          onClick={() => setActiveTab('credit')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            activeTab === 'credit' 
-              ? 'bg-primary text-white shadow-md' 
-              : 'text-gray-500 hover:bg-gray-50 hover:text-primary'
-          }`}
-        >
-          <CreditCard size={18} /> Crédito y Cobros
-        </button>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 p-1 rounded-2xl border border-slate-200 dark:border-white/5 shadow-inner w-fit animate-fade-in">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-250 ${
+              activeTab === 'list' 
+                ? 'bg-[#2B2D42] dark:bg-[#8D99AE] text-white shadow-md' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-[#2B2D42] dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+            }`}
+          >
+            <FileText size={18} /> Listado de Ventas
+          </button>
+          <button
+            onClick={() => setActiveTab('credit')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-250 ${
+              activeTab === 'credit' 
+                ? 'bg-[#2B2D42] dark:bg-[#8D99AE] text-white shadow-md' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-[#2B2D42] dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+            }`}
+          >
+            <CreditCard size={18} /> Crédito y Cobros
+          </button>
+        </div>
       </div>
 
       {activeTab === 'list' ? (
         <>
-          <Card className="animate-fade-in">
+          <Card className="animate-fade-in !rounded-[28px] overflow-hidden border-slate-200/50 dark:border-slate-800/70 bg-slate-100/60 dark:bg-[#151722]">
             <CardHeader
               actions={
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap w-full sm:w-auto">
-                  <div className="relative w-full sm:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center flex-wrap w-full lg:w-auto font-body">
+                  <div className="relative w-full lg:w-72">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       placeholder="Buscar por cliente, asesor, comisionista..." 
-                      className="text-sm border border-gray-border rounded-lg pl-10 pr-9 py-2 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+                      className="text-sm border border-slate-200 dark:border-slate-850 rounded-xl pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                     {searchTerm && (
-                      <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                      <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded">
                         <X size={14} />
                       </button>
                     )}
@@ -462,7 +455,7 @@ export default function Sales() {
                   <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value as any)}
-                    className="text-sm border border-gray-border rounded-lg px-3 py-2 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20 w-full sm:w-auto"
+                    className="text-sm border border-slate-200 dark:border-slate-850 rounded-xl px-4 py-2.5 bg-slate-50 dark:bg-[#1c1d26] text-slate-600 dark:text-slate-350 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full lg:w-auto cursor-pointer"
                   >
                     <option value="all">Todos los estados</option>
                     <option value="pagado">Finalizado</option>
@@ -470,9 +463,9 @@ export default function Sales() {
                     <option value="credito">En Crédito</option>
                     <option value="anulado">Anulado</option>
                   </select>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto">
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <span className="text-xs font-semibold text-gray-400 whitespace-nowrap">Desde:</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Desde:</span>
                       <div className="w-full sm:w-36">
                         <DatePicker
                           value={startDate}
@@ -483,7 +476,7 @@ export default function Sales() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <span className="text-xs font-semibold text-gray-400 whitespace-nowrap">Hasta:</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Hasta:</span>
                       <div className="w-full sm:w-36">
                         <DatePicker
                           value={endDate}
@@ -496,7 +489,7 @@ export default function Sales() {
                     {(startDate || endDate) && (
                       <button 
                         onClick={() => { setStartDate(""); setEndDate(""); }}
-                        className="text-red-500 dark:text-red-300 hover:text-red-600 p-2 rounded bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center h-[34px] w-[34px] shrink-0 self-end sm:self-auto border border-red-100 dark:border-red-900/40 transition-colors"
+                        className="text-red-500 dark:text-red-300 hover:text-red-650 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center h-[38px] w-[38px] shrink-0 border border-red-100 dark:border-red-900/40 transition-colors shadow-sm"
                         title="Limpiar fechas"
                       >
                         <X size={14} />
@@ -504,7 +497,7 @@ export default function Sales() {
                     )}
                   </div>
                   {canCreate("sales") && (
-                    <Button onClick={handleOpenNewSale} className="w-full sm:w-auto justify-center">
+                    <Button onClick={handleOpenNewSale} className="w-full lg:w-auto justify-center bg-[#2B2D42] hover:bg-[#1e202f] dark:bg-[#8D99AE] dark:hover:bg-[#b2bccb] text-white rounded-xl shadow-md px-5 py-2.5 font-bold">
                       <Plus size={18} />
                       Nueva Venta
                     </Button>
@@ -584,8 +577,7 @@ export default function Sales() {
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
         title="Nueva Venta"
-        size="xl"
-        contentClassName="!p-0 flex flex-col overflow-hidden h-[65vh] sm:h-[70vh] md:h-[75vh]"
+        size="panel"
       >
         <NewSaleWizard
           onClose={() => setIsWizardOpen(false)}
@@ -647,7 +639,7 @@ export default function Sales() {
         isAdmin={isAdmin}
         onUpdateSale={updateSale}
         onAddSale={addSale}
-        onRegisterPayment={(saleId, amount, method) => registerCreditPayment(saleId, amount, method)}
+        onRegisterPayment={(saleId, amount, method) => registerCreditPayment(saleId, { amount, method })}
         onDeletePayment={(saleId, paymentId) => deleteSalePayment(saleId, paymentId)}
         onDownloadVoucher={handleDownloadVoucher}
       />

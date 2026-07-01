@@ -120,7 +120,7 @@ export default function CommissionAgents() {
       setFormData({ ...agent });
     } else {
       setEditingAgent(null);
-      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.abbreviation || "" });
+      setFormData({ status: "Activo", type: "Comisionista", docType: data.config.documentTypes?.[0]?.abreviatura || "" });
     }
     setIsModalOpen(true);
   };
@@ -213,7 +213,7 @@ export default function CommissionAgents() {
     if (!selectedAgent) return;
     setIsSaving(true);
     try {
-      await settleCommissions(selectedAgent.id, { ...settleData, agentName: selectedAgent.name });
+      await settleCommissions({ agentId: selectedAgent.id, ...settleData, agentName: selectedAgent.name });
       await fetchSettlements();
       notifySuccess(`Liquidación de ${formatCurrency(selectedAgent.accumulated)} procesada`);
       setIsSettleModalOpen(false);

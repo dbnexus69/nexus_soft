@@ -15,14 +15,17 @@ import {
   Legend,
 } from "recharts";
 import {
-  Building,
-  ShieldCheck,
+  TrendingUp,
+  Clock,
+  Store,
+  Contact,
+  Ticket,
+  BedDouble,
+  HeartPulse,
+  Palmtree,
   Briefcase,
-  Plane,
-  Users,
   DollarSign,
   CreditCard,
-  Map,
 } from "lucide-react";
 import Datepicker from "react-tailwindcss-datepicker";
 import { useData } from "../context/DataContext";
@@ -73,29 +76,28 @@ export default function Dashboard() {
     return <LoadingScreen fullScreen={false} />;
   }
 
-  const CARTERA_COLORS = ["#10b981", "#3b82f6", "#f59e0b"];
+  const CARTERA_COLORS = ["#8D99AE", "#2B2D42", "#f59e0b"];
 
   return (
     <div className="space-y-8 pb-8">
-      {/* Header Premium con Gradient */}
-      <div className="relative rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-8 shadow-2xl z-10">
-        {/* Capa de fondo con overflow-hidden para no recortar el contenido interactivo como el Datepicker */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl z-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500 rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
+      {/* Header Premium con Estilo de Lujo DB NEXUS */}
+      <div className="relative rounded-3xl bg-white dark:bg-[#1a1b22] p-8 shadow-xl border border-slate-200/50 dark:border-slate-800/60 transition-all duration-300">
+        {/* Capa de fondo con destellos de gradiente */}
+        <div className="absolute inset-0 overflow-hidden rounded-3xl z-0 pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#8D99AE] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-10 dark:opacity-20"></div>
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#2B2D42] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-5 dark:opacity-20"></div>
         </div>
         
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <h1 className="text-4xl font-extrabold text-[#ffffff] drop-shadow-sm flex items-center gap-3">
+            <h1 className="text-4xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight">
               Panel de Control
             </h1>
-            <p className="text-blue-100/80 text-sm mt-2 max-w-xl font-medium">
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 max-w-xl font-medium">
               Supervisa el rendimiento financiero y operativo en tiempo real. Todos los indicadores estratégicos de tu agencia, en un solo vistazo.
             </p>
           </div>
-          <div className="flex items-center bg-[#ffffff]/10 backdrop-blur-md p-1.5 rounded-xl shadow-inner border border-[#ffffff]/20">
+          <div className="flex items-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1 rounded-xl transition-all shadow-inner">
             <div className="w-72 datepicker-container datepicker-transparent">
               <Datepicker
                 value={dateRange as any}
@@ -106,18 +108,18 @@ export default function Dashboard() {
                 placeholder={"Selecciona un periodo"}
                 separator={" - "}
                 containerClassName="relative !bg-transparent"
-                inputClassName="w-full text-sm font-semibold !text-[#ffffff] !bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-[#ffffff]/60 dark:!text-[#ffffff]"
+                inputClassName="w-full text-sm font-semibold text-[#2B2D42] dark:text-white !bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-slate-400 dark:placeholder-slate-500"
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modern Glassmorphism KPIs */}
+      {/* Sección 1: Indicadores Financieros Estratégicos */}
       {dashboardLoading && !dashboardData ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="bg-gray-100 rounded-2xl h-[140px]"></div>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-150 dark:bg-slate-800 rounded-3xl h-[160px]"></div>
           ))}
         </div>
       ) : (
@@ -128,18 +130,18 @@ export default function Dashboard() {
               value: formatCurrency(stats.totalIngresos),
               subtitle: "Ventas Totales",
               detail: `+${formatCurrency(stats.monthIngresos)} mes`,
-              icon: <DollarSign size={24} />,
-              gradient: "from-emerald-500 to-teal-400",
-              lightBg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300",
+              icon: <TrendingUp size={24} />,
+              gradient: "from-[#2B2D42] to-[#454866]",
+              lightBg: "bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200",
             },
             {
               label: "CRÉDITO",
               value: formatCurrency(stats.totalPendiente),
               subtitle: "Cuentas por Cobrar",
               detail: `${stats.PendienteCount} cuentas`,
-              icon: <CreditCard size={24} />,
-              gradient: "from-orange-500 to-amber-400",
-              lightBg: "bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-300",
+              icon: <Clock size={24} />,
+              gradient: "from-amber-500 to-yellow-400",
+              lightBg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-350",
               onClick: () => setIsCreditModalOpen(true),
             },
             {
@@ -147,81 +149,46 @@ export default function Dashboard() {
               value: formatCurrency(stats.totalProveedores),
               subtitle: "Costos Operativos",
               detail: `${stats.supplierCount} activos`,
-              icon: <Briefcase size={24} />,
+              icon: <Store size={24} />,
               gradient: "from-rose-500 to-pink-400",
-              lightBg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300",
+              lightBg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-350",
             },
             {
               label: "CLIENTES",
               value: stats.totalClients,
               subtitle: "Total Registrados",
               detail: `${stats.activeClients} Activos`,
-              icon: <Users size={24} />,
-              gradient: "from-blue-600 to-indigo-500",
-              lightBg: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300",
-            },
-            {
-              label: "TIQUETES AÉREOS",
-              value: stats.totalFlights,
-              subtitle: "Tramos Emitidos",
-              icon: <Plane size={24} />,
-              gradient: "from-cyan-500 to-blue-400",
-              lightBg: "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-300",
-            },
-            {
-              label: "HOTELES",
-              value: stats.hotelesCount,
-              subtitle: "Reservas Generadas",
-              detail: formatCurrency(stats.hotelesIngresos),
-              icon: <Building size={24} />,
-              gradient: "from-violet-500 to-purple-400",
-              lightBg: "bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-300",
-            },
-            {
-              label: "SEGUROS",
-              value: stats.segurosCount,
-              subtitle: "Pólizas Activas",
-              detail: formatCurrency(stats.segurosIngresos),
-              icon: <ShieldCheck size={24} />,
-              gradient: "from-fuchsia-500 to-pink-500",
-              lightBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-300",
-            },
-            {
-              label: "PAQUETES",
-              value: stats.planesCount,
-              subtitle: "Paquetes Turísticos",
-              detail: formatCurrency(stats.planesIngresos),
-              icon: <Map size={24} />,
-              gradient: "from-amber-500 to-yellow-400",
-              lightBg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300",
+              icon: <Contact size={24} />,
+              gradient: "from-[#8D99AE] to-[#b0b9c7]",
+              lightBg: "bg-blue-50 dark:bg-blue-950/40 text-[#8D99AE] dark:text-blue-300",
             },
           ].map((kpi, i) => (
             <div
               key={i}
               onClick={kpi.onClick}
-              className={`relative group bg-white dark:bg-slate-800/90 border border-gray-100 dark:border-slate-700/60 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
-                kpi.onClick ? "cursor-pointer hover:border-orange-200 dark:hover:border-orange-500/50" : ""
+              className={`relative group bg-white dark:bg-[#1a1b22] border border-slate-200/50 dark:border-slate-800/70 rounded-[28px] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
+                kpi.onClick ? "cursor-pointer hover:border-amber-300 dark:hover:border-amber-500/40" : ""
               }`}
             >
               <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${kpi.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <p className="text-[13px] font-black text-gray-700 dark:text-slate-300 uppercase tracking-widest">
+                  <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                     {kpi.label}
                   </p>
-                  <div className={`p-3 rounded-2xl ${kpi.lightBg} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                  <div className={`p-3 rounded-2xl ${kpi.lightBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                     {kpi.icon}
                   </div>
                 </div>
-                <h3 className="text-3xl font-black text-gray-800 dark:text-white mb-1 tracking-tight">
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-850 dark:text-white mb-1 tracking-tight font-heading">
                   {kpi.value}
                 </h3>
-                <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700/50 flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-700 dark:text-slate-400 font-semibold truncate">
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between gap-2">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold truncate">
                     {kpi.subtitle}
                   </span>
                   {kpi.detail && (
-                    <span className="text-[10px] font-bold text-gray-600 dark:text-slate-300 bg-gray-100/80 dark:bg-slate-700/60 px-2 py-1 rounded-lg whitespace-nowrap shadow-sm">
+                    <span className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg whitespace-nowrap shadow-sm">
                       {kpi.detail}
                     </span>
                   )}
@@ -232,14 +199,85 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Sección 2: Ventas Operativas por Categoría (Horizontal Rows) */}
+      <div className="bg-slate-50/50 dark:bg-[#1a1b22]/40 backdrop-blur-md rounded-3xl p-6 border border-slate-200/50 dark:border-slate-800/60">
+        <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 px-1">
+          Rendimiento por Categoría de Servicio
+        </h3>
+        
+        {dashboardLoading && !dashboardData ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-150 dark:bg-slate-800 rounded-2xl h-[80px]"></div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                label: "TIQUETES AÉREOS",
+                value: `${stats.totalFlights} tramos`,
+                subtitle: "Tramos Emitidos",
+                icon: <Ticket size={20} />,
+                lightBg: "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-300",
+              },
+              {
+                label: "HOTELES",
+                value: `${stats.hotelesCount} reserv.`,
+                subtitle: "Reservas Activas",
+                detail: formatCurrency(stats.hotelesIngresos),
+                icon: <BedDouble size={20} />,
+                lightBg: "bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-300",
+              },
+              {
+                label: "SEGUROS",
+                value: `${stats.segurosCount} pólizas`,
+                subtitle: "Pólizas Emitidas",
+                detail: formatCurrency(stats.segurosIngresos),
+                icon: <HeartPulse size={20} />,
+                lightBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-300",
+              },
+              {
+                label: "PAQUETES",
+                value: `${stats.planesCount} planes`,
+                subtitle: "Paquetes Turísticos",
+                detail: formatCurrency(stats.planesIngresos),
+                icon: <Palmtree size={20} />,
+                lightBg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-350",
+              },
+            ].map((kpi, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-4 p-4.5 bg-white dark:bg-[#1a1b22]/90 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/70 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group"
+              >
+                <div className={`p-2.5 rounded-xl ${kpi.lightBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
+                  {kpi.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-wider truncate">
+                    {kpi.label}
+                  </p>
+                  <h4 className="text-lg font-black text-slate-800 dark:text-white mt-0.5 truncate font-heading">
+                    {kpi.value}
+                  </h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-450 truncate mt-0.5 font-medium">
+                    {kpi.detail ? kpi.detail : kpi.subtitle}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Advanced Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800/90 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-sm p-4 sm:p-6 relative overflow-hidden">
-          <div className="absolute -right-20 -top-20 w-40 h-40 bg-blue-50 dark:bg-blue-950/20 rounded-full blur-3xl"></div>
-          <h2 className="text-lg font-black text-gray-800 dark:text-white mb-6">Comparativa de Ingresos</h2>
-          <div className="h-72 w-full">
+        <div className="lg:col-span-2 bg-white dark:bg-[#1a1b22] border border-slate-200/50 dark:border-slate-800/70 rounded-3xl shadow-sm p-4 sm:p-6 relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 w-40 h-40 bg-slate-300/10 dark:bg-slate-800/10 rounded-full blur-3xl"></div>
+          <h2 className="text-lg font-black text-slate-850 dark:text-white mb-6 font-heading">Comparativa de Ingresos</h2>
+          <div className="h-72 w-full font-body">
             {dashboardLoading && !dashboardData ? (
-              <div className="w-full h-full bg-gray-50 dark:bg-slate-800 rounded-xl animate-pulse" />
+              <div className="w-full h-full bg-gray-50 dark:bg-slate-850 rounded-xl animate-pulse" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
@@ -248,20 +286,20 @@ export default function Dashboard() {
                 >
                   <defs>
                     <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorPrev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b", fontWeight: 600 }} dy={10} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#8D99AE", fontWeight: 600 }} dy={10} />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} 
+                    tick={{ fontSize: 11, fill: "#8D99AE", fontWeight: 600 }} 
                     tickFormatter={(v) => {
                       if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
                       if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
@@ -270,21 +308,21 @@ export default function Dashboard() {
                   />
                   <Tooltip 
                     formatter={(value: number) => formatCurrency(value)} 
-                    contentStyle={{ borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)", padding: "12px", fontWeight: "bold" }} 
+                    contentStyle={{ borderRadius: "16px", border: "1px solid #e2e8f0", backgroundColor: "rgba(11, 15, 25, 0.95)", color: "#fff", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.15)", padding: "12px", fontWeight: "bold" }} 
                   />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", fontWeight: 600, paddingTop: "20px" }} />
-                  <Area type="monotone" dataKey="current" name="Año Actual" stroke="#4f46e5" strokeWidth={4} fillOpacity={1} fill="url(#colorCurrent)" activeDot={{ r: 8, fill: "#4f46e5", stroke: "#fff", strokeWidth: 3, className: "drop-shadow-md" }} />
-                  <Area type="monotone" dataKey="previous" name="Año Anterior" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" fillOpacity={1} fill="url(#colorPrev)" />
+                  <Area type="monotone" dataKey="current" name="Año Actual" stroke="var(--color-primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorCurrent)" activeDot={{ r: 8, fill: "var(--color-primary)", stroke: "var(--color-bg-card)", strokeWidth: 3, className: "drop-shadow-md" }} />
+                  <Area type="monotone" dataKey="previous" name="Año Anterior" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="5 5" fillOpacity={1} fill="url(#colorPrev)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-sm p-4 sm:p-6 flex flex-col">
-          <h2 className="text-lg font-black text-gray-800 mb-2">Estado de Cartera</h2>
+        <div className="bg-white dark:bg-[#1a1b22] border border-slate-200/50 dark:border-slate-800/70 rounded-3xl shadow-sm p-4 sm:p-6 flex flex-col">
+          <h2 className="text-lg font-black text-slate-850 dark:text-white mb-2 font-heading">Estado de Cartera</h2>
           <div className="flex-grow flex flex-col justify-center">
-            <div className="relative h-56 flex items-center justify-center">
+            <div className="relative h-56 flex items-center justify-center font-body">
               {dashboardLoading && !dashboardData ? (
                 <div className="w-40 h-40 rounded-full border-[20px] border-gray-50 animate-pulse" />
               ) : (
@@ -305,22 +343,22 @@ export default function Dashboard() {
               )}
               {(!dashboardLoading || dashboardData) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none drop-shadow-sm">
-                  <span className="text-[10px] uppercase font-extrabold text-gray-400 tracking-[0.2em] mb-1">Total</span>
-                  <span className="text-xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{formatCurrency(stats.totalIngresos)}</span>
+                  <span className="text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 tracking-[0.2em] mb-1">Total</span>
+                  <span className="text-lg font-black text-slate-800 dark:text-slate-100">{formatCurrency(stats.totalIngresos)}</span>
                 </div>
               )}
             </div>
-            <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 font-body">
               {dashboardLoading && !dashboardData ? (
                 <></>
               ) : (
                 stats.carteraData.map((item: any, i: number) => (
-                  <div key={i} className="flex flex-col items-center justify-center py-3 px-1 bg-gray-50/80 dark:bg-slate-800/60 rounded-xl border border-gray-100/50 dark:border-slate-700/50 shadow-inner">
+                  <div key={i} className="flex flex-col items-center justify-center py-3 px-1 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100/50 dark:border-slate-800/40 shadow-inner">
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: CARTERA_COLORS[i] }} />
-                      <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">{item.name}</span>
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">{item.name}</span>
                     </div>
-                    <span className="text-sm font-black text-gray-800 dark:text-white">{item.value}%</span>
+                    <span className="text-sm font-black text-slate-850 dark:text-white">{item.value}%</span>
                   </div>
                 ))
               )}
@@ -329,15 +367,16 @@ export default function Dashboard() {
         </div>
       </div>
 
+
       {/* Modern Table */}
-      <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 dark:border-slate-700/60 bg-gray-50/50 dark:bg-slate-800/50">
+      <div className="bg-white/90 dark:bg-[#131524]/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-200/60 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30">
           <h2 className="text-lg font-black text-gray-800 dark:text-white">Últimas Ventas Aprobadas</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-white dark:bg-slate-800 text-left text-[11px] font-black text-gray-400 dark:text-slate-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700/60">
+              <tr className="bg-transparent text-left text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/50 dark:border-slate-800/80">
                 <th className="px-6 py-4">Cliente</th>
                 <th className="px-6 py-4">Asesor</th>
                 <th className="px-6 py-4">Fecha</th>
@@ -358,7 +397,7 @@ export default function Dashboard() {
                 ))
               ) : (
                 stats.recentSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-blue-50/30 dark:hover:bg-slate-700/30 transition-colors group">
+                  <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-[#1c1e30]/30 transition-colors group">
                     <td className="px-6 py-4 font-semibold text-gray-700 dark:text-slate-200">{sale.clientName}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{sale.asesorName}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{formatDate(sale.date)}</td>

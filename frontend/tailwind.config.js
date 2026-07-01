@@ -23,8 +23,8 @@ export default {
         danger: "#dc2626",
       },
       fontFamily: {
-        heading: ["Nunito", "sans-serif"],
-        body: ["Lato", "sans-serif"],
+        heading: ["Outfit", "sans-serif"],
+        body: ["Plus Jakarta Sans", "sans-serif"],
       },
     },
   },

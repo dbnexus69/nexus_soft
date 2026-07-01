@@ -54,7 +54,7 @@ export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: H
             <Combobox
               value={hotel.destination}
               onChange={(val) => onChange({ destination: val })}
-              options={data.config.airports.map((a: any) => ({
+              options={(data?.config?.airports || []).map((a: any) => ({
                 value: a.location,
                 label: `${a.location} (${a.abbreviation})`,
               }))}
@@ -65,7 +65,7 @@ export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: H
             <Combobox
               value={hotel.supplier}
               onChange={(val) => onChange({ supplier: val })}
-              options={data.config.suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
+              options={(data?.config?.suppliers || []).map((s: any) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -162,9 +162,9 @@ export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: H
                 <Combobox
                   value={guest.docType}
                   onChange={(val) => updateGuest(gIdx, { docType: val })}
-                  options={data.config.documentTypes.map((d: any) => ({
-                    value: d.abreviatura,
-                    label: d.abreviatura,
+                  options={(data?.config?.documentTypes || []).map((d: any) => ({
+                    value: d.abreviatura || d.code || d.name,
+                    label: d.abreviatura || d.name || d.code,
                   }))}
                   placeholder="Tipo de documento"
                 />
@@ -215,7 +215,7 @@ export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: H
             <Combobox
               value={hotel.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
-              options={data.config.cards.map((m: any) => ({
+              options={(data?.config?.cards || []).map((m: any) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}

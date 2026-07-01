@@ -1,7 +1,19 @@
 import { useState, useCallback } from 'react';
 import * as api from '../api';
-import { normalizeRolePermissions } from '../types';
+import { normalizeRolePermissions, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, RolePermissions } from '../types';
 import { saveConfigCache, loadConfigCache, invalidateConfigCache } from '../utils/configCache';
+
+export interface ConfigData {
+  cards: any[];
+  paymentMethods: any[];
+  documentTypes: any[];
+  airlines: any[];
+  suppliers: any[];
+  airports: any[];
+  baggage: any[];
+  packages: any[];
+  rolePermissions: Record<string, RolePermissions>;
+}
 
 const emptyData = {
   config: {
@@ -14,38 +26,10 @@ const emptyData = {
     baggage: [],
     packages: [],
     rolePermissions: {
-      asesor: {
-        canViewDashboard: true,
-        canViewSales: true,
-        canCreateSales: true,
-        canEditSales: false,
-        canDeleteSales: false,
-        canRegisterPayments: true,
-        canDeletePayments: false,
-        canViewClients: true,
-        canCreateClients: true,
-        canEditClients: true,
-        canDeleteClients: false,
-        canViewConfig: false,
-        canEditConfig: false,
-      },
-      freelancer: {
-        canViewDashboard: true,
-        canViewSales: true,
-        canCreateSales: true,
-        canEditSales: false,
-        canDeleteSales: false,
-        canRegisterPayments: true,
-        canDeletePayments: false,
-        canViewClients: true,
-        canCreateClients: true,
-        canEditClients: true,
-        canDeleteClients: false,
-        canViewConfig: false,
-        canEditConfig: false,
-      }
+      asesor: DEFAULT_ASESOR_PERMISSIONS,
+      freelancer: DEFAULT_FREELANCER_PERMISSIONS
     }
-  }
+  } as ConfigData
 };
 
 export function useConfig() {

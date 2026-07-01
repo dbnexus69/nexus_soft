@@ -29,11 +29,11 @@ import { FormField, Input, Select } from '../components/ui/Form';
 import { Table, TableRow, TableCell } from '../components/ui/Table';
 import { useConfigContext } from '../context/ConfigContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { ConfigSection, ConfigSectionMap } from '../types';
+import { ConfigData } from '../hooks/useConfig';
 import ConfigForms from '../components/config/ConfigForms';
 import ConfigGrids from '../components/config/ConfigGrids';
 
-import { updateConfigItem, addConfigItem, deleteConfigItem } from '../api/config';
+import { updateConfigItem, createConfigItem as addConfigItem, deleteConfigItem } from '../api/config';
 import { formatCurrency, formatMealPlan } from '../utils/formatters';
 import LoadingScreen from '../components/ui/LoadingScreen';
 
@@ -58,7 +58,7 @@ const isOptimisticId = (item: any): boolean => {
 };
 
 export default function Config() {
-  const { config, addConfigItem, updateConfigItem, deleteConfigItem, fetchConfig, loading: isLoading } = useConfigContext();
+  const { config, loading, addConfigItem: addContextItem, updateConfigItem: updateContextItem, deleteConfigItem: deleteContextItem, fetchConfig } = useConfigContext();
   const [currentSection, setCurrentSection] = useState<SectionId>('cards');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -297,7 +297,7 @@ export default function Config() {
     { label: 'Formas de Pago', count: config.paymentMethods?.length || 0, icon: <Coins className="text-warning" size={18} /> },
   ];
 
-  if (isLoading && (!config.suppliers || config.suppliers.length === 0)) {
+  if (loading && (!config.suppliers || config.suppliers.length === 0)) {
     return <LoadingScreen fullScreen={false} />;
   }
 

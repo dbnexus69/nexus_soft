@@ -74,7 +74,7 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
             <Combobox
               value={insurance.supplier}
               onChange={(val) => onChange({ supplier: val })}
-              options={data.config.suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
+              options={(data?.config?.suppliers || []).map((s: any) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -125,7 +125,7 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
                 <Select
                   value={member.docType}
                   onChange={(e) => updateMember(mIdx, { docType: e.target.value })}
-                  options={data.config.documentTypes.map((d: any) => ({
+                  options={(data?.config?.documentTypes || []).map((d: any) => ({
                     value: d.abreviatura,
                     label: d.abreviatura,
                   }))}
@@ -177,7 +177,7 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
             <Combobox
               value={insurance.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
-              options={data.config.cards.map((m: any) => ({
+              options={(data?.config?.cards || []).map((m: any) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}

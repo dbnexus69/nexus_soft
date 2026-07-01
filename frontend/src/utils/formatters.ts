@@ -127,4 +127,20 @@ export function formatMealPlan(plan: string): string {
   };
   return plans[plan] || plan;
 }
+
+export function getAvatarGradient(name: string): string {
+  if (!name) return "from-slate-500 to-slate-400 text-white";
+  const char = name.trim().charAt(0).toUpperCase();
+  const code = char.charCodeAt(0);
+  const presets = [
+    "from-[#2B2D42] to-[#8D99AE] text-white",
+    "from-indigo-600 to-blue-500 text-white",
+    "from-emerald-500 to-teal-400 text-white",
+    "from-violet-600 to-fuchsia-500 text-white",
+    "from-rose-500 to-pink-500 text-white",
+    "from-amber-500 to-yellow-400 text-white",
+    "from-cyan-500 to-blue-400 text-white"
+  ];
+  return presets[code % presets.length];
+}
 

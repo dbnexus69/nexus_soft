@@ -11,8 +11,9 @@ import {
   ChevronDown,
   Loader2,
   AlertCircle,
+  X,
 } from "lucide-react";
-import { Button } from "../ui/Button";
+
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -110,7 +111,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     setTimeout(() => setShowError(false), 4000);
   };
 
-  // Saber si el formulario de tiqueterÃ­a estÃ¡ completamente vacÃ­o (sin tocar)
+  // Saber si el formulario de tiqueteríƒÂ­a estíƒÂ¡ completamente vacíƒÂ­o (sin tocar)
   const isTicketFormEmpty = (() => {
     if (activeForm === "tiqueteria" && activeIdx !== null) {
       const ticket = form.tickets[activeIdx];
@@ -312,7 +313,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         today.setHours(0, 0, 0, 0);
         selectedDate.setHours(0, 0, 0, 0);
         if (selectedDate < today) {
-          setErrors((prev) => ({ ...prev, creditDueDate: "La fecha de vencimiento no puede ser anterior al dÃ­a de hoy" }));
+          setErrors((prev) => ({ ...prev, creditDueDate: "La fecha de vencimiento no puede ser anterior al díƒÂ­a de hoy" }));
         } else {
           setErrors((prev) => {
             const next = { ...prev };
@@ -348,7 +349,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     if (s === 1) {
       if (!form.clientId) errs.clientId = "El cliente es obligatorio";
       if (form.commissionAgentName && !form.commissionAgentId) {
-        errs.commissionAgent = "El comisionista ingresado no estÃ¡ registrado";
+        errs.commissionAgent = "El comisionista ingresado no estíƒÂ¡ registrado";
       } else if (form.commissionAgentId) {
         const agentExists = (data.commissionAgents || []).some(
           (a: any) => String(a.id) === String(form.commissionAgentId)
@@ -370,7 +371,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             const parsed = ticketSchema.safeParse(ticket);
             
             if (!parsed.success) {
-              const errorMessage = parsed.error.errors[0].message;
+              const errorMessage = parsed.error.issues[0].message;
               triggerError(`El servicio de Tiquetería #${i + 1} tiene campos inválidos: ${errorMessage}`);
               errs.tiqueteriaValidation = "invalid";
               break;
@@ -405,7 +406,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             })();
 
             if (!isStrictlyValid) {
-              triggerError(`El servicio de HotelerÃ­a #${i + 1} tiene campos requeridos vacÃ­os o invÃ¡lidos (El nombre de hotel debe tener entre 2 y 50 letras, la reserva mÃ¡ximo 20 caracteres y sin caracteres especiales, las fechas deben ser futuras y los montos obligatorios). Por favor, edÃ­talo.`);
+              triggerError(`El servicio de Hotelería #${i + 1} tiene campos requeridos vacíos o inválidos (El nombre de hotel debe tener entre 2 y 50 letras, la reserva máximo 20 caracteres y sin caracteres especiales, las fechas deben ser futuras y los montos obligatorios). Por favor, edítalo.`);
               errs.hoteleriaValidation = "invalid";
               break;
             }
@@ -425,7 +426,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               // Validar tipo de seguro
               if (!ins.insuranceType || ins.insuranceType.trim().length < 3 || ins.insuranceType.trim().length > 40) return false;
 
-              // Validar telÃ©fono del cliente: limpiar a nÃºmeros y medir de 7 a 15
+              // Validar teléfono del cliente: limpiar a números y medir de 7 a 15
               const cleanedPhone = ins.phone ? ins.phone.replace(/\D/g, "") : "";
               if (cleanedPhone.length < 7 || cleanedPhone.length > 15) return false;
 
@@ -437,7 +438,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             })();
 
             if (!isStrictlyValid) {
-              triggerError(`El servicio de Seguro de Viaje #${i + 1} tiene campos requeridos vacÃ­os o invÃ¡lidos. El tipo de seguro debe tener entre 3 y 40 caracteres, el telÃ©fono entre 7 y 15 dÃ­gitos y los costos financieros obligatorios.`);
+              triggerError(`El servicio de Seguro de Viaje #${i + 1} tiene campos requeridos vacíos o inválidos. El tipo de seguro debe tener entre 3 y 40 caracteres, el teléfono entre 7 y 15 díƒÂ­gitos y los costos financieros obligatorios.`);
               errs.segurosValidation = "invalid";
               break;
             }
@@ -452,13 +453,13 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.plans.length; i++) {
             const plan = form.plans[i];
             const errors: string[] = [];
-            if (!plan) errors.push("Plan invÃ¡lido");
+            if (!plan) errors.push("Plan inválido");
             else {
-              // Campo comÃºn a ambos tipos
-              if (!plan.planName || plan.planName.trim().length > 50) errors.push("Nombre del Plan (mÃ¡x 50 chars)");
+              // Campo comíƒÂºn a ambos tipos
+              if (!plan.planName || plan.planName.trim().length > 50) errors.push("Nombre del Plan (máx 50 chars)");
 
               if (plan.packageType === 'supplier') {
-                // â”€â”€ PAQUETE POR PROVEEDOR: solo campos mÃ­nimos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // í¢â€â‚¬í¢â€â‚¬ PAQUETE POR PROVEEDOR: solo campos míƒÂ­nimos í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬
                 if (!plan.supplier || plan.supplier.trim().length === 0) errors.push("Proveedor (requerido)");
 
                 if (!plan.vouchers || plan.vouchers.length === 0) {
@@ -467,34 +468,34 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
                 if (plan.supplierCost === undefined || plan.supplierCost <= 0) errors.push("Costo Proveedor (> $0)");
                 if (plan.ta === undefined || plan.ta < 0) errors.push("Valor TA (>= $0)");
-                if (!plan.supplierPaymentMethod) errors.push("MÃ©todo de Pago Proveedor (requerido)");
+                if (!plan.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
 
               } else {
-                // â”€â”€ PAQUETE POR EMPRESA: validaciÃ³n completa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // í¢â€â‚¬í¢â€â‚¬ PAQUETE POR EMPRESA: validaciíƒÂ³n completa í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬
                 if (!plan.hotelName || plan.hotelName.trim().length < 2 || plan.hotelName.trim().length > 50) errors.push("Nombre del Hotel (2-50 chars)");
-                if (!plan.reservationNumber || plan.reservationNumber.trim().length === 0 || plan.reservationNumber.trim().length > 20) errors.push("NÃºmero de ReservaciÃ³n (1-20 chars)");
+                if (!plan.reservationNumber || plan.reservationNumber.trim().length === 0 || plan.reservationNumber.trim().length > 20) errors.push("Número de Reservación (1-20 chars)");
                 if (plan.adultsCount === undefined || plan.adultsCount < 0 || plan.adultsCount > 999) errors.push("Adultos (0-999)");
                 if (plan.childrenCount === undefined || plan.childrenCount < 0 || plan.childrenCount > 999) errors.push("Menores (0-999)");
                 if (!plan.flightNumber || plan.flightNumber.trim().length === 0) {
-                  errors.push("NÃºmero de Vuelo (requerido)");
+                  errors.push("Número de Vuelo (requerido)");
                 } else if (plan.flightNumber.length > 8) {
-                  errors.push("NÃºmero de Vuelo (mÃ¡x 8 caracteres)");
+                  errors.push("Número de Vuelo (máx 8 caracteres)");
                 } else if (!/^[A-Z0-9]+$/.test(plan.flightNumber)) {
-                  errors.push("NÃºmero de Vuelo (debe ser alfanumÃ©rico en mayÃºsculas sin espacios ni caracteres especiales)");
+                  errors.push("Número de Vuelo (debe ser alfanumérico en mayúsculas sin espacios ni caracteres especiales)");
                 }
                 if (!plan.ticketNumber || plan.ticketNumber.trim().length === 0) {
-                  errors.push("NÃºmero de Tiquete (requerido)");
+                  errors.push("Número de Tiquete (requerido)");
                 } else if (plan.ticketNumber.length < 13 || plan.ticketNumber.length > 14) {
-                  errors.push("NÃºmero de Tiquete (mÃ­nimo 13 y mÃ¡ximo 14 dÃ­gitos)");
+                  errors.push("Número de Tiquete (míƒÂ­nimo 13 y máximo 14 díƒÂ­gitos)");
                 } else if (!/^\d+$/.test(plan.ticketNumber)) {
-                  errors.push("NÃºmero de Tiquete (debe ser estrictamente numÃ©rico)");
+                  errors.push("Número de Tiquete (debe ser estrictamente numérico)");
                 }
                 if (!plan.confirmationNumber || plan.confirmationNumber.trim().length === 0) {
-                  errors.push("ConfirmaciÃ³n (requerido)");
+                  errors.push("Confirmación (requerido)");
                 } else if (plan.confirmationNumber.length !== 6) {
-                  errors.push("ConfirmaciÃ³n (debe tener exactamente 6 caracteres)");
+                  errors.push("Confirmación (debe tener exactamente 6 caracteres)");
                 } else if (!/^[A-Z0-9]+$/.test(plan.confirmationNumber)) {
-                  errors.push("ConfirmaciÃ³n (debe ser alfanumÃ©rico en mayÃºsculas sin espacios ni caracteres especiales)");
+                  errors.push("Confirmación (debe ser alfanumérico en mayúsculas sin espacios ni caracteres especiales)");
                 }
                 if (!plan.supplier || plan.supplier.trim().length === 0) errors.push("Proveedor (requerido)");
 
@@ -537,7 +538,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 plan.guests.forEach((g, gIdx) => {
                   if (!g.name || g.name.trim().length < 3 || g.name.trim().length > 70) {
                     errors.push(`Integrante #${gIdx + 1}: Nombre Completo (3-70 caracteres)`);
-                  } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(g.name)) {
+                  } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(g.name)) {
                     errors.push(`Integrante #${gIdx + 1}: Nombre Completo solo permite letras y espacios`);
                   }
                   if (!g.docType || g.docType.trim().length === 0) {
@@ -570,14 +571,14 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.checkIns.length; i++) {
             const check = form.checkIns[i];
             const errors: string[] = [];
-            if (!check) errors.push("Check-in invÃ¡lido");
+            if (!check) errors.push("Check-in inválido");
             else {
               if (!check.passengerName || check.passengerName.trim().length === 0) errors.push("Nombre del pasajero (requerido)");
               if (!check.docType || check.docType.trim().length === 0) errors.push("Tipo de Doc (requerido)");
-              if (!check.docNumber || check.docNumber.trim().length === 0) errors.push("NÂº de Doc (requerido)");
+              if (!check.docNumber || check.docNumber.trim().length === 0) errors.push("Ní‚Âº de Doc (requerido)");
               if (!check.flightOrReservation || check.flightOrReservation.trim().length < 3 || check.flightOrReservation.trim().length > 8) errors.push("Vuelo o Reserva (3-8 chars)");
               if (!check.travelDate) errors.push("Fecha de viaje (requerido)");
-              if (check.seat && check.seat.trim().length > 10) errors.push("Silla Preferida (mÃ¡x 10 chars)");
+              if (check.seat && check.seat.trim().length > 10) errors.push("Silla Preferida (máx 10 chars)");
 
               const now = new Date();
               now.setHours(0, 0, 0, 0);
@@ -595,25 +596,25 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
       if (form.selectedProducts.includes("documentacion_migratoria")) {
         if (!form.migrations || form.migrations.length === 0) {
-          errs.products = "Debes configurar al menos una DocumentaciÃ³n Migratoria";
+          errs.products = "Debes configurar al menos una Documentación Migratoria";
         } else {
           for (let i = 0; i < form.migrations.length; i++) {
             const mig = form.migrations[i];
             const errors: string[] = [];
-            if (!mig) errors.push("Documento invÃ¡lido");
+            if (!mig) errors.push("Documento inválido");
             else {
               if (!mig.passengerName || mig.passengerName.trim().length === 0) errors.push("Nombre del pasajero (requerido)");
               if (!mig.birthDate) errors.push("Fecha de Nacimiento (requerida)");
               if (!mig.nationality || mig.nationality.trim().length === 0 || mig.nationality.length > 30) errors.push("Nacionalidad (1-30 chars)");
               if (!mig.docType) errors.push("Tipo de Documento (requerido)");
-              if (!mig.docNumber || mig.docNumber.trim().length < 5 || mig.docNumber.length > 20) errors.push("NÃºmero de Documento (5-20 chars)");
+              if (!mig.docNumber || mig.docNumber.trim().length < 5 || mig.docNumber.length > 20) errors.push("Número de Documento (5-20 chars)");
               if (mig.docType === "Pasaporte" && !mig.passportExpiry) errors.push("Vencimiento de Documento (requerido)");
-              if (!mig.destinationCountry || mig.destinationCountry.trim().length === 0) errors.push("PaÃ­s de Destino (requerido)");
-              if (!mig.requestedDocType || mig.requestedDocType.trim().length === 0) errors.push("TrÃ¡mite (requerido)");
+              if (!mig.destinationCountry || mig.destinationCountry.trim().length === 0) errors.push("País de Destino (requerido)");
+              if (!mig.requestedDocType || mig.requestedDocType.trim().length === 0) errors.push("Trámite (requerido)");
               
               if (mig.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(mig.email)) errors.push("Correo electrÃ³nico invÃ¡lido");
+                if (!emailRegex.test(mig.email)) errors.push("Correo electríƒÂ³nico inválido");
                 if (!mig.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -625,7 +626,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             }
 
             if (errors.length > 0) {
-              triggerError(`El servicio de DocumentaciÃ³n Migratoria #${i + 1} tiene errores: ${errors.join(", ")}`);
+              triggerError(`El servicio de Documentación Migratoria #${i + 1} tiene errores: ${errors.join(", ")}`);
               errs.migrationValidation = "invalid";
               break;
             }
@@ -640,16 +641,16 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.simCards.length; i++) {
             const sim = form.simCards[i];
             const errors: string[] = [];
-            if (!sim) errors.push("SIM Card invÃ¡lida");
+            if (!sim) errors.push("SIM Card inválida");
             else {
               if (!sim.passengerName || sim.passengerName.trim().length === 0) errors.push("Nombre del Titular (requerido)");
-              if (!sim.destinationCountry || sim.destinationCountry.trim().length === 0) errors.push("PaÃ­s de Destino (requerido)");
+              if (!sim.destinationCountry || sim.destinationCountry.trim().length === 0) errors.push("País de Destino (requerido)");
               if (!sim.arrivalDate) errors.push("Fecha de Llegada (requerida)");
-              if (!sim.tripDuration || isNaN(Number(sim.tripDuration)) || Number(sim.tripDuration) <= 0) errors.push("DuraciÃ³n del Viaje (mayor a 0)");
+              if (!sim.tripDuration || isNaN(Number(sim.tripDuration)) || Number(sim.tripDuration) <= 0) errors.push("Duración del Viaje (mayor a 0)");
               
               if (sim.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(sim.email)) errors.push("Correo electrÃ³nico invÃ¡lido");
+                if (!emailRegex.test(sim.email)) errors.push("Correo electríƒÂ³nico inválido");
                 if (!sim.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -670,20 +671,20 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
       if (form.selectedProducts.includes("renta_vehiculos")) {
         if (!form.carRentals || form.carRentals.length === 0) {
-          errs.products = "Debes configurar al menos una Renta de VehÃ­culo";
+          errs.products = "Debes configurar al menos una Renta de VehíƒÂ­culo";
         } else {
           for (let i = 0; i < form.carRentals.length; i++) {
             const car = form.carRentals[i];
             const errors: string[] = [];
-            if (!car) errors.push("Renta de VehÃ­culo invÃ¡lida");
+            if (!car) errors.push("Renta de VehíƒÂ­culo inválida");
             else {
               if (!car.mainDriver || car.mainDriver.trim().length === 0) errors.push("Conductor Principal (requerido)");
               if (!car.pickupDate) errors.push("Recogida (requerida)");
-              if (!car.returnDate) errors.push("DevoluciÃ³n (requerida)");
+              if (!car.returnDate) errors.push("Devolución (requerida)");
               
               const cleanLicense = car.licenseNumber ? car.licenseNumber.replace(/[\-\s]/g, "") : "";
               if (cleanLicense.length < 5 || cleanLicense.length > 18) {
-                errors.push("NÃºmero de Licencia (5-18 caracteres)");
+                errors.push("Número de Licencia (5-18 caracteres)");
               }
               
               if (car.additionalDrivers === undefined || car.additionalDrivers < 0 || car.additionalDrivers > 10) {
@@ -691,19 +692,19 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }
 
               if (!car.guaranteeCreditCard || car.guaranteeCreditCard.trim().length !== 4) {
-                errors.push("Tarjeta de GarantÃ­a (exactamente 4 dÃ­gitos)");
+                errors.push("Tarjeta de GarantíƒÂ­a (exactamente 4 díƒÂ­gitos)");
               }
 
               const now = new Date();
               now.setHours(0, 0, 0, 0);
               
               if (car.pickupDate && new Date(car.pickupDate) < now) errors.push("Recogida no puede ser pasada");
-              if (car.returnDate && new Date(car.returnDate) < now) errors.push("DevoluciÃ³n no puede ser pasada");
-              if (car.pickupDate && car.returnDate && new Date(car.returnDate) < new Date(car.pickupDate)) errors.push("DevoluciÃ³n debe ser posterior a la Recogida");
+              if (car.returnDate && new Date(car.returnDate) < now) errors.push("Devolución no puede ser pasada");
+              if (car.pickupDate && car.returnDate && new Date(car.returnDate) < new Date(car.pickupDate)) errors.push("Devolución debe ser posterior a la Recogida");
             }
 
             if (errors.length > 0) {
-              triggerError(`El servicio de Renta de VehÃ­culo #${i + 1} tiene errores: ${errors.join(", ")}`);
+              triggerError(`El servicio de Renta de VehíƒÂ­culo #${i + 1} tiene errores: ${errors.join(", ")}`);
               errs.carRentalValidation = "invalid";
               break;
             }
@@ -718,17 +719,17 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.fincas.length; i++) {
             const finca = form.fincas[i];
             const errors: string[] = [];
-            if (!finca) errors.push("Renta de Finca invÃ¡lida");
+            if (!finca) errors.push("Renta de Finca inválida");
             else {
               if (!finca.fincaName || finca.fincaName.trim().length < 3 || finca.fincaName.trim().length > 30) errors.push("Nombre de la Finca (3-30 caracteres)");
               if (!finca.fincaCity || finca.fincaCity.trim().length < 3 || finca.fincaCity.trim().length > 50) errors.push("Ciudad o Pueblo (3-50 caracteres)");
-              if (!finca.fincaAddress || finca.fincaAddress.trim().length < 5 || finca.fincaAddress.trim().length > 30) errors.push("DirecciÃ³n de la Finca (5-30 caracteres)");
+              if (!finca.fincaAddress || finca.fincaAddress.trim().length < 5 || finca.fincaAddress.trim().length > 30) errors.push("Dirección de la Finca (5-30 caracteres)");
               if (!finca.responsibleName || finca.responsibleName.trim().length === 0) errors.push("Responsable (requerido)");
               if (!finca.checkInDate) errors.push("Check-in (requerido)");
               if (!finca.checkOutDate) errors.push("Check-out (requerido)");
               
-              if (finca.adultsCount === undefined || isNaN(Number(finca.adultsCount)) || Number(finca.adultsCount) < 0 || Number(finca.adultsCount) > 999) errors.push("NÃºmero de Adultos (0-999)");
-              if (finca.childrenCount === undefined || isNaN(Number(finca.childrenCount)) || Number(finca.childrenCount) < 0 || Number(finca.childrenCount) > 999) errors.push("NÃºmero de NiÃ±os (0-999)");
+              if (finca.adultsCount === undefined || isNaN(Number(finca.adultsCount)) || Number(finca.adultsCount) < 0 || Number(finca.adultsCount) > 999) errors.push("Número de Adultos (0-999)");
+              if (finca.childrenCount === undefined || isNaN(Number(finca.childrenCount)) || Number(finca.childrenCount) < 0 || Number(finca.childrenCount) > 999) errors.push("Número de NiíƒÂ±os (0-999)");
 
               const now = new Date();
               now.setHours(0, 0, 0, 0);
@@ -736,7 +737,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (finca.checkInDate && new Date(finca.checkInDate) < now) errors.push("Check-in no puede ser pasado");
               if (finca.checkOutDate && new Date(finca.checkOutDate) < now) errors.push("Check-out no puede ser pasado");
               if (finca.checkInDate && finca.checkOutDate && new Date(finca.checkOutDate) < new Date(finca.checkInDate)) errors.push("Check-out debe ser posterior al Check-in");
-              if (!finca.supplierPaymentMethod) errors.push("MÃ©todo de Pago Proveedor (requerido)");
+              if (!finca.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -755,15 +756,15 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.tours.length; i++) {
             const tour = form.tours[i];
             const errors: string[] = [];
-            if (!tour) errors.push("Tour invÃ¡lido");
+            if (!tour) errors.push("Tour inválido");
             else {
               if (!tour.passengerName || tour.passengerName.trim().length === 0) errors.push("Nombre del Pasajero (requerido)");
               if (!tour.pickupPoint || tour.pickupPoint.trim().length === 0 || tour.pickupPoint.length > 30) errors.push("Punto de Recogida (1-30 caracteres)");
               
-              if (tour.adultsCount === undefined || isNaN(Number(tour.adultsCount)) || Number(tour.adultsCount) < 0 || Number(tour.adultsCount) > 999) errors.push("NÃºmero de Adultos (0-999)");
-              if (tour.childrenCount === undefined || isNaN(Number(tour.childrenCount)) || Number(tour.childrenCount) < 0 || Number(tour.childrenCount) > 999) errors.push("NÃºmero de NiÃ±os (0-999)");
+              if (tour.adultsCount === undefined || isNaN(Number(tour.adultsCount)) || Number(tour.adultsCount) < 0 || Number(tour.adultsCount) > 999) errors.push("Número de Adultos (0-999)");
+              if (tour.childrenCount === undefined || isNaN(Number(tour.childrenCount)) || Number(tour.childrenCount) < 0 || Number(tour.childrenCount) > 999) errors.push("Número de NiíƒÂ±os (0-999)");
 
-              if (!tour.supplierPaymentMethod) errors.push("MÃ©todo de Pago Proveedor (requerido)");
+              if (!tour.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -777,19 +778,19 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
       if (form.selectedProducts.includes("centros_convencion")) {
         if (!form.conventions || form.conventions.length === 0) {
-          errs.products = "Debes configurar al menos un Centro de ConvenciÃ³n";
+          errs.products = "Debes configurar al menos un Centro de ConvenciíƒÂ³n";
         } else {
           for (let i = 0; i < form.conventions.length; i++) {
             const conv = form.conventions[i];
             const errors: string[] = [];
-            if (!conv) errors.push("ConvenciÃ³n invÃ¡lida");
+            if (!conv) errors.push("ConvenciíƒÂ³n inválida");
             else {
               if (!conv.placeName || conv.placeName.trim().length < 3 || conv.placeName.trim().length > 40) errors.push("Nombre del Lugar (3-40 caracteres)");
               if (!conv.city || conv.city.trim().length < 3 || conv.city.trim().length > 40) errors.push("Ciudad (3-40 caracteres)");
-              if (!conv.address || conv.address.trim().length < 5 || conv.address.trim().length > 40) errors.push("DirecciÃ³n (5-40 caracteres)");
+              if (!conv.address || conv.address.trim().length < 5 || conv.address.trim().length > 40) errors.push("Dirección (5-40 caracteres)");
               if (!conv.requiredSpace || conv.requiredSpace.trim().length < 3 || conv.requiredSpace.trim().length > 40) errors.push("Espacio Requerido (3-40 caracteres)");
               if (!conv.eventType || conv.eventType.trim().length < 3 || conv.eventType.trim().length > 40) errors.push("Tipo de Evento (3-40 caracteres)");
-              if (!conv.organization || conv.organization.trim().length === 0) errors.push("OrganizaciÃ³n (requerido)");
+              if (!conv.organization || conv.organization.trim().length === 0) errors.push("Organización (requerido)");
               if (!conv.contactName || conv.contactName.trim().length === 0) errors.push("Nombre de Contacto (requerido)");
               if (!conv.startDate) errors.push("Fecha Inicio (requerida)");
               if (!conv.endDate) errors.push("Fecha Fin (requerida)");
@@ -798,7 +799,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
               if (conv.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(conv.email)) errors.push("Correo electrÃ³nico invÃ¡lido");
+                if (!emailRegex.test(conv.email)) errors.push("Correo electríƒÂ³nico inválido");
                 if (!conv.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -808,7 +809,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (conv.startDate && new Date(conv.startDate) < now) errors.push("Fecha Inicio no puede ser pasada");
               if (conv.endDate && new Date(conv.endDate) < now) errors.push("Fecha Fin no puede ser pasada");
               if (conv.startDate && conv.endDate && new Date(conv.endDate) < new Date(conv.startDate)) errors.push("Fecha Fin debe ser posterior a la de Inicio");
-              if (!conv.supplierPaymentMethod) errors.push("MÃ©todo de Pago Proveedor (requerido)");
+              if (!conv.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -827,19 +828,19 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.restaurants.length; i++) {
             const rest = form.restaurants[i];
             const errors: string[] = [];
-            if (!rest) errors.push("Restaurante invÃ¡lido");
+            if (!rest) errors.push("Restaurante inválido");
             else {
               if (!rest.reservationName || rest.reservationName.trim().length === 0) errors.push("Nombre de Reserva (requerido)");
               if (!rest.dateTime) errors.push("Fecha y Hora (requerida)");
               if (!rest.phone || rest.phone.trim().length === 0) errors.push("Celular (requerido)");
               
-              if (rest.peopleCount === undefined || isNaN(Number(rest.peopleCount)) || Number(rest.peopleCount) < 1 || Number(rest.peopleCount) > 999) errors.push("NÂº de Personas (1-999)");
+              if (rest.peopleCount === undefined || isNaN(Number(rest.peopleCount)) || Number(rest.peopleCount) < 1 || Number(rest.peopleCount) > 999) errors.push("Ní‚Âº de Personas (1-999)");
 
               if (rest.tablePreference && (rest.tablePreference.trim().length < 3 || rest.tablePreference.length > 30)) {
                 errors.push("Preferencia de Mesa (3-30 caracteres)");
               }
               if (rest.menuType && (rest.menuType.trim().length < 3 || rest.menuType.length > 30)) {
-                errors.push("Tipo de MenÃº (3-30 caracteres)");
+                errors.push("Tipo de MeníƒÂº (3-30 caracteres)");
               }
 
               const now = new Date();
@@ -868,7 +869,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.visas.length; i++) {
             const visa = form.visas[i];
             const errors: string[] = [];
-            if (!visa) errors.push("Visa invÃ¡lida");
+            if (!visa) errors.push("Visa inválida");
             else {
               if (!visa.fullName || visa.fullName.trim().length === 0) errors.push("Nombre Completo (requerido)");
               
@@ -884,16 +885,16 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
               if (!visa.nationality || visa.nationality.trim().length < 3 || visa.nationality.trim().length > 30) {
                 errors.push("Nacionalidad (3-30 caracteres)");
-              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(visa.nationality)) {
+              } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(visa.nationality)) {
                 errors.push("Nacionalidad solo permite letras");
               }
 
               if (!visa.docType) errors.push("Tipo de Documento (requerido)");
 
               if (!visa.docNumber || visa.docNumber.trim().length < 5 || visa.docNumber.length > 20) {
-                errors.push("NÃºmero de Documento (5-20 chars)");
+                errors.push("Número de Documento (5-20 chars)");
               } else if (/[^a-zA-Z0-9]/.test(visa.docNumber)) {
-                errors.push("NÃºmero de Documento debe ser alfanumÃ©rico");
+                errors.push("Número de Documento debe ser alfanumérico");
               }
 
               if (visa.docType === "Pasaporte" && !visa.passportExpiration) {
@@ -907,14 +908,14 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }
 
               if (!visa.countryApplying || visa.countryApplying.trim().length < 3 || visa.countryApplying.trim().length > 30) {
-                errors.push("PaÃ­s al que aplica (3-30 caracteres)");
-              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(visa.countryApplying)) {
-                errors.push("PaÃ­s al que aplica solo permite letras");
+                errors.push("País al que aplica (3-30 caracteres)");
+              } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(visa.countryApplying)) {
+                errors.push("País al que aplica solo permite letras");
               }
 
               if (visa.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(visa.email)) errors.push("Correo electrÃ³nico invÃ¡lido");
+                if (!emailRegex.test(visa.email)) errors.push("Correo electríƒÂ³nico inválido");
                 if (!visa.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -943,10 +944,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.passports.length; i++) {
             const passport = form.passports[i];
             const errors: string[] = [];
-            if (!passport) errors.push("Pasaporte invÃ¡lido");
+            if (!passport) errors.push("Pasaporte inválido");
             else {
               if (!passport.fullName || passport.fullName.trim().length === 0) errors.push("Nombre Completo (requerido)");
-              if (!passport.idNumber || passport.idNumber.trim().length === 0) errors.push("NÃºmero de IdentificaciÃ³n (requerido)");
+              if (!passport.idNumber || passport.idNumber.trim().length === 0) errors.push("Número de Identificación (requerido)");
               
               if (!passport.birthDate) {
                 errors.push("Fecha de Nacimiento (requerida)");
@@ -962,10 +963,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 errors.push("Ciudad de Residencia (requerida)");
               } else {
                 if (passport.residenceCity.length > 85) {
-                  errors.push("Ciudad de Residencia (mÃ¡ximo 85 caracteres)");
+                  errors.push("Ciudad de Residencia (máximo 85 caracteres)");
                 }
-                if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(passport.residenceCity)) {
-                  errors.push("Ciudad de Residencia no debe tener nÃºmeros ni caracteres especiales");
+                if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(passport.residenceCity)) {
+                  errors.push("Ciudad de Residencia no debe tener números ni caracteres especiales");
                 }
               }
 
@@ -978,19 +979,19 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }
 
               if (!passport.phone || passport.phone.trim().length === 0) {
-                errors.push("TelÃ©fono de Contacto (requerido)");
+                errors.push("TelíƒÂ©fono de Contacto (requerido)");
               } else {
                 if (passport.phone.length > 15) {
-                  errors.push("TelÃ©fono de Contacto (mÃ¡ximo 15 caracteres)");
+                  errors.push("TelíƒÂ©fono de Contacto (máximo 15 caracteres)");
                 }
                 if (/[a-zA-Z]/.test(passport.phone)) {
-                  errors.push("TelÃ©fono de Contacto no puede contener letras");
+                  errors.push("TelíƒÂ©fono de Contacto no puede contener letras");
                 }
               }
             }
 
             if (errors.length > 0) {
-              triggerError(`El trÃ¡mite de Pasaporte #${i + 1} tiene errores: ${errors.join(", ")}`);
+              triggerError(`El tríƒÂ¡mite de Pasaporte #${i + 1} tiene errores: ${errors.join(", ")}`);
               errs.passportValidation = "invalid";
               break;
             }
@@ -1005,23 +1006,23 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           for (let i = 0; i < form.petServices.length; i++) {
             const pet = form.petServices[i];
             const errors: string[] = [];
-            if (!pet) errors.push("Transporte de Mascotas invÃ¡lido");
+            if (!pet) errors.push("Transporte de Mascotas inválido");
             else {
               if (!pet.ownerName || pet.ownerName.trim().length === 0) {
-                errors.push("Nombre del DueÃ±o (requerido)");
-              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(pet.ownerName)) {
-                errors.push("Nombre del DueÃ±o solo permite letras");
+                errors.push("Nombre del DueíƒÂ±o (requerido)");
+              } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(pet.ownerName)) {
+                errors.push("Nombre del DueíƒÂ±o solo permite letras");
               }
 
               if (!pet.petName || pet.petName.trim().length === 0) {
                 errors.push("Nombre de la Mascota (requerido)");
-              } else if (/[^a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]/.test(pet.petName)) {
+              } else if (/[^a-zA-ZíƒÂ¡íƒÂ©íƒÂ­íƒÂ³íƒÂºíƒÂíƒâ€°íƒÂíƒâ€œíƒÅ¡íƒÂ±íƒâ€˜\s]/.test(pet.petName)) {
                 errors.push("Nombre de la Mascota solo permite letras");
               }
 
               if (!pet.breed || pet.breed.trim().length === 0) {
                 errors.push("Raza (requerida)");
-              } else if (/[^a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]/.test(pet.breed)) {
+              } else if (/[^a-zA-ZíƒÂ¡íƒÂ©íƒÂ­íƒÂ³íƒÂºíƒÂíƒâ€°íƒÂíƒâ€œíƒÅ¡íƒÂ±íƒâ€˜\s]/.test(pet.breed)) {
                 errors.push("Raza solo permite letras");
               }
 
@@ -1043,22 +1044,22 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }
 
               if (!pet.destinationCountry || pet.destinationCountry.trim().length < 3 || pet.destinationCountry.trim().length > 30) {
-                errors.push("PaÃ­s Destino (3-30 caracteres)");
-              } else if (/[^a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]/.test(pet.destinationCountry)) {
-                errors.push("PaÃ­s Destino solo permite letras");
+                errors.push("País Destino (3-30 caracteres)");
+              } else if (/[^a-zA-ZíƒÂ¡íƒÂ©íƒÂ­íƒÂ³íƒÂºíƒÂíƒâ€°íƒÂíƒâ€œíƒÅ¡íƒÂ±íƒâ€˜\s]/.test(pet.destinationCountry)) {
+                errors.push("País Destino solo permite letras");
               }
 
               if (!pet.phone || pet.phone.trim().length === 0) {
-                errors.push("TelÃ©fono (requerido)");
+                errors.push("TelíƒÂ©fono (requerido)");
               } else {
                 if (pet.phone.length > 15) {
-                  errors.push("TelÃ©fono (mÃ¡ximo 15 caracteres)");
+                  errors.push("TelíƒÂ©fono (máximo 15 caracteres)");
                 }
                 if (/[a-zA-Z]/.test(pet.phone)) {
-                  errors.push("TelÃ©fono no puede contener letras");
+                  errors.push("TelíƒÂ©fono no puede contener letras");
                 }
               }
-              if (!pet.supplierPaymentMethod) errors.push("MÃ©todo de Pago Proveedor (requerido)");
+              if (!pet.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
 
             if (errors.length > 0) {
@@ -1093,7 +1094,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           today.setHours(0, 0, 0, 0);
           selectedDate.setHours(0, 0, 0, 0);
           if (selectedDate < today) {
-            errs.creditDueDate = "La fecha de vencimiento no puede ser anterior al dÃ­a de hoy";
+            errs.creditDueDate = "La fecha de vencimiento no puede ser anterior al díƒÂ­a de hoy";
           }
         }
       }
@@ -1127,7 +1128,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     setIsSubmitting(true);
     const client = data.clients.find((c: any) => c.name === form.clientId);
     if (!client) {
-      setErrors({ ...errors, clientId: "El cliente no es vÃ¡lido" });
+      setErrors({ ...errors, clientId: "El cliente no es víƒÂ¡lido" });
       setStep(1);
       return;
     }
@@ -1217,7 +1218,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       onClose();
     } catch (err: any) {
       console.error("Error al registrar venta:", err);
-      const errMsg = err?.response?.data?.error?.message || "OcurriÃ³ un error interno en el servidor al registrar la venta. Por favor, asegÃºrese de reiniciar el servidor backend local para cargar los nuevos mÃ³dulos de base de datos.";
+      const errMsg = err?.response?.data?.error?.message || "Ocurrió un error interno en el servidor al registrar la venta.";
       alert(`Error al registrar venta: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
@@ -1230,174 +1231,217 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full relative overflow-hidden">
-      {/* Toast Error Notification */}
-      {showError && (
-        <div className="fixed top-24 right-6 z-[200] bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
-          <div className="bg-rose-500 text-white rounded-full p-1 flex-shrink-0">
-            <AlertCircle size={18} />
-          </div>
-          <div>
-            <p className="font-bold text-sm">Error de ValidaciÃ³n</p>
-            <p className="text-xs opacity-90">{errorMessage}</p>
+    <div className="flex h-full w-full overflow-hidden" style={{ minHeight: 0 }}>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• LEFT SIDEBAR â€“ STEP NAVIGATOR â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <div
+        className="hidden sm:flex flex-col flex-shrink-0 w-64 relative overflow-hidden"
+        style={{ background: "linear-gradient(160deg, #1e2035 0%, #2B2D42 60%, #3a2f50 100%)" }}
+      >
+        {/* Decorative orbs */}
+        <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #8D99AE 0%, transparent 70%)" }} />
+        <div className="absolute bottom-0 -right-10 w-48 h-48 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #8D99AE 0%, transparent 70%)" }} />
+
+        {/* Brand header */}
+        <div className="px-6 pt-8 pb-6 border-b border-white/10 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm"
+              style={{ background: "linear-gradient(135deg, #8D99AE, #6b7a94)" }}>
+              DB
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm tracking-wider">DB NEXUS</p>
+              <p className="text-white/40 text-[10px] tracking-widest uppercase">Nueva Venta</p>
+            </div>
           </div>
         </div>
-      )}
-      {activeForm ? <ProductFormsModal activeForm={activeForm} activeIdx={activeIdx} form={form} data={data} set={set} onCloseForm={() => { setActiveForm(null); setActiveIdx(null); }} triggerError={triggerError} /> : (
-        <>
-          {/* Header / Stepper */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-border bg-gray-50">
-            <div className="flex justify-between items-center max-w-2xl mx-auto relative">
-              <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -translate-y-1/2 -z-10" />
-              {STEPS.map((s) => {
-                const Icon = s.icon;
-                const isCompleted = step > s.id;
-                const isActive = step === s.id;
 
-                return (
-                  <div key={s.id} className="flex flex-col items-center gap-1.5 sm:gap-2">
-                    <div
-                      className={`
-                        w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500
-                        ${
-                          isCompleted
-                             ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100"
-                             : isActive
-                               ? "bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105 sm:scale-110"
-                               : "bg-white border-gray-200 text-gray-400"
-                        }
-                      `}
-                    >
-                      <Icon size={16} className="sm:hidden" />
-                      <Icon size={18} className="hidden sm:block" />
-                    </div>
-                    <span
-                      className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
-                        isActive ? "text-primary" : "text-gray-400"
-                      }`}
-                    >
-                      {s.label}
-                    </span>
+        {/* Step list */}
+        <div className="flex-1 px-5 py-8 space-y-2">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            const isCompleted = step > s.id;
+            const isActive    = step === s.id;
+            return (
+              <div key={s.id} className="relative">
+                {i < STEPS.length - 1 && (
+                  <div className="absolute left-5 top-10 bottom-0 w-px"
+                    style={{ background: isCompleted ? "rgba(141,153,174,0.6)" : "rgba(255,255,255,0.08)" }} />
+                )}
+                <div className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 ${
+                  isActive ? "bg-white/10 shadow-lg" : "hover:bg-white/5"
+                }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 border ${
+                    isCompleted
+                      ? "border-emerald-400 bg-emerald-400/20 text-emerald-400"
+                      : isActive
+                        ? "border-slate-300 bg-slate-300/20 text-slate-200 shadow-md"
+                        : "border-white/15 bg-transparent text-white/30"
+                  }`}>
+                    {isCompleted ? <CheckCircle2 size={15} /> : <Icon size={15} />}
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                  <div>
+                    <p className={`text-xs font-semibold tracking-wide transition-colors ${
+                      isActive ? "text-white" : isCompleted ? "text-emerald-400" : "text-white/35"
+                    }`}>{s.label}</p>
+                    <p className={`text-[10px] mt-0.5 ${
+                      isActive ? "text-white/50" : "text-white/20"
+                    }`}>
+                      {s.id === 1 ? "Datos del cliente" : s.id === 2 ? "Selección de productos" : "Método de pago"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4 bg-white">
-            {step === 1 && <Step1Client form={form} set={set} data={data} errors={errors} />}
-            {step === 2 && <Step2Products form={form} set={set} data={data} errors={errors} toggleProduct={toggleProduct} actions={actions} />}
-            {step === 3 && <Step3Payment form={form} set={set} data={data} errors={errors} />}
+        {/* Progress bar */}
+        <div className="px-5 pb-6 border-t border-white/10 pt-4 flex-shrink-0">
+          <p className="text-white/30 text-[10px] uppercase tracking-widest mb-2">Progreso</p>
+          <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${((step - 1) / (STEPS.length - 1)) * 100}%`,
+                background: "linear-gradient(90deg, #8D99AE, #a8b4c4)"
+              }}
+            />
           </div>
-        </>
-      )}
+          <p className="text-white/40 text-[10px] mt-1.5">Paso {step} de {STEPS.length}</p>
+        </div>
+      </div>
 
-      {/* Footer */}
-      <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-border bg-white flex gap-2 sm:gap-3 flex-shrink-0">
+      {/* ══════════════ RIGHT CONTENT AREA ══════════════ */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[var(--color-bg-base)]" style={{ position: "relative" }}>
+
         {activeForm ? (
-          <div className="flex justify-between items-center w-full gap-2">
-            <Button
-              variant="outline"
-              onClick={closeActiveForm}
-              className="px-3 sm:px-6 text-xs sm:text-sm"
-            >
-              Regresar
-            </Button>
-            <Button
-              onClick={closeActiveForm}
-              disabled={(() => {
-                if (!activeForm || activeIdx === null) return false;
-                if (activeForm === "tiqueteria") return isTicketFormEmpty;
-                if (activeForm === "hoteleria") return isHotelFormEmpty;
-                if (activeForm === "seguros_viaje") return isInsuranceFormEmpty;
-                
-                // Generic fallback checking for all other forms
-                let targetKey: string | null = null;
-                switch (activeForm) {
-                  case "planes": targetKey = "plans"; break;
-                  case "checkin": targetKey = "checkIns"; break;
-                  case "documentacion_migratoria": targetKey = "migrations"; break;
-                  case "simcard": targetKey = "simCards"; break;
-                  case "renta_vehiculos": targetKey = "carRentals"; break;
-                  case "renta_fincas": targetKey = "fincas"; break;
-                  case "tours": targetKey = "tours"; break;
-                  case "centros_convencion": targetKey = "conventions"; break;
-                  case "restaurantes": targetKey = "restaurants"; break;
-                  case "visa": targetKey = "visas"; break;
-                  case "pasaporte": targetKey = "passports"; break;
-                  case "servicio_mascotas": targetKey = "petServices"; break;
-                }
-                if (targetKey) {
-                  const items = (form as any)[targetKey] || [];
-                  const currentItem = items[activeIdx];
-                  return isItemEmpty(currentItem, activeForm);
-                }
-                return false;
-              })()}
-              className="px-3 sm:px-6 text-xs sm:text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              Confirmar y Continuar
-            </Button>
-          </div>
+          <ProductFormsModal
+            activeForm={activeForm}
+            activeIdx={activeIdx}
+            form={form}
+            data={data}
+            set={set}
+            onCloseForm={() => { setActiveForm(null); setActiveIdx(null); }}
+            triggerError={triggerError}
+          />
         ) : (
-          <div className="flex justify-between items-center w-full gap-2">
-            <Button
-              variant="outline"
-              onClick={goBack}
-              disabled={step === 1}
-              className="px-3 sm:px-8 border-gray-200 text-gray-500 hover:bg-gray-50 text-xs sm:text-sm"
-            >
-              Anterior
-            </Button>
-
-            <div className="flex gap-2 sm:gap-3">
-              <Button
-                variant="outline"
-                className="px-3 sm:px-8 border-gray-200 text-gray-500 hover:bg-gray-50 text-xs sm:text-sm"
+          <>
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-5 sm:px-8 py-4 bg-white border-b border-gray-100 flex-shrink-0 shadow-sm">
+              <div className="sm:hidden flex items-center gap-1.5">
+                {STEPS.map((s) => (
+                  <div key={s.id} className={`h-1.5 rounded-full transition-all duration-300 ${
+                    step >= s.id ? "w-6 bg-primary" : "w-3 bg-gray-200"
+                  }`} />
+                ))}
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
+                  Paso {step} - {STEPS[step - 1].label}
+                </p>
+                <h2 className="text-base font-bold text-primary mt-0.5">
+                  {step === 1 ? "Información del Cliente" : step === 2 ? "Configura tus Productos" : "Resumen y Pago"}
+                </h2>
+              </div>
+              <button
                 onClick={handleCancel}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
               >
-                Cancelar
-              </Button>
-
-              {step < 3 ? (
-                <Button
-                  onClick={goNext}
-                  disabled={step === 2 && form.selectedProducts.length === 0}
-                  className="px-4 sm:px-10 group disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm"
-                >
-                  Siguiente
-                  <ArrowRight
-                    size={16}
-                    className="ml-1.5 sm:ml-2 group-hover:translate-x-1 transition-transform"
-                  />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className={`px-4 sm:px-10 text-white shadow-lg text-xs sm:text-sm ${
-                    isSubmitting
-                      ? "bg-emerald-400 cursor-not-allowed shadow-none"
-                      : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-1.5 sm:gap-2">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Creando...
-                    </span>
-                  ) : (
-                    "Finalizar Venta"
-                  )}
-                </Button>
-              )}
+                <X size={18} />
+              </button>
             </div>
-          </div>
+
+            {/* Toast Error */}
+            {showError && (
+              <div className="absolute top-20 right-6 z-[200] max-w-sm bg-white border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl shadow-2xl flex items-start gap-3 animate-slide-in-right">
+                <div className="bg-rose-500 text-white rounded-full p-1 flex-shrink-0 mt-0.5">
+                  <AlertCircle size={15} />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Error de Validación</p>
+                  <p className="text-xs text-rose-600 mt-0.5 leading-relaxed">{errorMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6">
+              <div className="animate-fade-in">
+                {step === 1 && <Step1Client form={form} set={set} data={data} errors={errors} />}
+                {step === 2 && <Step2Products form={form} set={set} data={data} errors={errors} toggleProduct={toggleProduct} actions={actions} />}
+                {step === 3 && <Step3Payment form={form} set={set} data={data} errors={errors} />}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 bg-white border-t border-gray-100 px-5 sm:px-8 py-4 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+              <div className="flex justify-between items-center gap-3">
+                <button
+                  type="button"
+                  onClick={goBack}
+                  disabled={step === 1}
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={16} />
+                  Anterior
+                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-4 py-2.5 rounded-xl text-gray-500 text-sm font-medium hover:bg-gray-100 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  {step < 3 ? (
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      disabled={step === 2 && form.selectedProducts.length === 0}
+                      className="px-6 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-100 transition-all"
+                      style={{ background: "linear-gradient(135deg, #2B2D42, #3d4060)" }}
+                    >
+                      Siguiente
+                      <ArrowRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="px-7 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-100 disabled:cursor-not-allowed transition-all"
+                      style={{
+                        background: isSubmitting
+                          ? "linear-gradient(135deg, #5eb87b, #4caf68)"
+                          : "linear-gradient(135deg, #27ae60, #1e8449)"
+                      }}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Creando venta...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} />
+                          Finalizar Venta
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
+
 
 function isItemEmpty(item: any, category: SaleProductId): boolean {
   if (!item) return true;
@@ -1507,5 +1551,3 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
       return true;
   }
 }
-
-

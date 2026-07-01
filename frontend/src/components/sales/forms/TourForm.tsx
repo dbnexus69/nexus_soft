@@ -200,7 +200,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                 <Select
                   value={guest.docType}
                   onChange={(e) => updateGuest(gIdx, { docType: e.target.value })}
-                  options={data.config.documentTypes.map((d: any) => ({
+                  options={(data?.config?.documentTypes || []).map((d: any) => ({
                     value: d.abreviatura,
                     label: d.abreviatura,
                   }))}

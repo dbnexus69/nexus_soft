@@ -1,6 +1,6 @@
 import api from './client';
 
-export async function listCommissionAgents(params: Record<string, unknown>) {
+export async function listCommissionAgents(params: Record<string, unknown> = {}) {
   const res = await api.get('/commissions/agents', { params });
   return res.data;
 }
@@ -19,7 +19,7 @@ export async function deleteCommissionAgent(id: number) {
   await api.delete(`/commissions/agents/${id}`);
 }
 
-export async function listSettlements(params: Record<string, unknown>) {
+export async function listSettlements(params: Record<string, unknown> = {}) {
   const res = await api.get('/commissions/settlements', { params });
   return res.data;
 }

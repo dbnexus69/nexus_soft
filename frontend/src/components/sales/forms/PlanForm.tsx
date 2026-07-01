@@ -154,7 +154,7 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                 <Combobox
                   value={plan.airline}
                   onChange={(val) => onChange({ airline: val })}
-                  options={data.config.airlines.map((a: any) => ({ value: a.name, label: a.name }))}
+                  options={(data?.config?.airlines || []).map((a: any) => ({ value: a.name, label: a.name }))}
                   placeholder="Seleccionar aerolínea..."
                 />
               </FormField>
@@ -307,7 +307,7 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
             <Combobox
               value={plan.supplier}
               onChange={(val) => onChange({ supplier: val })}
-              options={data.config.suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
+              options={(data?.config?.suppliers || []).map((s: any) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -337,7 +337,7 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
             <Combobox
               value={plan.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
-              options={data.config.cards.map((m: any) => ({
+              options={(data?.config?.cards || []).map((m: any) => ({
                 value: m.name,
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
@@ -393,7 +393,7 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                 <Select
                   value={guest.docType}
                   onChange={(e) => updateGuest(gIdx, { docType: e.target.value })}
-                  options={data.config.documentTypes.map((d: any) => ({
+                  options={(data?.config?.documentTypes || []).map((d: any) => ({
                     value: d.abreviatura,
                     label: d.abreviatura,
                   }))}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAvatarGradient } from '../../utils/formatters';
 
 interface AvatarProps {
   src?: string | null;
@@ -43,7 +44,7 @@ const Avatar = React.memo(function Avatar({ src, avatarUrl, name, size = 'sm', c
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 ${className}`}
+      className={`${sizeClasses[size]} rounded-full bg-gradient-to-tr ${getAvatarGradient(name)} flex items-center justify-center font-bold shrink-0 shadow-sm border border-white/10 ${className}`}
       title={name}
     >
       {getInitials(name)}

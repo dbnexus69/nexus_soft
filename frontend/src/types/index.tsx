@@ -91,6 +91,7 @@ export interface Client {
   phone: string;
   email: string;
   birthDate?: string;
+  address?: string;
   status: "active" | "inactive";
   avatar?: string;
   registrationDate: string;

@@ -1,6 +1,7 @@
 import { Users } from "lucide-react";
 import { FormField, Input, Combobox, Select } from "../../ui/Form";
 import { WizardFormData } from "../wizardData";
+import { getAvatarGradient } from "../../../utils/formatters";
 
 export function Step1Client({ form, set, data, errors }: any) {
   return (
@@ -94,13 +95,13 @@ export function Step1Client({ form, set, data, errors }: any) {
             (c: any) => c.name === form.clientId,
           );
           if (!client) return null;
+          const gradient = getAvatarGradient(client.name);
+          const initials = client.name.split(" ").filter(Boolean).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
           return (
             <div className="mt-4 bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
-              <img
-                src={client.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${client.firstName}`}
-                alt={client.name}
-                className="w-12 h-12 rounded-full bg-gray-100"
-              />
+              <div className={`w-12 h-12 rounded-full bg-gradient-to-tr ${gradient} flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0`}>
+                {initials}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-gray-800 text-sm truncate">
                   {client.name}

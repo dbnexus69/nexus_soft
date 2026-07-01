@@ -1,6 +1,6 @@
 import React from "react";
 import { LogOut } from "lucide-react";
-import { getInitials } from "../../utils/formatters";
+import { getInitials, getAvatarGradient } from "../../utils/formatters";
 
 interface SidebarUserProfileProps {
   user: any;
@@ -22,16 +22,16 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({
   };
 
   return (
-    <div className="p-4 border-t border-[#032650] bg-[#082c54]/50">
+    <div className="p-4 border-t border-slate-800/80 bg-[#0e1424]">
       <div className="flex items-center gap-3">
         {user?.avatar ? (
           <img
             src={user.avatar}
             alt={user.name}
-            className="w-10 h-10 rounded-full object-cover border-2 border-[#19c3b5] flex-shrink-0"
+            className="w-10 h-10 rounded-full object-cover border-2 border-accent flex-shrink-0"
           />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-[#19c3b5] text-white font-bold flex items-center justify-center text-sm flex-shrink-0">
+          <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${getAvatarGradient(user?.name || "User")} font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-md border border-white/10`}>
             {getInitials(user?.name || "User")}
           </div>
         )}
@@ -40,7 +40,7 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({
             <p className="text-sm font-semibold text-white truncate">
               {getShortName(user?.name)}
             </p>
-            <p className="text-[11px] text-[#19c3b5] font-medium capitalize">
+            <p className="text-[11px] text-amber-400 font-bold uppercase tracking-wider">
               {user?.role}
             </p>
           </div>
@@ -48,7 +48,7 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({
         {isExpanded && (
           <button
             onClick={onLogoutClick}
-            className="p-1.5 hover:bg-[#032650] rounded-lg text-slate-300 hover:text-white transition-colors flex-shrink-0"
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors flex-shrink-0"
             title="Cerrar sesión"
           >
             <LogOut size={18} />

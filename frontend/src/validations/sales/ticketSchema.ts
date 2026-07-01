@@ -10,26 +10,26 @@ export const passengerSchema = z.object({
   nroReserva: z.string().optional(),
   nroTiquete: z.string().optional()
 }).refine(data => data.name.trim().length > 0, {
-  message: "Nombre invÃ¡lido",
+  message: "Nombre inválido",
   path: ["name"]
 });
 
 export const flightLegSchema = z.object({
   origin: z.string().min(1, "Origen es requerido"),
   destination: z.string().min(1, "Destino es requerido"),
-  flightNumber: z.string().min(3, "MÃ­nimo 3 caracteres").max(6, "MÃ¡ximo 6 caracteres"),
+  flightNumber: z.string().min(3, "Mínimo 3 caracteres").max(6, "Máximo 6 caracteres"),
   date: z.string().min(1, "Fecha de salida requerida"),
   arrivalDate: z.string().min(1, "Fecha de llegada requerida"),
   seat: z.string().optional()
 }).refine(data => !data.seat || (data.seat.length >= 2 && data.seat.length <= 5), {
-  message: "Silla invÃ¡lida (2-5 caracteres)",
+  message: "Silla inválida (2-5 caracteres)",
   path: ["seat"]
 });
 
 export const ticketSchema = z.object({
-  airline: z.string().min(1, "AerolÃ­nea requerida"),
+  airline: z.string().min(1, "Aerolínea requerida"),
   supplier: z.string().min(1, "Proveedor requerido"),
-  reservationNumber: z.string().length(6, "Debe tener 6 caracteres").regex(/^[A-Z0-9]+$/, "AlfanumÃ©rico mayÃºsculas"),
+  reservationNumber: z.string().length(6, "Debe tener 6 caracteres").regex(/^[A-Z0-9]+$/, "Alfanumérico mayúsculas"),
   flightMode: z.enum(["one_way", "round_trip"]),
   hasStops: z.boolean().optional(),
   returnHasStops: z.boolean().optional(),
@@ -50,7 +50,7 @@ export const ticketSchema = z.object({
   if (!titular.nroTiquete || titular.nroTiquete.trim().length < 8 || titular.nroTiquete.trim().length > 16) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Nro de tiquete del titular invÃ¡lido (8-16 caracteres)",
+      message: "Nro de tiquete del titular inválido (8-16 caracteres)",
       path: ["passengers", "titular", "nroTiquete"]
     });
   }

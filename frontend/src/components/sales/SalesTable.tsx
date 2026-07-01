@@ -4,7 +4,7 @@ import { RxUpdate } from "react-icons/rx";
 import { Table, TableRow, TableCell, Pagination } from "../ui/Table";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-import { formatCurrency, formatDate, formatSaleId } from "../../utils/formatters";
+import { formatCurrency, formatDate, formatSaleId, getAvatarGradient } from "../../utils/formatters";
 import { Sale, Client, User } from "../../types";
 
 interface SalesTableProps {
@@ -78,56 +78,68 @@ export default function SalesTable({
                     alt={sale.clientName}
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs border border-primary/20">
-                    {sale.clientName.charAt(0)}
+                  <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getAvatarGradient(sale.clientName)} flex items-center justify-center font-black text-xs shadow-sm border border-white/20 shrink-0`}>
+                    {sale.clientName.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="flex flex-col">
-                  <span className="font-medium text-primary leading-tight">
+                  <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
                     {sale.clientName}
                   </span>
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
                     {sale.clientEmail || "Sin correo"}
                   </span>
                 </div>
               </div>
             </TableCell>
             <TableCell>
-              <div className="flex items-center gap-3">
-                
+              <div className="flex items-center gap-2.5">
+                <div className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarGradient(sale.asesorName)} flex items-center justify-center font-extrabold text-[10px] shadow-sm border border-white/20 shrink-0`}>
+                  {sale.asesorName ? sale.asesorName.charAt(0).toUpperCase() : 'A'}
+                </div>
                 <div className="flex flex-col">
-                  <span className="font-medium text-gray-700 leading-tight">
-                    {sale.asesorName}
+                  <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
+                    {sale.asesorName || "Sin Asesor"}
                   </span>
-                 
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    {asesor?.email || "Sin correo"}
+                  </span>
                 </div>
               </div>
             </TableCell>
             <TableCell>
-              <div className="flex flex-col">
-                <span className="text-s font-medium text-gray-700">
-                  {sale.commissionAgentName || "Venta Directa"}
-                </span>
-              </div>  
+                  <div className="flex flex-col">
+                    <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
+                      {sale.commissionAgentName}
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 flex flex-col">
+                      <span>Comisión: {sale.commissionAgentAmount ? formatCurrency(sale.commissionAgentAmount) : 'Sin Monto'}</span>
+                      {sale.isSettled ? (
+                        <span className="text-emerald-500 font-semibold flex items-center gap-1 mt-0.5"><CheckCircle2 size={10} /> Pagada</span>
+                      ) : (
+                        <span className="text-amber-500 font-semibold flex items-center gap-1 mt-0.5"><RxUpdate size={10} /> Pendiente</span>
+                      )}
+                    </span>
+                  </div>
             </TableCell>
             <TableCell>
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-600">
                   T.A: {formatCurrency(sale.ta || 0)}
                 </span>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
                   Costo: {formatCurrency(sale.supplierCost || 0)}
                 </span>
               </div>
             </TableCell>
             <TableCell>
               <div className="flex flex-col">
-                <span className="font-bold text-primary">
+                <span className="font-bold text-slate-800 dark:text-slate-100">
                   {formatCurrency(sale.total)}
                 </span>
               </div>
             </TableCell>
-            <TableCell className="text-xs text-gray-500">
+            <TableCell className="text-xs text-slate-500 dark:text-slate-400">
               {formatDate(sale.date)}
             </TableCell>
             <TableCell>

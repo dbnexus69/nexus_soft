@@ -69,26 +69,26 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
   return (
     <div className="sticky top-0 z-40 flex flex-col">
-      <header className="bg-white border-b border-gray-border px-4 md:px-6 py-4">
+      <header className="bg-white/85 dark:bg-[#090b11]/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/60 px-4 md:px-6 py-3.5 transition-colors duration-300">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Mobile Menu Toggle */}
             <button 
               onClick={onMenuToggle}
-              className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-primary rounded-lg hover:bg-gray-100 transition-colors"
+              className="md:hidden p-1.5 -ml-1.5 text-slate-500 hover:text-primary dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
             >
               <Menu size={20} />
             </button>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500 hidden sm:inline">iTea</span>
-              <span className="text-gray-400 hidden sm:inline">/</span>
-              <span className="font-heading font-semibold text-primary">{title}</span>
+            <div className="flex items-center gap-2 text-sm font-body">
+              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline font-bold">NEXUS</span>
+              <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">/</span>
+              <span className="font-heading font-bold text-primary dark:text-amber-400">{title}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 font-body">
             <button
               onClick={toggleDarkMode}
-              className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
               title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
@@ -96,16 +96,16 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <button
               onClick={handleRefresh}
               disabled={isSpinning}
-              className={`p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`p-2 text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
               title="Actualizar datos"
             >
-              <RefreshCw size={16} className={isSpinning ? 'animate-spin text-primary' : ''} />
+              <RefreshCw size={16} className={isSpinning ? 'animate-spin text-primary dark:text-amber-400' : ''} />
             </button>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200/50 dark:border-slate-800/60 hidden sm:block">
               {new Date().toLocaleDateString('es-CO', {
-                weekday: 'long',
+                weekday: 'short',
                 day: 'numeric',
-                month: 'long',
+                month: 'short',
                 year: 'numeric'
               })}
             </div>
@@ -113,8 +113,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
         </div>
       </header>
       {isRootPath && (
-        <nav className="bg-white border-b border-gray-border px-6 shadow-sm">
-          <div className="flex gap-1">
+        <nav className="bg-white/80 dark:bg-[#090b11]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/60 px-6 transition-colors duration-300">
+          <div className="flex gap-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeNav === item.path;
@@ -122,10 +122,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all relative ${
                     isActive
-                      ? 'text-primary border-primary'
-                      : 'text-gray-500 border-transparent hover:text-primary hover:border-gray-300'
+                      ? 'text-primary dark:text-white border-primary dark:border-white font-semibold'
+                      : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

@@ -130,92 +130,137 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingClient ? "Editar Cliente" : "Nuevo Cliente"}
+      title={editingClient ? "Editar Perfil del Cliente" : "Crear Perfil de Cliente"}
       size="xl"
     >
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
-        {errors.submit && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{errors.submit}</div>
-        )}
-        
-        <div className="flex justify-center mb-6">
-          <AvatarPicker
-            value={formData.avatar || AVATARS[0]}
-            onChange={(avatar) => setFormData((prev) => ({ ...prev, avatar }))}
-          />
+      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row min-h-[500px]">
+        {/* Left Column - Avatar */}
+        <div className="w-full md:w-1/3 bg-gray-50/50 dark:bg-slate-800/30 p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-700/50 flex flex-col items-center justify-start relative overflow-hidden">
+          {/* Subtle background decoration */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+          
+          <div className="relative z-10 w-full">
+            <AvatarPicker
+              value={formData.avatar || AVATARS[0]}
+              onChange={(avatar) => setFormData((prev) => ({ ...prev, avatar }))}
+            />
+            <div className="mt-6 text-center text-sm text-gray-500 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+              <p>Selecciona un avatar moderno y premium que represente a tu cliente.</p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombres" required error={errors.firstName}>
-            <Input
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              onBlur={(e) => validateField("firstName", e.target.value)}
-              placeholder="Ej: Juan Pablo"
-            />
-          </FormField>
-          <FormField label="Apellidos" required error={errors.lastName}>
-            <Input
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              onBlur={(e) => validateField("lastName", e.target.value)}
-              placeholder="Ej: Pérez Gómez"
-            />
-          </FormField>
-          <FormField label="Tipo Doc" required error={errors.docType}>
-            <Select
-              value={formData.docType}
-              onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
-              onBlur={(e) => validateField("docType", e.target.value)}
-            >
-              <option value="">Seleccione...</option>
-              {(documentTypes || []).map((dt: any) => (
-                <option key={dt.id} value={dt.abbreviation}>
-                  {dt.abbreviation}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="No. Documento" required error={errors.docNumber}>
-            <Input
-              value={formData.docNumber}
-              onChange={(e) => setFormData({ ...formData, docNumber: e.target.value.toUpperCase() })}
-              onBlur={(e) => validateField("docNumber", e.target.value)}
-            />
-          </FormField>
-          <FormField label="Email" required error={errors.email}>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              onBlur={(e) => validateField("email", e.target.value)}
-            />
-          </FormField>
-          <FormField label="Teléfono" required error={errors.phone}>
-            <Input
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              onBlur={(e) => validateField("phone", e.target.value)}
-            />
-          </FormField>
+        {/* Right Column - Form Data */}
+        <div className="w-full md:w-2/3 p-6 md:p-8 flex flex-col justify-between bg-white dark:bg-slate-900">
+          <div className="space-y-8">
+            {errors.submit && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-4 border border-red-100 flex items-center gap-2">
+                <span className="font-bold">Error:</span> {errors.submit}
+              </div>
+            )}
+            
+            {/* Personal Info Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="h-6 w-1 bg-primary rounded-full"></div>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                  Información Personal
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FormField label="Nombres" required error={errors.firstName}>
+                  <Input
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    onBlur={(e) => validateField("firstName", e.target.value)}
+                    placeholder="Ej: Juan Pablo"
+                    className="bg-gray-50/50"
+                  />
+                </FormField>
+                <FormField label="Apellidos" required error={errors.lastName}>
+                  <Input
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    onBlur={(e) => validateField("lastName", e.target.value)}
+                    placeholder="Ej: Pérez Gómez"
+                    className="bg-gray-50/50"
+                  />
+                </FormField>
+                
+                <FormField label="Tipo Doc" required error={errors.docType}>
+                  <Select
+                    value={formData.docType}
+                    onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
+                    onBlur={(e) => validateField("docType", e.target.value)}
+                    className="bg-gray-50/50"
+                  >
+                    <option value="">Seleccione...</option>
+                    {(documentTypes || []).map((dt: any) => (
+                      <option key={dt.id} value={dt.abbreviation}>
+                        {dt.abbreviation}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField label="No. Documento" required error={errors.docNumber}>
+                  <Input
+                    value={formData.docNumber}
+                    onChange={(e) => setFormData({ ...formData, docNumber: e.target.value.toUpperCase() })}
+                    onBlur={(e) => validateField("docNumber", e.target.value)}
+                    className="bg-gray-50/50"
+                  />
+                </FormField>
+                <FormField label="Fecha Nacimiento">
+                  <DatePicker
+                    value={formData.birthDate || ""}
+                    onChange={(date) => setFormData({ ...formData, birthDate: date })}
+                    max={todayStr()}
+                    popoverDirection="up"
+                    fieldName="birthDate"
+                  />
+                </FormField>
+              </div>
+            </div>
 
-          <FormField label="Fecha Nacimiento">
-            <DatePicker
-              value={formData.birthDate || ""}
-              onChange={(date) => setFormData({ ...formData, birthDate: date })}
-              max={todayStr}
-              popoverDirection="up"
-            />
-          </FormField>
-        </div>
+            {/* Contact Info Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="h-6 w-1 bg-accent rounded-full"></div>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                  Información de Contacto
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FormField label="Email" required error={errors.email}>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onBlur={(e) => validateField("email", e.target.value)}
+                    className="bg-gray-50/50"
+                  />
+                </FormField>
+                <FormField label="Teléfono" required error={errors.phone}>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onBlur={(e) => validateField("phone", e.target.value)}
+                    className="bg-gray-50/50"
+                  />
+                </FormField>
+              </div>
+            </div>
+          </div>
 
-        <div className="flex justify-end gap-3 mt-6">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Guardando..." : "Guardar Cliente"}
-          </Button>
+          <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-gray-100 dark:border-slate-700/50">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="min-w-[120px]">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="min-w-[160px] shadow-lg shadow-primary/20">
+              {isSubmitting ? "Guardando..." : "Guardar Cliente"}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

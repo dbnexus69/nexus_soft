@@ -240,11 +240,7 @@ export default function Users() {
             {editingUserPermissions && (
               <PermissionsGrid
                 permissions={editingUserPermissions}
-                onChange={(cat, act, val) => {
-                  const newPerms = { ...editingUserPermissions };
-                  newPerms[cat][act] = val;
-                  setEditingUserPermissions(newPerms);
-                }}
+                onChange={setEditingUserPermissions}
               />
             )}
           </div>

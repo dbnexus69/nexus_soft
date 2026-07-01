@@ -53,13 +53,18 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
               return (
                 <TicketForm
                   ticket={form.tickets[activeIdx] || INITIAL_TICKET(client)}
-                  mainClient={client}
-                  data={data}
                   onChange={(updates) => {
                     const next = [...form.tickets];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
                     set("tickets", next);
                   }}
+                  airlines={data.config.airlines}
+                  suppliers={data.config.suppliers}
+                  airports={data.config.airports}
+                  paymentMethods={data.config.cards}
+                  baggage={data.config.baggage}
+                  clients={data.clients}
+                  mainClient={client}
                   triggerError={triggerError}
                 />
               );
@@ -81,39 +86,36 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
               return (
                 <InsuranceForm
                   insurance={form.insurances[activeIdx] || INITIAL_INSURANCE(client)}
-                  mainClient={client}
-                  data={data}
                   onChange={(updates) => {
                     const next = [...form.insurances];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
                     set("insurances", next);
                   }}
-                  triggerError={triggerError}
+                  data={data}
+                  client={client}
                 />
               );
             case "planes":
               return (
                 <PlanForm
                   plan={form.plans[activeIdx] || INITIAL_PLAN(client)}
-                  client={client}
-                  suppliers={data.config.suppliers}
-                  packages={data.config.packages}
-                  airlines={data.config.airlines}
-                  paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.plans];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
                     set("plans", next);
                   }}
+                  data={data}
                   triggerError={triggerError}
+                  mainClient={client}
                 />
               );
             case "checkin":
               return (
                 <CheckInForm
-                  checkin={form.checkIns[activeIdx] || INITIAL_CHECKIN(client)}
+                  checkIn={form.checkIns[activeIdx] || INITIAL_CHECKIN(client)}
                   client={client}
                   suppliers={data.config.suppliers}
+                  baggage={data.config.baggage}
                   paymentMethods={data.config.cards}
                   onChange={(updates) => {
                     const next = [...form.checkIns];
@@ -141,7 +143,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
             case "simcard":
               return (
                 <SimCardForm
-                  simcard={form.simCards[activeIdx] || INITIAL_SIMCARD(client)}
+                  sim={form.simCards[activeIdx] || INITIAL_SIMCARD(client)}
                   client={client}
                   suppliers={data.config.suppliers}
                   paymentMethods={data.config.cards}

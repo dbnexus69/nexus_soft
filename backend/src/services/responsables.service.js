@@ -69,7 +69,7 @@ class ResponsablesService {
       docNumber: r.docNumber,
       phone: r.phone,
       email: r.email,
-      birth_date: r.birthDate,
+      birthDate: r.birthDate,
       status: r.status,
       creadoAt: r.creadoAt,
       deudaTotal: parseFloat(r.deudaTotal)
@@ -129,7 +129,7 @@ class ResponsablesService {
       docNumber: responsable.personas.documento,
       phone: responsable.personas.telefono,
       email: responsable.personas.email,
-      birth_date: responsable.personas.birth_date,
+      birthDate: responsable.personas.birth_date,
       status: responsable.status,
       creadoAt: responsable.creadoAt,
       deudaTotal,
@@ -155,7 +155,7 @@ class ResponsablesService {
       }) : null;
 
       if (!personas) {
-        persona = await tx.personas.create({
+        personas = await tx.personas.create({
           data: {
             nombres: firstName,
             apellidos: lastName,

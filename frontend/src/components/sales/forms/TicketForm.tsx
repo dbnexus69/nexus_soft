@@ -787,9 +787,28 @@ export function TicketForm({
           <Plane size={14} /> Información General del Vuelo
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField label="Proveedor">
+          <FormField label="Aerolínea Principal" required>
             <Combobox
-              value={ticket.supplier}
+              value={ticket.airline || ""}
+              onChange={(val) => onChange({ airline: val })}
+              options={airlines.map((a) => ({ value: a.name, label: a.name }))}
+              placeholder="Ej: Avianca"
+            />
+          </FormField>
+          <FormField label="N° de Reserva (PNR)" required>
+            <Input
+              value={ticket.reservationNumber || ""}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                onChange({ reservationNumber: cleaned });
+              }}
+              placeholder="Ej: AB12CD"
+              maxLength={6}
+            />
+          </FormField>
+          <FormField label="Proveedor" required>
+            <Combobox
+              value={ticket.supplier || ""}
               onChange={(val) => onChange({ supplier: val })}
               options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
               placeholder="Ej: Viajes Éxito"
@@ -1327,6 +1346,7 @@ export function TicketForm({
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."
+              direction="up"
             />
           </FormField>
         </div>

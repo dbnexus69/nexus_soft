@@ -125,10 +125,10 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
                 <Select
                   value={member.docType}
                   onChange={(e) => updateMember(mIdx, { docType: e.target.value })}
-                  options={(data?.config?.documentTypes || []).map((d: any) => ({
-                    value: d.abreviatura,
-                    label: d.abreviatura,
-                  }))}
+                  options={(data?.config?.documentTypes || []).map((d: any) => {
+                    const code = d.abbreviation || d.abreviatura || d.code || d.name || '';
+                    return { value: code, label: code };
+                  })}
                 />
                 <Input
                   value={member.docNumber}
@@ -182,6 +182,7 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."
+              direction="up"
             />
           </FormField>
         </div>

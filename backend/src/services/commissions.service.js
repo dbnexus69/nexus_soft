@@ -90,10 +90,11 @@ class CommissionsService {
 
     if (data.docNumber) {
       const existingAgent = await prisma.comisionistas.findFirst({
-        where: { personas: { documento: data.docNumber } }
+        where: { personas: { documento: data.docNumber } },
+        include: { personas: true }
       });
-      if (existingAgent) {
-        throw new BadRequestError('Este número de documento ya está registrado como comisionista');
+      if (existingAgent && !existingAgent.personas.deleted_at) {
+        throw new BadRequestError('Este número de documento ya está registrado como comisionista activo');
       }
     }
 

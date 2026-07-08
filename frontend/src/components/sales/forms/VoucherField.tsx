@@ -302,6 +302,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
               placeholder="Seleccionar método..."
               inputClassName={`pl-8 ${isPaymentMethodRequired && !supplierPaymentMethod ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50/30 dark:bg-amber-500/10' : 'border-emerald-200 dark:border-emerald-500/30 dark:bg-slate-900/50'}`}
               preventNumbers={false}
+              direction="up"
             />
           </div>
         </FormField>

@@ -16,6 +16,7 @@ import {
 
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
+import { useSalesContext } from "../../context/SalesContext";
 import {
   Sale,
   SaleProductId,
@@ -77,6 +78,7 @@ const STEPS = [
 
 export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   const { data, addSale, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables } = useData();
+  const { fetchSales } = useSalesContext();
   const { user } = useAuth();
 
   const draftKey = `itea_new_sale_draft_${user?.id || 'unknown'}`;
@@ -351,11 +353,13 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       if (form.commissionAgentName && !form.commissionAgentId) {
         errs.commissionAgent = "El comisionista ingresado no estíƒÂ¡ registrado";
       } else if (form.commissionAgentId) {
-        const agentExists = (data.commissionAgents || []).some(
-          (a: any) => String(a.id) === String(form.commissionAgentId)
-        );
-        if (!agentExists) {
-          errs.commissionAgent = "El comisionista seleccionado ya no existe en el sistema";
+        if (data.commissionAgents && data.commissionAgents.length > 0) {
+          const agentExists = data.commissionAgents.some(
+            (a: any) => String(a.id) === String(form.commissionAgentId)
+          );
+          if (!agentExists) {
+            errs.commissionAgent = "El comisionista seleccionado ya no existe en el sistema";
+          }
         }
       }
     }
@@ -1202,6 +1206,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
     try {
       await addSale(saleData as any);
+      await fetchSales();
       localStorage.removeItem(draftKey);
 
       const hasVouchersToSend = [

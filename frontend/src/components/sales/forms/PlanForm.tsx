@@ -342,6 +342,7 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."
+              direction="up"
             />
           </FormField>
         </div>
@@ -393,10 +394,10 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                 <Select
                   value={guest.docType}
                   onChange={(e) => updateGuest(gIdx, { docType: e.target.value })}
-                  options={(data?.config?.documentTypes || []).map((d: any) => ({
-                    value: d.abreviatura,
-                    label: d.abreviatura,
-                  }))}
+                  options={(data?.config?.documentTypes || []).map((d: any) => {
+                    const code = d.abbreviation || d.abreviatura || d.code || d.name || '';
+                    return { value: code, label: code };
+                  })}
                 />
                 <Input
                   value={guest.docNumber}

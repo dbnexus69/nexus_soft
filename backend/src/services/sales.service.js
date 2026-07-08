@@ -185,7 +185,502 @@ const PRODUCT_TRANSFORMS = {
   }
 };
 
+const { randomUUID: uuidv4 } = require('crypto');
+
 class SalesService {
+  async createSale(body) {
+    const {
+      clientId, asesorId, total, paymentMethod, payments = [],
+      status = 'credito', isCredit = false, creditDueDate,
+      observations, products = [], responsableId,
+      commissionAgentId, commissionAgentAmount, commissionAgentRetentionPercentage, commissionAgentNetPayment,
+      ta = 0, supplierCost = 0,
+      ticketData = [], hotelData = [], insuranceData = [], planData = [],
+      checkInData = [], migrationData = [], simCardData = [], carRentalData = [],
+      fincaData = [], tourData = [], conventionData = [], restaurantData = [],
+      visaData = [], passportData = [], petServiceData = []
+    } = body;
+
+    // Resolve payment method principal id
+    let metodo_pago_principal_id = null;
+    if (paymentMethod) {
+      const mp = await prisma.metodos_pago.findFirst({ where: { nombre: { contains: paymentMethod, mode: 'insensitive' } } });
+      if (mp) metodo_pago_principal_id = mp.id;
+    }
+
+    const created = await prisma.$transaction(async (tx) => {
+      // 1. Create sale record
+      const venta = await tx.ventas.create({
+        data: {
+          cliente_id: Number(clientId),
+          usuario_id: Number(asesorId),
+          monto_total: Number(total) || 0,
+          costo_proveedor_total: Number(supplierCost) || 0,
+          ta_total: Number(ta) || 0,
+          comisionista_id: commissionAgentId ? Number(commissionAgentId) : null,
+          monto_comision_bruto: Number(commissionAgentAmount) || 0,
+          porcentaje_retencion_comision: Number(commissionAgentRetentionPercentage) || 0,
+          monto_comision_neto: Number(commissionAgentNetPayment) || 0,
+          comision_liquidada: false,
+          metodo_pago_principal_id,
+          status,
+          es_credito: Boolean(isCredit),
+          fecha_vence_credito: creditDueDate ? new Date(creditDueDate) : null,
+          monto_pagado_credito: payments.reduce((s, p) => s + Number(p.amount || 0), 0),
+          observaciones: observations || null,
+          responsable_id: responsableId ? Number(responsableId) : null,
+        }
+      });
+
+      const ventaId = venta.id;
+
+      // Helper: find or create persona
+      const findOrCreatePersona = async (name, docType, docNumber) => {
+        if (!name && !docNumber) return null;
+        const parts = (name || '').trim().split(' ');
+        const nombres = parts.slice(0, Math.ceil(parts.length / 2)).join(' ') || name || '';
+        const apellidos = parts.slice(Math.ceil(parts.length / 2)).join(' ') || '';
+        const existing = docNumber ? await tx.personas.findFirst({ where: { documento: docNumber } }) : null;
+        if (existing) return existing.id;
+        const created = await tx.personas.create({
+          data: { nombres, apellidos, documento: docNumber || null, tipo_documento_id: null }
+        });
+        return created.id;
+      };
+
+      // 2. Create detalle_venta for each product type
+      const createDetalle = async (categoria, serviceData, prodFn) => {
+        for (const item of (serviceData || [])) {
+          const detalleId = uuidv4();
+          const detalle = await tx.detalle_venta.create({
+            data: {
+              id: detalleId,
+              venta_id: ventaId,
+              categoria,
+              subtotal: Number(item.total || item.subtotal || 0),
+              ta: Number(item.ta || 0),
+              costo_proveedor: Number(item.supplierCost || 0),
+              observaciones: item.observations || null,
+            }
+          });
+          await prodFn(tx, detalle.id, item);
+        }
+      };
+
+      // ── TIQUETERÍA ──
+      for (const t of ticketData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({
+          data: {
+            id: detalleId, venta_id: ventaId, categoria: 'tiqueteria',
+            subtotal: Number(t.total || t.subtotal || 0),
+            ta: Number(t.ta || 0),
+            costo_proveedor: Number(t.supplierCost || 0),
+            observaciones: t.observations || null,
+            origen: t.legs?.[0]?.origin || null,
+            destino: t.legs?.[t.legs.length - 1]?.destination || null,
+          }
+        });
+        const ticketId = uuidv4();
+        let airlineId = null;
+        if (t.airline) {
+          const al = await tx.aerolineas.findFirst({ where: { nombre: { contains: t.airline, mode: 'insensitive' } } });
+          if (al) airlineId = al.id;
+        }
+        await tx.prod_tiqueteria.create({
+          data: {
+            id: ticketId, detalle_venta_id: detalleId,
+            aerolineaId: airlineId,
+            nro_reserva: t.reservationNumber || null,
+            nro_vuelo: t.flightNumber || null,
+            nro_tiquete: t.passengers?.[0]?.nroTiquete || null,
+            modo_vuelo: t.flightMode || 'one_way',
+            checkin_status: 'pendiente',
+          }
+        });
+        // Tramos de vuelo
+        const allLegs = [];
+        if (t.legs) allLegs.push(...t.legs);
+        if (t.outboundStops) allLegs.push(...t.outboundStops);
+        if (t.returnLeg) allLegs.push(t.returnLeg);
+        if (t.returnStops) allLegs.push(...t.returnStops);
+
+        for (let i = 0; i < allLegs.length; i++) {
+          const leg = allLegs[i];
+          if (!leg || !leg.origin || !leg.destination) continue;
+
+          let origAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: leg.origin } });
+          let destAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: leg.destination } });
+          if (!origAirport) origAirport = await tx.aeropuertos.create({ data: { codigo_iata: leg.origin || 'UNK', nombre: leg.origin || 'Desconocido', ciudad: '' } });
+          if (!destAirport) destAirport = await tx.aeropuertos.create({ data: { codigo_iata: leg.destination || 'UNK', nombre: leg.destination || 'Desconocido', ciudad: '' } });
+          
+          let salidaDt = new Date();
+          if (leg.date) {
+            if (leg.date.includes('T')) {
+              salidaDt = new Date(leg.date);
+            } else {
+              salidaDt = new Date(`${leg.date}T${leg.departureTime || leg.time || '00:00'}:00`);
+            }
+          }
+          
+          let llegadaDt = new Date(salidaDt.getTime() + 3600000);
+          if (leg.arrivalDate) {
+            if (leg.arrivalDate.includes('T')) {
+              llegadaDt = new Date(leg.arrivalDate);
+            } else {
+              llegadaDt = new Date(`${leg.arrivalDate}T${leg.arrivalTime || '00:00'}:00`);
+            }
+          }
+
+          let legAirlineId = airlineId;
+          if (leg.airline && leg.airline !== t.airline) {
+            const al2 = await tx.aerolineas.findFirst({ where: { nombre: { contains: leg.airline, mode: 'insensitive' } } });
+            if (al2) legAirlineId = al2.id;
+          }
+          await tx.tramos_vuelo.create({
+            data: {
+              id: uuidv4(), prod_tiqueteria_id: ticketId,
+              aeropuerto_origen_id: origAirport.id,
+              aeropuerto_destino_id: destAirport.id,
+              salida: salidaDt, llegada: llegadaDt,
+              nro_vuelo_tramo: leg.flightNumber || null,
+              asiento: leg.seat || null,
+              orden: i + 1,
+              nro_tiquete: leg.ticketNumber || null,
+              aerolinea_id: legAirlineId,
+            }
+          });
+        }
+        // Pasajeros
+        for (const pax of (t.passengers || [])) {
+          const personaId = await findOrCreatePersona(pax.name, pax.docType, pax.docNumber);
+          if (personaId) {
+            await tx.pasajeros_detalle.create({
+              data: {
+                id: uuidv4(), detalle_venta_id: detalleId,
+                persona_id: personaId, es_titular: pax.esTitular || false,
+                nro_reserva: pax.nroReserva || null, nro_tiquete: pax.nroTiquete || null,
+              }
+            });
+          }
+        }
+      }
+
+      // ── HOTELERÍA ──
+      for (const h of hotelData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({
+          data: {
+            id: detalleId, venta_id: ventaId, categoria: 'hoteleria',
+            subtotal: Number(h.total || h.subtotal || 0),
+            ta: Number(h.ta || 0), costo_proveedor: Number(h.supplierCost || 0),
+            destino: h.destination || null,
+          }
+        });
+        await tx.prod_hoteleria.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            hotel_nombre: h.hotelName || null, tipo_hotel: h.hotelType || 'hotel',
+            destino: h.destination || null, nro_reserva: h.reservationNumber || null,
+            fecha_entrada: h.startDate ? new Date(h.startDate) : null,
+            fecha_salida: h.endDate ? new Date(h.endDate) : null,
+            observaciones: h.observations || null,
+          }
+        });
+        for (const g of (h.guests || [])) {
+          const personaId = await findOrCreatePersona(g.name, g.docType, g.docNumber);
+          if (personaId) await tx.pasajeros_detalle.create({ data: { id: uuidv4(), detalle_venta_id: detalleId, persona_id: personaId, es_titular: false } });
+        }
+      }
+
+      // ── SEGUROS DE VIAJE ──
+      for (const s of insuranceData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'seguros_viaje', subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
+        await tx.prod_seguros.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            tipo_seguro: s.insuranceType || null,
+            cobertura_usd: Number(s.coverage || 0),
+            dias_cobertura: Number(s.coverageDays || 0),
+            fecha_inicio_vigencia: s.startDate ? new Date(s.startDate) : null,
+            fecha_fin_vigencia: s.endDate ? new Date(s.endDate) : null,
+            telefono_contacto: s.phone || null,
+          }
+        });
+        for (const m of (s.members || [])) {
+          const personaId = await findOrCreatePersona(m.name, m.docType, m.docNumber);
+          if (personaId) await tx.pasajeros_detalle.create({ data: { id: uuidv4(), detalle_venta_id: detalleId, persona_id: personaId, es_titular: false } });
+        }
+      }
+
+      // ── PLANES ──
+      for (const p of planData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'planes', subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
+        let planAirlineId = null;
+        if (p.airline) {
+          const al = await tx.aerolineas.findFirst({ where: { nombre: { contains: p.airline, mode: 'insensitive' } } });
+          if (al) planAirlineId = al.id;
+        }
+        await tx.prod_planes.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            nombre_plan: p.planName || null, nombre_hotel: p.hotelName || null,
+            aerolineaId: planAirlineId,
+            nro_vuelo: p.flightNumber || null, nro_reserva: p.reservationNumber || null,
+            nro_tiquete: p.ticketNumber || null,
+            fecha_viaje_inicio: p.startDate ? new Date(p.startDate) : null,
+            fecha_viaje_fin: p.endDate ? new Date(p.endDate) : null,
+            adultos_count: Number(p.adultsCount || 1),
+            menores_count: Number(p.childrenCount || 0),
+            observaciones: p.observations || null,
+          }
+        });
+        for (const g of (p.guests || [])) {
+          const personaId = await findOrCreatePersona(g.name, g.docType, g.docNumber);
+          if (personaId) await tx.pasajeros_detalle.create({ data: { id: uuidv4(), detalle_venta_id: detalleId, persona_id: personaId, es_titular: false } });
+        }
+      }
+
+      // ── CHECK-IN ──
+      for (const c of checkInData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.prod_checkins.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            nro_vuelo_reserva: c.flightOrReservation || null,
+            fecha_viaje: c.travelDate ? new Date(c.travelDate) : null,
+            asiento: c.seat || null,
+            maletas_contadas: c.baggage || null,
+            telefono_contacto: c.phone || null,
+            necesidades_especiales: c.specialNeeds || null,
+          }
+        });
+        if (c.passengerName) {
+          const personaId = await findOrCreatePersona(c.passengerName, c.docType, c.docNumber);
+          if (personaId) await tx.pasajeros_detalle.create({ data: { id: uuidv4(), detalle_venta_id: detalleId, persona_id: personaId, es_titular: true } });
+        }
+      }
+
+      // ── MIGRACIÓN ──
+      for (const m of migrationData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'documentacion_migratoria', subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
+        await tx.prod_migracion.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            tipo_tramite_migratorio: m.tramiteType || null, nacionalidad: m.nationality || null,
+            tipo_documento: m.docType || 'Pasaporte', pasaporte_nro: m.docNumber || null,
+            pasaporte_vence: m.passportExpiry ? new Date(m.passportExpiry) : null,
+            pais_destino: m.destinationCountry || null,
+          }
+        });
+      }
+
+      // ── SIM CARD ──
+      for (const s of simCardData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
+        await tx.prod_simcards.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            pais_destino: s.destinationCountry || null,
+            fecha_llegada: s.arrivalDate ? new Date(s.arrivalDate) : null,
+            duracion_viaje: s.tripDuration ? String(s.tripDuration) : null,
+            plan_datos: s.dataPlan || null, tipo_sim: s.simType || null,
+          }
+        });
+      }
+
+      // ── RENTA DE VEHÍCULOS ──
+      for (const c of carRentalData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'renta_vehiculos', subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.prod_autos.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            conductor_nombre: c.driverName || null, licencia_nro: c.licenseNumber || null,
+            fecha_recogida: c.pickupDate ? new Date(c.pickupDate) : null,
+            fecha_devolucion: c.returnDate ? new Date(c.returnDate) : null,
+            lugar_recogida: c.pickupLocation || null, categoria_auto: c.vehicleCategory || null,
+            conductores_adicionales: Number(c.additionalDrivers || 0),
+            tipo_seguro: c.insuranceType || null, tarjeta_garantia_info: c.guaranteeCreditCard || null,
+          }
+        });
+      }
+
+      // ── RENTA DE FINCAS ──
+      for (const f of fincaData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'renta_fincas', subtotal: Number(f.total || f.subtotal || 0), ta: Number(f.ta || 0), costo_proveedor: Number(f.supplierCost || 0) } });
+        await tx.prod_fincas.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            nombre_finca: f.fincaName || null, ciudad_pueblo: f.city || null,
+            direccion_finca: f.address || null,
+            responsable_nombre: f.responsible || null,
+            documento_responsable: f.docNumber || null,
+            fecha_entrada: f.checkInDate ? new Date(f.checkInDate) : null,
+            fecha_salida: f.checkOutDate ? new Date(f.checkOutDate) : null,
+            adultos_count: Number(f.adultsCount || 1), ninos_count: Number(f.childrenCount || 0),
+            tiene_mascotas: Boolean(f.hasPets), tipo_mascota: f.petType || null,
+            observaciones: f.observations || null,
+          }
+        });
+      }
+
+      // ── TOURS ──
+      for (const t of tourData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tours', subtotal: Number(t.total || t.subtotal || 0), ta: Number(t.ta || 0), costo_proveedor: Number(t.supplierCost || 0) } });
+        await tx.prod_tours.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            tour_nombre: t.selectedTour || null,
+            fecha_preferida: t.preferredDate ? new Date(t.preferredDate) : null,
+            adultos_count: Number(t.adultsCount || 1),
+            menores_count: Number(t.childrenCount || 0),
+            edades_menores: t.childrenAges || null,
+            punto_encuentro: t.pickupPoint || null,
+            condiciones_medicas: t.medicalConditions || null,
+            observaciones: t.observations || null,
+            telefono_contacto: t.phone || null,
+          }
+        });
+        for (const g of (t.guests || [])) {
+          const personaId = await findOrCreatePersona(g.name, g.docType, g.docNumber);
+          if (personaId) await tx.pasajeros_detalle.create({ data: { id: uuidv4(), detalle_venta_id: detalleId, persona_id: personaId, es_titular: false } });
+        }
+      }
+
+      // ── CENTROS DE CONVENCIÓN ──
+      for (const c of conventionData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'centros_convencion', subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.prod_eventos.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            organizacion: c.organization || null, nombre_contacto: c.contactName || null,
+            email_contacto: c.email || null,
+            fechaInicio: c.startDate ? new Date(c.startDate) : null,
+            fechaFin: c.endDate ? new Date(c.endDate) : null,
+            asistencia_estimada: Number(c.estimatedAttendance || 0),
+            espacio_requerido: c.spaceRequired || null, tipo_evento: c.eventType || null,
+            notas_catering: c.cateringNotes || null,
+            nombre_lugar: c.venueName || null, ciudad: c.city || null, direccion: c.address || null,
+          }
+        });
+      }
+
+      // ── RESTAURANTES ──
+      for (const r of restaurantData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurantes', subtotal: Number(r.total || r.subtotal || 0), ta: Number(r.ta || 0), costo_proveedor: Number(r.supplierCost || 0) } });
+        await tx.prod_restaurantes.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            nombre_reserva: r.reservationName || null,
+            fecha_hora_reserva: r.dateTime ? new Date(r.dateTime) : null,
+            personas_count: Number(r.personsCount || 1),
+            preferencia_mesa: r.tablePreference || null,
+            tipo_menu: r.menuType || null,
+            restricciones_dieta: r.dietRestrictions || null,
+            ocasion_especial: r.specialOccasion || null,
+            telefono_contacto: r.phone || null,
+          }
+        });
+      }
+
+      // ── VISAS ──
+      for (const v of visaData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', subtotal: Number(v.total || v.subtotal || 0), ta: Number(v.ta || 0), costo_proveedor: Number(v.supplierCost || 0) } });
+        await tx.prod_visas.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            nombre_completo: v.fullName || null, nacionalidad: v.nationality || null,
+            tipo_documento: v.docType || 'Pasaporte', nro_pasaporte: v.docNumber || null,
+            vencimiento_pasaporte: v.passportExpiration ? new Date(v.passportExpiration) : null,
+            pais_aplicacion: v.countryApplying || null, tipo_visa: v.visaType || null,
+            fecha_estimada_viaje: v.estimatedTravelDate ? new Date(v.estimatedTravelDate) : null,
+            email_contacto: v.email || null,
+          }
+        });
+      }
+
+      // ── PASAPORTES ──
+      for (const p of passportData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pasaporte', subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
+        await tx.prod_pasaportes.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            nombre_completo: p.fullName || null, nro_documento: p.docNumber || null,
+            ciudad_residencia: p.residenceCity || null, tipo_tramite: p.tramiteType || null,
+            fecha_nacimiento: p.birthDate ? new Date(p.birthDate) : null,
+            fecha_estimada_viaje: p.estimatedTravelDate ? new Date(p.estimatedTravelDate) : null,
+            telefono_contacto: p.phone || null,
+          }
+        });
+      }
+
+      // ── MASCOTAS ──
+      for (const m of petServiceData) {
+        const detalleId = uuidv4();
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'servicio_mascotas', subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
+        await tx.prod_mascotas.create({
+          data: {
+            id: uuidv4(), detalle_venta_id: detalleId,
+            mascota_nombre: m.petName || null, especie: m.species || null,
+            raza: m.breed || null, peso_kg: Number(m.weight || 0),
+            transporte_tipo: m.transportCompany || null,
+            fecha_viaje: m.travelDate ? new Date(m.travelDate) : null,
+            pais_destino: m.destinationCountry || null,
+            condiciones_medicas: m.medicalConditions || null,
+            observaciones: m.observations || null,
+            telefono_contacto: m.phone || null,
+          }
+        });
+      }
+
+      // 3. Payments
+      const totalPaid = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+      for (const p of payments) {
+        let mpId = null;
+        if (p.method) {
+          const mp = await tx.metodos_pago.findUnique({ where: { id: Number(p.method) } });
+          if (mp) mpId = mp.id;
+        }
+        await tx.pagos_venta.create({
+          data: {
+            id: uuidv4(), venta_id: ventaId,
+            monto: Number(p.amount),
+            metodo_pago_id: mpId,
+            referencia: p.reference || null,
+          }
+        });
+      }
+
+      return venta;
+    });
+
+    // Return the new sale in the same format used by listSales
+    return {
+      id: created.id,
+      clientId: created.cliente_id,
+      asesorId: created.usuario_id,
+      date: created.creado_at,
+      total: created.monto_total,
+      status: created.status,
+      observations: created.observaciones,
+      isCredit: created.es_credito,
+      payments: [],
+      servicesSummary: [],
+    };
+  }
+
   async listSales({ pagination, search, status, asesorId, clientId, dateFrom, dateTo, permissionScope, user, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
 
@@ -393,8 +888,14 @@ class SalesService {
       id: venta.id,
       clientId: venta.cliente_id,
       clientName: `${venta.cliente.personas.nombres} ${venta.cliente.personas.apellidos}`,
+      clientDocType: venta.cliente.personas.tipoDocumento || null,
+      clientDocNumber: venta.cliente.personas.documento || null,
+      clientEmail: venta.cliente.personas.email || null,
+      clientPhone: venta.cliente.personas.celular || null,
       asesorId: venta.usuarioId,
       asesorName: `${venta.usuario.personas.nombres} ${venta.usuario.personas.apellidos}`,
+      responsableId: venta.responsable_id || null,
+      responsableName: venta.responsable ? `${venta.responsable.personas.nombres} ${venta.responsable.personas.apellidos}` : null,
       date: venta.creadoAt,
       total: venta.montoTotal,
       paymentMethod: venta.metodoPagoPrincipal?.nombre || null,
@@ -420,7 +921,18 @@ class SalesService {
       ticketData: resultMap.tiqueteria || [],
       hotelData: resultMap.hoteleria || [],
       insuranceData: resultMap.seguros_viaje || [],
-      planData: resultMap.planes || []
+      planData: resultMap.planes || [],
+      checkInData: resultMap.checkin || [],
+      migrationData: resultMap.migracion || [],
+      simCardData: resultMap.simcard || [],
+      carRentalData: resultMap.renta_vehiculos || [],
+      fincaData: resultMap.renta_fincas || [],
+      tourData: resultMap.tours || [],
+      conventionData: resultMap.centros_convencion || [],
+      restaurantData: resultMap.restaurantes || [],
+      visaData: resultMap.visa || [],
+      passportData: resultMap.pasaporte || [],
+      petServiceData: resultMap.mascotas || []
     };
   }
 
@@ -444,32 +956,33 @@ class SalesService {
   }
 
   async registerPayment(id, { amount, isTotal, method, reference, currentPaidAmount, saleTotal }) {
+    const { randomUUID } = require('crypto');
     let newPaidAmount, newStatus;
     let metodo_pago_id = null;
     if (method) {
-      const m = await prisma.metodosPago.findFirst({ where: { nombre: method } });
+      const m = await prisma.metodos_pago.findFirst({ where: { nombre: method } });
       if (m) metodo_pago_id = m.id;
     }
 
     if (saleTotal !== undefined && currentPaidAmount !== undefined) {
-      newPaidAmount = isTotal ? saleTotal : (currentPaidAmount || 0) + amount;
+      newPaidAmount = isTotal ? saleTotal : (currentPaidAmount || 0) + Number(amount);
       newStatus = (isTotal || newPaidAmount >= saleTotal) ? 'pagado' : 'abonado';
     } else {
-      const venta = await prisma.ventas.findUnique({ where: { id }, select: { montoTotal: true, montoPagadoCredito: true } });
+      const venta = await prisma.ventas.findUnique({ where: { id }, select: { monto_total: true, monto_pagado_credito: true } });
       if (!venta) throw new NotFoundError('Venta no encontrada');
-      const currentPaid = venta.montoPagadoCredito || 0;
-      newPaidAmount = isTotal ? venta.montoTotal : currentPaid + amount;
-      newStatus = (isTotal || newPaidAmount >= venta.montoTotal) ? 'pagado' : 'abonado';
+      const currentPaid = venta.monto_pagado_credito || 0;
+      newPaidAmount = isTotal ? venta.monto_total : currentPaid + Number(amount);
+      newStatus = (isTotal || newPaidAmount >= venta.monto_total) ? 'pagado' : 'abonado';
     }
 
     let newPayment;
     await prisma.$transaction(async (tx) => {
-      newPayment = await tx.pagosVenta.create({
-        data: { venta_id: id, monto: amount, metodo_pago_id, referencia: reference || null }
+      newPayment = await tx.pagos_venta.create({
+        data: { id: randomUUID(), venta_id: id, monto: Number(amount), metodo_pago_id, referencia: reference || null }
       });
       await tx.ventas.update({
         where: { id },
-        data: { montoPagadoCredito: newPaidAmount, status: newStatus }
+        data: { monto_pagado_credito: newPaidAmount, status: newStatus }
       });
     });
 
@@ -478,7 +991,7 @@ class SalesService {
       status: newStatus,
       payment: {
         id: newPayment.id,
-        date: newPayment.fechaPago,
+        date: newPayment.fecha_pago,
         amount: newPayment.monto,
         method: method || null
       }
@@ -486,7 +999,7 @@ class SalesService {
   }
 
   async deletePayment(saleId, paymentId, { currentPayments, saleTotal } = {}) {
-    const payment = await prisma.pagosVenta.findUnique({
+    const payment = await prisma.pagos_venta.findUnique({
       where: { id: paymentId },
       select: { id: true, venta_id: true, monto: true }
     });
@@ -500,17 +1013,17 @@ class SalesService {
       newPaidAmount = currentPayments.filter(p => p.id !== paymentId).reduce((sum, p) => sum + p.amount, 0);
       newStatus = newPaidAmount >= saleTotal ? 'pagado' : newPaidAmount > 0 ? 'abonado' : 'credito';
       await prisma.$transaction([
-        prisma.pagosVenta.delete({ where: { id: paymentId } }),
-        prisma.ventas.update({ where: { id: saleId }, data: { montoPagadoCredito: newPaidAmount, status: newStatus } })
+        prisma.pagos_venta.delete({ where: { id: paymentId } }),
+        prisma.ventas.update({ where: { id: saleId }, data: { monto_pagado_credito: newPaidAmount, status: newStatus } })
       ]);
     } else {
       await prisma.$transaction(async (tx) => {
-        await tx.pagosVenta.delete({ where: { id: paymentId } });
-        const remainingPayments = await tx.pagosVenta.findMany({ where: { venta_id: saleId }, select: { monto: true } });
+        await tx.pagos_venta.delete({ where: { id: paymentId } });
+        const remainingPayments = await tx.pagos_venta.findMany({ where: { venta_id: saleId }, select: { monto: true } });
         newPaidAmount = remainingPayments.reduce((sum, p) => sum + p.monto, 0);
-        const venta = await tx.ventas.findUnique({ where: { id: saleId }, select: { montoTotal: true } });
-        newStatus = newPaidAmount >= venta.montoTotal ? 'pagado' : newPaidAmount > 0 ? 'abonado' : 'credito';
-        await tx.ventas.update({ where: { id: saleId }, data: { montoPagadoCredito: newPaidAmount, status: newStatus } });
+        const venta = await tx.ventas.findUnique({ where: { id: saleId }, select: { monto_total: true } });
+        newStatus = newPaidAmount >= venta.monto_total ? 'pagado' : newPaidAmount > 0 ? 'abonado' : 'credito';
+        await tx.ventas.update({ where: { id: saleId }, data: { monto_pagado_credito: newPaidAmount, status: newStatus } });
       });
     }
 

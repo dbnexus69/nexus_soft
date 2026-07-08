@@ -260,24 +260,24 @@ export default function SaleDetailModal({
                 {sale.clientName}
               </span>
             </div>
-            {client ? (
+            {client || sale.clientDocNumber ? (
               <>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Documento</span>
                   <span className="font-medium text-gray-800">
-                    {client.docType} {client.docNumber}
+                    {client?.docType || sale.clientDocType} {client?.docNumber || sale.clientDocNumber}
                   </span>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Correo</span>
                   <span className="font-medium text-gray-800 break-words">
-                    {client.email}
+                    {client?.email || sale.clientEmail}
                   </span>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Teléfono</span>
                   <span className="font-medium text-gray-800">
-                    {client.phone}
+                    {client?.phone || sale.clientPhone}
                   </span>
                 </div>
               </>
@@ -288,6 +288,23 @@ export default function SaleDetailModal({
             )}
           </div>
         </div>
+
+        {/* Sección Responsable */}
+        {sale.responsableName && (
+          <div>
+            <h4 className="text-sm font-bold text-primary border-b border-gray-200 pb-2 mb-3">
+              Responsable de la Venta
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+              <div>
+                <span className="text-gray-500 text-xs block">Nombre del Responsable</span>
+                <span className="font-medium text-gray-800">
+                  {sale.responsableName}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sección Operativo y Financiero */}
         <div>

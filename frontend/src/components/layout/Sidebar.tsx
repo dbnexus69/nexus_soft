@@ -146,7 +146,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                      isActive ? "bg-white/10 text-white font-bold" : "text-slate-350 hover:bg-white/5 hover:text-white"
+                      isActive ? "bg-white/10 text-white font-bold" : "text-slate-300 hover:bg-white/5 hover:text-white"
                     }`
                   }
                 >
@@ -170,7 +170,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                       onClick={onClose}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                          isActive ? "bg-white/10 text-white font-bold" : "text-slate-350 hover:bg-white/5 hover:text-white"
+                          isActive ? "bg-white/10 text-white font-bold" : "text-slate-300 hover:bg-white/5 hover:text-white"
                         }`
                       }
                     >
@@ -236,7 +236,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     isAdminMenuOpen || filteredAdminLinks.some(link => location.pathname === link.to)
                       ? "bg-white/10 text-white font-bold"
-                      : "text-slate-350 hover:bg-white/5 hover:text-white"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   <UserCog size={18} />
@@ -280,26 +280,26 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           <button
             onClick={handleRefresh}
             disabled={isSpinning}
-            className={`p-2 hover:bg-white/5 rounded-xl transition-all ${isSpinning ? 'opacity-50' : ''}`}
+            className={`p-2 hover:bg-white/5 rounded-xl transition-all text-slate-300 hover:text-white ${isSpinning ? 'opacity-50' : ''}`}
             title="Actualizar datos"
           >
-            <RefreshCw size={16} className={isSpinning ? 'animate-spin text-accent' : 'text-slate-350'} />
+            <RefreshCw size={16} className={isSpinning ? 'animate-spin text-accent' : ''} />
           </button>
 
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleDarkMode}
-            className="p-2 hover:bg-white/5 rounded-xl transition-all"
+            className="p-2 hover:bg-white/5 rounded-xl transition-all text-slate-300 hover:text-white"
             title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
           >
-            {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-slate-350" />}
+            {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
           </button>
 
           {/* Profile Dropdown Widget */}
           <div className="relative">
             <button 
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2 hover:bg-white/5 p-1 px-2.5 rounded-xl transition-all"
+              className="flex items-center gap-2 hover:bg-white/5 p-1 px-2.5 rounded-xl transition-all text-slate-300 hover:text-white"
             >
               {user?.avatar ? (
                 <img
@@ -312,7 +312,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                   {getInitials(user?.name || "User")}
                 </div>
               )}
-              <span className="text-xs font-semibold text-slate-350 hidden lg:inline">{getShortName(user?.name)}</span>
+              <span className="text-xs font-semibold hidden lg:inline">{getShortName(user?.name)}</span>
               <ChevronDown size={12} className="text-slate-400" />
             </button>
 

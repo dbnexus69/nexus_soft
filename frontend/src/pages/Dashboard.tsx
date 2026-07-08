@@ -38,36 +38,66 @@ import LoadingScreen from "../components/ui/LoadingScreen";
 export default function Dashboard() {
   const { dashboardData, dashboardLoading, fetchDashboard } = useData();
   const { start, end } = getCurrentMonth();
-  const [dateRange, setDateRange] = useState<any>({
-    startDate: new Date(start),
-    endDate: new Date(end),
+  const [dateRange, setDateRange] = useState<any>(() => {
+    const saved = localStorage.getItem("dashboard_date_range");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.startDate && parsed.endDate) {
+          return {
+            startDate: new Date(parsed.startDate),
+            endDate: new Date(parsed.endDate)
+          };
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    const { start, end } = getCurrentMonth();
+    return {
+      startDate: new Date(start),
+      endDate: new Date(end),
+    };
   });
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const isInitialMount = React.useRef(true);
 
   useEffect(() => {
-    const params: Record<string, unknown> = {};
-    if (dateRange?.startDate) {
-      const s = typeof dateRange.startDate === 'string' ? dateRange.startDate.replace(/-/g, '/') : dateRange.startDate;
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) {
-        d.setHours(0, 0, 0, 0);
-        params.dateFrom = d.toISOString();
-      }
+    if (dateRange) {
+      localStorage.setItem("dashboard_date_range", JSON.stringify(dateRange));
     }
-    if (dateRange?.endDate) {
-      const s = typeof dateRange.endDate === 'string' ? dateRange.endDate.replace(/-/g, '/') : dateRange.endDate;
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) {
-        d.setHours(23, 59, 59, 999);
-        params.dateTo = d.toISOString();
+    const getParams = () => {
+      const params: Record<string, unknown> = {};
+      if (dateRange?.startDate) {
+        const s = typeof dateRange.startDate === 'string' ? dateRange.startDate.replace(/-/g, '/') : dateRange.startDate;
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+          d.setHours(0, 0, 0, 0);
+          params.dateFrom = d.toISOString();
+        }
       }
-    }
-    
+      if (dateRange?.endDate) {
+        const s = typeof dateRange.endDate === 'string' ? dateRange.endDate.replace(/-/g, '/') : dateRange.endDate;
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999);
+          params.dateTo = d.toISOString();
+        }
+      }
+      return params;
+    };
+
+    const params = getParams();
     const isBackground = isInitialMount.current && dashboardData !== null;
     fetchDashboard(params, isBackground);
-    
     isInitialMount.current = false;
+
+    // Actualización en tiempo real cada 30 segundos (en segundo plano)
+    const interval = setInterval(() => {
+      fetchDashboard(getParams(), true);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [dateRange, fetchDashboard]);
 
   const stats = useDashboardStats();
@@ -81,7 +111,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 pb-8">
       {/* Header Premium con Estilo de Lujo DB NEXUS */}
-      <div className="relative rounded-3xl bg-white dark:bg-[#1a1b22] p-8 shadow-xl border border-slate-200/50 dark:border-slate-800/60 transition-all duration-300">
+      <div className="relative rounded-3xl bg-[#0b0f19] p-8 shadow-xl border border-slate-800 transition-all duration-300">
         {/* Capa de fondo con destellos de gradiente */}
         <div className="absolute inset-0 overflow-hidden rounded-3xl z-0 pointer-events-none">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#8D99AE] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-10 dark:opacity-20"></div>
@@ -90,14 +120,14 @@ export default function Dashboard() {
         
         <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center">
           <div className="flex flex-col items-center justify-center">
-            <h1 className="text-4xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center justify-center">
+            <h1 className="text-4xl font-black text-white font-heading tracking-tight flex items-center justify-center">
               Panel de Control
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 max-w-xl font-medium">
+            <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium">
               Supervisa el rendimiento financiero y operativo en tiempo real. Todos los indicadores estratégicos de tu agencia, en un solo vistazo.
             </p>
           </div>
-          <div className="flex items-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1 rounded-xl transition-all shadow-inner">
+          <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-xl transition-all shadow-inner">
             <div className="w-72 datepicker-container datepicker-transparent">
               <Datepicker
                 value={dateRange as any}
@@ -108,7 +138,7 @@ export default function Dashboard() {
                 placeholder={"Selecciona un periodo"}
                 separator={" - "}
                 containerClassName="relative !bg-transparent"
-                inputClassName="w-full text-sm font-semibold text-[#2B2D42] dark:text-white !bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-slate-400 dark:placeholder-slate-500"
+                inputClassName="w-full text-sm font-semibold text-white !bg-transparent border-none py-2 px-4 cursor-pointer focus:ring-0 placeholder-slate-400"
               />
             </div>
           </div>
@@ -218,7 +248,8 @@ export default function Dashboard() {
                 label: "TIQUETES AÉREOS",
                 value: `${stats.totalFlights} tramos`,
                 subtitle: "Tramos Emitidos",
-                icon: <Ticket size={20} />,
+                icon: <Ticket size={24} />,
+                gradient: "from-cyan-500 to-cyan-400",
                 lightBg: "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-300",
               },
               {
@@ -226,7 +257,8 @@ export default function Dashboard() {
                 value: `${stats.hotelesCount} reserv.`,
                 subtitle: "Reservas Activas",
                 detail: formatCurrency(stats.hotelesIngresos),
-                icon: <BedDouble size={20} />,
+                icon: <BedDouble size={24} />,
+                gradient: "from-violet-500 to-violet-400",
                 lightBg: "bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-300",
               },
               {
@@ -234,7 +266,8 @@ export default function Dashboard() {
                 value: `${stats.segurosCount} pólizas`,
                 subtitle: "Pólizas Emitidas",
                 detail: formatCurrency(stats.segurosIngresos),
-                icon: <HeartPulse size={20} />,
+                icon: <HeartPulse size={24} />,
+                gradient: "from-fuchsia-500 to-fuchsia-400",
                 lightBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-300",
               },
               {
@@ -242,27 +275,38 @@ export default function Dashboard() {
                 value: `${stats.planesCount} planes`,
                 subtitle: "Paquetes Turísticos",
                 detail: formatCurrency(stats.planesIngresos),
-                icon: <Palmtree size={20} />,
+                icon: <Palmtree size={24} />,
+                gradient: "from-amber-500 to-amber-400",
                 lightBg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-350",
               },
             ].map((kpi, i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 p-4.5 bg-white dark:bg-[#1a1b22]/90 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/70 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group"
+                className="relative group bg-white dark:bg-[#1a1b22] border border-slate-200/50 dark:border-slate-800/70 rounded-[28px] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
               >
-                <div className={`p-2.5 rounded-xl ${kpi.lightBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
-                  {kpi.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-wider truncate">
-                    {kpi.label}
-                  </p>
-                  <h4 className="text-lg font-black text-slate-800 dark:text-white mt-0.5 truncate font-heading">
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${kpi.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      {kpi.label}
+                    </p>
+                    <div className={`p-3 rounded-2xl ${kpi.lightBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
+                      {kpi.icon}
+                    </div>
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-850 dark:text-white mb-1 tracking-tight font-heading">
                     {kpi.value}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-450 truncate mt-0.5 font-medium">
-                    {kpi.detail ? kpi.detail : kpi.subtitle}
-                  </p>
+                  </h3>
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold truncate">
+                      {kpi.subtitle}
+                    </span>
+                    {kpi.detail && (
+                      <span className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg whitespace-nowrap shadow-sm">
+                        {kpi.detail}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -358,7 +402,11 @@ export default function Dashboard() {
                       <span className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: CARTERA_COLORS[i] }} />
                       <span className="text-[10px] font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">{item.name}</span>
                     </div>
-                    <span className="text-sm font-black text-slate-850 dark:text-white">{item.value}%</span>
+                    <span className="text-sm font-black text-slate-850 dark:text-white">
+                      {stats.carteraData.reduce((acc: number, curr: any) => acc + curr.value, 0) > 0 
+                        ? ((item.value / stats.carteraData.reduce((acc: number, curr: any) => acc + curr.value, 0)) * 100).toFixed(1)
+                        : 0}%
+                    </span>
                   </div>
                 ))
               )}
@@ -402,7 +450,7 @@ export default function Dashboard() {
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{sale.asesorName}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{formatDate(sale.date)}</td>
                     <td className="px-6 py-4 font-black text-gray-800 dark:text-white">
-                      {formatCurrency(sale.total)}
+                      {formatCurrency(sale.amount)}
                     </td>
                     <td className="px-6 py-4">
                       <span

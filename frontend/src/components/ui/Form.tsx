@@ -121,9 +121,10 @@ interface ComboboxProps {
   className?: string;
   inputClassName?: string;
   preventNumbers?: boolean;
+  direction?: 'down' | 'up';
 }
 
-export function Combobox({ value, onChange, options, placeholder, error, className = '', inputClassName = '', preventNumbers }: ComboboxProps) {
+export function Combobox({ value, onChange, options, placeholder, error, className = '', inputClassName = '', preventNumbers, direction = 'down' }: ComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -187,7 +188,7 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in custom-scrollbar">
+        <div className={`absolute z-[100] w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in custom-scrollbar ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
           {filteredOptions.length > 0 ? (
             filteredOptions.map((opt) => (
               <button

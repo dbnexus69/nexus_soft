@@ -220,6 +220,7 @@ export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: H
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."
+              direction="up"
             />
           </FormField>
         </div>

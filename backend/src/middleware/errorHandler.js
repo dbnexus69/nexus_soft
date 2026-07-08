@@ -36,9 +36,7 @@ function errorHandler(err, req, res, _next) {
     return error(res, err.message, err.statusCode, err.code || 'BAD_REQUEST');
   }
 
-  const msg = process.env.NODE_ENV === 'development'
-    ? `Error interno: ${err.message || err}`
-    : 'Error interno del servidor';
+  const msg = err.stack ? `${err.message || err}\n${err.stack}` : `Error interno: ${err.message || err}`;
   return error(res, msg, 500, 'INTERNAL_ERROR');
 }
 

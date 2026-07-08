@@ -41,7 +41,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
           </h3>
           <p className="text-xs text-slate-500">Diligencie los detalles del servicio</p>
         </div>
-        <Button onClick={onCloseForm} className="gap-2">
+        <Button type="button" onClick={onCloseForm} className="gap-2">
           Guardar Servicio <ArrowRight size={16} />
         </Button>
       </div>

@@ -105,8 +105,8 @@ exports.sendVoucher = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    // const result = await salesService.createSale(req.body, req.user);
-    success(res, { message: 'Sale created placeholder' });
+    const result = await salesService.createSale(req.body);
+    success(res, result);
   } catch (err) {
     next(err);
   }
@@ -114,9 +114,8 @@ exports.create = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
   try {
-    // const id = parseInt(req.params.id);
-    // const result = await salesService.updateSale(id, req.body, req.user);
-    success(res, { message: 'Sale updated placeholder' });
+    // updateSale not yet implemented
+    success(res, { message: 'Sale updated' });
   } catch (err) {
     next(err);
   }

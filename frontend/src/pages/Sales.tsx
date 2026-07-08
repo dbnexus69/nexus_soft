@@ -401,7 +401,7 @@ export default function Sales() {
           href="https://siigonube.siigo.com/#/sales-management/2044" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="bg-[#2B2D42]/5 hover:bg-[#2B2D42]/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#2B2D42] dark:text-[#b2bccb] px-4.5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-slate-350/20 dark:border-white/10 transition-all shadow-sm shrink-0"
+          className="bg-[#2B2D42]/5 hover:bg-[#2B2D42]/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#2B2D42] dark:text-[#b2bccb] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-slate-350/20 dark:border-white/10 transition-all shadow-sm shrink-0"
         >
           <ExternalLink size={16} /> Ir a Siigo Nube
         </a>

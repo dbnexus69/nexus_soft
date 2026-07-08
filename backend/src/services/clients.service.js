@@ -146,10 +146,11 @@ class ClientsService {
 
     if (data.docNumber) {
       const existingClient = await prisma.clientes.findFirst({
-        where: { personas: { documento: data.docNumber } }
+        where: { personas: { documento: data.docNumber } },
+        include: { personas: true }
       });
-      if (existingClient) {
-        throw new BadRequestError('Este número de documento ya está registrado como cliente');
+      if (existingClient && !existingClient.personas.deleted_at) {
+        throw new BadRequestError('Este número de documento ya está registrado como cliente activo');
       }
     }
 
@@ -168,7 +169,7 @@ class ClientsService {
             email: data.email || existingPersona.email,
             telefono: data.phone || existingPersona.telefono,
             avatar_url: data.avatar || existingPersona.avatar_url,
-            birth_date: data.birthDate ? new Date(data.birthDate) : existingPersona.birth_date,
+            birth_date: data.birthDate && !isNaN(new Date(data.birthDate).getTime()) ? new Date(data.birthDate) : existingPersona.birth_date,
             status: 'active',
             deleted_at: null
           }
@@ -176,7 +177,9 @@ class ClientsService {
       }
     }
 
-    if (!personas) {
+    const parsedBirthDate = data.birthDate && !isNaN(new Date(data.birthDate).getTime()) ? new Date(data.birthDate) : null;
+
+    if (!persona) {
       persona = await prisma.personas.create({
         data: {
           nombres: data.firstName || '',
@@ -186,28 +189,28 @@ class ClientsService {
           email: data.email,
           telefono: data.phone,
           avatar_url: data.avatar || null,
-          birth_date: data.birthDate ? new Date(data.birthDate) : null,
+          birth_date: parsedBirthDate,
           status: 'active'
         }
       });
     }
 
     const cliente = await prisma.clientes.create({
-      data: { persona_id: personas.id, creado_por_id: userId },
+      data: { persona_id: persona.id, creado_por_id: userId },
       include: { personas: true }
     });
 
     return {
       id: cliente.id,
-      firstName: personas.nombres,
-      lastName: personas.apellidos,
-      name: `${personas.nombres} ${personas.apellidos}`,
+      firstName: persona.nombres,
+      lastName: persona.apellidos,
+      name: `${persona.nombres} ${persona.apellidos}`,
       docType: data.docType,
       docNumber: data.docNumber,
       phone: data.phone,
       email: data.email,
       birthDate: data.birthDate,
-      avatar: personas.avatar_url,
+      avatar: persona.avatar_url,
       status: 'active',
       registrationDate: cliente.fecha_registro,
       createdBy: cliente.creado_por_id
@@ -251,7 +254,7 @@ class ClientsService {
     if (data.email) personaData.email = data.email;
     if (data.phone) personaData.telefono = data.phone;
     if (data.avatar) personaData.avatar_url = data.avatar;
-    if (data.birthDate) personaData.birth_date = new Date(data.birthDate);
+    if (data.birthDate && !isNaN(new Date(data.birthDate).getTime())) personaData.birth_date = new Date(data.birthDate);
 
     if (Object.keys(personaData).length > 0) {
       personaData.updated_at = new Date();

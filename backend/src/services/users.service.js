@@ -136,11 +136,13 @@ class UsersService {
     }
 
     if (data.docNumber) {
+      // Solo bloquear si el usuario existente NO fue eliminado lógicamente
       const existingUser = await prisma.usuarios.findFirst({
-        where: { personas: { documento: data.docNumber } }
+        where: { personas: { documento: data.docNumber } },
+        include: { personas: true }
       });
-      if (existingUser) {
-        throw new BadRequestError('Este número de documento ya está registrado como usuario');
+      if (existingUser && !existingUser.personas.deleted_at) {
+        throw new BadRequestError('Este número de documento ya está registrado como usuario activo');
       }
     }
 
@@ -190,7 +192,7 @@ class UsersService {
 
     const usuario = await prisma.usuarios.create({
       data: {
-        persona_id: personas.id,
+        persona_id: persona.id,
         email: data.email,
         password_hash,
         rol_id: roles.id,
@@ -209,7 +211,7 @@ class UsersService {
               <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido a Samtur Travel!</h1>
             </div>
             <div style="padding: 30px;">
-              <p style="font-size: 16px;">Hola <strong>${personas.nombres}</strong>,</p>
+              <p style="font-size: 16px;">Hola <strong>${persona.nombres}</strong>,</p>
               <p style="font-size: 16px;">Tu cuenta ha sido creada exitosamente en nuestro sistema.</p>
               <p style="font-size: 16px;"><strong>Tus credenciales de acceso temporal son:</strong></p>
               <ul style="font-size: 16px; background: #f8fafc; padding: 15px 30px; border-radius: 6px;">

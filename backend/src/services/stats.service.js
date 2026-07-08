@@ -13,8 +13,12 @@ class StatsService {
     }
 
     let userCondition = '';
+    let userDetalleCondition = '';
+    let userClientCondition = '';
     if (permissionScope === 'own') {
       userCondition = `AND usuario_id = '${user.id}'`;
+      userDetalleCondition = `AND v.usuario_id = '${user.id}'`;
+      userClientCondition = `AND creado_por_id = '${user.id}'`;
     }
 
     const aggregatesSql = `
@@ -35,6 +39,25 @@ class StatsService {
       WHERE deleted_at IS NULL ${dateCondition} ${userCondition}
     `;
 
+    const categorySql = `
+      SELECT categoria, COUNT(d.id)::int as count, COALESCE(SUM(d.subtotal), 0)::float as revenue
+      FROM detalle_venta d
+      JOIN ventas v ON d.venta_id = v.id
+      WHERE v.deleted_at IS NULL ${dateCondition.replace(/creado_at/g, 'v.creado_at')} ${userDetalleCondition}
+      GROUP BY categoria
+    `;
+
+    const monthlyTrendSql = `
+      SELECT 
+        EXTRACT(MONTH FROM creado_at)::int as month,
+        SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear} THEN monto_total ELSE 0 END)::float as "currentYear",
+        SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear - 1} THEN monto_total ELSE 0 END)::float as "previousYear"
+      FROM ventas
+      WHERE deleted_at IS NULL ${userCondition}
+      GROUP BY EXTRACT(MONTH FROM creado_at)
+      ORDER BY month ASC
+    `;
+
     let clientsWhere = { deleted_at: null };
     if (permissionScope === 'own') {
       clientsWhere.creado_por_id = user.id;
@@ -45,9 +68,22 @@ class StatsService {
       if (dateTo) clientsWhere.fecha_registro.lte = new Date(dateTo);
     }
 
-    const [aggResult, activeClientsCount] = await Promise.all([
+    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount, recentSales] = await Promise.all([
       prisma.$queryRawUnsafe(aggregatesSql),
-      prisma.clientes.count({ where: clientsWhere })
+      prisma.clientes.count({ where: { ...clientsWhere, personas: { status: 'active' } } }),
+      prisma.clientes.count({ where: clientsWhere }),
+      prisma.$queryRawUnsafe(categorySql),
+      prisma.$queryRawUnsafe(monthlyTrendSql),
+      prisma.proveedores.count({ where: { status: 'active' } }),
+      prisma.ventas.findMany({
+        where: {
+          deleted_at: null,
+          ...(permissionScope === 'own' ? { usuario_id: user.id } : {})
+        },
+        orderBy: { creado_at: 'desc' },
+        take: 5,
+        include: { clientes: { include: { personas: true } } }
+      })
     ]);
 
     const agg = aggResult[0] || {};
@@ -55,14 +91,38 @@ class StatsService {
     const prevSales = Number(agg.prevYearSales) || 0;
     const salesGrowth = prevSales > 0 ? Number((((currentSales - prevSales) / prevSales) * 100).toFixed(2)) : 0;
 
+    const categoryBreakdown = {};
+    let totalFlights = 0;
+    categoryResult.forEach(c => {
+      categoryBreakdown[c.categoria] = { count: c.count, revenue: c.revenue };
+      if (c.categoria === 'tiqueteria') totalFlights = c.count;
+    });
+
     return {
       totalOperations: agg.totalOperations || 0,
       totalRevenue: Number(agg.totalRevenue) || 0,
       activeClients: activeClientsCount,
+      totalClients: totalClientsCount,
       pendingBalance: Number(agg.pendingBalance) || 0,
       pendingCount: agg.pendingCount || 0,
       suppliersTotal: Number(agg.suppliersTotal) || 0,
+      supplierCount: suppliersCount,
+      totalFlights,
+      categoryBreakdown,
+      monthlyTrend: trendResult || [],
+      recentSales: recentSales.map(s => ({
+        id: s.id,
+        date: s.creado_at,
+        clientName: s.clientes?.personas ? `${s.clientes.personas.nombres} ${s.clientes.personas.apellidos}` : 'N/A',
+        amount: s.monto_total,
+        status: s.status
+      })),
       salesGrowth,
+      carteraStatus: [
+        { name: "Pagado", value: Number(agg.paids) || 0, color: "#10b981" },
+        { name: "Abonado", value: Number(agg.partPaids) || 0, color: "#3b82f6" },
+        { name: "Pendiente", value: Number(agg.credits) || 0, color: "#f59e0b" }
+      ],
       salesDistribution: {
         paids: Number(agg.paids) || 0,
         credits: Number(agg.credits) || 0,

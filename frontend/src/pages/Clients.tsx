@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, X, Users as UsersIcon } from 'lucide-react';
+import { Plus, Search, X, Users as UsersIcon, UserX, UserCheck } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Form';
 import { ClientTable } from '../components/clients/ClientTable';
 import ClientDetailModal from '../components/clients/ClientDetailModal';
 import { ClientModal } from '../components/clients/ClientModal';
+import { Modal } from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
 import { useClientsContext } from '../context/ClientsContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -27,6 +28,8 @@ export default function Clients() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [confirmToggle, setConfirmToggle] = useState<{ id: number; name: string; newStatus: 'active' | 'inactive' } | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Client; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'desc' });
@@ -76,17 +79,29 @@ export default function Clients() {
     setIsDetailOpen(true);
   };
 
-  const handleToggleStatus = async (client: Client) => {
-    const action = client.status === 'active' ? 'desactivar' : 'activar';
-    if (window.confirm(`¿Estás seguro de que deseas ${action} a ${client.name}?`)) {
-      try {
-        await toggleClientStatus(client.id);
-        success(`Cliente ${action}do exitosamente`);
-      } catch (err: any) {
-        error(err.message || `Error al ${action} cliente`);
-      }
+  const handleToggleStatus = (client: Client) => {
+    setConfirmToggle({
+      id: client.id,
+      name: client.name,
+      newStatus: client.status === 'active' ? 'inactive' : 'active'
+    });
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!confirmToggle) return;
+    setIsToggling(true);
+    try {
+      await toggleClientStatus(confirmToggle.id);
+      success(`Cliente ${confirmToggle.newStatus === 'active' ? 'activado' : 'desactivado'} exitosamente`);
+      setConfirmToggle(null);
+    } catch (err: any) {
+      error(err.message || `Error al cambiar estado del cliente`);
+    } finally {
+      setIsToggling(false);
     }
   };
+
+  const handleCancelToggle = () => setConfirmToggle(null);
 
   const handleSaveClient = async (clientData: Partial<Client>) => {
     try {
@@ -187,12 +202,49 @@ export default function Clients() {
       {selectedClient && (
         <ClientDetailModal
           isOpen={isDetailOpen}
-          onClose={() => setIsDetailOpen(false)}
+          onClose={() => {
+            setIsDetailOpen(false);
+            setSelectedClient(null);
+          }}
           client={selectedClient}
           clientSales={(data.sales as any).filter((s: any) => s.clientId === selectedClient.id)}
           clientFlights={[]}
         />
       )}
+
+      {/* Confirmación de cambio de estado */}
+      <Modal
+        isOpen={!!confirmToggle}
+        onClose={handleCancelToggle}
+        title={confirmToggle?.newStatus === 'inactive' ? 'Desactivar Cliente' : 'Activar Cliente'}
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={handleCancelToggle} disabled={isToggling}>Cancelar</Button>
+            <Button 
+              variant={confirmToggle?.newStatus === 'inactive' ? 'danger' : 'success'} 
+              onClick={handleConfirmToggle}
+              disabled={isToggling}
+            >
+              {isToggling ? 'Procesando...' : `Sí, ${confirmToggle?.newStatus === 'inactive' ? 'desactivar' : 'activar'}`}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center py-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+            confirmToggle?.newStatus === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+          }`}>
+            {confirmToggle?.newStatus === 'inactive' ? <UserX size={32} /> : <UserCheck size={32} />}
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            ¿Estás seguro de {confirmToggle?.newStatus === 'active' ? 'activar' : 'desactivar'} a este cliente?
+          </h3>
+          <p className="text-gray-500 mb-6">
+            El cliente <strong>{confirmToggle?.name}</strong> cambiará su estado a {confirmToggle?.newStatus === 'active' ? 'Activo' : 'Inactivo'}.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -182,7 +182,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchSales = useCallback(async () => {
     setSalesLoading(true);
     try {
-      const res = await api.listSales({ perPage: 5000 }).catch(() => ({ data: [] }));
+      const res = await api.listSales({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
       const freshSales = res.data || [];
       setData(prev => {
         saveSalesAndClientsCache(freshSales, prev.clients);
@@ -196,7 +196,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchClients = useCallback(async () => {
     try {
-      const res = await api.listClients({ perPage: 5000 }).catch(() => ({ data: [] }));
+      const res = await api.listClients({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
       const freshClients = res.data || [];
       setData(prev => {
         saveSalesAndClientsCache(prev.sales, freshClients);
@@ -207,7 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchResponsables = useCallback(async () => {
     try {
-      const res = await api.listResponsables({ perPage: 5000 }).catch(() => null);
+      const res = await api.listResponsables({ perPage: 100, sortOrder: 'desc' }).catch(() => null);
       const freshResponsables = res?.data || [];
       setData(prev => ({ ...prev, responsables: freshResponsables }));
     } catch {}
@@ -215,7 +215,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await api.listUsers({ perPage: 5000 }).catch(() => ({ data: [] }));
+      const res = await api.listUsers({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
       const freshUsers = res.data || [];
       saveUsersCache(freshUsers);
       setData(prev => ({ ...prev, users: freshUsers }));
@@ -264,7 +264,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchFlights = useCallback(async () => {
     try {
-      const res = await api.listFlights({ perPage: 5000 }).catch(() => ({ data: [] }));
+      const res = await api.listFlights({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
       setData(prev => ({ ...prev, flights: res.data || [] }));
     } catch (err) {
       console.warn('[DataContext] Error fetching flights:', err);
@@ -273,14 +273,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchCommissionAgents = useCallback(async () => {
     try {
-      const res = await api.listCommissionAgents({ perPage: 5000 }).catch(() => ({ data: [] }));
+      const res = await api.listCommissionAgents({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
       setData(prev => ({ ...prev, commissionAgents: res.data || [] }));
     } catch {}
   }, []);
 
   const fetchSettlements = useCallback(async () => {
     try {
-      const res = await api.listSettlements({ perPage: 5000 }).catch(() => ({ data: [] }));
+      const res = await api.listSettlements({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
       setData(prev => ({ ...prev, commissionSettlements: res.data || [] }));
     } catch {}
   }, []);

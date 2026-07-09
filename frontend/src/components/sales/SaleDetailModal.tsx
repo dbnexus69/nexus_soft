@@ -260,12 +260,12 @@ export default function SaleDetailModal({
                 {sale.clientName}
               </span>
             </div>
-            {client || sale.clientDocNumber ? (
+            {(client || (sale as any).clientDocNumber) ? (
               <>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Documento</span>
                   <span className="font-medium text-gray-800">
-                    {client?.docType || sale.clientDocType} {client?.docNumber || sale.clientDocNumber}
+                    {client?.docType || (sale as any).clientDocType} {client?.docNumber || (sale as any).clientDocNumber}
                   </span>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
@@ -277,7 +277,7 @@ export default function SaleDetailModal({
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Teléfono</span>
                   <span className="font-medium text-gray-800">
-                    {client?.phone || sale.clientPhone}
+                    {client?.phone || (sale as any).clientPhone}
                   </span>
                 </div>
               </>

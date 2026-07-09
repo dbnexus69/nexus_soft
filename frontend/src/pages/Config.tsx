@@ -31,7 +31,6 @@ import { useConfigContext } from '../context/ConfigContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { ConfigData } from '../hooks/useConfig';
 import ConfigForms from '../components/config/ConfigForms';
-import ConfigGrids from '../components/config/ConfigGrids';
 
 import { updateConfigItem, createConfigItem as addConfigItem, deleteConfigItem } from '../api/config';
 import { formatCurrency, formatMealPlan } from '../utils/formatters';
@@ -63,10 +62,6 @@ export default function Config() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
-    const saved = localStorage.getItem('catalog_view_mode');
-    return (saved === 'grid' || saved === 'table') ? saved : 'grid';
-  });
   const [formData, setFormData] = useState<any>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
@@ -302,152 +297,76 @@ export default function Config() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Dynamic Header */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
+    <div className="space-y-6 animate-fade-in relative">
+      {/* Header */}
+      <div className="flex flex-col items-center justify-center gap-4 mb-6 text-center">
+        <div className="flex flex-col items-center justify-center">
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary flex items-center justify-center gap-3">
             <Database className="text-accent w-8 h-8" /> Gestión Interna
           </h1>
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-gray-500 text-sm mt-1">
             Administración central de tablas maestras, catálogos base y parámetros para la facturación.
           </p>
         </div>
       </div>
 
-      {/* Stats Summary Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white border border-gray-border p-4 rounded-xl shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-                {stat.icon}
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{stat.label}</p>
-                <p className="text-lg font-bold text-gray-800">{stat.count}</p>
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Tabs */}
+      <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-border w-fit mx-auto mb-6 max-w-full overflow-x-auto flex-nowrap scrollbar-none">
+        {SECTIONS.map(section => {
+          const isActive = currentSection === section.id;
+          const count = (config[section.id as keyof ConfigData] as any[])?.length || 0;
+          return (
+            <button
+              key={section.id}
+              onClick={() => {
+                setCurrentSection(section.id);
+                setSearchTerm('');
+              }}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                isActive ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {section.icon}
+              <span className="hidden sm:inline">{section.label}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left internal Sidebar: catalog selection */}
-        <div className="lg:col-span-1 space-y-2">
-          <div className="bg-white border border-gray-border rounded-xl p-3 shadow-sm">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 mb-2 lg:mb-3 hidden lg:block">Módulos Catálogos</p>
-            <div className="flex flex-row overflow-x-auto lg:flex-col gap-1.5 lg:gap-0 lg:space-y-1 pb-1 lg:pb-0 scrollbar-none">
-              {SECTIONS.map(section => {
-                const isActive = currentSection === section.id;
-                const count = (config[section.id as keyof ConfigData] as any[])?.length || 0;
-                return (
-                  <button
-                    key={section.id}
-                    onClick={() => {
-                      setCurrentSection(section.id);
-                      setSearchTerm('');
-                    }}
-                    className={`shrink-0 lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
-                      isActive
-                        ? 'bg-primary text-white shadow-md shadow-primary/10'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={isActive ? 'text-accent' : 'text-gray-400'}>
-                        {section.icon}
-                      </div>
-                      <div className="text-left min-w-0">
-                        <span className="block truncate">{section.label}</span>
-                      </div>
-                    </div>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+      <Card className="animate-fade-in">
+        <CardHeader actions={
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input 
+                placeholder={`Buscar en ${SECTIONS.find(s => s.id === currentSection)?.label}...`}
+                className="pl-10 pr-9 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+            <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto justify-center">
+              <Plus size={18} />
+              Nuevo {SECTIONS.find(s => s.id === currentSection)?.label}
+            </Button>
           </div>
-        </div>
-
-        {/* Right Panel: Active Catalog view */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader actions={
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-44">
-                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Filtrar..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 pr-3 py-1.5 w-full rounded-lg border border-gray-border text-xs focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all"
-                  />
-                </div>
-
-                {/* Grid/List View switcher */}
-                <div className="flex items-center border border-gray-border dark:border-slate-700 rounded-lg p-0.5 bg-gray-50 dark:bg-slate-800">
-                  <button
-                    onClick={() => { setViewMode('grid'); localStorage.setItem('catalog_view_mode', 'grid'); }}
-                    className={`p-1 rounded transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-primary dark:text-teal-400 shadow-sm font-bold' : 'text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200'}`}
-                    title="Vista de Cuadrículas"
-                  >
-                    <Grid size={13} />
-                  </button>
-                  <button
-                    onClick={() => { setViewMode('table'); localStorage.setItem('catalog_view_mode', 'table'); }}
-                    className={`p-1 rounded transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 text-primary dark:text-teal-400 shadow-sm font-bold' : 'text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200'}`}
-                    title="Vista de Tabla"
-                  >
-                    <List size={13} />
-                  </button>
-                </div>
-                {/* Add new button */}
-                <Button onClick={() => handleOpenModal()} size="sm">
-                  <Plus size={14} />
-                  Agregar Nuevo
-                </Button>
-              </div>
-            }>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-heading font-bold text-base">
-                  {SECTIONS.find(s => s.id === currentSection)?.label}
-                </span>
-                <span className="text-[11px] font-normal text-gray-400 hidden sm:inline">
-                  — {SECTIONS.find(s => s.id === currentSection)?.desc}
-                </span>
-              </div>
-            </CardHeader>
-            
-            <CardBody>
-              {filteredData.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-400 text-xs">No se encontraron registros en este catálogo.</p>
-                </div>
-              ) : (
-                viewMode === 'grid' ? (
-                  <ConfigGrids 
-                    section={currentSection} 
-                    filteredData={filteredData} 
-                    handleOpenModal={handleOpenModal} 
-                    handleDelete={handleDelete} 
-                    setViewingPackage={setViewingPackage}
-                  />
-                ) : (
-                  <div className="overflow-x-auto w-full">
-                    <Table headers={getHeaders(currentSection)}>
-                      {filteredData
-                        .map((item: any) => {
-                        const isOptimistic = isOptimisticId(item);
-                        return (
-                          <TableRow key={item.id}>
+        }>
+          Catálogo de {SECTIONS.find(s => s.id === currentSection)?.label}
+        </CardHeader>
+        
+        <CardBody>
+          {filteredData.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-sm">No se encontraron registros en este catálogo.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto w-full">
+              <Table headers={getHeaders(currentSection)}>
+                {filteredData.map((item: any) => {
+                  const isOptimistic = isOptimisticId(item);
+                  return (
+                    <TableRow key={item.id}>
                             <TableCell className="font-semibold text-gray-700">
                               {item.id}
                             </TableCell>
@@ -490,13 +409,9 @@ export default function Config() {
                       })}
                     </Table>
                   </div>
-                )
               )}
             </CardBody>
           </Card>
-        </div>
-      </div>
-
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

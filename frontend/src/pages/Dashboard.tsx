@@ -92,10 +92,10 @@ export default function Dashboard() {
     fetchDashboard(params, isBackground);
     isInitialMount.current = false;
 
-    // Actualización en tiempo real cada 30 segundos (en segundo plano)
+    // Actualización en tiempo real cada 5 minutos (en segundo plano)
     const interval = setInterval(() => {
       fetchDashboard(getParams(), true);
-    }, 30000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, [dateRange, fetchDashboard]);
@@ -450,7 +450,7 @@ export default function Dashboard() {
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{sale.asesorName}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{formatDate(sale.date)}</td>
                     <td className="px-6 py-4 font-black text-gray-800 dark:text-white">
-                      {formatCurrency(sale.amount)}
+                      {formatCurrency((sale as any).total || (sale as any).amount || 0)}
                     </td>
                     <td className="px-6 py-4">
                       <span

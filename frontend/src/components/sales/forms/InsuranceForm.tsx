@@ -78,6 +78,36 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
+          <FormField label="Cobertura (USD)">
+            <CurrencyInput
+              value={insurance.coverage === 0 ? "" : insurance.coverage}
+              onChange={(val) => onChange({ coverage: val === "" ? 0 : Number(val) })}
+              placeholder="Ej: 50000"
+            />
+          </FormField>
+          <FormField label="Días de Cobertura">
+            <Input
+              type="number"
+              min={0}
+              value={insurance.coverageDays === 0 ? "" : insurance.coverageDays}
+              onChange={(e) => onChange({ coverageDays: Number(e.target.value) || 0 })}
+              placeholder="Ej: 30"
+            />
+          </FormField>
+          <FormField label="Fecha Inicio Vigencia">
+            <Input
+              type="date"
+              value={insurance.startDate || ""}
+              onChange={(e) => onChange({ startDate: e.target.value })}
+            />
+          </FormField>
+          <FormField label="Fecha Fin Vigencia">
+            <Input
+              type="date"
+              value={insurance.endDate || ""}
+              onChange={(e) => onChange({ endDate: e.target.value })}
+            />
+          </FormField>
         </div>
       </div>
 

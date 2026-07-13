@@ -52,6 +52,9 @@ model comisionistas {
   umbral_pago            Float?                   @default(0)
   acumulado              Float?                   @default(0)
   status                 AgentStatus              @default(Activo)
+  banco                  String?
+  tipo_cuenta            String?
+  numero_cuenta          String?
   creado_at              DateTime                 @default(now())
   personas               personas                 @relation(fields: [persona_id], references: [id])
   liquidaciones_comision liquidaciones_comision[]

@@ -95,7 +95,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     { to: "/", icon: Compass, label: "Dashboard", permission: 'dashboard' as const },
     { to: "/sales", icon: Wallet, label: "Ventas", permission: 'sales' as const },
     { to: "/clients", icon: Contact, label: "Clientes", permission: 'clients' as const },
-    { to: "/itineraries", icon: Globe, label: "Itinerarios", permission: 'itineraries' as const },
+    { to: "/itineraries", icon: Globe, label: "Vuelos", permission: 'itineraries' as const },
     { to: "/commissions", icon: BadgePercent, label: "Comisionistas", permission: 'commissions' as const },
   ];
 

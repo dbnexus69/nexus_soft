@@ -9,6 +9,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
   // Local state for the new payment item being added
   const [payMethodId, setPayMethodId] = useState("");
   const [payAmount, setPayAmount] = useState("");
+  const [payReference, setPayReference] = useState("");
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const [isTouched, setIsTouched] = useState(false);
 
@@ -77,7 +78,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
       amount: amt,
       methodId: payMethodId,
       methodName: selectedMethod ? selectedMethod.name : "Otro",
-      reference: "" // Reference field is removed
+      reference: payReference,
     };
 
     set("payments", [...paymentsList, newPayment]);
@@ -85,6 +86,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
     // Reset local inputs
     setPayMethodId("");
     setPayAmount("");
+    setPayReference("");
     setIsTouched(false);
     setLocalErrors({});
   };
@@ -147,24 +149,14 @@ export function Step3Payment({ form, set, data, errors }: any) {
         </div>
       </div>
 
-      {/* Observaciones */}
-      <FormField label="Observaciones / Comentarios">
-        <Textarea
-          value={form.observations}
-          onChange={(e) => set("observations", e.target.value)}
-          placeholder="Detalles adicionales sobre los productos seleccionados..."
-          rows={3}
-        />
-      </FormField>
-
 
       {/* PANEL DE PAGOS MÚLTIPLES */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-          <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+      <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+        <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
+          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
             Distribución de Pagos del Cliente
           </h4>
-          <span className="text-[10px] text-slate-400 font-bold bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
+          <span className="text-[10px] text-slate-400 font-bold bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
             {paymentsList.length} Pago(s) Registrado(s)
           </span>
         </div>
@@ -175,8 +167,9 @@ export function Step3Payment({ form, set, data, errors }: any) {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 text-slate-500 font-bold border-b border-slate-200">
-                  <th className="px-4 py-3">Método de Pago</th>
-                  <th className="px-4 py-3">Monto</th>
+                  <th className="px-4 py-3 text-left">Método de Pago</th>
+                  <th className="px-4 py-3 text-left">Referencia</th>
+                  <th className="px-4 py-3 text-left">Monto</th>
                   <th className="px-4 py-3 text-right">Acción</th>
                 </tr>
               </thead>
@@ -185,6 +178,9 @@ export function Step3Payment({ form, set, data, errors }: any) {
                   <tr key={idx} className="hover:bg-slate-50/40 transition-colors">
                     <td className="px-4 py-3 font-semibold text-slate-700">
                       {p.methodName}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      {p.reference || "-"}
                     </td>
                     <td className="px-4 py-3 text-emerald-600 font-bold">
                       ${p.amount.toLocaleString("es-CO")}
@@ -247,6 +243,14 @@ export function Step3Payment({ form, set, data, errors }: any) {
                   error={localErrors.amount}
                 />
               </FormField>
+
+              <FormField label={<span>Ref. / Comprobante <span className="font-normal text-[10px] text-slate-400">(Opcional)</span></span>}>
+                <Input
+                  value={payReference}
+                  onChange={(e) => setPayReference(e.target.value)}
+                  placeholder="Nro. Transferencia"
+                />
+              </FormField>
             </div>
 
             <div className="flex justify-end pt-1">
@@ -267,17 +271,17 @@ export function Step3Payment({ form, set, data, errors }: any) {
 
         {/* Resumen de Estado de Cobro */}
         <div className="grid grid-cols-3 gap-3 pt-2 text-center">
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Venta</p>
-            <p className="text-sm font-black text-slate-800">${totalSale.toLocaleString("es-CO")}</p>
+            <p className="text-sm font-black text-slate-800 dark:text-white">${totalSale.toLocaleString("es-CO")}</p>
           </div>
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Abonado</p>
-            <p className="text-sm font-black text-emerald-600">${totalPaid.toLocaleString("es-CO")}</p>
+            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">${totalPaid.toLocaleString("es-CO")}</p>
           </div>
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saldo Restante</p>
-            <p className={`text-sm font-black ${remaining > 0.01 ? "text-amber-500" : "text-emerald-600"}`}>
+            <p className={`text-sm font-black ${remaining > 0.01 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"}`}>
               ${remaining.toLocaleString("es-CO")}
             </p>
           </div>
@@ -355,6 +359,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
             <FormField label="% Comisión Bruta (sobre T.A.)">
               <Input
                 type="number"
+                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 value={form.commissionAgentPercentage}
                 onChange={(e) => {
                   let val = e.target.value;
@@ -381,6 +386,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
             <FormField label="% Retención para Oficina">
               <Input
                 type="number"
+                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 value={form.commissionAgentRetentionPercentage}
                 onChange={(e) => {
                   let val = e.target.value;
@@ -458,6 +464,18 @@ export function Step3Payment({ form, set, data, errors }: any) {
           </div>
         </div>
       )}
+
+      {/* Observaciones */}
+      <div className="pt-2">
+        <FormField label="Observaciones / Comentarios">
+          <Textarea
+            value={form.observations}
+            onChange={(e) => set("observations", e.target.value)}
+            placeholder="Detalles adicionales sobre los productos seleccionados..."
+            rows={3}
+          />
+        </FormField>
+      </div>
     </div>
   );
 }

@@ -795,7 +795,7 @@ export function TicketForm({
               placeholder="Ej: Avianca"
             />
           </FormField>
-          <FormField label="N° de Reserva (PNR)" required>
+          <FormField label="N° de Reserva (PNR) (Titular)" required>
             <Input
               value={ticket.reservationNumber || ""}
               onChange={(e) => {
@@ -1201,10 +1201,19 @@ export function TicketForm({
                         };
                         onChange({ passengers: updatedPax });
                       }}
-                      options={(clients || []).filter((c: any) => c.name || c.firstName).map((c: any) => ({
-                        value: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
-                        label: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
-                      }))}
+                      options={(clients || [])
+                        .filter((c: any) => c.name || c.firstName)
+                        .map((c: any) => ({
+                          value: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
+                          label: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
+                        }))
+                        .filter(opt => {
+                          if (opt.value === pax.name) return true;
+                          const titularName = (ticket.passengers || []).find((p: any) => p.esTitular)?.name;
+                          if (!pax.esTitular && titularName && opt.value === titularName) return false;
+                          return true;
+                        })
+                      }
                       placeholder="Nombre del pasajero"
                     />
                   </FormField>
@@ -1242,7 +1251,7 @@ export function TicketForm({
                     />
                   </FormField>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className={`grid grid-cols-2 ${pax.esTitular ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
                   <FormField label="Fecha de Nacimiento">
                     <DatePicker
                       value={pax.birthDate || ""}
@@ -1256,19 +1265,30 @@ export function TicketForm({
                       fieldName="Fecha de nacimiento"
                     />
                   </FormField>
-                  <FormField label="N° Reserva">
-                    <Input
-                      value={pax.nroReserva || ""}
-                      onChange={(e) => {
-                        const updatedPax = [...(ticket.passengers || [])];
-                        updatedPax[pIdx] = { ...updatedPax[pIdx], nroReserva: e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() };
-                        onChange({ passengers: updatedPax });
-                      }}
-                      placeholder="Código reserva"
-                      maxLength={10}
-                    />
-                  </FormField>
-                  <FormField label="N° Tiquete">
+                  
+                  {!pax.esTitular && (
+                    <FormField label="N° Reserva (Opcional)">
+                      <Input
+                        value={pax.nroReserva || ""}
+                        onChange={(e) => {
+                          const updatedPax = [...(ticket.passengers || [])];
+                          updatedPax[pIdx] = { ...updatedPax[pIdx], nroReserva: e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() };
+                          onChange({ passengers: updatedPax });
+                        }}
+                        placeholder="Código reserva"
+                        maxLength={10}
+                      />
+                    </FormField>
+                  )}
+
+                  <FormField 
+                    label={pax.esTitular ? <span>N° Tiquete <span className="text-red-500">*</span></span> : "N° Tiquete (Opcional)"}
+                    error={
+                      pax.nroTiquete && pax.nroTiquete.trim().length > 0 && (pax.nroTiquete.trim().length < 8 || pax.nroTiquete.trim().length > 16)
+                        ? "Debe tener entre 8 y 16 caracteres"
+                        : undefined
+                    }
+                  >
                     <Input
                       value={pax.nroTiquete || ""}
                       onChange={(e) => {
@@ -1280,6 +1300,7 @@ export function TicketForm({
                       maxLength={16}
                     />
                   </FormField>
+                  
                   <FormField label="Asiento">
                     <Input
                       value={pax.asiento || ""}

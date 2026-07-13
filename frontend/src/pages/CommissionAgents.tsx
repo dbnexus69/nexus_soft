@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Coins,
   Search,
@@ -88,11 +89,20 @@ export default function CommissionAgents() {
     const sales = data.sales || [];
     console.log("Debug - CommissionAgents:", { agentsCount: agents.length, salesCount: sales.length });
     
+    // Create map for O(N + M) complexity instead of O(N * M)
+    const accumulatedByAgent = sales.reduce((acc: Record<string, number>, s: any) => {
+      if (!s.isSettled && s.commissionAgentId) {
+        const id = s.commissionAgentId.toString();
+        acc[id] = (acc[id] || 0) + (s.commissionAgentNetPayment || 0);
+      }
+      return acc;
+    }, {});
+
     const mapped = agents.map((agent: any) => {
-      const accumulated = sales
-        .filter((s) => s.commissionAgentId?.toString() === agent.id?.toString() && !s.isSettled)
-        .reduce((sum, s) => sum + (s.commissionAgentNetPayment || 0), 0);
-      return { ...agent, accumulated };
+      return { 
+        ...agent, 
+        accumulated: accumulatedByAgent[agent.id?.toString()] || 0 
+      };
     });
 
     const result = mapped.filter(
@@ -100,6 +110,7 @@ export default function CommissionAgents() {
         (a.name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
         (a.docNumber || "").includes(searchTerm)
     ).sort((a: any, b: any) => b.id - a.id);
+    
     console.log("Debug - FilteredAgents:", result);
     return result;
   }, [commissionAgents, data.sales, searchTerm]);
@@ -241,8 +252,8 @@ export default function CommissionAgents() {
   return (
     <div className="space-y-6 relative pb-10">
       {/* Toast Notification */}
-      {showSuccess && (
-        <div className="fixed top-20 right-6 z-[200] bg-emerald-50 border border-emerald-200 text-emerald-700 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
+      {showSuccess && createPortal(
+        <div className="fixed top-20 right-6 z-[9999] bg-emerald-50 border border-emerald-200 text-emerald-700 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
           <div className="bg-emerald-500 text-white rounded-full p-1">
             <TrendingUp size={18} />
           </div>
@@ -250,10 +261,11 @@ export default function CommissionAgents() {
             <p className="font-bold text-sm">Operación Exitosa</p>
             <p className="text-xs opacity-90">{successMessage}</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-      {showError && (
-        <div className="fixed top-32 right-6 z-[200] bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
+      {showError && createPortal(
+        <div className="fixed top-32 right-6 z-[9999] bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
           <div className="bg-rose-500 text-white rounded-full p-1">
             <AlertCircle size={18} />
           </div>
@@ -261,7 +273,8 @@ export default function CommissionAgents() {
             <p className="font-bold text-sm">Error</p>
             <p className="text-xs opacity-90">{errorMessage}</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Background Glow */}
@@ -722,6 +735,52 @@ export default function CommissionAgents() {
                       "Ej. 1234567890"
                     }
                     error={errors.docNumber}
+                  />
+                </FormField>
+              </div>
+
+              {/* Datos Bancarios */}
+              <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-inner">
+                  <CreditCard size={24} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-emerald-700 dark:text-emerald-400">Datos Bancarios</h4>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Información de cuenta para pagos de comisiones.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField label="Banco">
+                  <Input
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.banco || ""}
+                    onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                    placeholder="Ej. Bancolombia"
+                  />
+                </FormField>
+                <FormField label="Tipo de Cuenta">
+                  <Select
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.tipoCuenta || ""}
+                    onChange={(e) => setFormData({ ...formData, tipoCuenta: e.target.value })}
+                    options={[
+                      { value: "", label: "Seleccione" },
+                      { value: "Ahorros", label: "Cuenta de Ahorros" },
+                      { value: "Corriente", label: "Cuenta Corriente" },
+                      { value: "Nequi", label: "Nequi" },
+                      { value: "Daviplata", label: "Daviplata" },
+                      { value: "Otro", label: "Otro" },
+                    ]}
+                  />
+                </FormField>
+                <FormField label="Número de Cuenta">
+                  <Input
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    value={formData.numeroCuenta || ""}
+                    onChange={(e) => setFormData({ ...formData, numeroCuenta: e.target.value.replace(/\D/g, "") })}
+                    placeholder="Ej. 1234567890"
+                    maxLength={20}
                   />
                 </FormField>
               </div>

@@ -274,6 +274,10 @@ export interface InsuranceData {
   ta: number;
   supplierPaymentMethod: string;
   members: GuestInfo[];
+  coverage: number;
+  coverageDays: number;
+  startDate: string;
+  endDate: string;
 }
 
 export interface TicketData {
@@ -529,6 +533,7 @@ export interface PaymentRecord {
   date: string;
   amount: number;
   method: string;
+  reference?: string;
 }
 
 export interface Sale {

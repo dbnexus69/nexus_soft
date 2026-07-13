@@ -219,8 +219,9 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                 {mainPassenger?.name && ` - ${mainPassenger.name}`}
               </h4>
               {renderGrid([
+                { label: "Proveedor", value: ticket.supplier || ticket.airlineName || ticket.airline || "-" },
                 { label: "Aerolínea", value: ticket.airlineName || ticket.airline },
-                { label: "Equipaje", value: ticket.baggagePlan || "-" },
+                { label: "Equipaje", value: ticket.baggagePlanName || "-" },
                 { label: "Reserva Global", value: ticket.reservationNumber || "-" },
                 { label: "Vuelo Ida", value: ticket.flightNumber || ticket.legs?.[0]?.flightNumber || "-" },
               ])}
@@ -246,7 +247,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Equipaje</span>
-                        <span className="font-medium text-gray-800">{leg.baggagePlan || ticket.baggagePlan || "-"}</span>
+                        <span className="font-medium text-gray-800">{leg.baggagePlanName || ticket.baggagePlanName || "-"}</span>
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
@@ -294,7 +295,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Equipaje</span>
-                        <span className="font-medium text-blue-800">{leg.baggagePlan || ticket.baggagePlan || "-"}</span>
+                        <span className="font-medium text-blue-800">{leg.baggagePlanName || ticket.baggagePlanName || "-"}</span>
                       </div>
                       <div className="text-gray-600">
                         <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
@@ -351,6 +352,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <ShieldCheck size={16} className="text-accent" /> Seguro #{idx + 1}
             </h4>
             {renderGrid([
+              { label: "Proveedor", value: ins.supplier || "-" },
               { label: "Plan", value: ins.planName || ins.insuranceType },
               { label: "Cobertura", value: ins.coverageAmount ? `$${Number(ins.coverageAmount).toLocaleString("es-CO")}` : ins.coverageAmount },
               { label: "Días", value: ins.coverageDays },
@@ -361,7 +363,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Dirección Asegurado", value: ins.address },
             ].filter(item => {
               const val = item.value;
-              return val !== undefined && val !== null && val !== "" && val !== 0 && val !== "0" && val !== "-";
+              return val !== undefined && val !== null && val !== "";
             }))}
             {renderPassengers(ins.members || ins.passengers)}
           </div>

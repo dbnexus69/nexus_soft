@@ -320,14 +320,7 @@ export default function SaleDetailModal({
                 {sale.asesorName}
               </span>
             </div>
-            <div>
-              <span className="text-gray-500 text-xs block">
-                Proveedor(es)
-              </span>
-              <span className="font-medium text-gray-800 break-words" title={suppliersList}>
-                {suppliersList}
-              </span>
-            </div>
+
             <div>
               <span className="text-gray-500 text-xs block">
                 Pago a Proveedores

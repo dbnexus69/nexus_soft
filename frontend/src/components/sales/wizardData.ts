@@ -141,6 +141,10 @@ export const INITIAL_INSURANCE = (client?: any): InsuranceData => ({
   supplierCost: 0,
   ta: 0,
   supplierPaymentMethod: "",
+  coverage: 0,
+  coverageDays: 0,
+  startDate: "",
+  endDate: "",
   members: [
     {
       name: client?.name || "",

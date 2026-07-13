@@ -21,7 +21,7 @@ interface SaleEditModalProps {
   isAdmin: boolean;
   onUpdateSale?: (id: number, data: any) => void;
   onAddSale?: (data: any) => void;
-  onRegisterPayment: (saleId: number, amount: number, method?: string) => Promise<any>;
+  onRegisterPayment: (saleId: number, amount: number, method?: string, reference?: string) => Promise<any>;
   onDeletePayment: (saleId: number, paymentId: string) => Promise<void>;
   onDownloadVoucher: (sale: Sale) => void;
 }
@@ -107,6 +107,7 @@ export default function SaleEditModal({
   const [newPayment, setNewPayment] = useState({
     amount: "",
     method: "Efectivo",
+    reference: "",
   });
   const [localStatus, setLocalStatus] = useState<string>("");
   const [localCreditDueDate, setLocalCreditDueDate] = useState<string>("");
@@ -146,7 +147,7 @@ export default function SaleEditModal({
         setLocalStatus("credito");
       }
     } else {
-      if (localStatus !== "abonado" && localStatus !== "credito") {
+      if (localStatus !== "abonado") {
         setLocalStatus("abonado");
       }
     }
@@ -167,12 +168,13 @@ export default function SaleEditModal({
       date: new Date().toISOString(),
       amount,
       method: newPayment.method,
+      reference: newPayment.reference,
     };
     setPayments(prev => [...prev, optimisticPayment]);
-    setNewPayment({ amount: "", method: "Efectivo" });
+    setNewPayment({ amount: "", method: "Efectivo", reference: "" });
 
     // Fire-and-forget: sync with server in background
-    onRegisterPayment(sale.id, amount, newPayment.method).then(result => {
+    onRegisterPayment(sale.id, amount, newPayment.method, newPayment.reference).then(result => {
       // Replace temp entry with real server data
       setPayments(prev => prev.map(p => p.id === tempId ? result.payment : p));
     }).catch(() => {
@@ -433,6 +435,21 @@ export default function SaleEditModal({
                       ]}
                     />
                   </div>
+                  <div className="flex-1 w-full">
+                    <label className="text-xs font-bold text-gray-600 mb-1 block">
+                      Ref. / Comprobante <span className="font-normal text-[10px] text-gray-400">(Opcional)</span>
+                    </label>
+                    <Input
+                      value={newPayment.reference}
+                      onChange={(e) =>
+                        setNewPayment({
+                          ...newPayment,
+                          reference: e.target.value,
+                        })
+                      }
+                      placeholder="Nro. Transferencia"
+                    />
+                  </div>
                   <Button
                     type="button"
                     onClick={handleAddPayment}
@@ -475,9 +492,13 @@ export default function SaleEditModal({
                           <span className="font-bold text-gray-800 text-sm">
                             {formatCurrency(p.amount)}
                           </span>
-                          <span className="text-xs text-gray-500 font-medium">
-                            {formatDate(p.date)} · {p.method}
-                          </span>
+                          <p className="text-[11px] font-bold text-gray-800">{p.method}</p>
+                          {p.reference && (
+                            <p className="text-[10px] text-gray-500">Ref: {p.reference}</p>
+                          )}
+                          <p className="text-[10px] text-gray-400">
+                            {formatDate(p.date)}
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-2 items-center mt-2 sm:mt-0">

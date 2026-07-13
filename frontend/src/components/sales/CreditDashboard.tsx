@@ -85,7 +85,7 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                   <input 
                     placeholder="Buscar por documento, nombre, ID de venta..." 
-                    className="text-sm border border-gray-border rounded-lg pl-9 pr-8 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+                    className="text-sm border border-gray-border dark:border-slate-700 rounded-lg pl-9 pr-8 py-1.5 bg-white dark:bg-slate-900 text-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                   />
@@ -128,18 +128,18 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-primary">{creditClient.client.name}</span>
+                              <span className="font-bold text-primary dark:text-white">{creditClient.client.name}</span>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColors.bg} ${statusColors.text}`}>{statusColors.label}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400 mt-1">
                               <span className="flex items-center gap-1"><DollarSign size={12} /> {creditClient.activeCredits} crédito(s)</span>
                               <span className="flex items-center gap-1"><Clock size={12} /> {creditClient.nextDueDate ? formatDate(creditClient.nextDueDate) : 'Sin fecha'}</span>
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-primary">{formatCurrency(creditClient.pendingAmount)}</p>
-                          <p className="text-xs text-gray-500">pendiente</p>
+                          <p className="text-lg font-bold text-primary dark:text-slate-200">{formatCurrency(creditClient.pendingAmount)}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">pendiente</p>
                         </div>
                       </div>
                     );
@@ -163,22 +163,22 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
         </div>
 
         <div className="space-y-6">
-          <Card className="bg-primary text-white border-none shadow-xl shadow-primary/20">
+          <Card className="bg-primary dark:bg-slate-900 text-white dark:text-slate-100 border-none dark:border dark:border-slate-850 shadow-xl shadow-primary/20 dark:shadow-none">
             <CardBody className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 rounded-xl"><Wallet size={24} /></div>
-                <Badge variant="accent" className="bg-white/20 text-white border-none">CARTERA TOTAL</Badge>
+                <div className="p-3 bg-white/20 dark:bg-slate-800/50 rounded-xl"><Wallet size={24} /></div>
+                <Badge variant="accent" className="bg-white/20 dark:bg-slate-800 text-white dark:text-slate-200 border-none">CARTERA TOTAL</Badge>
               </div>
-              <h3 className="text-sm font-medium text-white/80 uppercase tracking-wider">Total Pendiente</h3>
+              <h3 className="text-sm font-medium text-white/80 dark:text-slate-300 uppercase tracking-wider">Total Pendiente</h3>
               <p className="text-3xl font-bold mt-1">{formatCurrency(creditTotals.totalPending)}</p>
-              <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
-                <div className="flex justify-between text-xs text-white/70">
+              <div className="mt-4 pt-4 border-t border-white/20 dark:border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs text-white/70 dark:text-slate-300">
                   <span>Vencido</span>
-                  <span className="font-bold text-red-300">{formatCurrency(creditTotals.totalOverdue)}</span>
+                  <span className="font-bold text-red-300 dark:text-red-400">{formatCurrency(creditTotals.totalOverdue)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-white/70">
+                <div className="flex justify-between text-xs text-white/70 dark:text-slate-300">
                   <span>Próximo (3 días)</span>
-                  <span className="font-bold text-orange-300">{formatCurrency(creditTotals.totalUrgent)}</span>
+                  <span className="font-bold text-orange-300 dark:text-orange-400">{formatCurrency(creditTotals.totalUrgent)}</span>
                 </div>
               </div>
             </CardBody>

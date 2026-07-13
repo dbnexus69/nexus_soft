@@ -560,19 +560,19 @@ export default function Itineraries() {
             </div>
 
             <div className="space-y-6">
-              <Card className="bg-primary text-white border-none shadow-xl shadow-primary/20">
+              <Card className="bg-primary dark:bg-slate-900 text-white dark:text-slate-100 border-none dark:border dark:border-slate-850 shadow-xl shadow-primary/20 dark:shadow-none">
                 <CardBody className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-white/20 rounded-xl">
+                    <div className="p-3 bg-white/20 dark:bg-slate-800/50 rounded-xl">
                       <Clock size={24} />
                     </div>
-                    <Badge variant="accent" className="bg-white/20 text-white border-none">PRÓXIMAS 48H</Badge>
+                    <Badge variant="accent" className="bg-white/20 dark:bg-slate-800 text-white dark:text-slate-200 border-none">PRÓXIMAS 48H</Badge>
                   </div>
-                  <h3 className="text-sm font-medium text-white/80 uppercase tracking-wider">Check-ins Críticos</h3>
+                  <h3 className="text-sm font-medium text-white/80 dark:text-slate-300 uppercase tracking-wider">Check-ins Críticos</h3>
                   <p className="text-3xl font-bold mt-1">
                     {pendingCheckins.filter(f => getFlightStatus(f).isUrgente).length}
                   </p>
-                  <p className="text-xs text-white/60 mt-4 leading-relaxed">
+                  <p className="text-xs text-white/60 dark:text-slate-400 mt-4 leading-relaxed">
                     Recuerda que el check-in debe realizarse al menos 24 horas antes de la salida para evitar inconvenientes.
                   </p>
                 </CardBody>

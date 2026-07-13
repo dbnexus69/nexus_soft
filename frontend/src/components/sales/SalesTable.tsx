@@ -101,9 +101,6 @@ export default function SalesTable({
                   <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
                     {sale.asesorName || "Sin Asesor"}
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    {asesor?.email || "Sin correo"}
-                  </span>
                 </div>
               </div>
             </TableCell>

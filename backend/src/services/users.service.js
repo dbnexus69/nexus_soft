@@ -73,7 +73,7 @@ class UsersService {
       docNumber: u.docNumber,
       status: u.status,
       avatar: u.avatar,
-      birth_date: u.birthDate,
+      birthDate: u.birthDate,
       lastLogin: u.ultimo_login,
       creado_at: u.creadoAt,
       customPermissions: undefined
@@ -111,7 +111,7 @@ class UsersService {
       docNumber: usuario.personas.documento,
       status: usuario.status,
       avatar: usuario.personas.avatar_url,
-      birth_date: usuario.personas.birth_date,
+      birthDate: usuario.personas.birth_date,
       lastLogin: usuario.ultimo_login,
       creado_at: usuario.creadoAt,
       customPermissions: usuario.permisos_usuario.length > 0 ? usuario.permisos_usuario.reduce((acc, pu) => {

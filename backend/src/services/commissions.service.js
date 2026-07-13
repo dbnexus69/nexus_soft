@@ -45,6 +45,9 @@ class CommissionsService {
           c.status,
           c.acumulado as "accumulated",
           c.umbral_pago as "paymentThreshold",
+          c.banco,
+          c.tipo_cuenta as "tipoCuenta",
+          c.numero_cuenta as "numeroCuenta",
           p.nombres as "firstName",
           p.apellidos as "lastName",
           p.telefono as "phone",
@@ -72,7 +75,10 @@ class CommissionsService {
       paymentThreshold: a.paymentThreshold,
       phone: a.phone,
       email: a.email,
-      avatar: a.avatar || null
+      avatar: a.avatar || null,
+      banco: a.banco || null,
+      tipoCuenta: a.tipoCuenta || null,
+      numeroCuenta: a.numeroCuenta || null
     }));
 
     return {
@@ -142,7 +148,10 @@ class CommissionsService {
         tipo: data.type || null,
         umbral_pago: parseFloat(data.paymentThreshold) || 0,
         acumulado: 0,
-        status: data.status || 'Activo'
+        status: data.status || 'Activo',
+        banco: data.banco || null,
+        tipo_cuenta: data.tipoCuenta || null,
+        numero_cuenta: data.numeroCuenta || null
       },
       include: { personas: { include: { tipos_documento: true } } }
     });
@@ -158,7 +167,10 @@ class CommissionsService {
       paymentThreshold: agent.umbral_pago,
       phone: agent.personas.telefono,
       email: agent.personas.email,
-      avatar: agent.personas.avatar_url || null
+      avatar: agent.personas.avatar_url || null,
+      banco: agent.banco || null,
+      tipoCuenta: agent.tipo_cuenta || null,
+      numeroCuenta: agent.numero_cuenta || null
     };
   }
 
@@ -187,7 +199,7 @@ class CommissionsService {
           throw new BadRequestError('Este número de documento ya está asignado a otra persona en el sistema');
         }
       }
-      personaUpdate.documento = data.docNumber;
+      personaUpdate.documento = data.docNumber || null;
     }
 
     if (data.phone !== undefined) personaUpdate.telefono = data.phone;
@@ -200,17 +212,25 @@ class CommissionsService {
     }
 
     if (Object.keys(personaUpdate).length > 0) {
-      personaUpdate.updatedAt = new Date();
+      personaUpdate.updated_at = new Date();
       await prisma.personas.update({
         where: { id: agent.persona_id },
         data: personaUpdate
       });
     }
 
-    if (data.type !== undefined) await prisma.comisionistas.update({ where: { id }, data: { tipo: data.type } });
-    if (data.status !== undefined) await prisma.comisionistas.update({ where: { id }, data: { status: data.status } });
+    const agentUpdate = {};
+    if (data.type !== undefined) agentUpdate.tipo = data.type;
+    if (data.status !== undefined) agentUpdate.status = data.status;
     if (data.paymentThreshold !== undefined) {
-      await prisma.comisionistas.update({ where: { id }, data: { umbral_pago: parseFloat(data.paymentThreshold) || 0 } });
+      agentUpdate.umbral_pago = parseFloat(data.paymentThreshold) || 0;
+    }
+    if (data.banco !== undefined) agentUpdate.banco = data.banco || null;
+    if (data.tipoCuenta !== undefined) agentUpdate.tipo_cuenta = data.tipoCuenta || null;
+    if (data.numeroCuenta !== undefined) agentUpdate.numero_cuenta = data.numeroCuenta || null;
+
+    if (Object.keys(agentUpdate).length > 0) {
+      await prisma.comisionistas.update({ where: { id }, data: agentUpdate });
     }
 
     return { message: 'Comisionista actualizado' };

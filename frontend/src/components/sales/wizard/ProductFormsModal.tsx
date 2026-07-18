@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Link2 } from "lucide-react";
 import { Button } from "../../ui/Button";
 import { SaleProductId } from "../../../types";
 import { WizardFormData, INITIAL_TICKET, INITIAL_HOTEL, INITIAL_INSURANCE, INITIAL_PLAN, INITIAL_CHECKIN, INITIAL_MIGRATION, INITIAL_SIMCARD, INITIAL_CAR_RENTAL, INITIAL_FINCA, INITIAL_TOUR, INITIAL_CONVENTION, INITIAL_RESTAURANT, INITIAL_VISA, INITIAL_PASSPORT, INITIAL_PET_SERVICE } from "../wizardData";
@@ -32,6 +32,63 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
 
   const client = data.clients.find((c: any) => c.name === form.clientId);
 
+  const getCurrentItemLinkedPlanIndex = () => {
+    if (!activeForm || activeIdx === null || activeForm === 'planes') return '';
+    let targetKey = null;
+    switch (activeForm) {
+      case "tiqueteria": targetKey = "tickets"; break;
+      case "hoteleria": targetKey = "hotels"; break;
+      case "seguros_viaje": targetKey = "insurances"; break;
+      case "checkin": targetKey = "checkIns"; break;
+      case "documentacion_migratoria": targetKey = "migrations"; break;
+      case "simcard": targetKey = "simCards"; break;
+      case "renta_vehiculos": targetKey = "carRentals"; break;
+      case "renta_fincas": targetKey = "fincas"; break;
+      case "tours": targetKey = "tours"; break;
+      case "centros_convencion": targetKey = "conventions"; break;
+      case "restaurantes": targetKey = "restaurants"; break;
+      case "visa": targetKey = "visas"; break;
+      case "pasaporte": targetKey = "passports"; break;
+      case "servicio_mascotas": targetKey = "petServices"; break;
+    }
+    if (targetKey) {
+      const items = (form as any)[targetKey];
+      if (items[activeIdx] && items[activeIdx].linkedToPlanIndex !== undefined && items[activeIdx].linkedToPlanIndex !== null) {
+        return items[activeIdx].linkedToPlanIndex.toString();
+      }
+    }
+    return '';
+  };
+
+  const setCurrentItemLinkedPlanIndex = (val: string) => {
+    if (!activeForm || activeIdx === null || activeForm === 'planes') return;
+    let targetKey = null;
+    switch (activeForm) {
+      case "tiqueteria": targetKey = "tickets"; break;
+      case "hoteleria": targetKey = "hotels"; break;
+      case "seguros_viaje": targetKey = "insurances"; break;
+      case "checkin": targetKey = "checkIns"; break;
+      case "documentacion_migratoria": targetKey = "migrations"; break;
+      case "simcard": targetKey = "simCards"; break;
+      case "renta_vehiculos": targetKey = "carRentals"; break;
+      case "renta_fincas": targetKey = "fincas"; break;
+      case "tours": targetKey = "tours"; break;
+      case "centros_convencion": targetKey = "conventions"; break;
+      case "restaurantes": targetKey = "restaurants"; break;
+      case "visa": targetKey = "visas"; break;
+      case "pasaporte": targetKey = "passports"; break;
+      case "servicio_mascotas": targetKey = "petServices"; break;
+    }
+    if (targetKey) {
+      const items = [...((form as any)[targetKey] || [])];
+      if (items[activeIdx]) {
+        items[activeIdx] = { ...items[activeIdx], linkedToPlanIndex: val === '' ? null : Number(val) };
+        set(targetKey as keyof WizardFormData, items);
+      }
+    }
+  };
+
+
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col h-full bg-white relative">
       <div className="px-4 sm:px-6 py-4 border-b border-gray-border bg-slate-50 flex items-center justify-between">
@@ -46,8 +103,31 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
         </Button>
       </div>
 
+
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        {activeForm !== "planes" && form.plans.length > 0 && (
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm animate-fade-in mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Link2 size={16} className="text-primary" />
+              <h4 className="text-sm font-bold text-gray-800 dark:text-slate-200">Vincular a Paquete</h4>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-3">Si este servicio pertenece a un paquete de esta misma venta, selecciónalo aquí para agruparlos.</p>
+            <select 
+              className="w-full text-sm p-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100"
+              value={getCurrentItemLinkedPlanIndex()}
+              onChange={e => setCurrentItemLinkedPlanIndex(e.target.value)}
+            >
+              <option value="">-- No vincular a ningún paquete --</option>
+              {form.plans.map((p, idx) => (
+                <option key={idx} value={idx}>
+                  Paquete #{idx + 1}: {p.planName || p.packageName || 'Sin nombre'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {(() => {
+
           switch (activeForm) {
             case "tiqueteria":
               return (
@@ -80,6 +160,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                     set("hotels", next);
                   }}
                   triggerError={triggerError}
+                  suppliers={data.config.suppliers}
                 />
               );
             case "seguros_viaje":
@@ -93,6 +174,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   data={data}
                   client={client}
+                  suppliers={data.config.suppliers}
                 />
               );
             case "planes":

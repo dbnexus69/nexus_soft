@@ -130,19 +130,19 @@ export default function SaleDetailModal({
   const productSections = [
     { key: "ticketData", label: "Tiquetería", summaryType: "tiqueteria" },
     { key: "hotelData", label: "Hotelería", summaryType: "hoteleria" },
-    { key: "insuranceData", label: "Seguros", summaryType: "seguros" },
+    { key: "insuranceData", label: "Seguros", summaryType: "seguros_viaje" },
     { key: "planData", label: "Planes", summaryType: "planes" },
     { key: "checkInData", label: "CheckIn", summaryType: "checkin" },
-    { key: "migrationData", label: "Migración", summaryType: "migracion" },
+    { key: "migrationData", label: "Migración", summaryType: "documentacion_migratoria" },
     { key: "simCardData", label: "SimCard", summaryType: "simcard" },
-    { key: "carRentalData", label: "AlquilerAutos", summaryType: "autos" },
-    { key: "fincaData", label: "Finca", summaryType: "fincas" },
+    { key: "carRentalData", label: "AlquilerAutos", summaryType: "renta_vehiculos" },
+    { key: "fincaData", label: "Finca", summaryType: "renta_fincas" },
     { key: "tourData", label: "Tour", summaryType: "tours" },
-    { key: "conventionData", label: "Evento", summaryType: "eventos" },
+    { key: "conventionData", label: "Evento", summaryType: "centros_convencion" },
     { key: "restaurantData", label: "Restaurante", summaryType: "restaurantes" },
-    { key: "visaData", label: "Visa", summaryType: "visas" },
-    { key: "passportData", label: "Pasaporte", summaryType: "pasaportes" },
-    { key: "petServiceData", label: "Mascotas", summaryType: "mascotas" },
+    { key: "visaData", label: "Visa", summaryType: "visa" },
+    { key: "passportData", label: "Pasaporte", summaryType: "pasaporte" },
+    { key: "petServiceData", label: "Mascotas", summaryType: "servicio_mascotas" },
   ];
 
   const suppliersList = (() => {

@@ -182,13 +182,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchSales = useCallback(async () => {
     setSalesLoading(true);
     try {
-      const res = await api.listSales({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
-      const freshSales = res.data || [];
-      setData(prev => {
-        saveSalesAndClientsCache(freshSales, prev.clients);
-        return { ...prev, sales: freshSales };
-      });
-    } catch {
+      const res = await api.listSales({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        const freshSales = res.data;
+        setData(prev => {
+          saveSalesAndClientsCache(freshSales, prev.clients);
+          return { ...prev, sales: freshSales };
+        });
+      }
+    } catch (err) {
+      console.error('[DataContext] Error fetching sales:', err);
     } finally {
       setSalesLoading(false);
     }
@@ -196,36 +199,49 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchClients = useCallback(async () => {
     try {
-      const res = await api.listClients({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
-      const freshClients = res.data || [];
-      setData(prev => {
-        saveSalesAndClientsCache(prev.sales, freshClients);
-        return { ...prev, clients: freshClients };
-      });
-    } catch {}
+      const res = await api.listClients({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        const freshClients = res.data;
+        setData(prev => {
+          saveSalesAndClientsCache(prev.sales, freshClients);
+          return { ...prev, clients: freshClients };
+        });
+      }
+    } catch (err) {
+      console.error('[DataContext] Error fetching clients:', err);
+    }
   }, []);
 
   const fetchResponsables = useCallback(async () => {
     try {
-      const res = await api.listResponsables({ perPage: 100, sortOrder: 'desc' }).catch(() => null);
-      const freshResponsables = res?.data || [];
-      setData(prev => ({ ...prev, responsables: freshResponsables }));
-    } catch {}
+      const res = await api.listResponsables({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        setData(prev => ({ ...prev, responsables: res.data }));
+      }
+    } catch (err) {
+      console.error('[DataContext] Error fetching responsables:', err);
+    }
   }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await api.listUsers({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
-      const freshUsers = res.data || [];
-      saveUsersCache(freshUsers);
-      setData(prev => ({ ...prev, users: freshUsers }));
-    } catch {}
+      const res = await api.listUsers({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        saveUsersCache(res.data);
+        setData(prev => ({ ...prev, users: res.data }));
+      }
+    } catch (err) {
+      console.error('[DataContext] Error fetching users:', err);
+    }
   }, []);
 
   const fetchConfig = useCallback(async () => {
     try {
       const [configAll, asesorPerms, freelancerPerms] = await Promise.all([
-        api.getAllConfig().catch(() => ({})),
+        api.getAllConfig().catch((err) => {
+          console.error('[DataContext] Error fetching config:', err);
+          return {};
+        }),
         api.getRolePermissions('asesor').catch(() => null),
         api.getRolePermissions('freelancer').catch(() => null),
       ]);
@@ -234,7 +250,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         freelancer: freelancerPerms ? normalizeRolePermissions(freelancerPerms) : emptyData.config.rolePermissions.freelancer,
       };
       if (configAll && Object.keys(configAll).length > 0) {
-        saveConfigCache({
+        const newConfig = {
           cards: configAll.cards || [],
           paymentMethods: configAll['payment-methods'] || [],
           documentTypes: configAll['document-types'] || [],
@@ -243,29 +259,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
           airports: configAll.airports || [],
           baggage: configAll.baggage || [],
           packages: configAll.packages || [],
-        });
+        };
+        saveConfigCache(newConfig);
+        
+        setData(prev => ({
+          ...prev,
+          config: {
+            ...prev.config,
+            ...newConfig,
+            rolePermissions: resolvedRolePermissions,
+          }
+        }));
       }
-      setData(prev => ({
-        ...prev,
-        config: {
-          cards: configAll?.cards || [],
-          paymentMethods: configAll?.['payment-methods'] || [],
-          documentTypes: configAll?.['document-types'] || [],
-          airlines: configAll?.airlines || [],
-          suppliers: configAll?.suppliers || [],
-          airports: configAll?.airports || [],
-          baggage: configAll?.baggage || [],
-          packages: configAll?.packages || [],
-          rolePermissions: resolvedRolePermissions,
-        }
-      }));
-    } catch {}
+    } catch (err) {
+      console.error('[DataContext] Error in fetchConfig catch block:', err);
+    }
   }, []);
 
   const fetchFlights = useCallback(async () => {
     try {
-      const res = await api.listFlights({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
-      setData(prev => ({ ...prev, flights: res.data || [] }));
+      const res = await api.listFlights({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        setData(prev => ({ ...prev, flights: res.data }));
+      }
     } catch (err) {
       console.warn('[DataContext] Error fetching flights:', err);
     }
@@ -273,16 +289,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchCommissionAgents = useCallback(async () => {
     try {
-      const res = await api.listCommissionAgents({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
-      setData(prev => ({ ...prev, commissionAgents: res.data || [] }));
-    } catch {}
+      const res = await api.listCommissionAgents({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        setData(prev => ({ ...prev, commissionAgents: res.data }));
+      }
+    } catch (err) {
+      console.error('[DataContext] Error fetching agents:', err);
+    }
   }, []);
 
   const fetchSettlements = useCallback(async () => {
     try {
-      const res = await api.listSettlements({ perPage: 100, sortOrder: 'desc' }).catch(() => ({ data: [] }));
-      setData(prev => ({ ...prev, commissionSettlements: res.data || [] }));
-    } catch {}
+      const res = await api.listSettlements({ perPage: 100, sortOrder: 'desc' });
+      if (res && res.data) {
+        setData(prev => ({ ...prev, commissionSettlements: res.data }));
+      }
+    } catch (err) {
+      console.error('[DataContext] Error fetching settlements:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -295,21 +319,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Al iniciar sesión o cambiar de usuario, cargar inmediatamente su caché específico
     // Esto evita mostrar datos del usuario anterior (ej: admin a asesor)
     const cachedConfig = loadConfigCache();
+    const cachedClients = loadClientsCache();
+    const cachedSales = loadSalesCache();
+    const cachedUsers = loadUsersCache();
+    
     setData(prev => ({
       ...emptyData,
-      sales: (loadSalesCache() as Sale[]) || [],
-      clients: (loadClientsCache() as Client[]) || [],
-      users: (loadUsersCache() as User[]) || [],
+      sales: (cachedSales as Sale[]) || [],
+      clients: (cachedClients as Client[]) || [],
+      users: (cachedUsers as User[]) || [],
       config: { ...emptyData.config, ...(cachedConfig || {}) },
     }));
     setDashboardData(loadDashboardCache());
     setDashboardLoading(!loadDashboardCache());
-    setSalesLoading(!loadSalesCache());
+    setSalesLoading(!cachedSales);
 
-    if (!cachedConfig) {
-       fetchConfig();
-    }
-  }, [user?.id, fetchConfig]);
+    // Fetch all data sequentially to prevent connection pool exhaustion on the backend (DB connection limit = 1)
+    const loadBackgroundData = async () => {
+      await fetchConfig();
+      await fetchClients();
+      await fetchUsers();
+      await fetchSales();
+      await fetchResponsables();
+      await fetchCommissionAgents();
+      await fetchSettlements();
+      await fetchFlights();
+    };
+    
+    loadBackgroundData();
+  }, [
+    user?.id, 
+    fetchConfig, 
+    fetchClients, 
+    fetchUsers, 
+    fetchSales, 
+    fetchResponsables, 
+    fetchCommissionAgents, 
+    fetchSettlements, 
+    fetchFlights
+  ]);
 
   const refreshData = () => { 
     // Compatibilidad para el botón refrescar del usuario

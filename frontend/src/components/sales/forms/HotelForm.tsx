@@ -8,12 +8,13 @@ import { DateTimePicker } from "./TicketForm";
 interface HotelFormProps {
   hotel: HotelData;
   onChange: (updates: Partial<HotelData>) => void;
+  triggerError: (msg: string) => void;
   data: any;
-  triggerError?: (msg: string) => void;
   mainClient?: any;
+  suppliers?: { name: string }[];
 }
 
-export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: HotelFormProps) {
+export function HotelForm({ hotel, onChange, triggerError, data, mainClient, suppliers = [] }: HotelFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -63,9 +64,9 @@ export function HotelForm({ hotel, onChange, data, triggerError, mainClient }: H
           </FormField>
           <FormField label="Proveedor">
             <Combobox
-              value={hotel.supplier}
+              value={hotel.supplier || ""}
               onChange={(val) => onChange({ supplier: val })}
-              options={(data?.config?.suppliers || []).map((s: any) => ({ value: s.name, label: s.name }))}
+              options={suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>

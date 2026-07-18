@@ -104,9 +104,13 @@ function renderTicketPassengers(items: any[]) {
 }
 
 function renderGrid(items: { label: string; value: any }[]) {
+  const validItems = items.filter(
+    (item) => item.value !== undefined && item.value !== null && item.value !== "" && item.value !== "-"
+  );
+  if (validItems.length === 0) return null;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-      {items.map((item, i) => (
+      {validItems.map((item, i) => (
         <div key={i} className="min-w-0">
           <span className="block text-xs text-gray-500 truncate" title={item.label}>{item.label}</span>
           <span className="font-semibold text-sm text-gray-800 block break-all whitespace-normal">{safe(item.value)}</span>
@@ -351,18 +355,14 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <ShieldCheck size={16} className="text-accent" /> Seguro #{idx + 1}
             </h4>
             {renderGrid([
+              { label: "Proveedor", value: ins.supplier || "-" },
               { label: "Plan", value: ins.planName || ins.insuranceType },
-              { label: "Cobertura", value: ins.coverageAmount ? `$${Number(ins.coverageAmount).toLocaleString("es-CO")}` : ins.coverageAmount },
+              { label: "Cobertura", value: ins.coverage || ins.coverageAmount ? `$${Number(ins.coverage || ins.coverageAmount).toLocaleString("es-CO")}` : "-" },
               { label: "Días", value: ins.coverageDays },
               { label: "Fecha Inicio", value: ins.startDate ? formatDate(ins.startDate) : "-" },
               { label: "Fecha Fin", value: ins.endDate ? formatDate(ins.endDate) : "-" },
-              { label: "Contacto Emergencia", value: ins.contactName },
-              { label: "Teléfono Emergencia", value: ins.contactNumber },
-              { label: "Dirección Asegurado", value: ins.address },
-            ].filter(item => {
-              const val = item.value;
-              return val !== undefined && val !== null && val !== "" && val !== 0 && val !== "0" && val !== "-";
-            }))}
+              { label: "Contacto / Teléfono", value: ins.phone || ins.contactNumber || "-" },
+            ])}
             {renderPassengers(ins.members || ins.passengers)}
           </div>
         ));
@@ -437,9 +437,9 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <FileInput size={16} className="text-accent" /> Migración #{idx + 1}
             </h4>
             {renderGrid([
-              { label: "Trámite Migratorio", value: item.requestedDocType },
+              { label: "Trámite Migratorio", value: item.requestedDocType || item.tramiteType },
               { label: "Nacionalidad", value: item.nationality },
-              { label: "Nro Pasaporte", value: item.passportNumber },
+              { label: "Nro Pasaporte", value: item.passportNumber || item.docNumber },
               { label: "Vencimiento Pasaporte", value: item.passportExpiry ? formatDate(item.passportExpiry) : "-" },
               { label: "País Destino", value: item.destinationCountry },
             ])}
@@ -470,9 +470,9 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <Car size={16} className="text-accent" /> Alquiler de Auto #{idx + 1}
             </h4>
             {renderGrid([
-              { label: "Conductor Nombre", value: item.mainDriver },
+              { label: "Conductor Principal", value: item.mainDriver || item.driverName },
               { label: "Nro Licencia", value: item.licenseNumber },
-              { label: "Fecha Recogida", value: item.pickupDate ? formatDate(item.pickupDate) : "-" },
+              { label: "Recogida", value: item.pickupDate ? formatDate(item.pickupDate) : "-" },
               { label: "Fecha Devolución", value: item.returnDate ? formatDate(item.returnDate) : "-" },
               { label: "Lugar Recogida", value: item.pickupLocation },
               { label: "Categoría Auto", value: item.vehicleCategory },
@@ -490,10 +490,13 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               <TreePine size={16} className="text-accent" /> Renta de Finca #{idx + 1}
             </h4>
             {renderGrid([
-              { label: "Responsable Nombre", value: item.responsibleName },
+              { label: "Nombre Finca", value: item.fincaName },
+              { label: "Ciudad", value: item.fincaCity || item.city },
+              { label: "Dirección", value: item.fincaAddress || item.address },
+              { label: "Responsable", value: item.responsibleName || item.responsible },
               { label: "Documento Responsable", value: item.docNumber },
-              { label: "Fecha Entrada", value: item.checkInDate ? formatDate(item.checkInDate) : "-" },
-              { label: "Fecha Salida", value: item.checkOutDate ? formatDate(item.checkOutDate) : "-" },
+              { label: "Entrada", value: item.checkInDate ? formatDate(item.checkInDate) : "-" },
+              { label: "Salida", value: item.checkOutDate ? formatDate(item.checkOutDate) : "-" },
               { label: "Adultos", value: item.adultsCount },
               { label: "Niños", value: item.childrenCount },
               { label: "Tiene Mascotas", value: item.hasPets ? "Sí" : "No" },
@@ -553,10 +556,10 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Fecha de Inicio", value: item.startDate ? formatDate(item.startDate) : "-" },
               { label: "Fecha de Fin", value: item.endDate ? formatDate(item.endDate) : "-" },
               { label: "Asistencia Estimada", value: item.estimatedAttendance },
-              { label: "Espacio Requerido", value: item.requiredSpace },
+              { label: "Espacio Requerido", value: item.requiredSpace || item.spaceRequired },
               { label: "Tipo de Evento", value: item.eventType },
               { label: "Equipos AV", value: Array.isArray(item.avEquipment) ? item.avEquipment.join(", ") : item.avEquipment },
-              { label: "Requiere Catering", value: item.hasCatering ? "Sí" : "No" },
+              { label: "Requiere Catering", value: (item.hasCatering || item.cateringNotes) ? "Sí" : "No" },
             ])}
             {item.cateringNotes && (
               <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
@@ -576,16 +579,16 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
             {renderGrid([
               { label: "Nombre Reserva", value: item.reservationName },
               { label: "Fecha y Hora", value: item.dateTime ? formatDate(item.dateTime) + " " + new Date(item.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-" },
-              { label: "Cantidad Personas", value: item.peopleCount },
+              { label: "Cantidad Personas", value: item.peopleCount || item.personsCount },
               { label: "Preferencia Mesa", value: item.tablePreference },
               { label: "Tipo de Menú", value: item.menuType },
               { label: "Ocasión Especial", value: item.specialOccasion },
               { label: "Teléfono", value: item.phone },
             ])}
-            {item.dietaryRestrictions && (
+            {(item.dietaryRestrictions || item.dietRestrictions) && (
               <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
                 <span className="font-bold block text-[10px] text-gray-400 uppercase">Restricciones Alimenticias</span>
-                {Array.isArray(item.dietaryRestrictions) ? item.dietaryRestrictions.join(", ") : item.dietaryRestrictions}
+                {Array.isArray(item.dietaryRestrictions || item.dietRestrictions) ? (item.dietaryRestrictions || item.dietRestrictions).join(", ") : (item.dietaryRestrictions || item.dietRestrictions)}
               </div>
             )}
           </div>
@@ -601,7 +604,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Nombre Completo", value: item.fullName },
               { label: "Fecha Nacimiento", value: item.birthDate ? formatDate(item.birthDate) : "-" },
               { label: "Nacionalidad", value: item.nationality },
-              { label: "Nro Pasaporte", value: item.passportNumber },
+              { label: "Nro Pasaporte", value: item.passportNumber || item.docNumber },
               { label: "Vencimiento Pasaporte", value: item.passportExpiration ? formatDate(item.passportExpiration) : "-" },
               { label: "País Aplicación", value: item.countryApplying },
               { label: "Tipo de Visa", value: item.visaType },
@@ -619,11 +622,11 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
             </h4>
             {renderGrid([
               { label: "Nombre Completo", value: item.fullName },
-              { label: "Nro Documento", value: item.idNumber },
+              { label: "Nro Documento", value: item.idNumber || item.docNumber },
               { label: "Fecha Nacimiento", value: item.birthDate ? formatDate(item.birthDate) : "-" },
               { label: "Ciudad Residencia", value: item.residenceCity },
-              { label: "Tipo Trámite", value: item.processType },
-              { label: "Viaje Estimado", value: item.estimatedTravelDate ? formatDate(item.estimatedTravelDate) : "-" },
+              { label: "Tipo de Trámite", value: item.processType || item.tramiteType },
+              { label: "Fecha Estimada de Viaje", value: item.estimatedTravelDate ? formatDate(item.estimatedTravelDate) : "-" },
               { label: "Teléfono", value: item.phone },
             ])}
           </div>
@@ -640,8 +643,8 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Especie", value: item.species },
               { label: "Raza", value: item.breed },
               { label: "Peso (Kg)", value: item.weight ? `${item.weight} kg` : "-" },
-              { label: "Tamaño", value: item.size },
-              { label: "Tipo de Transporte", value: item.travelType },
+              { label: "Tamaño", value: item.size || "-" },
+              { label: "Tipo de Transporte", value: item.travelType || item.transportCompany },
               { label: "Fecha de Viaje", value: item.travelDate ? formatDate(item.travelDate) : "-" },
               { label: "País Destino", value: item.destinationCountry },
               { label: "Teléfono", value: item.phone },

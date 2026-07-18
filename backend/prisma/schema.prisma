@@ -75,9 +75,12 @@ model detalle_venta {
   destino                  String?
   observaciones            String?
   creado_at                DateTime?           @default(now())
+  parentDetalleId          String?             @map("parent_detalle_id")
   metodos_pago             metodos_pago?       @relation(fields: [metodo_pago_proveedor_id], references: [id])
   proveedores              proveedores?        @relation(fields: [proveedor_id], references: [id])
   ventas                   ventas              @relation(fields: [venta_id], references: [id])
+  parentDetalle            detalle_venta?      @relation("DetalleVentaHierarchy", fields: [parentDetalleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  childDetalles            detalle_venta[]     @relation("DetalleVentaHierarchy")
   pasajeros_detalle        pasajeros_detalle[]
   prod_autos               prod_autos?
   prod_checkins            prod_checkins?
@@ -195,15 +198,16 @@ model paquete_tarifas {
 }
 
 model paquete_vuelo {
-  id            Int         @id @default(autoincrement())
-  paquete_id    Int
-  aerolinea_id  Int?
-  nro_vuelo     String?
-  modo_vuelo    FlightMode? @default(round_trip)
-  trayectos     Json?
-  plan_equipaje String?
-  aerolineas    aerolineas? @relation(fields: [aerolinea_id], references: [id])
-  paquetes      paquetes    @relation(fields: [paquete_id], references: [id])
+  id              Int         @id @default(autoincrement())
+  paquete_id      Int
+  aerolinea_id    Int?
+  nro_vuelo       String?
+  modo_vuelo      FlightMode? @default(round_trip)
+  trayectos       Json?
+  plan_equipaje   String?
+  tipo_transporte String?     @default("Aereo")
+  aerolineas      aerolineas? @relation(fields: [aerolinea_id], references: [id])
+  paquetes        paquetes    @relation(fields: [paquete_id], references: [id])
 }
 
 model paquetes {
@@ -456,6 +460,7 @@ model prod_planes {
   checkin_status_ida          CheckinStatus?   @default(pendiente)
   checkin_status_regreso      CheckinStatus?   @default(pendiente)
   tipo_paquete                String?          @default("own")
+  tipo_transporte             String?          @default("Aereo")
   aerolineas                  aerolineas?      @relation(fields: [aerolineaId], references: [id])
   detalle_venta               detalle_venta    @relation(fields: [detalle_venta_id], references: [id])
   paquetes                    paquetes?        @relation(fields: [paqueteId], references: [id])

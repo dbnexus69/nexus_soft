@@ -406,17 +406,42 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
 
           {/* Vuelo - Estilo TicketForm Completo */}
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-6">
-            <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-              <PlaneTakeoff size={14} className="text-blue-600" /> Detalles del Vuelo (Plantilla)
-            </h4>
-            
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+              <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+                <PlaneTakeoff size={14} className="text-blue-600" /> Detalles del Transporte (Plantilla)
+              </h4>
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, flight: { ...formData.flight, transportType: 'Aereo' } })}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
+                    (!formData.flight?.transportType || formData.flight.transportType !== 'Terrestre')
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                      : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  ✈️ Aéreo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, flight: { ...formData.flight, transportType: 'Terrestre' } })}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
+                    formData.flight?.transportType === 'Terrestre'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
+                      : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  🚌 Terrestre
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Aerolínea">
+              <FormField label={formData.flight?.transportType === 'Terrestre' ? 'Empresa de Transporte' : 'Aerolínea'}>
                 <Combobox 
                   value={formData.flight?.airline || ''} 
                   onChange={val => setFormData({ ...formData, flight: { ...formData.flight, airline: val } })} 
                   options={data.config.airlines.map((a: any) => ({ value: a.name, label: a.name }))}
-                  placeholder="Seleccionar aerolínea..."
+                  placeholder={formData.flight?.transportType === 'Terrestre' ? 'Seleccionar empresa...' : 'Seleccionar aerolínea...'}
                 />
               </FormField>
               <FormField label="Ruta Resumen">
@@ -493,7 +518,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                         placeholder="Ej. CUN"
                       />
                     </FormField>
-                    <FormField label="N° Vuelo">
+                    <FormField label={formData.flight?.transportType === 'Terrestre' ? 'Placa / Vehículo' : 'N° Vuelo'}>
                       <Input 
                         value={leg.flightNumber} 
                         onChange={e => {
@@ -504,7 +529,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                         placeholder="Ej. AV93"
                       />
                     </FormField>
-                    <FormField label="Asiento">
+                    <FormField label={formData.flight?.transportType === 'Terrestre' ? 'Puesto' : 'Asiento'}>
                       <Input 
                         value={leg.seat} 
                         onChange={e => {
@@ -542,14 +567,14 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                     placeholder="Ej. BOG"
                   />
                 </FormField>
-                <FormField label="N° Vuelo">
+                <FormField label={formData.flight?.transportType === 'Terrestre' ? 'Placa / Vehículo' : 'N° Vuelo'}>
                   <Input 
                     value={formData.flight?.returnLeg?.flightNumber || ''} 
                     onChange={e => setFormData({ ...formData, flight: { ...formData.flight, returnLeg: { ...formData.flight?.returnLeg, flightNumber: e.target.value }, flightMode: 'round_trip' } })}
                     placeholder="Ej. AV94"
                   />
                 </FormField>
-                <FormField label="Asiento">
+                <FormField label={formData.flight?.transportType === 'Terrestre' ? 'Puesto' : 'Asiento'}>
                   <Input 
                     value={formData.flight?.returnLeg?.seat || ''} 
                     onChange={e => setFormData({ ...formData, flight: { ...formData.flight, returnLeg: { ...formData.flight?.returnLeg, seat: e.target.value }, flightMode: 'round_trip' } })}

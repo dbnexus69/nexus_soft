@@ -107,7 +107,8 @@ const SECTION_MAP = {
         route: r.paquete_vuelo[0].trayectos ? (typeof r.paquete_vuelo[0].trayectos === 'string' ? JSON.parse(r.paquete_vuelo[0].trayectos).route : r.paquete_vuelo[0].trayectos.route) : null,
         legs: r.paquete_vuelo[0].trayectos ? (typeof r.paquete_vuelo[0].trayectos === 'string' ? JSON.parse(r.paquete_vuelo[0].trayectos).legs : r.paquete_vuelo[0].trayectos.legs) : [],
         returnLeg: r.paquete_vuelo[0].trayectos ? (typeof r.paquete_vuelo[0].trayectos === 'string' ? JSON.parse(r.paquete_vuelo[0].trayectos).returnLeg : r.paquete_vuelo[0].trayectos.returnLeg) : null,
-        baggagePlan: r.paquete_vuelo[0].plan_equipaje
+        baggagePlan: r.paquete_vuelo[0].plan_equipaje,
+        transportType: r.paquete_vuelo[0].tipo_transporte
       } : undefined,
       rates: r.paquete_tarifas?.[0] ? {
         adult: r.paquete_tarifas[0].tarifa_adulto,
@@ -149,7 +150,8 @@ const SECTION_MAP = {
             aerolinea_id: airlineId,
             modo_vuelo: d.flight.flightMode || 'round_trip',
             trayectos: { route: d.flight.route, legs: d.flight.legs, returnLeg: d.flight.returnLeg },
-            plan_equipaje: d.flight.baggagePlan
+            plan_equipaje: d.flight.baggagePlan,
+            tipo_transporte: d.flight.transportType || 'Aereo'
           }]
         } : undefined,
         paquete_tarifas: d.rates ? {

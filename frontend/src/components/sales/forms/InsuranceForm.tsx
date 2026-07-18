@@ -9,9 +9,10 @@ interface InsuranceFormProps {
   onChange: (updates: Partial<InsuranceData>) => void;
   data: any;
   client?: any;
+  suppliers?: { name: string }[];
 }
 
-export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFormProps) {
+export function InsuranceForm({ insurance, onChange, data, client, suppliers = [] }: InsuranceFormProps) {
   useEffect(() => {
     if (!insurance.phone && client?.phone) {
       onChange({ phone: client.phone });
@@ -72,9 +73,9 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
           </FormField>
           <FormField label="Proveedor">
             <Combobox
-              value={insurance.supplier}
+              value={insurance.supplier || ""}
               onChange={(val) => onChange({ supplier: val })}
-              options={(data?.config?.suppliers || []).map((s: any) => ({ value: s.name, label: s.name }))}
+              options={suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -153,13 +154,20 @@ export function InsuranceForm({ insurance, onChange, data, client }: InsuranceFo
                   placeholder="Nombre completo"
                 />
                 <Select
-                  value={member.docType}
+                  value={member.docType || "CC"}
                   onChange={(e) => updateMember(mIdx, { docType: e.target.value })}
-                  options={(data?.config?.documentTypes || []).map((d: any) => {
+                >
+                  <option value="CC">CC</option>
+                  <option value="CE">CE</option>
+                  <option value="PA">PA</option>
+                  <option value="RC">RC</option>
+                  <option value="TI">TI</option>
+                  {(data?.config?.documentTypes || []).map((d: any) => {
                     const code = d.abbreviation || d.abreviatura || d.code || d.name || '';
-                    return { value: code, label: code };
+                    if (["CC", "CE", "PA", "RC", "TI"].includes(code)) return null;
+                    return <option key={code} value={code}>{code}</option>;
                   })}
-                />
+                </Select>
                 <Input
                   value={member.docNumber}
                   onChange={(e) => updateMember(mIdx, { docNumber: e.target.value })}

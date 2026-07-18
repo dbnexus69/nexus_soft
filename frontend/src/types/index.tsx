@@ -231,6 +231,7 @@ export interface HotelData {
   hotelType?: string;
   observations?: string;
   guests: GuestInfo[];
+  linkedToPlanIndex?: number;
 }
 
 export interface PlanData {
@@ -248,7 +249,8 @@ export interface PlanData {
   observations?: string;
   adultsCount?: number;
   childrenCount?: number;
-  startDate: string;
+  transportType?: string;
+    startDate: string;
   endDate: string;
   flightDepartureDate?: string;
   flightDepartureArrivalDate?: string;
@@ -278,6 +280,7 @@ export interface InsuranceData {
   coverageDays: number;
   startDate: string;
   endDate: string;
+  linkedToPlanIndex?: number;
 }
 
 export interface TicketData {
@@ -310,6 +313,7 @@ export interface TicketData {
     nroReserva?: string;
     nroTiquete?: string;
   }[];
+  linkedToPlanIndex?: number;
 }
 
 export interface CheckInData {
@@ -329,6 +333,7 @@ export interface CheckInData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface MigrationData {
@@ -347,6 +352,7 @@ export interface MigrationData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface SimCardData {
@@ -365,6 +371,7 @@ export interface SimCardData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface CarRentalData {
@@ -383,6 +390,7 @@ export interface CarRentalData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface FincaData {
@@ -406,6 +414,7 @@ export interface FincaData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface TourData {
@@ -429,6 +438,7 @@ export interface TourData {
   ta?: number;
   guests: GuestInfo[];
   vouchers?: Array<{ name: string; base64: string }>;
+  linkedToPlanIndex?: number;
 }
 
 export interface ConventionData {
@@ -452,6 +462,7 @@ export interface ConventionData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface RestaurantData {
@@ -469,6 +480,7 @@ export interface RestaurantData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface VisaData {
@@ -488,6 +500,7 @@ export interface VisaData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface PassportData {
@@ -504,6 +517,7 @@ export interface PassportData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface PetServiceData {
@@ -526,6 +540,7 @@ export interface PetServiceData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  linkedToPlanIndex?: number;
 }
 
 export interface PaymentRecord {

@@ -3,8 +3,12 @@ const { success } = require('../utils/apiResponse');
 
 exports.getSection = async (req, res, next) => {
   try {
-    const data = await configService.getSection(req.params.section);
-    success(res, data);
+    const data = await configService.getSection(req.params.section, req.pagination, req.search);
+    if (data && data.meta) {
+      success(res, data.data, data.meta);
+    } else {
+      success(res, data);
+    }
   } catch (err) {
     next(err);
   }

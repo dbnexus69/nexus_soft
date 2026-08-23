@@ -55,7 +55,6 @@ export default function SalesTable({
         "Cliente",
         "Asesor",
         "Comisionista",
-        "T.A / Costos",
         "Total",
         "Fecha",
         "Estado",
@@ -71,17 +70,6 @@ export default function SalesTable({
             <TableCell>{formatSaleId(sale.id)}</TableCell>
             <TableCell>
               <div className="flex items-center gap-3">
-                {sale.clientAvatar ? (
-                  <img
-                    src={sale.clientAvatar}
-                    className="w-8 h-8 rounded-full border border-gray-200"
-                    alt={sale.clientName}
-                  />
-                ) : (
-                  <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getAvatarGradient(sale.clientName)} flex items-center justify-center font-black text-xs shadow-sm border border-white/20 shrink-0`}>
-                    {sale.clientName.charAt(0).toUpperCase()}
-                  </div>
-                )}
                 <div className="flex flex-col">
                   <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
                     {sale.clientName}
@@ -94,9 +82,6 @@ export default function SalesTable({
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-2.5">
-                <div className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarGradient(sale.asesorName)} flex items-center justify-center font-extrabold text-[10px] shadow-sm border border-white/20 shrink-0`}>
-                  {sale.asesorName ? sale.asesorName.charAt(0).toUpperCase() : 'A'}
-                </div>
                 <div className="flex flex-col">
                   <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
                     {sale.asesorName || "Sin Asesor"}
@@ -105,27 +90,9 @@ export default function SalesTable({
               </div>
             </TableCell>
             <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
-                      {sale.commissionAgentName}
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 flex flex-col">
-                      <span>Comisión: {sale.commissionAgentAmount ? formatCurrency(sale.commissionAgentAmount) : 'Sin Monto'}</span>
-                      {sale.isSettled ? (
-                        <span className="text-emerald-500 font-semibold flex items-center gap-1 mt-0.5"><CheckCircle2 size={10} /> Pagada</span>
-                      ) : (
-                        <span className="text-amber-500 font-semibold flex items-center gap-1 mt-0.5"><RxUpdate size={10} /> Pendiente</span>
-                      )}
-                    </span>
-                  </div>
-            </TableCell>
-            <TableCell>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-emerald-600">
-                  T.A: {formatCurrency(sale.ta || 0)}
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                  Costo: {formatCurrency(sale.supplierCost || 0)}
+                <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
+                  {sale.commissionAgentName || "-"}
                 </span>
               </div>
             </TableCell>

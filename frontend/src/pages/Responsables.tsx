@@ -64,27 +64,27 @@ export default function Responsables() {
         else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) errorMsg = 'El apellido solo debe contener letras';
         else if (value.length > 40) errorMsg = 'El apellido no puede exceder 40 caracteres';
         break;
-      case 'docType':
+      case 'docTypeId':
         if (!value) errorMsg = 'Seleccione un tipo de documento';
         break;
       case 'docNumber':
         if (!value.trim()) {
           errorMsg = 'El número de documento es obligatorio';
         } else {
-          const typeUpper = formData.docType ? formData.docType.toUpperCase() : '';
-          if (typeUpper === 'PASAPORTE' || typeUpper === 'PP' || typeUpper === 'PAS') {
+          const typeUpper = getDocTypeName(formData.docTypeId);
+          if (typeUpper.includes('PASAPORTE') || typeUpper === 'PP' || typeUpper === 'PAS') {
             if (value.length < 9 || value.length > 12) {
               errorMsg = 'El pasaporte debe tener entre 9 y 12 caracteres';
             } else if (!/^[a-zA-Z0-9]+$/.test(value)) {
               errorMsg = 'El pasaporte solo debe contener caracteres alfanuméricos';
             }
-          } else if (typeUpper === 'NIT' || typeUpper === 'RUT') {
+          } else if (typeUpper.includes('NIT') || typeUpper.includes('RUT')) {
             if (value.length !== 11) {
               errorMsg = 'El NIT/RUT debe tener exactamente 11 caracteres (9 dígitos + guion + 1 dígito)';
             } else if (!/^\d{9}-\d{1}$/.test(value)) {
               errorMsg = 'El NIT/RUT debe tener formato 9 dígitos - guion - 1 dígito de verificación (ej: 123456789-0)';
             }
-          } else if (typeUpper === 'CC') {
+          } else if (typeUpper.includes('CÉDULA') || typeUpper.includes('CEDULA') || typeUpper === 'CC') {
             if (value.length < 8 || value.length > 10) {
               errorMsg = 'La cédula de ciudadanía debe tener entre 8 y 10 dígitos';
             } else if (!/^\d+$/.test(value)) {
@@ -112,18 +112,6 @@ export default function Responsables() {
         else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) errorMsg = 'El correo no es válido';
         else if (value.length > 40) errorMsg = 'El correo no puede exceder 40 caracteres';
         break;
-      case 'birthDate':
-        if (!value) {
-          errorMsg = 'La fecha de nacimiento es obligatoria';
-        } else {
-          const selectedDate = new Date(value);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          if (selectedDate > today) {
-            errorMsg = 'La fecha de nacimiento no puede ser superior a la fecha actual';
-          }
-        }
-        break;
     }
     
     setErrors(prev => ({ ...prev, [name]: errorMsg }));
@@ -141,15 +129,19 @@ export default function Responsables() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    docType: '',
+    docTypeId: '',
     docNumber: '',
     phone: '',
     email: '',
-    birthDate: '',
     status: 'active' as 'active' | 'inactive'
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const getDocTypeName = (id: string | number) => {
+    if (!id) return '';
+    const found = data.config.documentTypes.find(d => String(d.id) === String(id));
+    return found ? (found.name || '').toUpperCase() : '';
+  };
 
 
 
@@ -160,11 +152,10 @@ export default function Responsables() {
       setFormData({
         firstName: responsable.firstName || '',
         lastName: responsable.lastName || '',
-        docType: responsable.docType,
+        docTypeId: responsable.docTypeId ? String(responsable.docTypeId) : '',
         docNumber: responsable.docNumber,
         phone: responsable.phone,
         email: responsable.email,
-        birthDate: responsable.birthDate || '',
         status: responsable.status
       });
     } else {
@@ -172,11 +163,10 @@ export default function Responsables() {
       setFormData({
         firstName: '',
         lastName: '',
-        docType: '',
+        docTypeId: '',
         docNumber: '',
         phone: '',
         email: '',
-        birthDate: '',
         status: 'active'
       });
     }
@@ -194,27 +184,27 @@ export default function Responsables() {
     else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formData.lastName)) newErrors.lastName = 'El apellido solo debe contener letras';
     else if (formData.lastName.length > 40) newErrors.lastName = 'El apellido no puede exceder 40 caracteres';
     
-    if (!formData.docType) {
-      newErrors.docType = 'Seleccione un tipo de documento';
+    if (!formData.docTypeId) {
+      newErrors.docTypeId = 'Seleccione un tipo de documento';
     }
     
     if (!formData.docNumber.trim()) {
       newErrors.docNumber = 'El número de documento es obligatorio';
     } else {
-      const typeUpper = formData.docType ? formData.docType.toUpperCase() : '';
-      if (typeUpper === 'PASAPORTE' || typeUpper === 'PP' || typeUpper === 'PAS') {
+      const typeUpper = getDocTypeName(formData.docTypeId);
+      if (typeUpper.includes('PASAPORTE') || typeUpper === 'PP' || typeUpper === 'PAS') {
         if (formData.docNumber.length < 9 || formData.docNumber.length > 12) {
           newErrors.docNumber = 'El pasaporte debe tener entre 9 y 12 caracteres';
         } else if (!/^[a-zA-Z0-9]+$/.test(formData.docNumber)) {
           newErrors.docNumber = 'El pasaporte solo debe contener caracteres alfanuméricos';
         }
-      } else if (typeUpper === 'NIT' || typeUpper === 'RUT') {
+      } else if (typeUpper.includes('NIT') || typeUpper.includes('RUT')) {
         if (formData.docNumber.length !== 11) {
           newErrors.docNumber = 'El NIT/RUT debe tener exactamente 11 caracteres (9 dígitos + guion + 1 dígito)';
         } else if (!/^\d{9}-\d{1}$/.test(formData.docNumber)) {
           newErrors.docNumber = 'El NIT/RUT debe tener formato 9 dígitos - guion - 1 dígito de verificación (ej: 123456789-0)';
         }
-      } else if (typeUpper === 'CC') {
+      } else if (typeUpper.includes('CÉDULA') || typeUpper.includes('CEDULA') || typeUpper === 'CC') {
         if (formData.docNumber.length < 8 || formData.docNumber.length > 10) {
           newErrors.docNumber = 'La cédula de ciudadanía debe tener entre 8 y 10 dígitos';
         } else if (!/^\d+$/.test(formData.docNumber)) {
@@ -233,7 +223,6 @@ export default function Responsables() {
     else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) newErrors.email = 'El correo no es válido';
     else if (formData.email.length > 40) newErrors.email = 'El correo no puede exceder 40 caracteres';
     
-    if (!formData.birthDate) newErrors.birthDate = 'La fecha de nacimiento es obligatoria';
 
     const isDuplicateDoc = data.responsables.some(c => 
       c.docNumber === formData.docNumber && (!editingResponsable || c.id !== editingResponsable.id)
@@ -263,7 +252,7 @@ export default function Responsables() {
 
       if (editingResponsable) {
         await updateResponsable(editingResponsable.id, responsableData);
-        setSuccessMessage('Responsablee actualizado exitosamente');
+        setSuccessMessage('Responsable actualizado exitosamente');
       } else {
         await addResponsable(responsableData);
         setSuccessMessage('Nuevo responsablee registrado correctamente');
@@ -304,11 +293,10 @@ export default function Responsables() {
       const updateData = {
         firstName: responsableData.name.split(' ')[0],
         lastName: responsableData.name.split(' ').slice(1).join(' '),
-        docType: responsableData.docType,
+        docTypeId: responsableData.docTypeId,
         docNumber: responsableData.docNumber,
         phone: responsableData.phone,
         email: responsableData.email,
-        birthDate: responsableData.birthDate,
         status: newStatus
       };
 
@@ -392,11 +380,6 @@ export default function Responsables() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter]);
 
-  const responsableSales = useMemo(() => {
-    return selectedResponsable
-      ? data.sales.filter(s => s.responsableId === selectedResponsable.id)
-      : [];
-  }, [selectedResponsable, data.sales]);
 
   const responsableFlights = useMemo(() => {
     return selectedResponsable
@@ -429,12 +412,14 @@ export default function Responsables() {
       )}
 
       {showSuccess && createPortal(
-        <div className="fixed top-20 right-6 z-[200] bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right">
-          <div className={`rounded-full p-1 ${toggleAction === 'activated' ? 'bg-green-500 animate-pop-in' : toggleAction === 'deactivated' ? 'bg-orange-500' : 'bg-green-500'}`}>
+        <div className={`fixed top-20 right-6 z-[200] border px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right ${
+          toggleAction === 'deactivated' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
+        }`}>
+          <div className={`rounded-full p-1 text-white ${toggleAction === 'activated' ? 'bg-green-500 animate-pop-in' : toggleAction === 'deactivated' ? 'bg-red-500 animate-pop-in' : 'bg-green-500'}`}>
             {toggleAction === 'activated' ? <UserCheck size={18} /> : toggleAction === 'deactivated' ? <UserX size={18} /> : <CheckCircle size={18} />}
           </div>
           <div>
-            <p className="font-bold text-sm">{toggleAction === 'activated' ? 'Responsablee Activado' : toggleAction === 'deactivated' ? 'Responsablee Desactivado' : 'Operación Exitosa'}</p>
+            <p className="font-bold text-sm">{toggleAction === 'activated' ? 'Responsable Activado' : toggleAction === 'deactivated' ? 'Responsable Desactivado' : 'Operación Exitosa'}</p>
             <p className="text-xs opacity-90">{successMessage}</p>
           </div>
         </div>,
@@ -458,7 +443,7 @@ export default function Responsables() {
       <Modal
         isOpen={!!confirmToggle}
         onClose={handleCancelToggle}
-        title={confirmToggle?.newStatus === 'inactive' ? 'Desactivar Responsablee' : 'Activar Responsablee'}
+        title={confirmToggle?.newStatus === 'inactive' ? 'Desactivar Responsable' : 'Activar Responsable'}
         size="sm"
         footer={
           <>
@@ -698,20 +683,18 @@ export default function Responsables() {
               </FormField>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Tipo de Documento" error={errors.docType}>
+              <FormField label="Tipo de Documento" error={errors.docTypeId}>
                 <Select
-                  value={formData.docType}
+                  value={formData.docTypeId}
                   onChange={e => {
-                    setFormData({ ...formData, docType: e.target.value });
-                    if (errors.docType) setErrors(prev => ({ ...prev, docType: '' }));
-                    validateField('docType', e.target.value);
+                    setFormData({ ...formData, docTypeId: e.target.value });
+                    if (errors.docTypeId) setErrors(prev => ({ ...prev, docTypeId: '' }));
+                    validateField('docTypeId', e.target.value);
                   }}
                   options={[{ value: '', label: 'Seleccionar...' }, ...data.config.documentTypes.map(d => {
-                    const code = d.abreviatura || d.name || '';
-                    const labelStr = code;
-                    return { value: code, label: labelStr };
+                    return { value: String(d.id), label: d.name };
                   })]}
-                  error={errors.docType}
+                  error={errors.docTypeId}
                 />
               </FormField>
               <FormField label="Número de Documento" error={errors.docNumber}>
@@ -719,12 +702,12 @@ export default function Responsables() {
                   value={formData.docNumber}
                   onChange={e => {
                     let val = e.target.value;
-                    const typeUpper = formData.docType ? formData.docType.toUpperCase() : '';
-                    if (typeUpper === 'CC') {
+                    const typeUpper = getDocTypeName(formData.docTypeId);
+                    if (typeUpper.includes('CÉDULA') || typeUpper.includes('CEDULA') || typeUpper === 'CC') {
                       val = val.replace(/\D/g, '');
-                    } else if (typeUpper === 'PASAPORTE' || typeUpper === 'PP' || typeUpper === 'PAS') {
+                    } else if (typeUpper.includes('PASAPORTE') || typeUpper === 'PP' || typeUpper === 'PAS') {
                       val = val.replace(/[^a-zA-Z0-9]/g, '');
-                    } else if (typeUpper === 'NIT' || typeUpper === 'RUT') {
+                    } else if (typeUpper.includes('NIT') || typeUpper.includes('RUT')) {
                       val = val.replace(/[^0-9-]/g, '');
                     } else {
                       val = val.replace(/[^\w-]/gi, '');
@@ -736,10 +719,10 @@ export default function Responsables() {
                   placeholder="Número de documento"
                   error={errors.docNumber}
                   maxLength={
-                    formData.docType ? (
-                      formData.docType.toUpperCase() === 'CC' ? 10 :
-                      ['PASAPORTE', 'PP', 'PAS'].includes(formData.docType.toUpperCase()) ? 12 :
-                      ['NIT', 'RUT'].includes(formData.docType.toUpperCase()) ? 11 : 15
+                    formData.docTypeId ? (
+                      getDocTypeName(formData.docTypeId).includes('CÉDULA') || getDocTypeName(formData.docTypeId).includes('CEDULA') || getDocTypeName(formData.docTypeId) === 'CC' ? 10 :
+                      getDocTypeName(formData.docTypeId).includes('PASAPORTE') || ['PP', 'PAS'].includes(getDocTypeName(formData.docTypeId)) ? 12 :
+                      getDocTypeName(formData.docTypeId).includes('NIT') || getDocTypeName(formData.docTypeId).includes('RUT') ? 11 : 15
                     ) : 15
                   }
                 />
@@ -758,20 +741,6 @@ export default function Responsables() {
                   placeholder="3001234567"
                   error={errors.phone}
                   maxLength={15}
-                />
-              </FormField>
-              <FormField label="Fecha de Nacimiento" error={errors.birthDate}>
-                <DatePicker
-                  value={formData.birthDate}
-                  onChange={(val) => {
-                    setFormData({ ...formData, birthDate: val });
-                    if (errors.birthDate) setErrors(prev => ({ ...prev, birthDate: '' }));
-                    validateField('birthDate', val);
-                  }}
-                  max={todayStr()}
-                  fieldName="Nacimiento del responsablee"
-                  popoverDirection="up"
-                  triggerError={triggerError}
                 />
               </FormField>
             </div>
@@ -816,7 +785,6 @@ export default function Responsables() {
         isOpen={isDetailOpen} 
         onClose={() => setIsDetailOpen(false)} 
         responsable={selectedResponsable} 
-        responsableSales={responsableSales} 
         responsableFlights={responsableFlights} 
       />
 

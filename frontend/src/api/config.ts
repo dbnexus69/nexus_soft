@@ -16,10 +16,10 @@ export async function getAllConfig() {
   return res.data.data;
 }
 
-export async function getConfigSection(section: string) {
+export async function getConfigSection(section: string, params: any = {}) {
   const urlSection = SECTION_MAP[section] || section;
-  const res = await api.get(`/config/${urlSection}`);
-  return res.data.data;
+  const res = await api.get(`/config/${urlSection}`, { params });
+  return res.data;
 }
 
 export async function createConfigItem(section: string, data: Record<string, unknown>) {

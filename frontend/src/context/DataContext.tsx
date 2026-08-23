@@ -428,8 +428,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateResponsable = async (id: number, responsable: any) => {
-    await api.updateResponsable(id, responsable);
-    await fetchResponsables();
+    const res = await api.updateResponsable(id, responsable);
+    const updated = res.data;
+    setData(prev => ({
+      ...prev,
+      responsables: prev.responsables.map(r => r.id === id ? updated : r)
+    }));
   };
 
   const deleteResponsable = async (id: number) => {

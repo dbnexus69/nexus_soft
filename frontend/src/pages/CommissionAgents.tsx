@@ -18,6 +18,7 @@ import {
   Pencil,
   Users,
   Loader2,
+  X,
 } from "lucide-react";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -31,6 +32,8 @@ import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, capitalizeName, todayStr } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
 import LoadingScreen from "../components/ui/LoadingScreen";
+import { Pagination } from "../components/ui/Pagination";
+import { AgentDetailsModal } from "../components/commissions/AgentDetailsModal";
 
 export default function CommissionAgents() {
   const { data } = useData();
@@ -50,6 +53,7 @@ export default function CommissionAgents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<any>(null);
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"agents" | "settlements" | "history">("agents");
@@ -277,73 +281,81 @@ export default function CommissionAgents() {
         document.body
       )}
 
-      {/* Background Glow */}
-      <div className="absolute -top-20 -right-20 w-96 h-96 bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* Header Section */}
-      <div className="flex flex-col items-center justify-center gap-4 animate-fade-in relative z-10 text-center">
-        <div className="flex flex-col items-center justify-center">
-          <h1 className="text-2xl sm:text-4xl font-black text-primary tracking-tight flex items-center justify-center gap-3 sm:gap-4">
-            <div className="p-2.5 sm:p-3 bg-primary rounded-xl sm:rounded-2xl shadow-xl shadow-primary/20 text-white shrink-0">
-              <Coins size={24} className="sm:hidden" />
-              <Coins size={32} className="hidden sm:block" />
-            </div>
-            Comisionistas
-          </h1>
-          <p className="text-gray-500 font-medium mt-1 sm:mt-2 max-w-lg text-xs sm:text-sm">
-            Sistema avanzado de gestión de comisionistas, control de liquidaciones y seguimiento financiero.
-          </p>
-        </div>
-        <div className="w-full sm:w-auto">
-          {canCreate('commissions') && (
-            <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto h-12 sm:h-14 px-6 sm:px-8 bg-accent hover:bg-accent/90 text-white shadow-lg shadow-accent/20 rounded-xl sm:rounded-2xl transition-all hover:scale-105 active:scale-95 font-bold justify-center text-xs sm:text-sm">
-              <Plus size={20} /> Registrar Comisionista
-            </Button>
-          )}
+      <div className="mb-6 animate-fade-in">
+        <div className="flex flex-col items-center justify-center gap-4 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-3xl font-bold text-primary flex items-center justify-center gap-3">
+              <Coins className="text-accent w-8 h-8" /> Gestión de Comisionistas
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Sistema avanzado de gestión de comisionistas, control de liquidaciones y seguimiento financiero.
+            </p>
+          </div>
         </div>
       </div>
 
 
 
-      {/* Tab Navigation */}
-      <div className="flex flex-col gap-6 relative z-10">
-        <div className="flex flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm w-full sm:w-auto self-start">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 ${
-                  isActive
-                    ? "bg-primary text-white shadow-xl shadow-primary/20 scale-105"
-                    : "text-gray-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-primary dark:hover:text-primary"
-                }`}
-              >
-                <Icon size={16} className={isActive ? "animate-pulse" : ""} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Content Area */}
-        <div className="min-h-[400px]">
-          {/* === PESTAÑA DIRECTORIO === */}
-          {activeTab === "agents" && (
-            <div className="space-y-6 animate-fade-in-up">
-              {/* Search Bar */}
-              <div className="relative group max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={20} />
-                <Input
-                  className="pl-12 h-14 rounded-2xl border-gray-100 bg-white/80 backdrop-blur-sm shadow-sm focus:shadow-md transition-all text-sm"
-                  placeholder="Buscar por nombre o documento..."
+      <Card className="animate-fade-in">
+        <CardHeader actions={
+          <div className="flex gap-3 items-center flex-wrap">
+            {activeTab === 'agents' && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Input 
+                  placeholder="Buscar por nombre o doc..." 
+                  className="pl-10 pr-9 w-72"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                 />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                    <X size={14} />
+                  </button>
+                )}
               </div>
+            )}
+            {canCreate('commissions') && (
+              <Button 
+                onClick={() => handleOpenModal()}
+                className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/30 rounded-xl px-6 h-11 transition-all hover:scale-105 active:scale-95 ml-auto"
+              >
+                <Plus size={20} className="mr-1" /> Nuevo Comisionista
+              </Button>
+            )}
+          </div>
+        }>
+          Directorio
+        </CardHeader>
+        
+        <div className="p-4 sm:p-6">
+          {/* Tab Navigation */}
+          <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-100 dark:border-slate-700 pb-2">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 ${
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Icon size={16} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Content Area */}
+          <div className="min-h-[400px]">
+            {/* === PESTAÑA DIRECTORIO === */}
+            {activeTab === "agents" && (
+              <div className="space-y-6 animate-fade-in-up">
 
               {filteredAgents.length === 0 ? (
                 <div className="bg-white dark:bg-slate-800/50 rounded-[2rem] border border-dashed border-gray-200 dark:border-slate-700 py-20 flex flex-col items-center text-center">
@@ -422,6 +434,9 @@ export default function CommissionAgents() {
                             )}
                             
                             <div className="flex flex-row gap-1">
+                              <button onClick={() => { setSelectedAgent(agent); setIsDetailsModalOpen(true); }} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Ver Detalles">
+                                <FileText size={16} />
+                              </button>
                               {canEdit('commissions') && (
                                 <button onClick={() => handleOpenModal(agent)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Editar">
                                   <Pencil size={16} />
@@ -601,6 +616,7 @@ export default function CommissionAgents() {
           )}
         </div>
       </div>
+    </Card>
 
       {/* === MODAL CREAR/EDITAR COMISIONISTA === */}
       <Modal
@@ -909,6 +925,12 @@ export default function CommissionAgents() {
           </p>
         </div>
       </Modal>
+
+      <AgentDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        agent={selectedAgent}
+      />
     </div>
   );
 }

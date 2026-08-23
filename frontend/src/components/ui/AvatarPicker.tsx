@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
+import { RefreshCw } from 'lucide-react';
 
-const SEEDS = [
+export const generateAvatarUrl = (seed: string) => `https://api.dicebear.com/7.x/notionists/svg?seed=${seed}&backgroundColor=transparent`;
+
+const INITIAL_SEEDS = [
   'Felix', 'Aneka', 'Jack', 'Mimi', 'Casper', 'Luna', 
   'Oliver', 'Willow', 'Leo', 'Maya', 'Toby', 'Zoe', 
   'Finn', 'Ruby', 'Arlo', 'Nala', 'Bear', 'Bella', 'Milo', 'Daisy'
 ];
 
-export const AVATARS = SEEDS.map(seed => `https://api.dicebear.com/7.x/micah/svg?seed=${seed}&backgroundColor=transparent`);
+export const AVATARS = INITIAL_SEEDS.map(generateAvatarUrl);
 
 interface AvatarPickerProps {
   value: string;
@@ -14,8 +17,28 @@ interface AvatarPickerProps {
 }
 
 export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
-  // Ensure the value being passed is within our generated avatars, otherwise default to the first one
-  const safeValue = AVATARS.includes(value) ? value : AVATARS[0];
+  const [avatarsList, setAvatarsList] = useState<string[]>(AVATARS);
+  
+  // Ensure the value being passed is handled properly.
+  // If it's empty, we default to the first one in the list.
+  const safeValue = value || avatarsList[0];
+
+  const handleGenerateMore = () => {
+    const newAvatars = Array.from({ length: 20 }).map(() => {
+      const randomSeed = Math.random().toString(36).substring(2, 10);
+      return generateAvatarUrl(randomSeed);
+    });
+    setAvatarsList(newAvatars);
+  };
+
+  // If the currently selected avatar isn't in the list (because we generated new ones),
+  // we prepend it so it remains visible.
+  const displayAvatars = useMemo(() => {
+    if (safeValue && !avatarsList.includes(safeValue)) {
+      return [safeValue, ...avatarsList.slice(0, 19)];
+    }
+    return avatarsList;
+  }, [avatarsList, safeValue]);
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -31,11 +54,21 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
       </div>
       
       <div className="w-full">
-        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 text-center">Elegir Avatar</h3>
+        <div className="flex justify-between items-center mb-3 px-2">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Elegir Avatar</h3>
+          <button 
+            type="button" 
+            onClick={handleGenerateMore}
+            className="text-xs flex items-center gap-1.5 text-primary hover:text-primary/80 font-bold transition-all hover:scale-105 bg-primary/10 px-2.5 py-1 rounded-md"
+          >
+            <RefreshCw size={14} /> Nuevos
+          </button>
+        </div>
+        
         <div className="flex flex-wrap justify-center gap-2 max-h-[220px] overflow-y-auto custom-scrollbar p-2 bg-gray-50/50 dark:bg-slate-800/30 rounded-xl border border-gray-100 dark:border-slate-700/50">
-          {AVATARS.map((avatar, i) => (
+          {displayAvatars.map((avatar, i) => (
             <button
-              key={i}
+              key={`${avatar}-${i}`}
               type="button"
               onClick={() => onChange(avatar)}
               className={`w-12 h-12 rounded-full cursor-pointer border-2 transition-all hover:scale-110 flex items-center justify-center p-0.5 overflow-hidden ${

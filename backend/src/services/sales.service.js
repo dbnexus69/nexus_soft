@@ -941,13 +941,15 @@ class SalesService {
     };
   }
 
-  async listSales({ pagination, search, status, asesorId, clientId, dateFrom, dateTo, permissionScope, user, sortBy, sortOrder }) {
+  async listSales({ pagination, search, status, asesorId, clientId, responsableId, commissionAgentId, dateFrom, dateTo, permissionScope, user, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
 
     let searchCondition = search ? `AND v.observaciones ILIKE '%${search.replace(/'/g, "''")}%'` : '';
     let statusCondition = status ? `AND v.status = '${status.replace(/'/g, "''")}'` : '';
     let asesorCondition = asesorId ? `AND v.usuario_id = ${parseInt(asesorId)}` : '';
     let clientCondition = clientId ? `AND v.cliente_id = ${parseInt(clientId)}` : '';
+    let responsableCondition = responsableId ? `AND v.responsable_id = ${parseInt(responsableId)}` : '';
+    let commissionCondition = commissionAgentId ? `AND v.comisionista_id = ${parseInt(commissionAgentId)}` : '';
     let dateCondition = '';
     if (dateFrom) dateCondition += ` AND v.creado_at >= '${new Date(dateFrom).toISOString()}'`;
     if (dateTo) dateCondition += ` AND v.creado_at <= '${new Date(dateTo).toISOString()}'`;
@@ -961,6 +963,8 @@ class SalesService {
     if (status) where.status = status;
     if (asesorId) where.usuario_id = parseInt(asesorId);
     if (clientId) where.cliente_id = parseInt(clientId);
+    if (responsableId) where.responsable_id = parseInt(responsableId);
+    if (commissionAgentId) where.comisionista_id = parseInt(commissionAgentId);
     if (dateFrom || dateTo) {
       where.creado_at = {};
       if (dateFrom) where.creado_at.gte = new Date(dateFrom);
@@ -1036,7 +1040,7 @@ class SalesService {
         JOIN personas up ON u.persona_id = up.id
         LEFT JOIN comisionistas com ON v.comisionista_id = com.id
         LEFT JOIN personas comp ON com.persona_id = comp.id
-        WHERE 1=1 ${searchCondition} ${statusCondition} ${asesorCondition} ${clientCondition} ${dateCondition}
+        WHERE 1=1 ${searchCondition} ${statusCondition} ${asesorCondition} ${clientCondition} ${responsableCondition} ${commissionCondition} ${dateCondition}
         ORDER BY ${sqlOrderBy} ${sortOrder === 'desc' ? 'DESC' : 'ASC'}
         LIMIT ${perPage} OFFSET ${skip}
       `)

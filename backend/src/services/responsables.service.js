@@ -44,7 +44,8 @@ class ResponsablesService {
           p.email,
           p.birth_date as "birthDate",
           r.status,
-          td.abreviatura as "docType",
+          td.id as "docTypeId",
+          td.nombre as "docType",
           COALESCE(
             (SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0))
              FROM ventas v
@@ -65,6 +66,7 @@ class ResponsablesService {
       firstName: r.firstName,
       lastName: r.lastName,
       name: `${r.firstName} ${r.lastName}`,
+      docTypeId: r.docTypeId || null,
       docType: r.docType || null,
       docNumber: r.docNumber,
       phone: r.phone,
@@ -125,7 +127,7 @@ class ResponsablesService {
       lastName: responsable.personas.apellidos,
       name: `${responsable.personas.nombres} ${responsable.personas.apellidos}`,
       docTypeId: responsable.personas.tipos_documento?.id || null,
-      docType: responsable.personas.tipos_documento?.abreviatura || null,
+      docType: responsable.personas.tipos_documento?.nombre || null,
       docNumber: responsable.personas.documento,
       phone: responsable.personas.telefono,
       email: responsable.personas.email,
@@ -141,11 +143,11 @@ class ResponsablesService {
    * Crear responsable
    */
   async createResponsable(data) {
-    const { firstName, lastName, docType, docTypeId: rawDocTypeId, docNumber, phone, email, birthDate } = data;
+    const { firstName, lastName, docType, docTypeId: rawDocTypeId, docNumber, phone, email } = data;
 
     let docTypeId = rawDocTypeId ? parseInt(rawDocTypeId) : null;
     if (!docTypeId && docType) {
-      const tipoDoc = await prisma.tipos_documento.findFirst({ where: { abreviatura: docType } });
+      const tipoDoc = await prisma.tipos_documento.findFirst({ where: { nombre: docType } });
       docTypeId = tipoDoc ? tipoDoc.id : null;
     }
 
@@ -162,8 +164,7 @@ class ResponsablesService {
             tipo_documento_id: docTypeId || null,
             documento: docNumber || null,
             telefono: phone,
-            email: email,
-            birth_date: birthDate ? new Date(birthDate) : null,
+            email: email
           }
         });
       } else {
@@ -185,8 +186,7 @@ class ResponsablesService {
                 apellidos: lastName,
                 tipo_documento_id: docTypeId || personas.tipo_documento_id,
                 telefono: phone || personas.telefono,
-                email: email || personas.email,
-                birth_date: birthDate ? new Date(birthDate) : personas.birth_date
+                email: email || personas.email
               }
             });
             return existingResponsable;
@@ -199,8 +199,7 @@ class ResponsablesService {
             apellidos: lastName,
             tipo_documento_id: docTypeId || personas.tipo_documento_id,
             telefono: phone || personas.telefono,
-            email: email || personas.email,
-            birth_date: birthDate ? new Date(birthDate) : personas.birth_date
+            email: email || personas.email
           }
         });
       }
@@ -222,11 +221,11 @@ class ResponsablesService {
    * Actualizar responsable
    */
   async updateResponsable(id, data) {
-    const { firstName, lastName, docType, docTypeId: rawDocTypeId, docNumber, phone, email, birthDate, status } = data;
+    const { firstName, lastName, docType, docTypeId: rawDocTypeId, docNumber, phone, email, status } = data;
 
     let docTypeId = rawDocTypeId ? parseInt(rawDocTypeId) : null;
     if (!docTypeId && docType) {
-      const tipoDoc = await prisma.tipos_documento.findFirst({ where: { abreviatura: docType } });
+      const tipoDoc = await prisma.tipos_documento.findFirst({ where: { nombre: docType } });
       docTypeId = tipoDoc ? tipoDoc.id : null;
     }
 
@@ -266,8 +265,7 @@ class ResponsablesService {
           tipo_documento_id: docTypeId,
           documento: docNumber,
           telefono: phone,
-          email: email,
-          birth_date: birthDate ? new Date(birthDate) : null
+          email: email
         }
       }),
       prisma.responsables.update({
@@ -278,7 +276,9 @@ class ResponsablesService {
       })
     ]);
 
-    return { id, message: 'Responsable actualizado exitosamente' };
+    // Return the updated responsable using getResponsableById to get consistent formatting
+    const updatedResponsable = await this.getResponsableById(id);
+    return updatedResponsable;
   }
 
   /**

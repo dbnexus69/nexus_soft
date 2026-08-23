@@ -169,12 +169,78 @@ const SECTION_MAP = {
 };
 
 class ConfigService {
-  async getSection(section) {
+  async getSection(section, pagination = null, search = '') {
     const config = SECTION_MAP[section];
     if (!config) throw new NotFoundError('Sección no encontrada');
 
     const queryOptions = {};
     if (config.include) queryOptions.include = config.include;
+
+    const paginatedSections = ['cards', 'payment-methods', 'document-types', 'airlines', 'suppliers', 'airports', 'baggage', 'packages'];
+
+    if (search && paginatedSections.includes(section)) {
+      if (section === 'baggage') {
+        queryOptions.where = {
+          OR: [
+            { tipo_tarifa: { contains: search, mode: 'insensitive' } },
+            { aerolineas: { nombre: { contains: search, mode: 'insensitive' } } }
+          ]
+        };
+      } else if (section === 'packages') {
+        queryOptions.where = {
+          OR: [
+            { nombre: { contains: search, mode: 'insensitive' } },
+            { destino: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+      } else if (section === 'suppliers') {
+        queryOptions.where = {
+          OR: [
+            { nombre: { contains: search, mode: 'insensitive' } },
+            { email_contacto: { contains: search, mode: 'insensitive' } },
+            { telefono: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+      } else if (section === 'airports') {
+        queryOptions.where = {
+          OR: [
+            { nombre: { contains: search, mode: 'insensitive' } },
+            { ciudad: { contains: search, mode: 'insensitive' } },
+            { codigo_iata: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+      } else if (section === 'airlines') {
+        queryOptions.where = {
+          OR: [
+            { nombre: { contains: search, mode: 'insensitive' } },
+            { codigo_iata: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+      } else {
+        queryOptions.where = { nombre: { contains: search, mode: 'insensitive' } };
+      }
+    }
+
+    if (pagination && Object.keys(pagination).length > 0 && paginatedSections.includes(section)) {
+      const { skip, perPage, page } = pagination;
+      const [total, rows] = await Promise.all([
+        prisma[config.model].count({ where: queryOptions.where }),
+        prisma[config.model].findMany({
+          ...queryOptions,
+          skip,
+          take: perPage,
+        })
+      ]);
+      return {
+        data: rows.map(config.transform),
+        meta: {
+          total,
+          page,
+          perPage,
+          totalPages: Math.ceil(total / perPage)
+        }
+      };
+    }
 
     const rows = await prisma[config.model].findMany(queryOptions);
     return rows.map(config.transform);

@@ -9,6 +9,8 @@ exports.list = async (req, res, next) => {
       status: req.query.status,
       asesorId: req.query.asesorId,
       clientId: req.query.clientId,
+      responsableId: req.query.responsableId,
+      commissionAgentId: req.query.commissionAgentId,
       dateFrom: req.query.dateFrom,
       dateTo: req.query.dateTo,
       permissionScope: req.permissionScope,

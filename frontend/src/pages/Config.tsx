@@ -32,8 +32,9 @@ import { usePermissions } from '../context/PermissionsContext';
 import { ConfigData } from '../hooks/useConfig';
 import ConfigForms from '../components/config/ConfigForms';
 
-import { updateConfigItem, createConfigItem as addConfigItem, deleteConfigItem } from '../api/config';
+import { getConfigSection, updateConfigItem, createConfigItem as addConfigItem, deleteConfigItem } from '../api/config';
 import { formatCurrency, formatMealPlan } from '../utils/formatters';
+import { Pagination } from "../components/ui/Pagination";
 import LoadingScreen from '../components/ui/LoadingScreen';
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
@@ -68,11 +69,46 @@ export default function Config() {
   const [viewingPackage, setViewingPackage] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [paginatedData, setPaginatedData] = useState<any[]>([]);
+  const [paginationMeta, setPaginationMeta] = useState<any>(null);
+  const [isSectionLoading, setIsSectionLoading] = useState(false);
+
+  const paginatedSections = ['cards', 'paymentMethods', 'documentTypes', 'airlines', 'suppliers', 'airports', 'baggage', 'packages'];
+  const isPaginatedSection = paginatedSections.includes(currentSection);
 
   // Lazy Load Fetch
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
+
+  const fetchPaginatedData = async (page: number = 1, search: string = '') => {
+    if (!paginatedSections.includes(currentSection)) return;
+    setIsSectionLoading(true);
+    try {
+      const res = await getConfigSection(currentSection, { page, perPage: 10, search });
+      if (res && res.data) {
+        setPaginatedData(res.data);
+        if (res.meta) setPaginationMeta(res.meta);
+      } else {
+        setPaginatedData(res);
+        setPaginationMeta(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSectionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isPaginatedSection) {
+      setIsSectionLoading(true);
+      const handler = setTimeout(() => {
+        fetchPaginatedData(1, searchTerm);
+      }, 300);
+      return () => clearTimeout(handler);
+    }
+  }, [currentSection, searchTerm]);
 
   const currentData = ((config[currentSection as keyof ConfigData] || []) as any[])
     .slice()
@@ -249,10 +285,18 @@ export default function Config() {
     setIsSaving(true);
     try {
       if (editingItem) {
-        await updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
+        const updated = await updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
+        if (isPaginatedSection) {
+          setPaginatedData(prev => prev.map(item => item.id === editingItem.id ? updated : item));
+        }
       } else {
         await addConfigItem(currentSection as ConfigSection, formData);
       }
+      
+      if (isPaginatedSection && !editingItem) {
+        fetchPaginatedData(1, searchTerm);
+      }
+      fetchConfig();
       setIsModalOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -271,6 +315,10 @@ export default function Config() {
       setIsDeleting(true);
       try {
         await deleteConfigItem(currentSection as ConfigSection, deleteItemId);
+        if (isPaginatedSection) {
+          fetchPaginatedData(paginationMeta?.page || 1, searchTerm);
+        }
+        fetchConfig();
         setDeleteItemId(null);
       } catch (err: any) {
         console.error(err);
@@ -356,14 +404,20 @@ export default function Config() {
         </CardHeader>
         
         <CardBody>
-          {filteredData.length === 0 ? (
-            <div className="text-center py-12">
+          {isSectionLoading ? (
+            <LoadingScreen fullScreen={false} />
+          ) : ((isPaginatedSection ? paginatedData : filteredData).length === 0) ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center bg-gray-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 m-6">
+              <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center justify-center mb-4">
+                <Search className="text-gray-400" size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Catálogo Vacío</h3>
               <p className="text-gray-400 text-sm">No se encontraron registros en este catálogo.</p>
             </div>
           ) : (
             <div className="overflow-x-auto w-full">
               <Table headers={getHeaders(currentSection)}>
-                {filteredData.map((item: any) => {
+                {(isPaginatedSection ? paginatedData : filteredData).map((item: any) => {
                   const isOptimistic = isOptimisticId(item);
                   return (
                     <TableRow key={item.id}>
@@ -408,9 +462,19 @@ export default function Config() {
                         );
                       })}
                     </Table>
-                  </div>
-              )}
-            </CardBody>
+            </div>
+          )}
+          
+          {isPaginatedSection && paginationMeta && paginationMeta.totalPages > 1 && (
+            <div className="mt-4 border-t border-gray-100 dark:border-slate-800 pt-4">
+              <Pagination
+                currentPage={paginationMeta.page}
+                totalPages={paginationMeta.totalPages}
+                onPageChange={(page) => fetchPaginatedData(page, searchTerm)}
+              />
+            </div>
+          )}
+        </CardBody>
           </Card>
       <Modal
         isOpen={isModalOpen}

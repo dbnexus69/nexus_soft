@@ -104,11 +104,11 @@ export interface Responsable {
   firstName: string;
   lastName: string;
   name: string;
+  docTypeId: number | null;
   docType: string | null;
   docNumber: string;
   phone: string;
   email: string;
-  birthDate?: string;
   status: "active" | "inactive";
   creadoAt: string;
   deudaTotal: number;

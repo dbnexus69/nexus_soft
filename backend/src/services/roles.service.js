@@ -27,6 +27,13 @@ const DEFAULT_ROLE_VALUES = {
     itineraries: { view: 'true', edit: 'false' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
   },
+  admin: {
+    dashboard: { view: 'all' },
+    sales: { view: 'all', create: 'true', edit: 'true' },
+    clients: { view: 'all', create: 'true', edit: 'true' },
+    itineraries: { view: 'all', edit: 'true' },
+    commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+  },
 };
 
 function parseValor(accion, modulo, valor, role) {
@@ -37,7 +44,10 @@ function parseValor(accion, modulo, valor, role) {
     }
     if (valor === 'own') return 'own';
     if (valor === 'true') {
-      return modulo === 'dashboard' ? 'own' : 'all';
+      // Un 'true' guardado equivale a alcance total, salvo en el dashboard,
+      // donde solo el admin puede ver el de toda la agencia.
+      if (modulo === 'dashboard') return role === 'admin' ? 'all' : 'own';
+      return 'all';
     }
     return 'none';
   }
@@ -53,8 +63,10 @@ function encodeValor(value) {
 
 class RolesService {
   async getPermissions(role) {
-    const validRoles = ['asesor', 'freelancer'];
-    if (!validRoles.includes(role)) throw new BadRequestError('Rol inválido. Use: asesor, freelancer');
+    // Los roles válidos son los que existen en la base, no una lista fija:
+    // 'admin' quedaba fuera y por eso el frontend usaba permisos inventados.
+    const rolEnBd = await prisma.roles.findUnique({ where: { nombre: role } });
+    if (!rolEnBd) throw new BadRequestError(`Rol inválido: ${role}`);
 
     const permisos = await prisma.permisos_rol.findMany({
       where: { roles: { nombre: role } },
@@ -86,28 +98,44 @@ class RolesService {
   }
 
   async updatePermissions(role, permissions) {
+    // Validar ANTES de borrar nada. El borrado corría primero, así que un body
+    // mal formado dejaba el rol sin ningún permiso y luego reventaba.
+    if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
+      throw new BadRequestError('Se esperaba un objeto de permisos por módulo');
+    }
+    const entradas = Object.entries(permissions).filter(
+      ([, accs]) => accs && typeof accs === 'object' && !Array.isArray(accs)
+    );
+    if (entradas.length === 0) {
+      throw new BadRequestError('El objeto de permisos está vacío');
+    }
+
     const roles = await prisma.roles.findUnique({ where: { nombre: role } });
     if (!roles) throw new NotFoundError('Rol no encontrado');
 
-    await prisma.permisos_rol.deleteMany({ where: { rol_id: roles.id } });
-
-    for (const [modulo, accs] of Object.entries(permissions)) {
+    // Los permisos que falten se crean fuera de la transacción: son un catálogo
+    // compartido y no deben deshacerse si la escritura del rol falla.
+    const aEscribir = [];
+    for (const [modulo, accs] of entradas) {
       for (const [accion, value] of Object.entries(accs)) {
-        const encoded = encodeValor(value);
-        let permisos = await prisma.permisos.findFirst({ where: { modulo, accion } });
-        if (!permisos) {
-          permisos = await prisma.permisos.create({
+        let permiso = await prisma.permisos.findFirst({ where: { modulo, accion } });
+        if (!permiso) {
+          permiso = await prisma.permisos.create({
             data: { modulo, accion, descripcion: `${modulo} - ${accion}` }
           });
         }
-        await prisma.permisos_rol.create({
-          data: { rol_id: roles.id, permiso_id: permisos.id, valor: encoded }
-        });
+        aEscribir.push({ rol_id: roles.id, permiso_id: permiso.id, valor: encodeValor(value) });
       }
     }
 
+    // Borrado y alta van juntos: o se reemplazan todos, o no se toca ninguno.
+    await prisma.$transaction([
+      prisma.permisos_rol.deleteMany({ where: { rol_id: roles.id } }),
+      prisma.permisos_rol.createMany({ data: aEscribir }),
+    ]);
+
     AUTH_CACHE.clear();
-    return { message: 'Permisos de rol actualizados' };
+    return { message: 'Permisos de rol actualizados', count: aEscribir.length };
   }
 }
 

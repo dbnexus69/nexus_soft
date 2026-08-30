@@ -16,7 +16,6 @@ class AuthService {
       include: {
         personas: { include: { tipos_documento: true } },
         roles: { include: { permisos_rol: { include: { permisos: true } } } },
-        permisos_usuario: { include: { permisos: true } }
       }
     });
 
@@ -53,8 +52,7 @@ class AuthService {
         phone: usuario.personas.telefono,
         status: usuario.status,
         avatar: usuario.personas.avatar_url,
-        birth_date: usuario.personas.birth_date,
-        permisos: usuario.permisos_usuario.map(pu => ({ modulo: pu.permisos.modulo, accion: pu.permisos.accion, valor: pu.valor }))
+        birth_date: usuario.personas.birth_date
       }
     };
   }
@@ -65,17 +63,10 @@ class AuthService {
       include: {
         personas: { include: { tipos_documento: true } },
         roles: { include: { permisos_rol: { include: { permisos: true } } } },
-        permisos_usuario: { include: { permisos: true } }
       }
     });
 
     if (!usuario) throw new NotFoundError('Usuario no encontrado');
-
-    const permisos = usuario.permisos_usuario.map(pu => ({
-      modulo: pu.permisos.modulo,
-      accion: pu.permisos.accion,
-      valor: pu.valor
-    }));
 
     return {
       user: {
@@ -90,8 +81,7 @@ class AuthService {
         phone: usuario.personas.telefono,
         status: usuario.status,
         avatar: usuario.personas.avatar_url,
-        birth_date: usuario.personas.birth_date,
-        permisos
+        birth_date: usuario.personas.birth_date
       }
     };
   }

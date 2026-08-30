@@ -35,7 +35,6 @@ async function auth(req, res, next) {
             permisos_rol: { include: { permisos: true } }
           }
         },
-        permisos_usuario: { include: { permisos: true } }
       }
     });
 
@@ -55,11 +54,7 @@ async function auth(req, res, next) {
         accion: pr.permisos.accion,
         valor: pr.valor
       })),
-      permisos_usuario: usuario.permisos_usuario.filter(pu => pu.permitido).map(pu => ({
-        modulo: pu.permisos.modulo,
-        accion: pu.permisos.accion,
-        valor: pu.valor
-      }))
+
     };
 
     // 3. Guardar en RAM Cache para la próxima vez

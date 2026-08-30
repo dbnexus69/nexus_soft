@@ -1,11 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CreditCard, Coins, Plus, Trash2, Info, AlertTriangle, CheckCircle } from "lucide-react";
 import { FormField, Input, Select, Textarea, Combobox, CurrencyInput } from "../../ui/Form";
+import { AsyncCombobox } from "../../ui/AsyncCombobox";
+import * as api from "../../../api";
 import { Button } from "../../ui/Button";
 import { DatePicker } from "../forms/TicketForm";
 import { todayStr } from "../../../utils/formatters";
 
 export function Step3Payment({ form, set, data, errors }: any) {
+  // Los responsables se buscan en el servidor: el catálogo ya no viaja entero.
+  const buscarResponsables = useCallback(async (q: string) => {
+    const res: any = await api.listResponsables({ search: q || undefined, perPage: 20, status: 'active' });
+    return (res?.data || []).map((r: any) => ({ value: r.name, label: r.name, data: r }));
+  }, []);
+
   // Local state for the new payment item being added
   const [payMethodId, setPayMethodId] = useState("");
   const [payAmount, setPayAmount] = useState("");
@@ -318,16 +326,15 @@ export function Step3Payment({ form, set, data, errors }: any) {
         {/* Responsable (Sólo si es crédito o abonado) */}
         {(form.status === "credito" || form.status === "abonado") && (
           <FormField label="Responsable del Crédito (Opcional)">
-            <Combobox
-              value={form.responsableId || ""}
-              onChange={(val) => set("responsableId", val)}
-              options={data.responsables
-                .filter((r: any) => r.status === 'active')
-                .map((r: any) => ({
-                  value: String(r.id),
-                  label: r.name,
-                }))}
-              placeholder="Seleccione el responsable de la deuda..."
+            <AsyncCombobox
+              value={form.responsableName || ""}
+              onChange={(val, opt) => {
+                set("responsableId", opt?.data ? String(opt.data.id) : "");
+                set("responsableName", val);
+              }}
+              fetchOptions={buscarResponsables}
+              placeholder="Escribe para buscar un responsable..."
+              emptyText="Ningún responsable coincide"
             />
           </FormField>
         )}

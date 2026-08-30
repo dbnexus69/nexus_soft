@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import { 
@@ -12,67 +12,78 @@ import {
   X
 } from "lucide-react";
 import { 
-  getClientsWithCredit, 
-  getCreditSummaryTotals, 
   getClientStatusColor, 
   getStatusColor, 
   getClientCreditSales,
   ClientCreditSummary
 } from "../../utils/creditUtils";
 import { formatCurrency, formatDate } from "../../utils/formatters";
-import { Client, Sale } from "../../types";
+import { Pagination } from "../ui/Pagination";
+import * as api from "../../api";
 
-interface CreditDashboardProps {
-  clients: Client[];
-  sales: Sale[];
-}
+const PER_PAGE = 10;
 
-export default function CreditDashboard({ clients, sales }: CreditDashboardProps) {
+const TOTALES_VACIOS = {
+  clientsCount: 0, totalPending: 0, totalOverdue: 0, totalUrgent: 0,
+  countOverdue: 0, countUrgent: 0, countPending: 0,
+};
+
+export default function CreditDashboard() {
   const [creditFilter, setCreditFilter] = useState<'all' | 'overdue' | 'urgent' | 'pending'>('all');
   const [selectedCreditClient, setSelectedCreditClient] = useState<ClientCreditSummary | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const clientsWithCredit = useMemo(() => 
-    getClientsWithCredit(clients, sales), 
-  [clients, sales]);
+  // La cartera la agrupa el servidor sobre TODAS las ventas a crédito.
+  // Antes se calculaba aquí sobre la página de ventas que hubiera cargada,
+  // así que los totales salían cortos en cuanto había más de una página.
+  const [clientsWithCredit, setClientsWithCredit] = useState<any[]>([]);
+  const [creditTotals, setCreditTotals] = useState(TOTALES_VACIOS);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
 
-  const creditTotals = useMemo(() => 
-    getCreditSummaryTotals(clients, sales),
-  [clients, sales]);
+  useEffect(() => { setPage(1); }, [searchTerm, creditFilter]);
 
-  const filteredCreditClients = useMemo(() => {
-    let result = clientsWithCredit;
-    if (creditFilter !== 'all') {
-      result = result.filter(c => c.status === creditFilter);
-    }
+  useEffect(() => {
+    let vivo = true;
+    setLoading(true);
+    const t = setTimeout(() => {
+      api.getCreditPortfolio({
+        page,
+        perPage: PER_PAGE,
+        search: searchTerm.trim() || undefined,
+        status: creditFilter !== 'all' ? creditFilter : undefined,
+      })
+        .then((res: any) => {
+          if (!vivo) return;
+          setClientsWithCredit(res?.data || []);
+          setMeta({ total: res?.meta?.total || 0, totalPages: res?.meta?.totalPages || 0 });
+          setCreditTotals({ ...TOTALES_VACIOS, ...(res?.meta?.totals || {}) });
+        })
+        .catch(() => { if (vivo) setClientsWithCredit([]); })
+        .finally(() => { if (vivo) setLoading(false); });
+    }, searchTerm ? 300 : 0);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [page, searchTerm, creditFilter]);
 
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase().trim();
-      result = result.filter(c => {
-        if (c.client.name?.toLowerCase().includes(q)) return true;
-        if (c.client.docNumber?.toLowerCase().includes(q)) return true;
-        
-        const statusMap: Record<string, string> = { 'overdue': 'vencido', 'urgent': 'pronto', 'pending': 'pendiente' };
-        if (statusMap[c.status]?.includes(q)) return true;
+  // El servidor ya devuelve la página filtrada.
+  const filteredCreditClients = clientsWithCredit;
 
-        const clientSales = getClientCreditSales(c.client.id, sales);
-        return clientSales.some(cs => {
-          if (String(cs.sale.id).includes(q)) return true;
-          if (formatDate(cs.sale.date).toLowerCase().includes(q)) return true;
-          if (cs.sale.status?.toLowerCase().includes(q)) return true;
-          if (cs.status?.toLowerCase().includes(q)) return true;
-          return false;
-        });
-      });
-    }
+  // Las ventas a crédito del cliente elegido: se piden las suyas, no se filtra
+  // una lista global.
+  const [selectedClientCreditSales, setSelectedClientCreditSales] = useState<any[]>([]);
 
-    return result;
-  }, [clientsWithCredit, creditFilter, searchTerm, sales]);
-
-  const selectedClientCreditSales = useMemo(() => {
-    if (!selectedCreditClient) return [];
-    return getClientCreditSales(selectedCreditClient.client.id, sales);
-  }, [selectedCreditClient, sales]);
+  useEffect(() => {
+    if (!selectedCreditClient) { setSelectedClientCreditSales([]); return; }
+    let vivo = true;
+    api.listSales({ clientId: selectedCreditClient.client.id, perPage: 50, sortOrder: 'desc' })
+      .then((res: any) => {
+        if (!vivo) return;
+        setSelectedClientCreditSales(getClientCreditSales(selectedCreditClient.client.id, res?.data || []));
+      })
+      .catch(() => { if (vivo) setSelectedClientCreditSales([]); });
+    return () => { vivo = false; };
+  }, [selectedCreditClient]);
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -96,16 +107,16 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
                   )}
                 </div>
                 <button onClick={() => setCreditFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>
-                  Todos ({clientsWithCredit.length})
+                  Todos ({creditTotals.clientsCount})
                 </button>
                 <button onClick={() => setCreditFilter('overdue')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'overdue' ? 'bg-red-500 text-white' : 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/30'}`}>
-                  Vencidos ({clientsWithCredit.filter(c => c.status === 'overdue').length})
+                  Vencidos ({creditTotals.countOverdue})
                 </button>
                 <button onClick={() => setCreditFilter('urgent')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'urgent' ? 'bg-orange-500 text-white' : 'bg-orange-50 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/30'}`}>
-                  Pronto ({clientsWithCredit.filter(c => c.status === 'urgent').length})
+                  Pronto ({creditTotals.countUrgent})
                 </button>
                 <button onClick={() => setCreditFilter('pending')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${creditFilter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-500/30'}`}>
-                  Pendiente ({clientsWithCredit.filter(c => c.status === 'pending').length})
+                  Pendiente ({creditTotals.countPending})
                 </button>
               </div>
             }>
@@ -154,10 +165,21 @@ export default function CreditDashboard({ clients, sales }: CreditDashboardProps
               ) : (
                 <div className="flex flex-col items-center justify-center p-12 text-gray-400">
                   <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4"><CheckCircle size={32} /></div>
-                  <p className="font-bold text-gray-600">¡Todo al día!</p>
+                  <p className="font-bold text-gray-600">
+                    {loading ? 'Cargando cartera...' : '¡Todo al día!'}
+                  </p>
                   <p className="text-sm">No hay clientes con crédito pendiente.</p>
                 </div>
               )}
+              <Pagination
+                currentPage={page}
+                totalPages={meta.totalPages}
+                total={meta.total}
+                perPage={PER_PAGE}
+                loading={loading}
+                onPageChange={setPage}
+                className="px-4 py-3 border-t border-gray-border mt-0"
+              />
             </CardBody>
           </Card>
         </div>

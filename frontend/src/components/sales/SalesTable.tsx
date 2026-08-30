@@ -1,18 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Eye, FileDown, Pencil, Ban, ChevronDown, CheckCircle2 } from "lucide-react";
 import { RxUpdate } from "react-icons/rx";
-import { Table, TableRow, TableCell, Pagination } from "../ui/Table";
+import { Table, TableRow, TableCell } from "../ui/Table";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { formatCurrency, formatDate, formatSaleId, getAvatarGradient } from "../../utils/formatters";
-import { Sale, Client, User } from "../../types";
+import { Sale } from "../../types";
 
 interface SalesTableProps {
   sales: Sale[];
-  clients: Client[];
-  users: User[];
   onViewDetail: (sale: Sale) => void;
-  onPrefetchDetail?: (sale: Sale) => void;
   onDownloadVoucher: (sale: Sale) => void;
   onEdit: (sale: Sale) => void;
   onDelete: (sale: Sale) => void;
@@ -23,10 +20,7 @@ interface SalesTableProps {
 
 export default function SalesTable({
   sales,
-  clients,
-  users,
   onViewDetail,
-  onPrefetchDetail,
   onDownloadVoucher,
   onEdit,
   onDelete,
@@ -34,18 +28,11 @@ export default function SalesTable({
   isAdmin,
   onReviewStatusChange,
 }: SalesTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(sales.length / itemsPerPage);
-  
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
-  // Volver a la página 1 cuando se agrega una nueva venta
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [sales.length]);
-
-  const currentSales = sales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // La paginación es del servidor: `sales` YA es la página a pintar.
+  // Volver a cortarla aquí escondía la mitad de las filas recibidas.
+  const currentSales = sales;
 
   return (
     <div className="flex flex-col gap-4">
@@ -62,9 +49,6 @@ export default function SalesTable({
       ]}
     >
       {currentSales.map((sale) => {
-        const client = clients.find(c => c.id === sale.clientId);
-        const asesor = users.find(u => u.id === sale.asesorId);
-
         return (
           <TableRow key={sale.id}>
             <TableCell>{formatSaleId(sale.id)}</TableCell>
@@ -161,7 +145,6 @@ export default function SalesTable({
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => onViewDetail(sale)}
-                  onMouseEnter={() => onPrefetchDetail?.(sale)}
                   title="Ver detalle"
                 >
                   <Eye size={14} />
@@ -203,12 +186,6 @@ export default function SalesTable({
         );
       })}
     </Table>
-    
-    <Pagination 
-      currentPage={currentPage} 
-      totalPages={totalPages} 
-      onPageChange={setCurrentPage} 
-    />
     </div>
   );
 }

@@ -52,103 +52,70 @@ interface SaleDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedSale: Sale | null;
-  clients: Client[];
   onViewProductDetails: (product: { type: string; data: any[] }) => void;
 }
 
-const isAlreadyFull = (sale: Sale | null): boolean => {
-  if (!sale) return false;
-  return (
-    sale.ticketData !== undefined ||
-    sale.hotelData !== undefined ||
-    sale.insuranceData !== undefined ||
-    sale.planData !== undefined ||
-    sale.checkInData !== undefined ||
-    sale.migrationData !== undefined ||
-    sale.simCardData !== undefined ||
-    sale.carRentalData !== undefined ||
-    sale.fincaData !== undefined ||
-    sale.tourData !== undefined ||
-    sale.conventionData !== undefined ||
-    sale.restaurantData !== undefined ||
-    sale.visaData !== undefined ||
-    sale.passportData !== undefined ||
-    sale.petServiceData !== undefined
-  );
-};
 
 export default function SaleDetailModal({
   isOpen,
   onClose,
   selectedSale,
-  clients,
   onViewProductDetails,
 }: SaleDetailModalProps) {
   const [fullSale, setFullSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [pendingProductView, setPendingProductView] = useState<{ key: string; label: string } | null>(null);
+  // Cada categoría se pide cuando el usuario la abre, no al cargar el modal.
+  const [loadedProducts, setLoadedProducts] = useState<Record<string, any[]>>({});
+  const [loadingSection, setLoadingSection] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && selectedSale) {
-      if (isAlreadyFull(selectedSale)) {
+      setLoading(true);
+      setError("");
+      setLoadedProducts({});
+      api.getSale(selectedSale.id).then(fetched => {
+        setFullSale(fetched);
+      }).catch(() => {
         setFullSale(selectedSale);
-        setLoading(false);
-        setError("");
-      } else {
-        setLoading(true);
-        setError("");
-        api.getSale(selectedSale.id).then(fetched => {
-          setFullSale(fetched);
-        }).catch(() => {
-          setFullSale(selectedSale);
-          setError("No se pudieron cargar los detalles completos");
-        }).finally(() => setLoading(false));
-      }
+        setError("No se pudieron cargar los detalles completos");
+      }).finally(() => setLoading(false));
     } else {
       setFullSale(null);
-      setPendingProductView(null);
+      setLoadedProducts({});
+      setLoadingSection(null);
     }
   }, [isOpen, selectedSale]);
-
-  useEffect(() => {
-    if (fullSale && isAlreadyFull(fullSale) && pendingProductView) {
-      const data = (fullSale as any)[pendingProductView.key] || [];
-      onViewProductDetails({ type: pendingProductView.label, data });
-      setPendingProductView(null);
-    }
-  }, [fullSale, pendingProductView]);
 
   if (!selectedSale) return null;
 
   const sale = fullSale || selectedSale;
-  const client = clients.find((c) => c.id === sale.clientId);
   const commissionAmount = sale.commissionAgentNetPayment || 0;
   const supplierCost = sale.supplierCost || 0;
   const gananciaNeta = sale.total - supplierCost - commissionAmount;
 
   const productSections = [
-    { key: "ticketData", label: "Tiquetería", summaryType: "tiqueteria" },
-    { key: "hotelData", label: "Hotelería", summaryType: "hoteleria" },
-    { key: "insuranceData", label: "Seguros", summaryType: "seguros_viaje" },
-    { key: "planData", label: "Planes", summaryType: "planes" },
+    { key: "ticketData", label: "Tiquetería", summaryType: "ticket" },
+    { key: "hotelData", label: "Hotelería", summaryType: "hotel" },
+    { key: "insuranceData", label: "Seguros", summaryType: "insurance" },
+    { key: "planData", label: "Planes", summaryType: "plan" },
     { key: "checkInData", label: "CheckIn", summaryType: "checkin" },
-    { key: "migrationData", label: "Migración", summaryType: "documentacion_migratoria" },
+    { key: "migrationData", label: "Migración", summaryType: "migration" },
     { key: "simCardData", label: "SimCard", summaryType: "simcard" },
-    { key: "carRentalData", label: "AlquilerAutos", summaryType: "renta_vehiculos" },
-    { key: "fincaData", label: "Finca", summaryType: "renta_fincas" },
-    { key: "tourData", label: "Tour", summaryType: "tours" },
-    { key: "conventionData", label: "Evento", summaryType: "centros_convencion" },
-    { key: "restaurantData", label: "Restaurante", summaryType: "restaurantes" },
+    { key: "carRentalData", label: "AlquilerAutos", summaryType: "car" },
+    { key: "fincaData", label: "Finca", summaryType: "finca" },
+    { key: "tourData", label: "Tour", summaryType: "tour" },
+    { key: "conventionData", label: "Evento", summaryType: "convention" },
+    { key: "restaurantData", label: "Restaurante", summaryType: "restaurant" },
     { key: "visaData", label: "Visa", summaryType: "visa" },
-    { key: "passportData", label: "Pasaporte", summaryType: "pasaporte" },
-    { key: "petServiceData", label: "Mascotas", summaryType: "servicio_mascotas" },
+    { key: "passportData", label: "Pasaporte", summaryType: "passport" },
+    { key: "petServiceData", label: "Mascotas", summaryType: "pet" },
   ];
 
   const suppliersList = (() => {
     const suppliers = new Set<string>();
-    productSections.forEach(({ key }) => {
-      const dataArr = (sale as any)[key];
+    productSections.forEach(({ summaryType }) => {
+      const dataArr = loadedProducts[summaryType];
       if (Array.isArray(dataArr)) {
         dataArr.forEach((item: any) => {
           const name = item.supplier || item.supplierName;
@@ -161,9 +128,9 @@ export default function SaleDetailModal({
     return Array.from(suppliers).join(", ") || "No especificado";
   })();
 
-  const hasAnyProduct = (sale.servicesSummary && sale.servicesSummary.length > 0) || productSections.some(
-    ({ key }) => (sale as any)[key] && (sale as any)[key].length > 0
-  );
+  const inventory: { category: string; label: string; count: number }[] = (sale as any).products || [];
+  const hasCategory = (slug: string) => inventory.some(p => p.category === slug && p.count > 0);
+  const hasAnyProduct = (sale.servicesSummary && sale.servicesSummary.length > 0) || inventory.length > 0;
 
   const getCustomObservations = (obs: string) => {
     if (!obs) return "";
@@ -182,12 +149,20 @@ export default function SaleDetailModal({
     return txt;
   };
 
-  const onViewProductClick = (key: string, label: string) => {
-    if (fullSale && isAlreadyFull(fullSale)) {
-      const data = (fullSale as any)[key] || [];
+  const onViewProductClick = async (slug: string, label: string) => {
+    if (loadedProducts[slug]) {
+      onViewProductDetails({ type: label, data: loadedProducts[slug] });
+      return;
+    }
+    setLoadingSection(slug);
+    try {
+      const data = await api.getSaleProductsByCategory(sale.id, slug);
+      setLoadedProducts(prev => ({ ...prev, [slug]: data }));
       onViewProductDetails({ type: label, data });
-    } else {
-      setPendingProductView({ key, label });
+    } catch {
+      setError(`No se pudo cargar ${label}`);
+    } finally {
+      setLoadingSection(null);
     }
   };
 
@@ -260,24 +235,24 @@ export default function SaleDetailModal({
                 {sale.clientName}
               </span>
             </div>
-            {(client || (sale as any).clientDocNumber) ? (
+            {(sale as any).clientDocNumber ? (
               <>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Documento</span>
                   <span className="font-medium text-gray-800">
-                    {client?.docType || (sale as any).clientDocType} {client?.docNumber || (sale as any).clientDocNumber}
+                    {(sale as any).clientDocType} {(sale as any).clientDocNumber}
                   </span>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Correo</span>
                   <span className="font-medium text-gray-800 break-words">
-                    {client?.email || sale.clientEmail}
+                    {sale.clientEmail}
                   </span>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <span className="text-gray-500 text-xs block">Teléfono</span>
                   <span className="font-medium text-gray-800">
-                    {client?.phone || (sale as any).clientPhone}
+                    {(sale as any).clientPhone}
                   </span>
                 </div>
               </>
@@ -387,14 +362,17 @@ export default function SaleDetailModal({
               {productSections.map(({ key, label, summaryType }) => {
                 // If fullSale has loaded, check if this section has products.
                 // Otherwise, check if this category exists in servicesSummary.
-                const hasProduct = fullSale 
-                  ? ((fullSale as any)[key] && (fullSale as any)[key].length > 0)
+                // El inventario de la cabecera dice qué categorías tiene la venta
+                // y cuántas, sin traer sus datos.
+                const inv = inventory.find(p => p.category === summaryType);
+                const hasProduct = inv
+                  ? inv.count > 0
                   : (sale.servicesSummary || []).some(s => s.tipo === summaryType);
 
                 if (!hasProduct) return null;
-                
-                const isPending = pendingProductView?.key === key;
-                const itemsCount = fullSale ? ((fullSale as any)[key]?.length || 0) : 1;
+
+                const isPending = loadingSection === summaryType;
+                const itemsCount = inv?.count ?? (loadedProducts[summaryType]?.length || 1);
 
                 return (
                   <div key={key} className="bg-gray-50 border border-gray-200 p-3 rounded-lg flex items-center justify-between shadow-sm">
@@ -406,7 +384,7 @@ export default function SaleDetailModal({
                       size="sm"
                       variant="outline"
                       disabled={isPending}
-                      onClick={() => onViewProductClick(key, label)}
+                      onClick={() => onViewProductClick(summaryType, label)}
                       className="text-xs py-1.5 px-3 border-gray-200 text-gray-700 hover:bg-gray-50"
                     >
                       {isPending ? (

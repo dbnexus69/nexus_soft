@@ -25,39 +25,39 @@ interface ProductFormsModalProps {
 }
 
 const PRODUCT_ICONS: Record<SaleProductId, any> = {
-  tiqueteria: Plane,
-  hoteleria: Building2,
-  seguros_viaje: ShieldCheck,
-  planes: Package,
+  ticket: Plane,
+  hotel: Building2,
+  insurance: ShieldCheck,
+  plan: Package,
   checkin: Luggage,
-  documentacion_migratoria: FileInput,
+  migration: FileInput,
   simcard: Smartphone,
-  renta_vehiculos: Car,
-  renta_fincas: TreePine,
-  tours: Compass,
-  centros_convencion: Music,
-  restaurantes: UtensilsCrossed,
+  car: Car,
+  finca: TreePine,
+  tour: Compass,
+  convention: Music,
+  restaurant: UtensilsCrossed,
   visa: FileText,
-  pasaporte: FileInput,
-  servicio_mascotas: PawPrint,
+  passport: FileInput,
+  pet: PawPrint,
 };
 
 const PRODUCT_MAP: Record<SaleProductId, { key: keyof WizardFormData; labelSingular: string; initialFn: any }> = {
-  tiqueteria: { key: "tickets", labelSingular: "Tiquete", initialFn: INITIAL_TICKET },
-  hoteleria: { key: "hotels", labelSingular: "Hotel", initialFn: INITIAL_HOTEL },
-  seguros_viaje: { key: "insurances", labelSingular: "Seguro", initialFn: INITIAL_INSURANCE },
-  planes: { key: "plans", labelSingular: "Paquete", initialFn: INITIAL_PLAN },
+  ticket: { key: "tickets", labelSingular: "Tiquete", initialFn: INITIAL_TICKET },
+  hotel: { key: "hotels", labelSingular: "Hotel", initialFn: INITIAL_HOTEL },
+  insurance: { key: "insurances", labelSingular: "Seguro", initialFn: INITIAL_INSURANCE },
+  plan: { key: "plans", labelSingular: "Paquete", initialFn: INITIAL_PLAN },
   checkin: { key: "checkIns", labelSingular: "Check-In", initialFn: INITIAL_CHECKIN },
-  documentacion_migratoria: { key: "migrations", labelSingular: "Trámite Migratorio", initialFn: INITIAL_MIGRATION },
+  migration: { key: "migrations", labelSingular: "Trámite Migratorio", initialFn: INITIAL_MIGRATION },
   simcard: { key: "simCards", labelSingular: "SimCard", initialFn: INITIAL_SIMCARD },
-  renta_vehiculos: { key: "carRentals", labelSingular: "Vehículo", initialFn: INITIAL_CAR_RENTAL },
-  renta_fincas: { key: "fincas", labelSingular: "Finca", initialFn: INITIAL_FINCA },
-  tours: { key: "tours", labelSingular: "Tour", initialFn: INITIAL_TOUR },
-  centros_convencion: { key: "conventions", labelSingular: "Convención", initialFn: INITIAL_CONVENTION },
-  restaurantes: { key: "restaurants", labelSingular: "Restaurante", initialFn: INITIAL_RESTAURANT },
+  car: { key: "carRentals", labelSingular: "Vehículo", initialFn: INITIAL_CAR_RENTAL },
+  finca: { key: "fincas", labelSingular: "Finca", initialFn: INITIAL_FINCA },
+  tour: { key: "tours", labelSingular: "Tour", initialFn: INITIAL_TOUR },
+  convention: { key: "conventions", labelSingular: "Convención", initialFn: INITIAL_CONVENTION },
+  restaurant: { key: "restaurants", labelSingular: "Restaurante", initialFn: INITIAL_RESTAURANT },
   visa: { key: "visas", labelSingular: "Visa", initialFn: INITIAL_VISA },
-  pasaporte: { key: "passports", labelSingular: "Pasaporte", initialFn: INITIAL_PASSPORT },
-  servicio_mascotas: { key: "petServices", labelSingular: "Mascota", initialFn: INITIAL_PET_SERVICE },
+  passport: { key: "passports", labelSingular: "Pasaporte", initialFn: INITIAL_PASSPORT },
+  pet: { key: "petServices", labelSingular: "Mascota", initialFn: INITIAL_PET_SERVICE },
 };
 
 export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
@@ -72,28 +72,28 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
 }) => {
   if (!activeForm || activeIdx === null) return null;
 
-  const client = data.clients.find((c: any) => c.name === form.clientId);
+  const client = form.clientData;
   const currentConfig = activeForm ? PRODUCT_MAP[activeForm] : null;
   const currentItems = currentConfig ? ((form as any)[currentConfig.key] || []) : [];
 
   const getCurrentItemLinkedPlanIndex = () => {
-    if (!activeForm || activeIdx === null || activeForm === 'planes') return '';
+    if (!activeForm || activeIdx === null || activeForm === 'plan') return '';
     let targetKey = null;
     switch (activeForm) {
-      case "tiqueteria": targetKey = "tickets"; break;
-      case "hoteleria": targetKey = "hotels"; break;
-      case "seguros_viaje": targetKey = "insurances"; break;
+      case "ticket": targetKey = "tickets"; break;
+      case "hotel": targetKey = "hotels"; break;
+      case "insurance": targetKey = "insurances"; break;
       case "checkin": targetKey = "checkIns"; break;
-      case "documentacion_migratoria": targetKey = "migrations"; break;
+      case "migration": targetKey = "migrations"; break;
       case "simcard": targetKey = "simCards"; break;
-      case "renta_vehiculos": targetKey = "carRentals"; break;
-      case "renta_fincas": targetKey = "fincas"; break;
-      case "tours": targetKey = "tours"; break;
-      case "centros_convencion": targetKey = "conventions"; break;
-      case "restaurantes": targetKey = "restaurants"; break;
+      case "car": targetKey = "carRentals"; break;
+      case "finca": targetKey = "fincas"; break;
+      case "tour": targetKey = "tours"; break;
+      case "convention": targetKey = "conventions"; break;
+      case "restaurant": targetKey = "restaurants"; break;
       case "visa": targetKey = "visas"; break;
-      case "pasaporte": targetKey = "passports"; break;
-      case "servicio_mascotas": targetKey = "petServices"; break;
+      case "passport": targetKey = "passports"; break;
+      case "pet": targetKey = "petServices"; break;
     }
     if (targetKey) {
       const items = (form as any)[targetKey];
@@ -105,23 +105,23 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
   };
 
   const setCurrentItemLinkedPlanIndex = (val: string) => {
-    if (!activeForm || activeIdx === null || activeForm === 'planes') return;
+    if (!activeForm || activeIdx === null || activeForm === 'plan') return;
     let targetKey = null;
     switch (activeForm) {
-      case "tiqueteria": targetKey = "tickets"; break;
-      case "hoteleria": targetKey = "hotels"; break;
-      case "seguros_viaje": targetKey = "insurances"; break;
+      case "ticket": targetKey = "tickets"; break;
+      case "hotel": targetKey = "hotels"; break;
+      case "insurance": targetKey = "insurances"; break;
       case "checkin": targetKey = "checkIns"; break;
-      case "documentacion_migratoria": targetKey = "migrations"; break;
+      case "migration": targetKey = "migrations"; break;
       case "simcard": targetKey = "simCards"; break;
-      case "renta_vehiculos": targetKey = "carRentals"; break;
-      case "renta_fincas": targetKey = "fincas"; break;
-      case "tours": targetKey = "tours"; break;
-      case "centros_convencion": targetKey = "conventions"; break;
-      case "restaurantes": targetKey = "restaurants"; break;
+      case "car": targetKey = "carRentals"; break;
+      case "finca": targetKey = "fincas"; break;
+      case "tour": targetKey = "tours"; break;
+      case "convention": targetKey = "conventions"; break;
+      case "restaurant": targetKey = "restaurants"; break;
       case "visa": targetKey = "visas"; break;
-      case "pasaporte": targetKey = "passports"; break;
-      case "servicio_mascotas": targetKey = "petServices"; break;
+      case "passport": targetKey = "passports"; break;
+      case "pet": targetKey = "petServices"; break;
     }
     if (targetKey) {
       const items = [...((form as any)[targetKey] || [])];
@@ -136,16 +136,16 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
   const getLinkedServicesForPlan = (planIdx: number) => {
     const linked: Array<{ productId: SaleProductId; label: string; idx: number }> = [];
     const map: Array<{ productId: SaleProductId; label: string; key: keyof WizardFormData }> = [
-      { productId: "tiqueteria", label: "Tiquete", key: "tickets" },
-      { productId: "hoteleria", label: "Hotel", key: "hotels" },
-      { productId: "seguros_viaje", label: "Asistencia Médica", key: "insurances" },
+      { productId: "ticket", label: "Tiquete", key: "tickets" },
+      { productId: "hotel", label: "Hotel", key: "hotels" },
+      { productId: "insurance", label: "Asistencia Médica", key: "insurances" },
       { productId: "checkin", label: "Check-in", key: "checkIns" },
-      { productId: "renta_vehiculos", label: "Renta Autos", key: "carRentals" },
-      { productId: "renta_fincas", label: "Finca", key: "fincas" },
-      { productId: "tours", label: "Tour", key: "tours" },
-      { productId: "restaurantes", label: "Restaurante", key: "restaurants" },
+      { productId: "car", label: "Renta Autos", key: "carRentals" },
+      { productId: "finca", label: "Finca", key: "fincas" },
+      { productId: "tour", label: "Tour", key: "tours" },
+      { productId: "restaurant", label: "Restaurante", key: "restaurants" },
       { productId: "visa", label: "Visa", key: "visas" },
-      { productId: "pasaporte", label: "Pasaporte", key: "passports" },
+      { productId: "passport", label: "Pasaporte", key: "passports" },
     ];
     map.forEach(m => {
       const items = (form as any)[m.key] || [];
@@ -162,20 +162,20 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
     let targetKey: keyof WizardFormData | null = null;
     let initialFn: any = null;
     switch (productId) {
-      case "tiqueteria": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
-      case "hoteleria": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
-      case "seguros_viaje": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
+      case "ticket": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
+      case "hotel": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
+      case "insurance": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
       case "checkin": targetKey = "checkIns"; initialFn = INITIAL_CHECKIN; break;
-      case "documentacion_migratoria": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
+      case "migration": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
       case "simcard": targetKey = "simCards"; initialFn = INITIAL_SIMCARD; break;
-      case "renta_vehiculos": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
-      case "renta_fincas": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
-      case "tours": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
-      case "centros_convencion": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
-      case "restaurantes": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
+      case "car": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
+      case "finca": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
+      case "tour": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
+      case "convention": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
+      case "restaurant": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
       case "visa": targetKey = "visas"; initialFn = INITIAL_VISA; break;
-      case "pasaporte": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
-      case "servicio_mascotas": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
+      case "passport": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
+      case "pet": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
     }
     if (targetKey && initialFn) {
       if (!form.selectedProducts.includes(productId)) {
@@ -310,7 +310,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
 
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {activeForm !== "planes" && form.plans.length > 0 && (
+        {activeForm !== "plan" && form.plans.length > 0 && (
           <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm animate-fade-in mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Link2 size={16} className="text-primary" />
@@ -334,7 +334,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
         {(() => {
 
           switch (activeForm) {
-            case "tiqueteria":
+            case "ticket":
               return (
                 <TicketForm
                   ticket={form.tickets[activeIdx] || INITIAL_TICKET(client)}
@@ -353,7 +353,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "hoteleria":
+            case "hotel":
               return (
                 <HotelForm
                   hotel={form.hotels[activeIdx] || INITIAL_HOTEL(client)}
@@ -368,7 +368,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   suppliers={data.config.suppliers}
                 />
               );
-            case "seguros_viaje":
+            case "insurance":
               return (
                 <InsuranceForm
                   insurance={form.insurances[activeIdx] || INITIAL_INSURANCE(client)}
@@ -382,7 +382,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   suppliers={data.config.suppliers}
                 />
               );
-            case "planes":
+            case "plan":
               return (
                 <PlanForm
                   plan={form.plans[activeIdx] || INITIAL_PLAN(client)}
@@ -415,7 +415,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "documentacion_migratoria":
+            case "migration":
               return (
                 <MigrationForm
                   migration={form.migrations[activeIdx] || INITIAL_MIGRATION(client)}
@@ -445,7 +445,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "renta_vehiculos":
+            case "car":
               return (
                 <CarRentalForm
                   car={form.carRentals[activeIdx] || INITIAL_CAR_RENTAL(client)}
@@ -460,7 +460,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "renta_fincas":
+            case "finca":
               return (
                 <FincaForm
                   finca={form.fincas[activeIdx] || INITIAL_FINCA(client)}
@@ -475,7 +475,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "tours":
+            case "tour":
               return (
                 <TourForm
                   tour={form.tours[activeIdx] || INITIAL_TOUR(client)}
@@ -489,7 +489,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "centros_convencion":
+            case "convention":
               return (
                 <ConventionForm
                   convention={form.conventions[activeIdx] || INITIAL_CONVENTION(client)}
@@ -504,7 +504,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "restaurantes":
+            case "restaurant":
               return (
                 <RestaurantForm
                   restaurant={form.restaurants[activeIdx] || INITIAL_RESTAURANT(client)}
@@ -534,7 +534,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "pasaporte":
+            case "passport":
               return (
                 <PassportForm
                   passport={form.passports[activeIdx] || INITIAL_PASSPORT(client)}
@@ -549,7 +549,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                 />
               );
-            case "servicio_mascotas":
+            case "pet":
               return (
                 <PetServiceForm
                   pet={form.petServices[activeIdx] || INITIAL_PET_SERVICE(client)}

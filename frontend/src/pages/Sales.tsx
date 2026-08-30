@@ -32,6 +32,7 @@ import ProductDetailsModal from "../components/sales/ProductDetailsModal";
 import SaleDetailModal from "../components/sales/SaleDetailModal";
 import SaleEditModal from "../components/sales/SaleEditModal";
 import SalesTable from "../components/sales/SalesTable";
+import { Pagination } from "../components/ui/Pagination";
 import StatCard from "../components/ui/StatCard";
 import CreditDashboard from "../components/sales/CreditDashboard";
 import { VoucherPDF } from "../components/sales/VoucherPDF";
@@ -40,10 +41,21 @@ import LoadingScreen from "../components/ui/LoadingScreen";
 
 export default function Sales() {
   const { data } = useData(); // para airports, config, etc.
-  const { 
-    sales, 
+  const {
+    sales,
+    meta,
     loading: salesLoading,
     fetchSales,
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    page,
+    setPage,
     handleCreateSale: addSale,
     handleUpdateSale: updateSale,
     handleVoidSale: voidSale,
@@ -79,58 +91,25 @@ export default function Sales() {
   const voucherRef = useRef<HTMLDivElement>(null);
   const airportMap = useMemo(() => buildAirportMap(data.config.airports || []), [data.config.airports]);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pagado' | 'credito' | 'abonado' | 'anulado'>('all');
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  // Búsqueda, estado, fechas, orden y alcance por rol los resuelve el servidor.
+  // La tabla pinta la página que recibe, sin volver a filtrarla.
+  const filteredSales = sales;
 
-  const filteredSales = useMemo(() => {
-    const list = isAdmin ? sales : sales.filter((s) => s.asesorId === user?.id);
-    return list.filter((sale) => {
-      // 1. Text Search Filter (client name, status, asesor, commissionAgent, id)
-      const query = searchTerm.toLowerCase().trim();
-      const matchesText = !query || 
-        (sale.clientName && sale.clientName.toLowerCase().includes(query)) ||
-        (sale.status && sale.status.toLowerCase().includes(query)) ||
-        (sale.asesorName && sale.asesorName.toLowerCase().includes(query)) ||
-        (sale.commissionAgentName || "").toLowerCase().includes(query) ||
-        String(sale.id).includes(query) ||
-        formatId(sale.id).toLowerCase().includes(query);
-
-      // 2. Status Select Filter
-      const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
-
-      // 3. Date Range Filter
-      let matchesDate = true;
-      if (startDate) {
-        matchesDate = matchesDate && new Date(sale.date) >= new Date(startDate);
-      }
-      if (endDate) {
-        matchesDate = matchesDate && new Date(sale.date) <= new Date(endDate + "T23:59:59");
-      }
-
-      return matchesText && matchesStatus && matchesDate;
-    }).sort((a, b) => b.id - a.id);
-  }, [sales, isAdmin, user?.id, searchTerm, statusFilter, startDate, endDate]);
-
-  // Lazy Load Fetch
   useEffect(() => {
     fetchSales();
+  }, [fetchSales]);
+
+  useEffect(() => {
     fetchClients();
-  }, [fetchSales, fetchClients]);
+  }, [fetchClients]);
 
 
 
   // Eliminamos el prefetch silencioso para evitar peticiones "fantasma" que colapsan la red y el backend.
   // La carga detallada se hará estrictamente "On Demand" (bajo demanda) cuando el usuario pase el mouse o haga click.
 
-  const handlePrefetchDetail = (sale: Sale) => {
-    if (!salesDetails[sale.id]) {
-      api.getSale(sale.id).then(fetched => {
-        setSalesDetails(prev => ({ ...prev, [sale.id]: fetched }));
-      }).catch(() => null);
-    }
-  };
+  // Sin prefetch: la tabla no pide detalle. El modal carga la cabecera al abrirse
+  // y cada categoría de producto cuando el usuario la despliega.
 
   const canEditThis = (sale: Sale): boolean => {
     if (!canEdit("sales")) return false;
@@ -153,7 +132,6 @@ export default function Sales() {
   const handleViewDetail = (sale: Sale) => {
     setSelectedSale(sale);
     setIsDetailOpen(true);
-    handlePrefetchDetail(sale);
   };
 
   const handleDownloadVoucher = (sale: Sale) => {
@@ -166,7 +144,11 @@ export default function Sales() {
     // 1. Traer venta completa
     let fullSale: Sale = sale;
     try {
-      fullSale = await api.getSale(sale.id);
+      const [cabecera, productos] = await Promise.all([
+        api.getSale(sale.id),
+        api.getSaleProducts(sale.id),
+      ]);
+      fullSale = { ...cabecera, ...productos };
     } catch { /* fallback */ }
 
     // 2. Inyectar en el componente oculto y esperar render
@@ -538,10 +520,7 @@ export default function Sales() {
             ) : (
               <SalesTable
                 sales={filteredSales}
-                clients={data.clients}
-                users={data.users}
                 onViewDetail={handleViewDetail}
-                onPrefetchDetail={handlePrefetchDetail}
                 onDownloadVoucher={handleDownloadVoucher}
                 onEdit={handleOpenModal}
                 onDelete={(sale) => setVoidConfirm(sale)}
@@ -563,13 +542,20 @@ export default function Sales() {
                 }}
               />
             )}
+
+            <Pagination
+              currentPage={meta.page}
+              totalPages={meta.totalPages}
+              total={meta.total}
+              perPage={meta.perPage}
+              loading={salesLoading}
+              onPageChange={setPage}
+              className="px-4 py-3 bg-white border-t border-gray-100 rounded-b-2xl mt-0"
+            />
           </Card>
         </>
       ) : (
-        <CreditDashboard 
-          clients={data.clients}
-          sales={filteredSales} 
-        />
+        <CreditDashboard />
       )}
 
       {/* ===== WIZARD MODAL (Nueva Venta) ===== */}
@@ -634,7 +620,6 @@ export default function Sales() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         editingSale={editingSale}
-        clients={data.clients}
         user={user}
         isAdmin={isAdmin}
         onUpdateSale={updateSale}
@@ -649,7 +634,6 @@ export default function Sales() {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         selectedSale={salesDetails[selectedSale?.id || 0] || selectedSale}
-        clients={data.clients}
         onViewProductDetails={setDetailedProduct}
       />
 

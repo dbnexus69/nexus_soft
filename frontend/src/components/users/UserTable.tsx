@@ -3,7 +3,7 @@ import { Table, TableRow, TableCell } from "../ui/Table";
 import { Badge } from "../ui/Badge";
 import Avatar from "../ui/Avatar";
 import SortIcon from "../ui/SortIcon";
-import { Eye, Pencil, Trash2, Key } from "lucide-react";
+import { Eye, Pencil, Trash2, } from "lucide-react";
 import { User } from "../../types";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -20,7 +20,6 @@ interface UserTableProps {
   onViewDetail: (user: User) => void;
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
-  onManagePermissions: (user: User) => void;
 }
 
 export const UserTable: React.FC<UserTableProps> = ({
@@ -30,8 +29,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   onSort,
   onViewDetail,
   onEdit,
-  onDelete,
-  onManagePermissions
+  onDelete
 }) => {
   return (
     <div className="overflow-x-auto">
@@ -112,13 +110,6 @@ export const UserTable: React.FC<UserTableProps> = ({
                       title="Ver detalle"
                     >
                       <Eye size={16} />
-                    </button>
-                    <button
-                      onClick={() => onManagePermissions(user)}
-                      className="p-1 text-slate-400 hover:text-purple-600 transition-colors"
-                      title="Gestionar Permisos"
-                    >
-                      <Key size={16} />
                     </button>
                     <button
                       onClick={() => onEdit(user)}

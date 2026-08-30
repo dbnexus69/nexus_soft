@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Sale, SortField, SortDirection, PaginationState } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+import { Pagination } from '../ui/Pagination';
 
 interface SalesTableProps {
   sales: Sale[];
@@ -20,6 +21,17 @@ const DEFAULT_PAGINATION: PaginationState = {
   perPage: 10,
   total: 0,
 };
+
+// Fuera del componente: definirlo dentro creaba un tipo nuevo en cada render
+// y React remontaba el icono entero cada vez.
+function SortIcon({ field, sortField, sortDirection }: {
+  field: SortField; sortField: SortField; sortDirection: SortDirection;
+}) {
+  if (sortField !== field) return null;
+  return sortDirection === 'asc'
+    ? <ChevronUp className="w-4 h-4" />
+    : <ChevronDown className="w-4 h-4" />;
+}
 
 export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps) {
   const [sortField, setSortField] = useState<SortField>('date');
@@ -75,13 +87,6 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
     onPageChange?.(page);
   }, [onPageChange]);
 
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' 
-      ? <ChevronUp className="w-4 h-4" />
-      : <ChevronDown className="w-4 h-4" />;
-  };
-
   if (sales.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -102,7 +107,7 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
               >
                 <div className="flex items-center gap-1">
                   Fecha
-                  <SortIcon field="date" />
+                  <SortIcon field="date" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
               <th 
@@ -111,7 +116,7 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
               >
                 <div className="flex items-center gap-1">
                   Cliente
-                  <SortIcon field="clientName" />
+                  <SortIcon field="clientName" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
               <th 
@@ -120,7 +125,7 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
               >
                 <div className="flex items-center gap-1">
                   Asesor
-                  <SortIcon field="asesorName" />
+                  <SortIcon field="asesorName" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
               <th 
@@ -129,7 +134,7 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
               >
                 <div className="flex items-center justify-end gap-1">
                   Valor
-                  <SortIcon field="total" />
+                  <SortIcon field="total" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
               <th 
@@ -138,7 +143,7 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
               >
                 <div className="flex items-center justify-center gap-1">
                   Estado
-                  <SortIcon field="status" />
+                  <SortIcon field="status" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
             </tr>
@@ -171,42 +176,14 @@ export function SalesTable({ sales, pagination, onPageChange }: SalesTableProps)
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-border">
-          <p className="text-xs text-gray-500">
-            Mostrando {((currentPage - 1) * perPage) + 1} - {Math.min(currentPage * perPage, totalSales)} de {totalSales}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`w-7 h-7 text-xs rounded transition-colors ${
-                  page === currentPage
-                    ? 'bg-primary text-white'
-                    : 'hover:bg-gray-100 text-gray-600'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={totalSales}
+        perPage={perPage}
+        onPageChange={handlePageChange}
+        className="px-4 py-3 border-t border-gray-border mt-0"
+      />
     </div>
   );
 }

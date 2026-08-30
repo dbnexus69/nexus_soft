@@ -1,17 +1,20 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { Pagination } from '../ui/Pagination';
 import { TrendingUp } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import * as api from '../../api';
 import { User, Sale } from '../../types';
 
 interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
-  userSales: Sale[];
 }
+
+const PER_PAGE = 5;
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
@@ -19,8 +22,39 @@ const ROLE_LABELS: Record<string, string> = {
   freelancer: "Freelancer",
 };
 
-export default function UserDetailModal({ isOpen, onClose, user, userSales }: UserDetailModalProps) {
+export default function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps) {
+  // Las ventas del asesor se piden paginadas y filtradas por su id. Antes
+  // llegaban por props filtrando la lista global, que solo trae una página.
+  const [userSales, setUserSales] = useState<Sale[]>([]);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
+  const [resumen, setResumen] = useState<{ salesCount?: number; salesTotal?: number }>({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !user) { setUserSales([]); setPage(1); setResumen({}); return; }
+    let vivo = true;
+    setLoading(true);
+    Promise.all([
+      api.listSales({ asesorId: user.id, page, perPage: PER_PAGE, sortOrder: 'desc' }),
+      page === 1 ? api.getUser(user.id) : Promise.resolve(null),
+    ])
+      .then(([lista, detalle]: any[]) => {
+        if (!vivo) return;
+        setUserSales(lista?.data || []);
+        if (lista?.meta) setMeta({ total: lista.meta.total, totalPages: lista.meta.totalPages });
+        if (detalle) setResumen({ salesCount: detalle.salesCount, salesTotal: detalle.salesTotal });
+      })
+      .catch(() => { if (vivo) setUserSales([]); })
+      .finally(() => { if (vivo) setLoading(false); });
+    return () => { vivo = false; };
+  }, [isOpen, user, page]);
+
   if (!user) return null;
+
+  // Totales de todas las ventas del asesor, no solo de la página visible.
+  const numeroVentas = resumen.salesCount ?? meta.total;
+  const totalFacturado = resumen.salesTotal ?? 0;
 
   return (
     <Modal
@@ -64,13 +98,13 @@ export default function UserDetailModal({ isOpen, onClose, user, userSales }: Us
         <div>
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-semibold text-gray-900 dark:!text-[#ffffff] flex items-center gap-2">
-              <TrendingUp size={16} className="text-accent" /> Historial de Ventas Realizadas ({userSales.length})
+              <TrendingUp size={16} className="text-accent" /> Historial de Ventas Realizadas ({numeroVentas})
             </h4>
-            {userSales.length > 0 && (
+            {numeroVentas > 0 ? (
               <span className="text-xs font-bold text-primary dark:text-teal-400 bg-primary/10 dark:bg-teal-950/40 px-2 py-1 rounded-lg">
-                Total Facturado: {formatCurrency(userSales.reduce((acc, s) => acc + s.total, 0))}
+                Total Facturado: {formatCurrency(totalFacturado)}
               </span>
-            )}
+            ) : null}
           </div>
           {userSales.length > 0 ? (
             <table className="w-full text-sm">
@@ -92,8 +126,18 @@ export default function UserDetailModal({ isOpen, onClose, user, userSales }: Us
               </tbody>
             </table>
           ) : (
-            <p className="text-gray-500 dark:text-slate-400 text-sm italic">No hay ventas registradas por este usuario</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm italic">
+              {loading ? 'Cargando ventas...' : 'No hay ventas registradas por este usuario'}
+            </p>
           )}
+          <Pagination
+            currentPage={page}
+            totalPages={meta.totalPages}
+            total={meta.total}
+            perPage={PER_PAGE}
+            loading={loading}
+            onPageChange={setPage}
+          />
         </div>
       </div>
     </Modal>

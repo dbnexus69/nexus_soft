@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Sale, PaginationState } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { ChevronLeft, ChevronRight, User, MapPin, Calendar, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { User, MapPin, Calendar, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Pagination } from '../ui/Pagination';
 
 interface RecentBookingsProps {
   sales: Sale[];
@@ -122,31 +123,14 @@ export function RecentBookings({ sales }: RecentBookingsProps) {
         })}
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-border">
-        <p className="text-xs text-gray-500">
-          Mostrando {((currentPage - 1) * perPage) + 1} - {Math.min(currentPage * perPage, sales.length)} de {sales.length} reservas
-        </p>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
-          </button>
-          <span className="px-2 text-xs text-gray-600">
-            {currentPage} / {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight className="w-4 h-4 text-gray-600" />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={sales.length}
+        perPage={perPage}
+        onPageChange={setCurrentPage}
+        className="pt-2 border-t border-gray-border mt-2"
+      />
     </div>
   );
 }

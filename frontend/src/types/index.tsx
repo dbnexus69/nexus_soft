@@ -17,7 +17,6 @@ export interface User {
   createdAt?: string;
   lastLogin?: string;
   avatar?: string | null;
-  customPermissions?: RolePermissions;
   permisos?: { modulo: string; accion: string }[];
 }
 
@@ -116,21 +115,21 @@ export interface Responsable {
 }
 
 export type SaleProductId =
-  | "tiqueteria"
-  | "hoteleria"
-  | "seguros_viaje"
-  | "planes"
+  | "ticket"
+  | "hotel"
+  | "insurance"
+  | "plan"
   | "checkin"
-  | "documentacion_migratoria"
+  | "migration"
   | "simcard"
-  | "renta_vehiculos"
-  | "renta_fincas"
-  | "tours"
-  | "centros_convencion"
-  | "restaurantes"
+  | "car"
+  | "finca"
+  | "tour"
+  | "convention"
+  | "restaurant"
   | "visa"
-  | "pasaporte"
-  | "servicio_mascotas";
+  | "passport"
+  | "pet";
 
 export interface SaleProductDef {
   id: SaleProductId;
@@ -141,15 +140,15 @@ export interface SaleProductDef {
 
 export const SALE_PRODUCTS: SaleProductDef[] = [
   // --- Principales ---
-  { id: "tiqueteria", label: "Tiquetería", icon: "LuTicket", group: "main" },
-  { id: "hoteleria", label: "Hotelería", icon: "LuBed", group: "main" },
+  { id: "ticket", label: "Tiquetería", icon: "LuTicket", group: "main" },
+  { id: "hotel", label: "Hotelería", icon: "LuBed", group: "main" },
   {
-    id: "seguros_viaje",
+    id: "insurance",
     label: "Seguros de Viaje",
     icon: "LuShieldCheck",
     group: "main",
   },
-  { id: "planes", label: "Paquetes", icon: "LuPackage", group: "main" },
+  { id: "plan", label: "Paquetes", icon: "LuPackage", group: "main" },
   // --- Otros ---
   {
     id: "checkin",
@@ -158,41 +157,41 @@ export const SALE_PRODUCTS: SaleProductDef[] = [
     group: "other",
   },
   {
-    id: "documentacion_migratoria",
+    id: "migration",
     label: "Documentación Migratoria",
     icon: "LuFileText",
     group: "other",
   },
   { id: "simcard", label: "SIM Card", icon: "LuSmartphone", group: "other" },
   {
-    id: "renta_vehiculos",
+    id: "car",
     label: "Renta de Vehículos",
     icon: "LuCar",
     group: "other",
   },
   {
-    id: "renta_fincas",
+    id: "finca",
     label: "Renta de Fincas",
     icon: "LuWarehouse",
     group: "other",
   },
-  { id: "tours", label: "Tours", icon: "LuCompass", group: "other" },
+  { id: "tour", label: "Tours", icon: "LuCompass", group: "other" },
   {
-    id: "centros_convencion",
+    id: "convention",
     label: "Centros de Convención",
     icon: "LuUsers",
     group: "other",
   },
   {
-    id: "restaurantes",
+    id: "restaurant",
     label: "Restaurantes",
     icon: "LuUtensils",
     group: "other",
   },
   { id: "visa", label: "Visa", icon: "LuStamp", group: "other" },
-  { id: "pasaporte", label: "Pasaporte", icon: "LuBookOpen", group: "other" },
+  { id: "passport", label: "Pasaporte", icon: "LuBookOpen", group: "other" },
   {
-    id: "servicio_mascotas",
+    id: "pet",
     label: "Servicio de Mascotas",
     icon: "LuDog",
     group: "other",

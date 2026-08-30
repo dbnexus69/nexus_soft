@@ -207,7 +207,6 @@ export default function Clients() {
             setSelectedClient(null);
           }}
           client={selectedClient}
-          clientSales={(data.sales as any).filter((s: any) => s.clientId === selectedClient.id)}
           clientFlights={[]}
         />
       )}

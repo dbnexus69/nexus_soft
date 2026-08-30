@@ -1,16 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Eye, Pencil, UserCheck, UserX, Search, CheckCircle, ChevronLeft, ChevronRight, TrendingUp, Users as UsersIcon, X } from 'lucide-react';
+import { Plus, Eye, Pencil, UserCheck, UserX, Search, CheckCircle, TrendingUp, Users as UsersIcon, X } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { FormField, Input, Select } from '../components/ui/Form';
 import { Table, TableRow, TableCell } from '../components/ui/Table';
+import { Pagination } from '../components/ui/Pagination';
 import StatCard from '../components/ui/StatCard';
 import SortIcon from '../components/ui/SortIcon';
 import ResponsableDetailModal from '../components/responsables/ResponsableDetailModal';
 import { useData } from '../context/DataContext';
+import * as api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { formatDate, capitalizeName, formatId, todayStr } from '../utils/formatters';
@@ -21,7 +23,7 @@ import AvatarPicker, { AVATARS } from '../components/ui/AvatarPicker';
 import { DatePicker } from '../components/sales/forms/TicketForm';
 
 export default function Responsables() {
-  const { data, addResponsable, updateResponsable, deleteResponsable, fetchResponsables, fetchSales } = useData();
+  const { data, addResponsable, updateResponsable, deleteResponsable, fetchResponsables } = useData();
   const { user } = useAuth();
   const { permissions, canCreate, canEdit } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function Responsables() {
   const [isToggling, setIsToggling] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Responsable; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 10;
 
   const triggerError = (msg: string) => {
     setErrorMessage(msg);
@@ -120,11 +122,11 @@ export default function Responsables() {
     }
   };
 
-  // Lazy Load Fetch
+  // Las ventas de cada responsable se piden en su modal de detalle, paginadas.
+  // Esta página no usa data.sales: traerlas aquí era una petición desperdiciada.
   useEffect(() => {
     fetchResponsables().finally(() => setIsLoading(false));
-    fetchSales().catch(() => {});
-  }, [fetchResponsables, fetchSales]);
+  }, [fetchResponsables]);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -381,11 +383,18 @@ export default function Responsables() {
   }, [searchTerm, statusFilter]);
 
 
-  const responsableFlights = useMemo(() => {
-    return selectedResponsable
-      ? data.flights.filter(f => f.passenger === selectedResponsable.name)
-      : [];
-  }, [selectedResponsable, data.flights]);
+  // Los vuelos del responsable se piden al servidor cuando se abre su detalle.
+  // Antes se filtraba la lista global de vuelos, que ya no se carga entera.
+  const [responsableFlights, setResponsableFlights] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!selectedResponsable) { setResponsableFlights([]); return; }
+    let vivo = true;
+    api.listFlights({ search: selectedResponsable.name, perPage: 50 })
+      .then((res: any) => { if (vivo) setResponsableFlights(res?.data || []); })
+      .catch(() => { if (vivo) setResponsableFlights([]); });
+    return () => { vivo = false; };
+  }, [selectedResponsable]);
 
   if (isLoading && data.responsables.length === 0) {
     return <LoadingScreen fullScreen={false} />;
@@ -598,27 +607,12 @@ export default function Responsables() {
             Mostrando {Math.min(paginatedResponsables.length + (currentPage - 1) * itemsPerPage, filteredResponsables.length)} de {filteredResponsables.length} responsables
             {statusFilter !== 'all' && <span className="ml-1 text-primary dark:text-teal-400 font-medium">· Filtro: {statusFilter === 'active' ? 'Activos' : 'Inactivos'}</span>}
           </span>
-          {totalPages > 1 && (
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" size="sm" 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft size={16} /> Anterior
-              </Button>
-              <div className="flex items-center px-3 text-xs font-bold text-primary dark:text-teal-400 bg-white dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
-                {currentPage} / {totalPages}
-              </div>
-              <Button 
-                variant="outline" size="sm" 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Siguiente <ChevronRight size={16} />
-              </Button>
-            </div>
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            className="mt-0"
+          />
         </div>
 
         {filteredResponsables.length === 0 && (

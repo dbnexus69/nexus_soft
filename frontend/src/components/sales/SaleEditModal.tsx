@@ -16,7 +16,6 @@ interface SaleEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingSale: Sale | null;
-  clients: Client[];
   user: User | null;
   isAdmin: boolean;
   onUpdateSale?: (id: number, data: any) => void;
@@ -28,18 +27,18 @@ interface SaleEditModalProps {
 
 // ── Mapa de iconos y colores por tipo de servicio ──────────────────────────
 const SERVICE_CONFIG: Record<string, { icon: React.ReactNode; bg: string; text: string; border: string }> = {
-  tiqueteria:   { icon: <Plane size={13} />,       bg: 'bg-sky-50 dark:bg-sky-950/40',      text: 'text-sky-700 dark:text-sky-300',      border: 'border-sky-200 dark:border-sky-800/50' },
-  hoteleria:    { icon: <Hotel size={13} />,        bg: 'bg-amber-50 dark:bg-amber-950/40',    text: 'text-amber-700 dark:text-amber-300',    border: 'border-amber-200 dark:border-amber-800/50' },
+  ticket:   { icon: <Plane size={13} />,       bg: 'bg-sky-50 dark:bg-sky-950/40',      text: 'text-sky-700 dark:text-sky-300',      border: 'border-sky-200 dark:border-sky-800/50' },
+  hotel:    { icon: <Hotel size={13} />,        bg: 'bg-amber-50 dark:bg-amber-950/40',    text: 'text-amber-700 dark:text-amber-300',    border: 'border-amber-200 dark:border-amber-800/50' },
   seguros:      { icon: <Shield size={13} />,       bg: 'bg-green-50 dark:bg-green-950/40',    text: 'text-green-700 dark:text-green-300',    border: 'border-green-200 dark:border-green-800/50' },
-  planes:       { icon: <Package size={13} />,      bg: 'bg-purple-50 dark:bg-purple-950/40',   text: 'text-purple-700 dark:text-purple-300',   border: 'border-purple-200 dark:border-purple-800/50' },
+  plan:       { icon: <Package size={13} />,      bg: 'bg-purple-50 dark:bg-purple-950/40',   text: 'text-purple-700 dark:text-purple-300',   border: 'border-purple-200 dark:border-purple-800/50' },
   checkin:      { icon: <CheckSquare size={13} />,  bg: 'bg-teal-50 dark:bg-teal-950/40',     text: 'text-teal-700 dark:text-teal-300',     border: 'border-teal-200 dark:border-teal-800/50' },
   migracion:    { icon: <Globe size={13} />,        bg: 'bg-blue-50 dark:bg-blue-950/40',     text: 'text-blue-700 dark:text-blue-300',     border: 'border-blue-200 dark:border-blue-800/50' },
   simcard:      { icon: <Smartphone size={13} />,   bg: 'bg-indigo-50 dark:bg-indigo-950/40',   text: 'text-indigo-700 dark:text-indigo-300',   border: 'border-indigo-200 dark:border-indigo-800/50' },
   autos:        { icon: <Car size={13} />,          bg: 'bg-orange-50 dark:bg-orange-950/40',   text: 'text-orange-700 dark:text-orange-300',   border: 'border-orange-200 dark:border-orange-800/50' },
   fincas:       { icon: <Home size={13} />,         bg: 'bg-lime-50 dark:bg-lime-950/40',     text: 'text-lime-700 dark:text-lime-300',     border: 'border-lime-200 dark:border-lime-800/50' },
-  tours:        { icon: <Compass size={13} />,      bg: 'bg-cyan-50 dark:bg-cyan-950/40',     text: 'text-cyan-700 dark:text-cyan-300',     border: 'border-cyan-200 dark:border-cyan-800/50' },
+  tour:        { icon: <Compass size={13} />,      bg: 'bg-cyan-50 dark:bg-cyan-950/40',     text: 'text-cyan-700 dark:text-cyan-300',     border: 'border-cyan-200 dark:border-cyan-800/50' },
   eventos:      { icon: <Star size={13} />,         bg: 'bg-yellow-50 dark:bg-yellow-950/40',   text: 'text-yellow-700 dark:text-yellow-300',   border: 'border-yellow-200 dark:border-yellow-800/50' },
-  restaurantes: { icon: <Utensils size={13} />,     bg: 'bg-rose-50 dark:bg-rose-950/40',     text: 'text-rose-700 dark:text-rose-300',     border: 'border-rose-200 dark:border-rose-800/50' },
+  restaurant: { icon: <Utensils size={13} />,     bg: 'bg-rose-50 dark:bg-rose-950/40',     text: 'text-rose-700 dark:text-rose-300',     border: 'border-rose-200 dark:border-rose-800/50' },
   visas:        { icon: <FileCheck size={13} />,    bg: 'bg-violet-50 dark:bg-violet-950/40',   text: 'text-violet-700 dark:text-violet-300',   border: 'border-violet-200 dark:border-violet-800/50' },
   pasaportes:   { icon: <BookOpen size={13} />,     bg: 'bg-fuchsia-50 dark:bg-fuchsia-950/40',  text: 'text-fuchsia-700 dark:text-fuchsia-300',  border: 'border-fuchsia-200 dark:border-fuchsia-800/50' },
   mascotas:     { icon: <PawPrint size={13} />,     bg: 'bg-pink-50 dark:bg-pink-950/40',     text: 'text-pink-700 dark:text-pink-300',     border: 'border-pink-200 dark:border-pink-800/50' },
@@ -95,7 +94,6 @@ export default function SaleEditModal({
   isOpen,
   onClose,
   editingSale,
-  clients,
   user,
   isAdmin,
   onUpdateSale,

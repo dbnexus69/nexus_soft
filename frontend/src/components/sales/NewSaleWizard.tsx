@@ -115,7 +115,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
   // Saber si el formulario de tiqueteríƒÂ­a estíƒÂ¡ completamente vacíƒÂ­o (sin tocar)
   const isTicketFormEmpty = (() => {
-    if (activeForm === "tiqueteria" && activeIdx !== null) {
+    if (activeForm === "ticket" && activeIdx !== null) {
       const ticket = form.tickets[activeIdx];
       if (!ticket) return true;
       
@@ -164,7 +164,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   })();
 
   const isHotelFormEmpty = (() => {
-    if (activeForm === "hoteleria" && activeIdx !== null) {
+    if (activeForm === "hotel" && activeIdx !== null) {
       const hotel = form.hotels[activeIdx];
       if (!hotel) return true;
       const hasHotelName = !!hotel.hotelName?.trim();
@@ -179,7 +179,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       const hasTa = hotel.ta > 0;
       
       // Ignore initial prefilled passenger in guests list for empty check
-      const client = data.clients.find((c: any) => c.name === form.clientId);
+      const client = form.clientData;
       const initialGuestName = client?.name || "";
       const initialGuestDoc = client?.docNumber || "";
       
@@ -196,7 +196,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   })();
 
   const isInsuranceFormEmpty = (() => {
-    if (activeForm === "seguros_viaje" && activeIdx !== null) {
+    if (activeForm === "insurance" && activeIdx !== null) {
       const ins = form.insurances[activeIdx];
       if (!ins) return true;
       const hasInsuranceType = !!ins.insuranceType?.trim();
@@ -205,7 +205,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       const hasCost = ins.supplierCost > 0;
       const hasTa = ins.ta > 0;
       
-      const client = data.clients.find((c: any) => c.name === form.clientId);
+      const client = form.clientData;
       const initialMemberName = client?.name || "";
       const initialMemberDoc = client?.docNumber || "";
       
@@ -302,23 +302,23 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
 
   const getCurrentItemLinkedPlanIndex = () => {
-    if (!activeForm || activeIdx === null || activeForm === 'planes') return '';
+    if (!activeForm || activeIdx === null || activeForm === 'plan') return '';
     let targetKey = null;
     switch (activeForm) {
-      case "tiqueteria": targetKey = "tickets"; break;
-      case "hoteleria": targetKey = "hotels"; break;
-      case "seguros_viaje": targetKey = "insurances"; break;
+      case "ticket": targetKey = "tickets"; break;
+      case "hotel": targetKey = "hotels"; break;
+      case "insurance": targetKey = "insurances"; break;
       case "checkin": targetKey = "checkIns"; break;
-      case "documentacion_migratoria": targetKey = "migrations"; break;
+      case "migration": targetKey = "migrations"; break;
       case "simcard": targetKey = "simCards"; break;
-      case "renta_vehiculos": targetKey = "carRentals"; break;
-      case "renta_fincas": targetKey = "fincas"; break;
-      case "tours": targetKey = "tours"; break;
-      case "centros_convencion": targetKey = "conventions"; break;
-      case "restaurantes": targetKey = "restaurants"; break;
+      case "car": targetKey = "carRentals"; break;
+      case "finca": targetKey = "fincas"; break;
+      case "tour": targetKey = "tours"; break;
+      case "convention": targetKey = "conventions"; break;
+      case "restaurant": targetKey = "restaurants"; break;
       case "visa": targetKey = "visas"; break;
-      case "pasaporte": targetKey = "passports"; break;
-      case "servicio_mascotas": targetKey = "petServices"; break;
+      case "passport": targetKey = "passports"; break;
+      case "pet": targetKey = "petServices"; break;
     }
     if (targetKey) {
       const items = (form as any)[targetKey];
@@ -330,23 +330,23 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   };
 
   const setCurrentItemLinkedPlanIndex = (val: string) => {
-    if (!activeForm || activeIdx === null || activeForm === 'planes') return;
+    if (!activeForm || activeIdx === null || activeForm === 'plan') return;
     let targetKey = null;
     switch (activeForm) {
-      case "tiqueteria": targetKey = "tickets"; break;
-      case "hoteleria": targetKey = "hotels"; break;
-      case "seguros_viaje": targetKey = "insurances"; break;
+      case "ticket": targetKey = "tickets"; break;
+      case "hotel": targetKey = "hotels"; break;
+      case "insurance": targetKey = "insurances"; break;
       case "checkin": targetKey = "checkIns"; break;
-      case "documentacion_migratoria": targetKey = "migrations"; break;
+      case "migration": targetKey = "migrations"; break;
       case "simcard": targetKey = "simCards"; break;
-      case "renta_vehiculos": targetKey = "carRentals"; break;
-      case "renta_fincas": targetKey = "fincas"; break;
-      case "tours": targetKey = "tours"; break;
-      case "centros_convencion": targetKey = "conventions"; break;
-      case "restaurantes": targetKey = "restaurants"; break;
+      case "car": targetKey = "carRentals"; break;
+      case "finca": targetKey = "fincas"; break;
+      case "tour": targetKey = "tours"; break;
+      case "convention": targetKey = "conventions"; break;
+      case "restaurant": targetKey = "restaurants"; break;
       case "visa": targetKey = "visas"; break;
-      case "pasaporte": targetKey = "passports"; break;
-      case "servicio_mascotas": targetKey = "petServices"; break;
+      case "passport": targetKey = "passports"; break;
+      case "pet": targetKey = "petServices"; break;
     }
     if (targetKey) {
       const items = [...((form as any)[targetKey] || [])];
@@ -425,7 +425,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     if (s === 2) {
       if (form.selectedProducts.length === 0) {
         errs.products = "Debes seleccionar al menos un producto";
-      } else if (form.selectedProducts.includes("tiqueteria")) {
+      } else if (form.selectedProducts.includes("ticket")) {
         if (!form.tickets || form.tickets.length === 0) {
           errs.products = "Debes configurar al menos un tiquete";
         } else {
@@ -443,7 +443,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("hoteleria")) {
+      if (form.selectedProducts.includes("hotel")) {
         if (!form.hotels || form.hotels.length === 0) {
           errs.products = "Debes configurar al menos un hotel";
         } else {
@@ -477,7 +477,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("seguros_viaje")) {
+      if (form.selectedProducts.includes("insurance")) {
         if (!form.insurances || form.insurances.length === 0) {
           errs.products = "Debes configurar al menos un seguro de viaje";
         } else {
@@ -509,7 +509,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("planes")) {
+      if (form.selectedProducts.includes("plan")) {
         if (!form.plans || form.plans.length === 0) {
           errs.products = "Debes configurar al menos un paquete";
         } else {
@@ -661,7 +661,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("documentacion_migratoria")) {
+      if (form.selectedProducts.includes("migration")) {
         if (!form.migrations || form.migrations.length === 0) {
           errs.products = "Debes configurar al menos una Documentación Migratoria";
         } else {
@@ -736,7 +736,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("renta_vehiculos")) {
+      if (form.selectedProducts.includes("car")) {
         if (!form.carRentals || form.carRentals.length === 0) {
           errs.products = "Debes configurar al menos una Renta de VehíƒÂ­culo";
         } else {
@@ -779,7 +779,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("renta_fincas")) {
+      if (form.selectedProducts.includes("finca")) {
         if (!form.fincas || form.fincas.length === 0) {
           errs.products = "Debes configurar al menos una Renta de Finca";
         } else {
@@ -816,7 +816,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("tours")) {
+      if (form.selectedProducts.includes("tour")) {
         if (!form.tours || form.tours.length === 0) {
           errs.products = "Debes configurar al menos un Tour";
         } else {
@@ -843,7 +843,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("centros_convencion")) {
+      if (form.selectedProducts.includes("convention")) {
         if (!form.conventions || form.conventions.length === 0) {
           errs.products = "Debes configurar al menos un Centro de ConvenciíƒÂ³n";
         } else {
@@ -888,7 +888,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("restaurantes")) {
+      if (form.selectedProducts.includes("restaurant")) {
         if (!form.restaurants || form.restaurants.length === 0) {
           errs.products = "Debes configurar al menos un Restaurante";
         } else {
@@ -1004,7 +1004,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("pasaporte")) {
+      if (form.selectedProducts.includes("passport")) {
         if (!form.passports || form.passports.length === 0) {
           errs.products = "Debes configurar al menos un Pasaporte";
         } else {
@@ -1066,7 +1066,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
-      if (form.selectedProducts.includes("servicio_mascotas")) {
+      if (form.selectedProducts.includes("pet")) {
         if (!form.petServices || form.petServices.length === 0) {
           errs.products = "Debes configurar al menos un Transporte de Mascotas";
         } else {
@@ -1193,7 +1193,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     }
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const client = data.clients.find((c: any) => c.name === form.clientId);
+    const client = form.clientData;
     if (!client) {
       setErrors({ ...errors, clientId: "El cliente no es víƒÂ¡lido" });
       setStep(1);
@@ -1519,7 +1519,7 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
   if (item.supplierName && item.supplierName.trim() !== "") return false;
 
   switch (category) {
-    case "tiqueteria":
+    case "ticket":
       return (
         !item.airline &&
         !item.reservationNumber &&
@@ -1528,7 +1528,7 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.seatNumber &&
         (!item.legs || item.legs.every((l: any) => !l.origin && !l.destination && !l.flightNumber))
       );
-    case "hoteleria":
+    case "hotel":
       return (
         !item.hotelName &&
         !item.destination &&
@@ -1536,9 +1536,9 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.observations &&
         !item.hotelType
       );
-    case "seguros_viaje":
+    case "insurance":
       return !item.phone && !item.insuranceType;
-    case "planes":
+    case "plan":
       return (
         !item.planName &&
         !item.hotelName &&
@@ -1555,7 +1555,7 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.baggage &&
         !item.specialNeeds
       );
-    case "documentacion_migratoria":
+    case "migration":
       return (
         !item.nationality &&
         !item.docNumber &&
@@ -1569,16 +1569,16 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.tripDuration &&
         !item.dataPlan
       );
-    case "renta_vehiculos":
+    case "car":
       return (
         !item.licenseNumber &&
         !item.pickupDate &&
         !item.returnDate &&
         !item.guaranteeCreditCard
       );
-    case "renta_fincas":
+    case "finca":
       return !item.checkInDate && !item.checkOutDate && !item.petType;
-    case "tours":
+    case "tour":
       return (
         !item.selectedTour &&
         !item.preferredDate &&
@@ -1587,14 +1587,14 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.medicalConditions &&
         !item.observations
       );
-    case "centros_convencion":
+    case "convention":
       return (
         !item.organization &&
         !item.startDate &&
         !item.endDate &&
         !item.cateringNotes
       );
-    case "restaurantes":
+    case "restaurant":
       return !item.dateTime;
     case "visa":
       return (
@@ -1603,9 +1603,9 @@ function isItemEmpty(item: any, category: SaleProductId): boolean {
         !item.passportExpiration &&
         !item.countryApplying
       );
-    case "pasaporte":
+    case "passport":
       return !item.residenceCity;
-    case "servicio_mascotas":
+    case "pet":
       return (
         !item.petName &&
         !item.breed &&

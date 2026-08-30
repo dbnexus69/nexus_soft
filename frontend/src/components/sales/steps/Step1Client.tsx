@@ -1,9 +1,33 @@
+import { useCallback, useState } from "react";
 import { Users } from "lucide-react";
 import { FormField, Input, Combobox, Select } from "../../ui/Form";
+import { AsyncCombobox } from "../../ui/AsyncCombobox";
 import { WizardFormData } from "../wizardData";
 import { getAvatarGradient } from "../../../utils/formatters";
+import * as api from "../../../api";
 
 export function Step1Client({ form, set, data, errors }: any) {
+  // El cliente elegido se guarda aquí: ya no se puede buscar en data.clients,
+  // porque el catálogo completo ya no viaja al navegador.
+  const [clienteElegido, setClienteElegido] = useState<any>(null);
+
+  const buscarClientes = useCallback(async (q: string) => {
+    const res: any = await api.listClients({ search: q || undefined, perPage: 20, status: 'active' });
+    return (res?.data || []).map((c: any) => ({ value: c.name, label: c.name, data: c }));
+  }, []);
+
+  const buscarAsesores = useCallback(async (q: string) => {
+    const res: any = await api.listUsers({ search: q || undefined, perPage: 20 });
+    return (res?.data || [])
+      .filter((u: any) => u.status === 'active')
+      .map((u: any) => ({ value: u.name, label: u.name, data: u }));
+  }, []);
+
+  const buscarComisionistas = useCallback(async (q: string) => {
+    const res: any = await api.listCommissionAgents({ search: q || undefined, perPage: 20 });
+    return (res?.data || []).map((a: any) => ({ value: a.name, label: a.name, data: a }));
+  }, []);
+
   return (
     <div className="animate-fade-in space-y-1">
         <div className="flex items-center gap-2 mb-4">
@@ -22,46 +46,41 @@ export function Step1Client({ form, set, data, errors }: any) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Cliente *" error={errors.clientId}>
-            <Combobox
+            <AsyncCombobox
               value={form.clientId}
-              onChange={(val) => set("clientId", val)}
-              options={data.clients
-                .filter((c: any) => c.status === "active")
-                .map((c: any) => ({
-                  value: c.name,
-                  label: c.name,
-                }))}
-              placeholder="Seleccionar o escribir nombre..."
+              onChange={(val, opt) => {
+                set("clientId", val);
+                set("clientData", opt?.data);
+                setClienteElegido(opt?.data ?? null);
+              }}
+              fetchOptions={buscarClientes}
+              placeholder="Escribe para buscar un cliente..."
+              emptyText="Ningún cliente coincide"
               error={errors.clientId}
             />
           </FormField>
 
           <FormField label="Asesor *">
-            <Combobox
+            <AsyncCombobox
               value={form.asesorName}
-              onChange={(val) => {
-                const selected = data.users.find((u: any) => u.name === val);
-                if (selected) {
-                  set("asesorId", String(selected.id));
-                  set("asesorName", selected.name);
+              onChange={(val, opt) => {
+                if (opt?.data) {
+                  set("asesorId", String(opt.data.id));
+                  set("asesorName", opt.data.name);
                 } else {
                   set("asesorName", val);
                 }
               }}
-              options={data.users
-                .filter((u: any) => u.status === "active")
-                .map((u: any) => ({
-                  value: u.name,
-                  label: u.name,
-                }))}
+              fetchOptions={buscarAsesores}
               placeholder="¿Quién realiza la venta?"
+              emptyText="Ningún asesor coincide"
             />
           </FormField>
 
           <FormField label="Comisionista / Referido" error={errors.commissionAgent}>
-            <Combobox
+            <AsyncCombobox
               value={form.commissionAgentName || ""}
-              onChange={(val) => {
+              onChange={(val, opt) => {
                 if (!val) {
                   set("commissionAgentId", "");
                   set("commissionAgentName", "");
@@ -69,21 +88,18 @@ export function Step1Client({ form, set, data, errors }: any) {
                   set("commissionAgentRetentionPercentage", "0");
                   set("commissionAgentNetPayment", "0");
                 } else {
-                  const agent = (data.commissionAgents || []).find((a: any) => a.name === val);
-                  if (agent) {
-                    set("commissionAgentId", String(agent.id));
-                    set("commissionAgentName", agent.name);
+                  if (opt?.data) {
+                    set("commissionAgentId", String(opt.data.id));
+                    set("commissionAgentName", opt.data.name);
                   } else {
                     set("commissionAgentId", "");
                     set("commissionAgentName", val);
                   }
                 }
               }}
-              options={(data.commissionAgents || []).map((a: any) => ({
-                value: a.name,
-                label: a.name,
-              }))}
+              fetchOptions={buscarComisionistas}
               placeholder="Venta Directa (Sin Comisionista)"
+              emptyText="Ningún comisionista coincide"
               error={errors.commissionAgent}
             />
           </FormField>
@@ -91,9 +107,9 @@ export function Step1Client({ form, set, data, errors }: any) {
 
         {/* Client preview card */}
         {form.clientId && (() => {
-          const client = data.clients.find(
-            (c: any) => c.name === form.clientId,
-          );
+          // El cliente lo devuelve el propio selector, no una lista global.
+          const client = (clienteElegido ?? form.clientData);
+          if (!client || client.name !== form.clientId) return null;
           if (!client) return null;
           const gradient = getAvatarGradient(client.name);
           const initials = client.name.split(" ").filter(Boolean).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();

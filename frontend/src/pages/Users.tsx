@@ -16,7 +16,7 @@ import { User } from "../types";
 import LoadingScreen from "../components/ui/LoadingScreen";
 
 export default function Users() {
-  const { data } = useData(); // Dejamos data para referencias a config que no hemos migrado aun si las hubiera
+  const { data, fetchConfig } = useData(); // Dejamos data para referencias a config que no hemos migrado aun si las hubiera
   const { 
     users, 
     loading: usersLoading,
@@ -24,7 +24,6 @@ export default function Users() {
     handleUpdateUser: updateUser, 
     handleDeleteUser: deleteUser, 
     handleSaveRolePermissions: updateRolePermissions, 
-    handleSaveUserPermissions: updateUserPermissions,
     fetchUsers
   } = useUsersContext();
   const { success, error: toastError } = useToast();
@@ -49,9 +48,6 @@ export default function Users() {
   const [editingUserPermissions, setEditingUserPermissions] = useState<any>(null);
 
   // Individual permissions state
-  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
-  const [permissionsModalUser, setPermissionsModalUser] = useState<User | null>(null);
-  const [individualPermissions, setIndividualPermissions] = useState<any>(null);
 
   React.useEffect(() => {
     fetchUsers();
@@ -117,9 +113,12 @@ export default function Users() {
   const handleSaveRolePermissions = async () => {
     try {
       await updateRolePermissions(editingRole, editingUserPermissions);
+      // Releer de la base: lo que se muestra debe ser lo que quedó guardado,
+      // no lo que el formulario tenía en pantalla.
+      await fetchConfig();
       success("Permisos actualizados");
     } catch (err: any) {
-      toastError("Error al guardar permisos");
+      toastError(err?.response?.data?.error?.message || "Error al guardar permisos");
     }
   };
 
@@ -220,38 +219,6 @@ export default function Users() {
               onViewDetail={(u) => { setEditingUser(u); setIsDetailModalOpen(true); }}
               onEdit={(u) => handleOpenModal(u)}
               onDelete={handleDeleteUser}
-              onManagePermissions={(u) => {
-                setPermissionsModalUser(u);
-                
-                let parsedCustom = null;
-                if (u.customPermissions) {
-                  try {
-                    parsedCustom = typeof u.customPermissions === 'string' 
-                      ? JSON.parse(u.customPermissions) 
-                      : u.customPermissions;
-                  } catch (e) {
-                    console.error("Error parsing custom permissions", e);
-                  }
-                }
-
-                const defaultRolePerms = data?.config?.rolePermissions?.[u.role] || data?.config?.rolePermissions?.asesor || {
-                  sales: { view: 'own', create: true, edit: 'own', delete: 'none' },
-                  clients: { view: 'all', create: true, edit: 'own', delete: 'none' },
-                  itineraries: { view: 'own', create: true, edit: 'own', delete: 'none' },
-                  commissions: { view: 'own', create: false, edit: 'none', delete: 'none' },
-                  dashboard: { view: true }
-                };
-                
-                const mergedPerms = { ...defaultRolePerms };
-                if (parsedCustom) {
-                  for (const key in parsedCustom) {
-                    mergedPerms[key] = { ...(mergedPerms[key] || {}), ...parsedCustom[key] };
-                  }
-                }
-                
-                setIndividualPermissions(mergedPerms);
-                setIsPermissionsModalOpen(true);
-              }}
             />
           </div>
         </Card>
@@ -265,6 +232,7 @@ export default function Users() {
               </CardHeader>
               <div className="p-4 space-y-3">
                 {[
+                  { id: "admin", name: "Administradores", icon: <ShieldCheck size={20} /> },
                   { id: "asesor", name: "Asesores", icon: <UsersIcon size={20} /> },
                   { id: "freelancer", name: "Freelancers", icon: <ShieldCheck size={20} /> }
                 ].map(role => (
@@ -336,56 +304,9 @@ export default function Users() {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           user={editingUser}
-          userSales={(data.sales as any).filter((s: any) => s.asesorId === editingUser.id || s.commissionAgentId === editingUser.id)}
         />
       )}
 
-      {permissionsModalUser && (
-        <Modal
-          isOpen={isPermissionsModalOpen}
-          onClose={() => setIsPermissionsModalOpen(false)}
-          title={`Gestión de Accesos: ${permissionsModalUser.name}`}
-          size="xl"
-        >
-          <div className="space-y-6">
-            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white shadow-inner">
-                <ShieldCheck size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-primary text-lg">Permisos Individuales</h4>
-                <p className="text-sm text-gray-600 dark:text-slate-400">
-                  Estás ajustando los accesos específicos de este usuario. Al guardar, se sobrescribirán los permisos predeterminados de su rol (<strong className="capitalize">{permissionsModalUser.role}</strong>).
-                </p>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50/80 dark:bg-slate-800/80 p-6 rounded-3xl border border-gray-100 dark:border-slate-700/50 max-h-[55vh] overflow-y-auto scrollbar-thin shadow-inner">
-              {individualPermissions && (
-                <PermissionsGrid
-                  permissions={individualPermissions}
-                  onChange={setIndividualPermissions}
-                />
-              )}
-            </div>
-            <div className="flex justify-end gap-4 pt-4 mt-6 border-t border-gray-100 dark:border-slate-800">
-              <Button variant="outline" onClick={() => setIsPermissionsModalOpen(false)} className="h-12 px-8 rounded-xl font-bold border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800">Cancelar</Button>
-              <Button onClick={() => {
-                if (permissionsModalUser) {
-                  updateUserPermissions(permissionsModalUser.id, individualPermissions)
-                    .then(() => {
-                      success("Permisos individuales actualizados con éxito");
-                      setIsPermissionsModalOpen(false);
-                    })
-                    .catch((err) => toastError(err.message || "Error al actualizar permisos"));
-                }
-              }} className="bg-primary hover:bg-primary/90 px-10 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 text-white hover:scale-105 active:scale-95 transition-all">
-                Guardar Privilegios
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

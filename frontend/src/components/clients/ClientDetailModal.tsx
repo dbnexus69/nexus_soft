@@ -1,21 +1,56 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { Pagination } from '../ui/Pagination';
 import { Plane } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import * as api from '../../api';
 import { Client, Sale } from '../../types';
 
 interface ClientDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   client: Client | null;
-  clientSales: Sale[];
   clientFlights: any[];
 }
 
-export default function ClientDetailModal({ isOpen, onClose, client, clientSales, clientFlights }: ClientDetailModalProps) {
+const PER_PAGE = 5;
+
+export default function ClientDetailModal({ isOpen, onClose, client, clientFlights }: ClientDetailModalProps) {
+  // Las compras del cliente se piden aquí, paginadas y filtradas por su id.
+  // Antes llegaban por props filtrando en cliente la lista global de ventas,
+  // que solo traía una página: el historial salía incompleto.
+  const [clientSales, setClientSales] = useState<Sale[]>([]);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
+  const [resumen, setResumen] = useState<{ salesCount?: number; salesTotal?: number }>({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !client) { setClientSales([]); setPage(1); setResumen({}); return; }
+    let vivo = true;
+    setLoading(true);
+    Promise.all([
+      api.listSales({ clientId: client.id, page, perPage: PER_PAGE, sortOrder: 'desc' }),
+      page === 1 ? api.getClient(client.id) : Promise.resolve(null),
+    ])
+      .then(([lista, detalle]: any[]) => {
+        if (!vivo) return;
+        setClientSales(lista?.data || []);
+        if (lista?.meta) setMeta({ total: lista.meta.total, totalPages: lista.meta.totalPages });
+        if (detalle) setResumen({ salesCount: detalle.salesCount, salesTotal: detalle.salesTotal });
+      })
+      .catch(() => { if (vivo) setClientSales([]); })
+      .finally(() => { if (vivo) setLoading(false); });
+    return () => { vivo = false; };
+  }, [isOpen, client, page]);
+
   if (!client) return null;
+
+  // Totales de TODAS las compras, no solo de la página visible.
+  const totalCompras = resumen.salesTotal ?? 0;
+  const numeroCompras = resumen.salesCount ?? meta.total;
 
   return (
     <Modal
@@ -46,14 +81,14 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientSales
               {client.status === 'active' ? 'CLIENTE ACTIVO' : 'CLIENTE INACTIVO'}
             </Badge>
 
-            {clientSales.length > 0 && (
+            {numeroCompras > 0 ? (
               <div className="w-full bg-white/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-gray-100 dark:border-slate-700/50 text-center shadow-sm backdrop-blur-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Total Compras</span>
                 <span className="text-2xl font-bold text-primary dark:text-teal-400">
-                  {formatCurrency(clientSales.reduce((acc, s) => acc + s.total, 0))}
+                  {formatCurrency(totalCompras)}
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -83,7 +118,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientSales
               <div className="flex items-center gap-2 mb-5">
                 <div className="h-6 w-1 bg-accent rounded-full"></div>
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  Historial de Compras ({clientSales.length})
+                  Historial de Compras ({numeroCompras})
                 </h3>
               </div>
               
@@ -107,10 +142,21 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientSales
                       ))}
                     </tbody>
                   </table>
+                  <Pagination
+                    currentPage={page}
+                    totalPages={meta.totalPages}
+                    total={meta.total}
+                    perPage={PER_PAGE}
+                    loading={loading}
+                    onPageChange={setPage}
+                    className="px-5 py-3 border-t border-gray-100 dark:border-slate-700/50 mt-0"
+                  />
                 </div>
               ) : (
                 <div className="bg-gray-50/50 dark:bg-slate-800/30 p-8 rounded-2xl border border-gray-100 dark:border-slate-700/50 text-center">
-                  <p className="text-gray-500 text-sm italic">No hay compras registradas</p>
+                  <p className="text-gray-500 text-sm italic">
+                    {loading ? 'Cargando compras...' : 'No hay compras registradas'}
+                  </p>
                 </div>
               )}
             </div>

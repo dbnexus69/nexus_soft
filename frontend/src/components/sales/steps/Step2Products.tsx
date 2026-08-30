@@ -34,13 +34,13 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
     openForm
   } = actions;
 
-  const client = data.clients.find((c: any) => c.name === form.clientId);
+  const client = form.clientData;
 
   const mainProducts = SALE_PRODUCTS.filter((p) =>
-    ["tiqueteria", "hoteleria", "seguros_viaje", "planes"].includes(p.id)
+    ["ticket", "hotel", "insurance", "plan"].includes(p.id)
   );
   const otherProducts = SALE_PRODUCTS.filter(
-    (p) => !["tiqueteria", "hoteleria", "seguros_viaje", "planes"].includes(p.id)
+    (p) => !["ticket", "hotel", "insurance", "plan"].includes(p.id)
   );
 
   const handleAddAnotherProduct = (productId: SaleProductId, e?: React.MouseEvent) => {
@@ -49,21 +49,21 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
     let initialFn: any = null;
 
     switch (productId) {
-      case "tiqueteria": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
-      case "hoteleria": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
-      case "seguros_viaje": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
-      case "planes": targetKey = "plans"; initialFn = INITIAL_PLAN; break;
+      case "ticket": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
+      case "hotel": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
+      case "insurance": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
+      case "plan": targetKey = "plans"; initialFn = INITIAL_PLAN; break;
       case "checkin": targetKey = "checkIns"; initialFn = INITIAL_CHECKIN; break;
-      case "documentacion_migratoria": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
+      case "migration": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
       case "simcard": targetKey = "simCards"; initialFn = INITIAL_SIMCARD; break;
-      case "renta_vehiculos": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
-      case "renta_fincas": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
-      case "tours": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
-      case "centros_convencion": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
-      case "restaurantes": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
+      case "car": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
+      case "finca": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
+      case "tour": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
+      case "convention": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
+      case "restaurant": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
       case "visa": targetKey = "visas"; initialFn = INITIAL_VISA; break;
-      case "pasaporte": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
-      case "servicio_mascotas": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
+      case "passport": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
+      case "pet": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
     }
 
     if (targetKey && initialFn) {
@@ -90,21 +90,21 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
     let initialFn: any = null;
 
     switch (productId) {
-      case "tiqueteria": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
-      case "hoteleria": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
-      case "seguros_viaje": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
-      case "planes": targetKey = "plans"; initialFn = INITIAL_PLAN; break;
+      case "ticket": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
+      case "hotel": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
+      case "insurance": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
+      case "plan": targetKey = "plans"; initialFn = INITIAL_PLAN; break;
       case "checkin": targetKey = "checkIns"; initialFn = INITIAL_CHECKIN; break;
-      case "documentacion_migratoria": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
+      case "migration": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
       case "simcard": targetKey = "simCards"; initialFn = INITIAL_SIMCARD; break;
-      case "renta_vehiculos": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
-      case "renta_fincas": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
-      case "tours": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
-      case "centros_convencion": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
-      case "restaurantes": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
+      case "car": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
+      case "finca": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
+      case "tour": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
+      case "convention": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
+      case "restaurant": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
       case "visa": targetKey = "visas"; initialFn = INITIAL_VISA; break;
-      case "pasaporte": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
-      case "servicio_mascotas": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
+      case "passport": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
+      case "pet": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
     }
 
     if (targetKey && initialFn) {
@@ -125,21 +125,21 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
     SALE_PRODUCTS.forEach(p => {
       let count = 0;
       switch (p.id) {
-        case "tiqueteria": count = form.tickets.length; break;
-        case "hoteleria": count = form.hotels.length; break;
-        case "seguros_viaje": count = form.insurances.length; break;
-        case "planes": count = form.plans.length; break;
+        case "ticket": count = form.tickets.length; break;
+        case "hotel": count = form.hotels.length; break;
+        case "insurance": count = form.insurances.length; break;
+        case "plan": count = form.plans.length; break;
         case "checkin": count = form.checkIns.length; break;
-        case "documentacion_migratoria": count = form.migrations.length; break;
+        case "migration": count = form.migrations.length; break;
         case "simcard": count = form.simCards.length; break;
-        case "renta_vehiculos": count = form.carRentals.length; break;
-        case "renta_fincas": count = form.fincas.length; break;
-        case "tours": count = form.tours.length; break;
-        case "centros_convencion": count = form.conventions.length; break;
-        case "restaurantes": count = form.restaurants.length; break;
+        case "car": count = form.carRentals.length; break;
+        case "finca": count = form.fincas.length; break;
+        case "tour": count = form.tours.length; break;
+        case "convention": count = form.conventions.length; break;
+        case "restaurant": count = form.restaurants.length; break;
         case "visa": count = form.visas.length; break;
-        case "pasaporte": count = form.passports.length; break;
-        case "servicio_mascotas": count = form.petServices.length; break;
+        case "passport": count = form.passports.length; break;
+        case "pet": count = form.petServices.length; break;
       }
       if (count > 0) {
         items.push({ id: p.id, label: p.label, count, icon: p.icon });
@@ -202,11 +202,11 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                   <div className={`absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
                   {(() => {
                     const keyMap: Record<string, string> = {
-                      tiqueteria: "tickets", hoteleria: "hotels", seguros_viaje: "insurances", planes: "plans",
+                      ticket: "tickets", hoteleria: "hotels", seguros_viaje: "insurances", planes: "plans",
                       checkin: "checkIns", documentacion_migratoria: "migrations", simcard: "simCards",
-                      renta_vehiculos: "carRentals", renta_fincas: "fincas", tours: "tours",
-                      centros_convencion: "conventions", restaurantes: "restaurants", visa: "visas",
-                      pasaporte: "passports", servicio_mascotas: "petServices"
+                      car: "carRentals", renta_fincas: "fincas", tours: "tour",
+                      convention: "conventions", restaurantes: "restaurants", visa: "visas",
+                      passport: "passports", servicio_mascotas: "petServices"
                     };
                     const targetKey = keyMap[product.id];
                     const count = targetKey ? ((form as any)[targetKey]?.length || 0) : 0;
@@ -301,21 +301,21 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                 let itemsList: any[] = [];
                 let targetKey = "";
                 switch (p.id) {
-                  case "tiqueteria": itemsList = form.tickets; targetKey = "tickets"; break;
-                  case "hoteleria": itemsList = form.hotels; targetKey = "hotels"; break;
-                  case "seguros_viaje": itemsList = form.insurances; targetKey = "insurances"; break;
-                  case "planes": itemsList = form.plans; targetKey = "plans"; break;
+                  case "ticket": itemsList = form.tickets; targetKey = "tickets"; break;
+                  case "hotel": itemsList = form.hotels; targetKey = "hotels"; break;
+                  case "insurance": itemsList = form.insurances; targetKey = "insurances"; break;
+                  case "plan": itemsList = form.plans; targetKey = "plans"; break;
                   case "checkin": itemsList = form.checkIns; targetKey = "checkIns"; break;
-                  case "documentacion_migratoria": itemsList = form.migrations; targetKey = "migrations"; break;
+                  case "migration": itemsList = form.migrations; targetKey = "migrations"; break;
                   case "simcard": itemsList = form.simCards; targetKey = "simCards"; break;
-                  case "renta_vehiculos": itemsList = form.carRentals; targetKey = "carRentals"; break;
-                  case "renta_fincas": itemsList = form.fincas; targetKey = "fincas"; break;
-                  case "tours": itemsList = form.tours; targetKey = "tours"; break;
-                  case "centros_convencion": itemsList = form.conventions; targetKey = "conventions"; break;
-                  case "restaurantes": itemsList = form.restaurants; targetKey = "restaurants"; break;
+                  case "car": itemsList = form.carRentals; targetKey = "carRentals"; break;
+                  case "finca": itemsList = form.fincas; targetKey = "fincas"; break;
+                  case "tour": itemsList = form.tours; targetKey = "tours"; break;
+                  case "convention": itemsList = form.conventions; targetKey = "conventions"; break;
+                  case "restaurant": itemsList = form.restaurants; targetKey = "restaurants"; break;
                   case "visa": itemsList = form.visas; targetKey = "visas"; break;
-                  case "pasaporte": itemsList = form.passports; targetKey = "passports"; break;
-                  case "servicio_mascotas": itemsList = form.petServices; targetKey = "petServices"; break;
+                  case "passport": itemsList = form.passports; targetKey = "passports"; break;
+                  case "pet": itemsList = form.petServices; targetKey = "petServices"; break;
                 }
                 
                 itemsList.forEach((item, idx) => {

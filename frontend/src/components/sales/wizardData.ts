@@ -24,10 +24,10 @@ import imgSeguros from "../../assets/seguros.jpg";
 import imgPlanes from "../../assets/planes.jpg";
 
 export const PRODUCT_IMAGES: Record<string, string> = {
-  tiqueteria: imgTiqueteria,
-  hoteleria: imgHoteleria,
-  seguros_viaje: imgSeguros,
-  planes: imgPlanes,
+  ticket: imgTiqueteria,
+  hotel: imgHoteleria,
+  insurance: imgSeguros,
+  plan: imgPlanes,
 };
 
 export interface PaymentData {
@@ -39,9 +39,13 @@ export interface PaymentData {
 
 export interface WizardFormData {
   clientId: string;
+  /** Registro completo del cliente elegido en el selector. El catálogo ya no
+   *  viaja entero al navegador, así que no se puede volver a buscar por nombre. */
+  clientData?: any;
   commissionAgentId: string;
   commissionAgentName: string;
   responsableId?: string;
+  responsableName?: string;
   commissionAgentPercentage: string;
   commissionAgentAmount: string;
   commissionAgentRetentionPercentage: string;
@@ -399,9 +403,11 @@ export const INITIAL_PET_SERVICE = (client?: any): PetServiceData => ({
 
 export const INITIAL_FORM: WizardFormData = {
   clientId: "",
+  clientData: undefined,
   commissionAgentId: "",
   commissionAgentName: "",
   responsableId: "",
+  responsableName: "",
   commissionAgentPercentage: "",
   commissionAgentAmount: "",
   commissionAgentRetentionPercentage: "0",

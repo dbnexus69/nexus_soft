@@ -25,6 +25,7 @@ import { Button } from "../ui/Button";
 import { SidebarUserProfile } from "./SidebarUserProfile";
 import { useTheme } from "../../context/ThemeContext";
 import { useData } from "../../context/DataContext";
+import { useSalesContext } from '../../context/SalesContext';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
@@ -43,7 +44,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { 
     refreshData,
-    fetchSales,
+
     fetchClients,
     fetchResponsables,
     fetchFlights,
@@ -51,6 +52,9 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     fetchConfig,
     fetchCommissionAgents 
   } = useData();
+  // El refresco de la tabla de ventas vive en SalesContext, que es quien
+  // guarda la página y los filtros actuales.
+  const { fetchSales: refetchSales } = useSalesContext();
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
@@ -67,7 +71,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       else if (path === '/clients') await fetchClients();
       else if (path === '/itineraries') await fetchFlights();
       else if (path === '/sales') {
-        await Promise.all([fetchSales(), fetchClients(), fetchResponsables(), fetchCommissionAgents()]);
+        await Promise.all([refetchSales(), fetchClients(), fetchResponsables(), fetchCommissionAgents()]);
       }
       else {
         refreshData(); 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, BarChart3, Menu, RefreshCw, Moon, Sun } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useSalesContext } from '../../context/SalesContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const pageTitles: Record<string, string> = {
@@ -34,7 +35,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   
   const { 
     refreshData,
-    fetchSales,
+
     fetchClients,
     fetchResponsables,
     fetchFlights,
@@ -42,6 +43,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
     fetchConfig,
     fetchCommissionAgents 
   } = useData();
+  // El refresco de la tabla de ventas vive en SalesContext, que es quien
+  // guarda la página y los filtros actuales.
+  const { fetchSales: refetchSales } = useSalesContext();
 
   const [isSpinning, setIsSpinning] = useState(false);
 
@@ -56,7 +60,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
       else if (path === '/clients') await fetchClients();
       else if (path === '/itineraries') await fetchFlights();
       else if (path === '/sales') {
-        await Promise.all([fetchSales(), fetchClients(), fetchResponsables(), fetchCommissionAgents()]);
+        await Promise.all([refetchSales(), fetchClients(), fetchResponsables(), fetchCommissionAgents()]);
       }
       else {
         // Fallback for Dashboard / Stats

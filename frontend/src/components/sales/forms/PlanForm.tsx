@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car, Bus } from "lucide-react";
+import * as api from "../../../api";
 import { FormField, Input, Combobox, Select , CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { PlanData, GuestInfo, SaleProductId } from "../../../types";
@@ -47,11 +49,33 @@ export function PlanForm({
     onChange({ guests: nextGuests });
   };
 
-  const packages = data.config.packages || [];
+  // El catálogo de paquetes ya no viaja en /config/all: solo hace falta aquí.
+  // Se pide el listado ligero al abrir el formulario, y el detalle completo
+  // del paquete concreto que el usuario elija.
+  const [packages, setPackages] = useState<any[]>([]);
+  const [loadingPackage, setLoadingPackage] = useState(false);
 
-  const handleSelectPackage = (packageName: string) => {
-    const pkg = packages.find((p: any) => p.name === packageName);
-    if (pkg) {
+  useEffect(() => {
+    let vivo = true;
+    api.getConfigSection('packages')
+      .then((res: any) => { if (vivo) setPackages(Array.isArray(res) ? res : (res?.data || [])); })
+      .catch(() => { if (vivo) setPackages([]); });
+    return () => { vivo = false; };
+  }, []);
+
+  const handleSelectPackage = async (packageName: string) => {
+    const resumen = packages.find((p: any) => p.name === packageName);
+    if (!resumen) return;
+    setLoadingPackage(true);
+    let pkg = resumen;
+    try {
+      pkg = await api.getConfigItem('packages', resumen.id);
+    } catch {
+      triggerError?.('No se pudo cargar el detalle del paquete');
+    } finally {
+      setLoadingPackage(false);
+    }
+    {
       onChange({
         packageId: pkg.id,
         packageName: pkg.name,
@@ -83,7 +107,9 @@ export function PlanForm({
             placeholder="Busca un paquete registrado..."
           />
           <p className="text-[10px] text-gray-500 mt-2 italic">
-            * Al seleccionar un paquete se autocompletarán los datos base (Hotel, Aerolínea, Vuelo).
+            {loadingPackage
+              ? 'Cargando datos del paquete...'
+              : '* Al seleccionar un paquete se autocompletarán los datos base (Hotel, Aerolínea, Vuelo).'}
           </p>
         </div>
       )}
@@ -505,12 +531,12 @@ export function PlanForm({
             </label>
             <div className="flex flex-wrap gap-2">
               {[
-                { id: 'tours', label: '+ Tour / Excursión' },
-                { id: 'tiqueteria', label: '+ Tiquete Aéreo' },
-                { id: 'hoteleria', label: '+ Hotel Adicional' },
-                { id: 'seguros_viaje', label: '+ Asistencia Médica' },
-                { id: 'renta_vehiculos', label: '+ Renta Vehículo' },
-                { id: 'renta_fincas', label: '+ Renta Finca' },
+                { id: 'tour', label: '+ Tour / Excursión' },
+                { id: 'ticket', label: '+ Tiquete Aéreo' },
+                { id: 'hotel', label: '+ Hotel Adicional' },
+                { id: 'insurance', label: '+ Asistencia Médica' },
+                { id: 'car', label: '+ Renta Vehículo' },
+                { id: 'finca', label: '+ Renta Finca' },
               ].map(btn => (
                 <button
                   key={btn.id}

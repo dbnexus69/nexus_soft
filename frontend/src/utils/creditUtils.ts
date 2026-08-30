@@ -1,3 +1,6 @@
+// La agregación de la cartera (totales por cliente y del conjunto) la hace
+// ahora el backend en GET /sales/credit: calcularla aquí obligaba a tener
+// todas las ventas en memoria.
 import { Client, Sale } from '../types';
 
 export interface ClientCreditSummary {
@@ -42,69 +45,6 @@ export function getCreditSaleStatus(sale: Sale): 'pending' | 'partial' | 'paid' 
   return 'pending';
 }
 
-export function getClientsWithCredit(clients: Client[], sales: Sale[]): ClientCreditSummary[] {
-  const creditSales = sales.filter(s => s.isCredit === true || s.status === 'credito' || s.status === 'abonado');
-  
-  const clientMap = new Map<number, ClientCreditSummary>();
-  
-  creditSales.forEach(sale => {
-    const client = clients.find(c => c.id === sale.clientId);
-    if (!client) return;
-    
-    const saleStatus = getCreditSaleStatus(sale);
-    const daysUntilDue = getDaysUntilDue(sale.creditDueDate || '');
-    const paidAmount = sale.creditPaidAmount || 0;
-    const pendingAmount = sale.total - paidAmount;
-    
-    if (!clientMap.has(client.id)) {
-      clientMap.set(client.id, {
-        client,
-        totalCredit: 0,
-        pendingAmount: 0,
-        paidAmount: 0,
-        nextDueDate: null,
-        overdueAmount: 0,
-        activeCredits: 0,
-        status: 'ok'
-      });
-    }
-    
-    const summary = clientMap.get(client.id)!;
-    
-    summary.totalCredit += sale.total;
-    summary.paidAmount += paidAmount;
-    summary.activeCredits += 1;
-    
-    if (saleStatus === 'pending' || saleStatus === 'partial' || saleStatus === 'overdue') {
-      summary.pendingAmount += pendingAmount;
-    }
-    
-    if (saleStatus === 'overdue') {
-      summary.overdueAmount += pendingAmount;
-    }
-    
-    if (sale.creditDueDate) {
-      if (!summary.nextDueDate) {
-        summary.nextDueDate = sale.creditDueDate;
-      } else if (new Date(sale.creditDueDate) < new Date(summary.nextDueDate)) {
-        summary.nextDueDate = sale.creditDueDate;
-      }
-    }
-    
-    if (saleStatus === 'overdue') {
-      summary.status = 'overdue';
-    } else if (summary.status !== 'overdue' && daysUntilDue <= 3) {
-      summary.status = 'urgent';
-    } else if (summary.status !== 'overdue' && summary.status !== 'urgent' && daysUntilDue <= 7) {
-      summary.status = 'pending';
-    }
-  });
-  
-  return Array.from(clientMap.values()).sort((a, b) => {
-    const statusOrder = { overdue: 0, urgent: 1, pending: 2, ok: 3 };
-    return statusOrder[a.status] - statusOrder[b.status];
-  });
-}
 
 export function getClientCreditSales(clientId: number, sales: Sale[]): CreditSaleInfo[] {
   const creditSales = sales
@@ -131,21 +71,6 @@ export function getClientCreditSales(clientId: number, sales: Sale[]): CreditSal
   return creditSales;
 }
 
-export function getCreditSummaryTotals(clients: Client[], sales: Sale[]): {
-  totalPending: number;
-  totalOverdue: number;
-  totalUrgent: number;
-  clientsCount: number;
-} {
-  const clientsWithCredit = getClientsWithCredit(clients, sales);
-  
-  return {
-    totalPending: clientsWithCredit.reduce((sum, c) => sum + c.pendingAmount, 0),
-    totalOverdue: clientsWithCredit.reduce((sum, c) => sum + c.overdueAmount, 0),
-    totalUrgent: clientsWithCredit.filter(c => c.status === 'urgent').reduce((sum, c) => sum + c.pendingAmount, 0),
-    clientsCount: clientsWithCredit.length
-  };
-}
 
 export function getStatusColor(status: 'pending' | 'partial' | 'paid' | 'overdue'): string {
   switch (status) {

@@ -12,16 +12,23 @@ import { usePermissions } from '../context/PermissionsContext';
 import { Modal } from '../components/ui/Modal';
 import { FormField } from '../components/ui/Form';
 import { formatDate } from '../utils/formatters';
+import { Pagination } from '../components/ui/Pagination';
+import * as api from '../api';
 import { Flight } from '../types';
 import LoadingScreen from '../components/ui/LoadingScreen';
+
+/** Vuelos pendientes de check-in por página. */
+const CHECKIN_PER_PAGE = 10;
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 
 export default function Itineraries() {
-  const { data, updateFlight, fetchFlights, fetchClients } = useData();
+  const { data, updateFlight } = useData();
   const { canEdit: canEditItinerary, canView } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
+  // Se incrementa tras un check-in para releer las listas del servidor.
+  const [refreshToken, setRefreshToken] = useState(0);
   const [activeTab, setActiveTab] = useState<'calendar' | 'checkin'>('calendar');
   const [calendarTab, setCalendarTab] = useState<'ida' | 'regreso'>('ida');
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -50,41 +57,98 @@ export default function Itineraries() {
     return { isRealizado: false, isVencido, isUrgente };
   };
 
-  // Lazy Load Fetch
+  // ── Datos del calendario: solo los vuelos del mes visible ────────────────
+  // Antes se traían todos los vuelos y se filtraba el mes en el navegador.
+  const [monthFlights, setMonthFlights] = useState<Flight[]>([]);
+
   useEffect(() => {
-    fetchFlights().finally(() => setIsLoading(false));
-    fetchClients().catch(() => {});
-  }, [fetchFlights, fetchClients]);
+    const desde = new Date(currentYear, currentMonth, 1);
+    const hasta = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+    let vivo = true;
+    api.listFlights({
+      dateFrom: desde.toISOString(),
+      dateTo: hasta.toISOString(),
+      perPage: 100,
+    })
+      .then((res: any) => { if (vivo) setMonthFlights(res?.data || []); })
+      .catch(() => { if (vivo) setMonthFlights([]); })
+      .finally(() => { if (vivo) setIsLoading(false); });
+    return () => { vivo = false; };
+  }, [currentMonth, currentYear]);
 
-  // Estadísticas y filtros
-  const pendingCheckins = useMemo(() => {
-    return data.flights.filter(f => f.checkin === 'pendiente').sort((a, b) => a.date.localeCompare(b.date));
-  }, [data.flights]);
+  // ── Check-in: paginado de 10 y buscado en el servidor ────────────────────
+  const [pending, setPending] = useState<Flight[]>([]);
+  const [pendingMeta, setPendingMeta] = useState({ total: 0, totalPages: 0 });
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [urgentCount, setUrgentCount] = useState(0);
 
-  const filteredPending = useMemo(() => {
-    return pendingCheckins.filter(f => 
-      (f.passenger && f.passenger.toLowerCase().includes(checkinSearch.toLowerCase())) ||
-      (f.route && f.route.toLowerCase().includes(checkinSearch.toLowerCase()))
-    );
-  }, [pendingCheckins, checkinSearch]);
+  // Volver a la primera página al cambiar la búsqueda.
+  useEffect(() => { setPendingPage(1); }, [checkinSearch]);
 
-  // Cliente vinculado al vuelo seleccionado en el modal (memoizado)
-  const modalClient = useMemo(() =>
-    data.clients.find(c => c.name === selectedFlightForCheckin?.passenger)
-  , [data.clients, selectedFlightForCheckin]);
+  useEffect(() => {
+    let vivo = true;
+    setPendingLoading(true);
+    const t = setTimeout(() => {
+      api.listFlights({
+        checkinStatus: 'pendiente',
+        search: checkinSearch || undefined,
+        page: pendingPage,
+        perPage: CHECKIN_PER_PAGE,
+      })
+        .then((res: any) => {
+          if (!vivo) return;
+          setPending(res?.data || []);
+          setPendingMeta({ total: res?.meta?.total || 0, totalPages: res?.meta?.totalPages || 0 });
+        })
+        .catch(() => { if (vivo) setPending([]); })
+        .finally(() => { if (vivo) setPendingLoading(false); });
+    }, checkinSearch ? 300 : 0);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [pendingPage, checkinSearch, refreshToken]);
 
-  const flightsIda = data.flights.filter(f => f.type === 'ida');
-  const flightsRegreso = data.flights.filter(f => f.type === 'regreso');
+  // Los contadores se piden como agregados: una sola fila y se lee meta.total,
+  // sin traerse la lista entera solo para hacerle length.
+  const [doneCount, setDoneCount] = useState(0);
+
+  useEffect(() => {
+    const ahora = new Date();
+    const en48h = new Date(ahora.getTime() + 48 * 60 * 60 * 1000);
+    let vivo = true;
+    Promise.all([
+      api.listFlights({ checkinStatus: 'pendiente', dateFrom: ahora.toISOString(), dateTo: en48h.toISOString(), perPage: 1 }),
+      api.listFlights({ checkinStatus: 'realizado', perPage: 1 }),
+    ])
+      .then(([urgentes, hechos]: any[]) => {
+        if (!vivo) return;
+        setUrgentCount(urgentes?.meta?.total || 0);
+        setDoneCount(hechos?.meta?.total || 0);
+      })
+      .catch(() => { if (vivo) { setUrgentCount(0); setDoneCount(0); } });
+    return () => { vivo = false; };
+  }, [refreshToken]);
+
+  // El vuelo ya trae los datos de su titular: no hace falta cruzarlo con el
+  // catálogo de clientes.
+  const modalClient = selectedFlightForCheckin
+    ? {
+        docType: (selectedFlightForCheckin as any).clientDocType,
+        docNumber: (selectedFlightForCheckin as any).clientDocNumber,
+        email: (selectedFlightForCheckin as any).clientEmail,
+      }
+    : null;
+
+  const flightsIda = monthFlights.filter(f => f.type === 'ida');
+  const flightsRegreso = monthFlights.filter(f => f.type === 'regreso');
 
   const currentMonthFlights = useMemo(() => {
-    return data.flights.filter(f => {
-      const parts = f.date.split('-');
-      if (parts.length < 3) return false;
-      const y = Number(parts[0]);
-      const m = Number(parts[1]);
-      return y === currentYear && m === currentMonth + 1 && f.type === calendarTab;
-    }).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-  }, [data.flights, currentMonth, currentYear, calendarTab]);
+    return monthFlights
+      .filter(f => f.type === calendarTab)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  }, [monthFlights, calendarTab]);
+
+  // La lista del check-in ya viene filtrada y paginada del servidor.
+  const filteredPending = pending;
 
   const getDaysInMonth = (month: number, year: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (month: number, year: number) => new Date(year, month, 1).getDay();
@@ -100,7 +164,7 @@ export default function Itineraries() {
 
   const handleMarkCheckin = (flightId: string, passenger: string) => {
     if (!canEditItinerary('itineraries')) return;
-    const flight = data.flights.find(f => f.id === flightId);
+    const flight = [...monthFlights, ...pending].find(f => f.id === flightId);
     if (flight) {
       setSelectedFlightForCheckin(flight);
       setIsCheckinModalOpen(true);
@@ -124,6 +188,8 @@ export default function Itineraries() {
         await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
       }
       setIsCheckinModalOpen(false);
+      // Las listas viven en el servidor: se releen en vez de parchearse aquí.
+      setRefreshToken(t => t + 1);
       setSuccessMessage(`Check-in realizado para ${selectedFlightForCheckin.passenger}`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -154,7 +220,7 @@ export default function Itineraries() {
     // Días del mes actual
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      const dayFlights = data.flights.filter(f => f.date === dateStr && f.type === calendarTab);
+      const dayFlights = monthFlights.filter(f => f.date === dateStr && f.type === calendarTab);
       days.push({ day: i, month: currentMonth, year: currentYear, flights: dayFlights });
     }
 
@@ -166,7 +232,7 @@ export default function Itineraries() {
     }
 
     return days;
-  }, [currentMonth, currentYear, data.flights, calendarTab]);
+  }, [currentMonth, currentYear, monthFlights, calendarTab]);
 
   const toggleDay = (dayKey: string) => {
     setExpandedDays(prev => {
@@ -193,7 +259,7 @@ export default function Itineraries() {
     );
   }
 
-  if (isLoading && data.flights.length === 0) {
+  if (isLoading && monthFlights.length === 0) {
     return <LoadingScreen fullScreen={false} />;
   }
 
@@ -243,9 +309,9 @@ export default function Itineraries() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all relative ${activeTab === 'checkin' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
           >
             <UserCheck size={16} /> Check-in
-            {pendingCheckins.length > 0 && (
+            {pendingMeta.total > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
-                {pendingCheckins.length}
+                {pendingMeta.total}
               </span>
             )}
           </button>
@@ -344,7 +410,12 @@ export default function Itineraries() {
 
                         <div className="space-y-1">
                           {displayFlights.map(flight => {
-                            const client = data.clients.find(c => c.name === flight.passenger);
+                            const client = {
+                              avatar: (flight as any).clientAvatar,
+                              name: (flight as any).clientName,
+                              docType: (flight as any).clientDocType,
+                              docNumber: (flight as any).clientDocNumber,
+                            };
                             const docInfo = client ? `\n${client.docType}: ${client.docNumber}` : '';
                             const isPlan = flight.source === 'plan';
                             return (
@@ -394,7 +465,12 @@ export default function Itineraries() {
                 {currentMonthFlights.length > 0 ? (
                   <div className="space-y-3">
                     {currentMonthFlights.map(flight => {
-                      const client = data.clients.find(c => c.name === flight.passenger);
+                      const client = {
+                              avatar: (flight as any).clientAvatar,
+                              name: (flight as any).clientName,
+                              docType: (flight as any).clientDocType,
+                              docNumber: (flight as any).clientDocNumber,
+                            };
                       const parts = flight.date.split('-');
                       const dayStr = parts[2] || '';
                       const dayOfWeekIndex = new Date(flight.date + 'T00:00:00').getDay();
@@ -482,7 +558,12 @@ export default function Itineraries() {
                     <div className="divide-y divide-gray-border">
                       {filteredPending.map(flight => {
                         const { isVencido, isUrgente } = getFlightStatus(flight);
-                        const client = data.clients.find(c => c.name === flight.passenger);
+                        const client = {
+                              avatar: (flight as any).clientAvatar,
+                              name: (flight as any).clientName,
+                              docType: (flight as any).clientDocType,
+                              docNumber: (flight as any).clientDocNumber,
+                            };
 
                         return (
                           <div key={flight.id} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors ${isVencido ? 'opacity-85' : ''}`}>
@@ -551,10 +632,25 @@ export default function Itineraries() {
                       <div className="w-16 h-16 bg-green-50 dark:bg-green-950/40 text-green-500 dark:text-green-400 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle2 size={32} />
                       </div>
-                      <p className="font-bold text-gray-600 dark:text-slate-400">¡Todo al día!</p>
-                      <p className="text-sm">No hay check-ins pendientes para los próximos vuelos.</p>
+                      <p className="font-bold text-gray-600 dark:text-slate-400">
+                        {pendingLoading ? 'Cargando...' : (checkinSearch ? 'Sin coincidencias' : '¡Todo al día!')}
+                      </p>
+                      <p className="text-sm">
+                        {checkinSearch
+                          ? 'Ningún check-in pendiente coincide con la búsqueda.'
+                          : 'No hay check-ins pendientes para los próximos vuelos.'}
+                      </p>
                     </div>
                   )}
+                  <Pagination
+                    currentPage={pendingPage}
+                    totalPages={pendingMeta.totalPages}
+                    total={pendingMeta.total}
+                    perPage={CHECKIN_PER_PAGE}
+                    loading={pendingLoading}
+                    onPageChange={setPendingPage}
+                    className="px-4 py-3 border-t border-gray-border mt-0"
+                  />
                 </CardBody>
               </Card>
             </div>
@@ -570,7 +666,7 @@ export default function Itineraries() {
                   </div>
                   <h3 className="text-sm font-medium text-white/80 dark:text-slate-300 uppercase tracking-wider">Check-ins Críticos</h3>
                   <p className="text-3xl font-bold mt-1">
-                    {pendingCheckins.filter(f => getFlightStatus(f).isUrgente).length}
+                    {urgentCount}
                   </p>
                   <p className="text-xs text-white/60 dark:text-slate-400 mt-4 leading-relaxed">
                     Recuerda que el check-in debe realizarse al menos 24 horas antes de la salida para evitar inconvenientes.
@@ -586,21 +682,21 @@ export default function Itineraries() {
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-lg"><PlaneTakeoff size={18} /></div>
                       <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Salidas</span>
                     </div>
-                    <span className="font-bold text-primary dark:text-white">{data.flights.filter(f => f.type === 'ida').length}</span>
+                    <span className="font-bold text-primary dark:text-white">{flightsIda.length}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded-lg"><PlaneLanding size={18} /></div>
                       <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Regresos</span>
                     </div>
-                    <span className="font-bold text-primary dark:text-white">{data.flights.filter(f => f.type === 'regreso').length}</span>
+                    <span className="font-bold text-primary dark:text-white">{flightsRegreso.length}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300 rounded-lg"><CheckCircle2 size={18} /></div>
                       <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Completados</span>
                     </div>
-                    <span className="font-bold text-primary dark:text-white">{data.flights.filter(f => f.checkin === 'realizado').length}</span>
+                    <span className="font-bold text-primary dark:text-white">{doneCount}</span>
                   </div>
                 </CardBody>
               </Card>

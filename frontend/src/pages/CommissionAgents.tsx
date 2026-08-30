@@ -32,7 +32,6 @@ import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, capitalizeName, todayStr } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
 import LoadingScreen from "../components/ui/LoadingScreen";
-import { Pagination } from "../components/ui/Pagination";
 import { AgentDetailsModal } from "../components/commissions/AgentDetailsModal";
 
 export default function CommissionAgents() {
@@ -88,36 +87,18 @@ export default function CommissionAgents() {
   };
 
   // Calcular acumulados (solo ventas no liquidadas)
+  // El acumulado lo suma el backend sobre TODAS las ventas no liquidadas.
+  // Antes se recalculaba aquí recorriendo data.sales, que solo trae una página:
+  // con más ventas de las que cabían en ella, los totales salían cortos.
   const filteredAgents = useMemo(() => {
     const agents = commissionAgents || [];
-    const sales = data.sales || [];
-    console.log("Debug - CommissionAgents:", { agentsCount: agents.length, salesCount: sales.length });
-    
-    // Create map for O(N + M) complexity instead of O(N * M)
-    const accumulatedByAgent = sales.reduce((acc: Record<string, number>, s: any) => {
-      if (!s.isSettled && s.commissionAgentId) {
-        const id = s.commissionAgentId.toString();
-        acc[id] = (acc[id] || 0) + (s.commissionAgentNetPayment || 0);
-      }
-      return acc;
-    }, {});
-
-    const mapped = agents.map((agent: any) => {
-      return { 
-        ...agent, 
-        accumulated: accumulatedByAgent[agent.id?.toString()] || 0 
-      };
-    });
-
-    const result = mapped.filter(
-      (a: any) =>
-        (a.name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
-        (a.docNumber || "").includes(searchTerm)
-    ).sort((a: any, b: any) => b.id - a.id);
-    
-    console.log("Debug - FilteredAgents:", result);
-    return result;
-  }, [commissionAgents, data.sales, searchTerm]);
+    const q = (searchTerm || "").toLowerCase();
+    return agents
+      .filter((a: any) =>
+        (a.name || "").toLowerCase().includes(q) ||
+        (a.docNumber || "").includes(searchTerm))
+      .sort((a: any, b: any) => b.id - a.id);
+  }, [commissionAgents, searchTerm]);
 
   const stats = useMemo(() => {
     const totalAccumulated = filteredAgents.reduce((s: number, a: any) => s + (a.accumulated || 0), 0);

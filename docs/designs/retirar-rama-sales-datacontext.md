@@ -1,5 +1,8 @@
 # Retirar la rama `sales` del DataContext
 
+> **Estado: completado.** Los seis pasos se ejecutaron en orden. Al final de este
+> documento está el resultado y lo que apareció por el camino.
+
 ## Problema
 
 `DataContext.tsx` son 775 líneas con **32 referencias a ventas**: el array `data.sales`,
@@ -146,3 +149,56 @@ Cada paso deja la aplicación funcionando y se puede parar ahí.
 Los pasos 1–4 son mecánicos y los guía el compilador. El grueso del riesgo está en el
 paso 2 (leer y comparar dos funciones) y en el paso 5 (comprobación manual, sin pruebas
 automáticas que la cubran).
+
+---
+
+## Resultado
+
+`DataContext.tsx`: **781 → 613 líneas**. Cero referencias a ventas salvo `recentSales`,
+que pertenece al dashboard.
+
+Se retiraron el estado `sales`, `salesLoading`, `fetchSales` y las ocho mutaciones
+(`addSale`, `updateSale`, `deleteSale`, `voidSale`, `registerCreditPayment`,
+`deleteSalePayment`, `updateSaleReviewStatus`, `settleCommissions`), más `AppData.sales`.
+`salesCache.ts` pasa a `clientsCache.ts`, que es lo único que le quedaba.
+
+### El nudo de la caché
+
+Se resolvió como estaba previsto, y era peor de lo anticipado: `invalidateSalesCache()`
+borraba **también** la caché de clientes. Tras partirla, comprobado que invalidar una
+deja la otra intacta en ambos sentidos.
+
+### `addSale` no era equivalente a `handleCreateSale`
+
+El paso 2 encontró tres diferencias. Dos resultaron irrelevantes y una no:
+
+| | Importaba |
+|---|---|
+| `prev.sales` actualizado | No: nadie lo leía |
+| `fetchFlights()` | No: `data.flights` ya no tiene consumidores |
+| `invalidateDashboardCache()` + `setDashboardData(null)` | **Sí**: `Dashboard.tsx` lee `dashboardData` |
+
+Por eso `DataContext` expone ahora `invalidateDashboard()`, que el wizard llama tras
+crear la venta.
+
+### Dos bugs preexistentes que destapó el repaso del paso 5
+
+- **`listPayments` usaba `prisma.pagosVenta`**, con `fechaPago` y `metodoPago`. El modelo
+  es `pagos_venta` con `fecha_pago` y `metodos_pago`: `GET /sales/:id/payments` estaba
+  roto. Es el mismo patrón camelCase que ya apareció en `products.controller.js`,
+  `getClientById` y `updatePermissions`.
+- **`ADMIN_PERMISSIONS` no tenía `sales.delete`**, así que un administrador recibía 403
+  al anular una venta. Faltaban también los `delete` de clients, itineraries y config.
+
+### Verificación
+
+Los cuatro flujos del paso 5, contra la API real:
+
+```
+1. crear venta      201
+2. editar           200
+3. registrar pago   200 · listar 200 (1 pago) · borrar 200 con estado recalculado
+4. anular           200
+tabla coherente     filas 6 / total 6
+limpieza            5 ventas antes, 5 después
+```

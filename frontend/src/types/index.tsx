@@ -744,7 +744,8 @@ export interface AppData {
   users: User[];
   clients: Client[];
   responsables: Responsable[];
-  sales: Sale[];
+  // Las ventas no viven aquí: su listado, filtros y paginación están en
+  // SalesContext, y los detalles se piden filtrados por cliente o asesor.
   flights: Flight[];
   commissionAgents: CommissionAgent[];
   commissionSettlements: CommissionSettlement[];

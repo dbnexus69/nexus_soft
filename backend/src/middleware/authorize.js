@@ -2,12 +2,12 @@ const { error } = require('../utils/apiResponse');
 
 const ADMIN_PERMISSIONS = {
   dashboard: { view: 'all' },
-  sales: { view: 'all', create: true, edit: true },
-  clients: { view: 'all', create: true, edit: true },
-  itineraries: { view: 'all', edit: true },
+  sales: { view: 'all', create: true, edit: true, delete: true },
+  clients: { view: 'all', create: true, edit: true, delete: true },
+  itineraries: { view: 'all', edit: true, delete: true },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
-  config: { view: true, edit: true },
+  config: { view: true, create: true, edit: true, delete: true },
 };
 
 const ROLE_DEFAULT_PERMISSIONS = {

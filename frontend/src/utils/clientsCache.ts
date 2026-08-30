@@ -1,8 +1,11 @@
 /**
- * salesCache.ts
- * Módulo de caché en localStorage para ventas y clientes.
- * TTL: 5 minutos — después de ese tiempo se considera stale y se recarga desde red.
- * Al crear/eliminar ventas, el caché se invalida automáticamente.
+ * clientsCache.ts
+ * Caché en localStorage del catálogo de clientes.
+ * TTL: 5 minutos; pasado ese tiempo se recarga desde red.
+ *
+ * Antes guardaba también las ventas, en la misma operación: invalidar una
+ * borraba la otra. Las ventas ya no se cachean en el cliente — su listado vive
+ * en SalesContext, paginado y filtrado por el servidor.
  */
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
@@ -56,24 +59,24 @@ function deleteCache(key: string): void {
 
 // ---------- API pública ----------
 
-/** Guarda ventas y clientes en caché con timestamp actual */
-export function saveSalesAndClientsCache(sales: unknown[], clients: unknown[]): void {
-  writeCache(getCacheKey('itea_sales_cache'), sales);
+// Ventas y clientes se guardaban en la misma llamada, y al invalidar una se
+// borraba también la otra. Ahora cada colección va por su lado: cuando la rama
+// de ventas salga del DataContext, la de clientes no se ve afectada.
+
+
+/** Guarda los clientes en caché con timestamp actual */
+export function saveClientsCache(clients: unknown[]): void {
   writeCache(getCacheKey('itea_clients_cache'), clients);
 }
 
-/** Retorna ventas desde caché si TTL no expiró, null si expirado */
-export function loadSalesCache(): unknown[] | null {
-  return readCache<unknown[]>(getCacheKey('itea_sales_cache'));
-}
 
 /** Retorna clientes desde caché si TTL no expiró, null si expirado */
 export function loadClientsCache(): unknown[] | null {
   return readCache<unknown[]>(getCacheKey('itea_clients_cache'));
 }
 
-/** Invalida ambos cachés (ventas + clientes). Usar al crear/eliminar ventas. */
-export function invalidateSalesCache(): void {
-  deleteCache(getCacheKey('itea_sales_cache'));
+
+/** Invalida la caché de clientes. */
+export function invalidateClientsCache(): void {
   deleteCache(getCacheKey('itea_clients_cache'));
 }

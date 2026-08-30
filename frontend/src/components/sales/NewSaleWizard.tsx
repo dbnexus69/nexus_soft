@@ -77,8 +77,10 @@ const STEPS = [
 ] as const;
 
 export default function NewSaleWizard({ onClose, onSuccess }: Props) {
-  const { data, addSale, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig } = useData();
-  const { fetchSales } = useSalesContext();
+  const { data, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig, invalidateDashboard } = useData();
+  // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,
+  // que es donde vive el listado con su página y sus filtros.
+  const { handleCreateSale } = useSalesContext();
   const { user } = useAuth();
 
   const draftKey = `itea_new_sale_draft_${user?.id || 'unknown'}`;
@@ -1268,8 +1270,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     };
 
     try {
-      await addSale(saleData as any);
-      await fetchSales();
+      // handleCreateSale ya refresca el listado; el dashboard se invalida aparte
+      // porque sus cifras cambian con cada venta nueva.
+      await handleCreateSale(saleData as any);
+      invalidateDashboard();
       localStorage.removeItem(draftKey);
 
       const hasVouchersToSend = [

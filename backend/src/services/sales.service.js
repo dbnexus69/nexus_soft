@@ -1164,17 +1164,17 @@ class SalesService {
   }
 
   async listPayments(saleId) {
-    const payments = await prisma.pagosVenta.findMany({
+    const payments = await prisma.pagos_venta.findMany({
       where: { venta_id: saleId },
-      select: { id: true, fechaPago: true, monto: true, metodoPago: { select: { nombre: true } } },
-      orderBy: { fechaPago: 'asc' }
+      select: { id: true, fecha_pago: true, monto: true, metodos_pago: { select: { nombre: true } } },
+      orderBy: { fecha_pago: 'asc' }
     });
 
     return payments.map(p => ({
       id: p.id,
-      date: p.fechaPago,
+      date: p.fecha_pago,
       amount: p.monto,
-      method: p.metodoPago?.nombre || null
+      method: p.metodos_pago?.nombre || null
     }));
   }
 

@@ -288,8 +288,43 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
           )}
         </div>
 
+        {/* Live Financial Summary Banner */}
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-primary text-white p-4 rounded-2xl shadow-lg border border-slate-700/50 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-emerald-400 shrink-0 border border-white/10">
+                <LuIcons.LuCalculator size={22} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Resumen de Venta en Tiempo Real</h4>
+                <p className="text-[11px] text-slate-400">Total acumulado de los servicios seleccionados</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-white/5 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+              <div className="text-center sm:text-right px-2">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block">Costo Prov.</span>
+                <span className="text-xs sm:text-sm font-bold text-slate-100">
+                  ${(Number(form.supplierCost) || 0).toLocaleString("es-CO")}
+                </span>
+              </div>
+              <div className="text-center sm:text-right px-2 border-x border-white/10">
+                <span className="text-[9px] uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
+                <span className="text-xs sm:text-sm font-bold text-emerald-300">
+                  ${(Number(form.ta) || 0).toLocaleString("es-CO")}
+                </span>
+              </div>
+              <div className="text-center sm:text-right px-2">
+                <span className="text-[9px] uppercase font-bold text-cyan-300 block">Venta Total</span>
+                <span className="text-xs sm:text-sm font-extrabold text-cyan-300">
+                  ${(Number(form.total) || 0).toLocaleString("es-CO")}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Selected Services Summary */}
-        <div className="pt-6 border-t border-gray-100">
+        <div className="pt-2 border-t border-gray-100">
           <h3 className="font-bold text-primary text-sm flex items-center gap-2 mb-4">
              <LuIcons.LuListTodo size={16} /> Servicios en esta Venta
           </h3>

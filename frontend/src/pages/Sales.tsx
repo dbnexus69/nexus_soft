@@ -370,12 +370,12 @@ export default function Sales() {
         </div>
       )}
 
-      <div className="mb-6 animate-fade-in flex flex-col items-center justify-center gap-4 text-center">
-        <div className="flex flex-col items-center justify-center">
-          <h1 className="text-3xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center justify-center gap-3">
-            <Wallet className="text-[#8D99AE] w-8 h-8 shrink-0" /> Gestión de Ventas
+      <div className="mb-6 animate-fade-in flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#2B2D42] dark:text-white font-heading tracking-tight flex items-center gap-3">
+            <Wallet className="text-[#8D99AE] w-7 h-7 sm:w-8 sm:h-8 shrink-0" /> Gestión de Ventas
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 font-medium">
             Control de ingresos, facturación y estados de pago de tus clientes en tiempo real.
           </p>
         </div>
@@ -383,9 +383,11 @@ export default function Sales() {
           href="https://siigonube.siigo.com/#/sales-management/2044" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="bg-[#2B2D42]/5 hover:bg-[#2B2D42]/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#2B2D42] dark:text-[#b2bccb] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-slate-350/20 dark:border-white/10 transition-all shadow-sm shrink-0"
+          className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center justify-center font-black shadow-md hover:shadow-lg transition-all border border-blue-400/30 shrink-0 group relative"
+          title="Abrir facturación electrónica en Siigo Nube"
         >
-          <ExternalLink size={16} /> Ir a Siigo Nube
+          <span className="font-black tracking-tighter text-xs">S</span>
+          <ExternalLink size={10} className="absolute top-1.5 right-1.5 opacity-70 group-hover:opacity-100" />
         </a>
       </div>
 

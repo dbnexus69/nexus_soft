@@ -17,6 +17,7 @@ import {
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSalesContext } from "../../context/SalesContext";
+import { useSaleCalculations } from "../../hooks/useSaleCalculations";
 import {
   Sale,
   SaleProductId,
@@ -252,55 +253,8 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     fetchConfig();
   }, [fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig]);
 
-  // Compute Totals Automatically
-  useEffect(() => {
-    let calcSupplierCost = 0;
-    let calcTa = 0;
-
-    form.tickets.forEach(t => { calcSupplierCost += Number(t.supplierCost) || 0; calcTa += Number(t.ta) || 0; });
-    form.hotels.forEach(h => { calcSupplierCost += Number(h.supplierCost) || 0; calcTa += Number(h.ta) || 0; });
-    form.insurances.forEach(i => { calcSupplierCost += Number(i.supplierCost) || 0; calcTa += Number(i.ta) || 0; });
-    form.plans.forEach(p => { calcSupplierCost += Number(p.supplierCost) || 0; calcTa += Number(p.ta) || 0; });
-    form.checkIns.forEach(c => { calcSupplierCost += Number(c.supplierCost) || 0; calcTa += Number(c.ta) || 0; });
-    form.migrations.forEach(m => { calcSupplierCost += Number(m.supplierCost) || 0; calcTa += Number(m.ta) || 0; });
-    form.simCards.forEach(s => { calcSupplierCost += Number(s.supplierCost) || 0; calcTa += Number(s.ta) || 0; });
-    form.carRentals.forEach(cr => { calcSupplierCost += Number(cr.supplierCost) || 0; calcTa += Number(cr.ta) || 0; });
-    form.fincas.forEach(f => { calcSupplierCost += Number(f.supplierCost) || 0; calcTa += Number(f.ta) || 0; });
-    form.tours.forEach(t => { calcSupplierCost += Number(t.supplierCost) || 0; calcTa += Number(t.ta) || 0; });
-    form.conventions.forEach(c => { calcSupplierCost += Number(c.supplierCost) || 0; calcTa += Number(c.ta) || 0; });
-    form.restaurants.forEach(r => { calcSupplierCost += Number(r.supplierCost) || 0; calcTa += Number(r.ta) || 0; });
-    form.visas.forEach(v => { calcSupplierCost += Number(v.supplierCost) || 0; calcTa += Number(v.ta) || 0; });
-    form.passports.forEach(p => { calcSupplierCost += Number(p.supplierCost) || 0; calcTa += Number(p.ta) || 0; });
-    form.petServices.forEach(ps => { calcSupplierCost += Number(ps.supplierCost) || 0; calcTa += Number(ps.ta) || 0; });
-
-    const calcTotal = calcSupplierCost + calcTa;
-
-    if (
-      form.supplierCost !== calcSupplierCost.toString() ||
-      form.ta !== calcTa.toString() ||
-      form.total !== calcTotal.toString()
-    ) {
-      setForm(prev => {
-        const commPercentage = parseFloat(prev.commissionAgentPercentage || "0");
-        const newCommAmount = calcTa * (commPercentage / 100);
-        const retention = parseFloat(prev.commissionAgentRetentionPercentage || "0");
-        const newCommNet = newCommAmount * (1 - retention / 100);
-
-        return {
-          ...prev,
-          supplierCost: calcSupplierCost.toString(),
-          ta: calcTa.toString(),
-          total: calcTotal.toString(),
-          commissionAgentAmount: newCommAmount.toString(),
-          commissionAgentNetPayment: newCommNet.toString()
-        };
-      });
-    }
-  }, [
-    form.tickets, form.hotels, form.insurances, form.plans, form.checkIns,
-    form.migrations, form.simCards, form.carRentals, form.fincas, form.tours,
-    form.conventions, form.restaurants, form.visas, form.passports, form.petServices
-  ]);
+  // Compute Totals Automatically using custom hook
+  useSaleCalculations(form, setForm);
 
 
   const getCurrentItemLinkedPlanIndex = () => {

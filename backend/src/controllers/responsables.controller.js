@@ -1,5 +1,5 @@
 const responsablesService = require('../services/responsables.service');
-const { success } = require('../utils/apiResponse');
+const { success, noContent } = require('../utils/apiResponse');
 
 exports.list = async (req, res, next) => {
   try {
@@ -49,8 +49,8 @@ exports.update = async (req, res, next) => {
 exports.delete = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await responsablesService.deleteResponsable(id);
-    success(res, result);
+    await responsablesService.deleteResponsable(id);
+    noContent(res);
   } catch (err) {
     next(err);
   }

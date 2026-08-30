@@ -1,5 +1,5 @@
 const commissionsService = require('../services/commissions.service');
-const { success } = require('../utils/apiResponse');
+const { success, noContent } = require('../utils/apiResponse');
 
 exports.listAgents = async (req, res, next) => {
   try {
@@ -36,8 +36,8 @@ exports.updateAgent = async (req, res, next) => {
 exports.deleteAgent = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await commissionsService.deleteAgent(id);
-    success(res, result);
+    await commissionsService.deleteAgent(id);
+    noContent(res);
   } catch (err) {
     next(err);
   }

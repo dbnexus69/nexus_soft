@@ -89,6 +89,23 @@ const SECTION_MAP = {
   'packages': {
     model: 'paquetes', idField: 'id',
     include: { paquete_hotel: true, paquete_tarifas: true, paquete_asistencia_medica: true, paquete_vuelo: { include: { aerolineas: true } }, paquete_proveedor: { include: { proveedores: true } } },
+    // El listado solo necesita lo que se ve en la tabla y en el selector.
+    // El include completo son 5 relaciones = 6 viajes a la base por consulta;
+    // el detalle entero se pide con GET /config/packages/:id al elegir uno.
+    listSelect: {
+      id: true, nombre: true, destino: true,
+      paquete_hotel: { select: { noches: true } },
+      paquete_tarifas: { select: { tarifa_adulto: true, tarifa_menor: true } }
+    },
+    listTransform: (r) => ({
+      id: r.id,
+      name: r.nombre,
+      destination: r.destino,
+      nights: r.paquete_hotel?.[0]?.noches || null,
+      rates: r.paquete_tarifas?.[0]
+        ? { adult: r.paquete_tarifas[0].tarifa_adulto, child: r.paquete_tarifas[0].tarifa_menor }
+        : undefined
+    }),
     transform: (r) => ({
       id: r.id,
       name: r.nombre,
@@ -221,38 +238,69 @@ class ConfigService {
       }
     }
 
+    // Al listar se traen solo los campos que la tabla y los selectores muestran.
+    // select e include son excluyentes en Prisma: si hay listSelect, manda.
+    const listar = { ...queryOptions };
+    if (config.listSelect) {
+      delete listar.include;
+      listar.select = config.listSelect;
+    }
+    const transformar = config.listSelect ? config.listTransform : config.transform;
+
     if (pagination && Object.keys(pagination).length > 0 && paginatedSections.includes(section)) {
       const { skip, perPage, page } = pagination;
       const [total, rows] = await Promise.all([
         prisma[config.model].count({ where: queryOptions.where }),
-        prisma[config.model].findMany({
-          ...queryOptions,
-          skip,
-          take: perPage,
-        })
+        prisma[config.model].findMany({ ...listar, skip, take: perPage })
       ]);
       return {
-        data: rows.map(config.transform),
+        data: rows.map(transformar),
         meta: {
           total,
           page,
           perPage,
-          totalPages: Math.ceil(total / perPage)
+          totalPages: Math.ceil(total / perPage),
+          hasNext: page < Math.ceil(total / perPage),
+          hasPrev: page > 1
         }
       };
     }
 
-    const rows = await prisma[config.model].findMany(queryOptions);
-    return rows.map(config.transform);
+    const rows = await prisma[config.model].findMany(listar);
+    return rows.map(transformar);
   }
 
-  async getAll() {
-    const sections = Object.keys(SECTION_MAP);
-    const result = {};
-    for (const section of sections) {
-      result[section] = await this.getSection(section);
-    }
-    return result;
+  // Un elemento con su detalle completo. Es lo que se pide al seleccionar algo
+  // en un listado ligero (un paquete en el formulario de planes, por ejemplo).
+  async getItem(section, id) {
+    const config = SECTION_MAP[section];
+    if (!config) throw new NotFoundError('Sección no encontrada');
+
+    const row = await prisma[config.model].findUnique({
+      where: { [config.idField]: Number(id) },
+      include: config.include
+    });
+    if (!row) throw new NotFoundError('Elemento no encontrado');
+    return config.transform(row);
+  }
+
+  // Catálogos que los selectores necesitan desde el primer render.
+  // 'packages' queda fuera a propósito: son 5 relaciones anidadas por fila y
+  // solo lo usa el formulario de planes, que lo pide por su cuenta.
+  static SECCIONES_ARRANQUE = [
+    'cards', 'payment-methods', 'document-types',
+    'airlines', 'suppliers', 'airports', 'baggage'
+  ];
+
+  async getAll({ sections } = {}) {
+    // El cliente puede pedir un subconjunto con ?sections=airlines,suppliers
+    const pedidas = Array.isArray(sections) && sections.length
+      ? sections.filter(s => SECTION_MAP[s])
+      : ConfigService.SECCIONES_ARRANQUE;
+
+    // Las secciones son independientes: se piden en paralelo.
+    const rows = await Promise.all(pedidas.map(s => this.getSection(s)));
+    return Object.fromEntries(pedidas.map((s, i) => [s, rows[i]]));
   }
 
   async createItem(section, data) {

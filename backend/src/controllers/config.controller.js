@@ -1,5 +1,5 @@
 const configService = require('../services/config.service');
-const { success } = require('../utils/apiResponse');
+const { success, noContent } = require('../utils/apiResponse');
 
 exports.getSection = async (req, res, next) => {
   try {
@@ -14,9 +14,19 @@ exports.getSection = async (req, res, next) => {
   }
 };
 
+// Solo los catálogos del arranque. Se puede acotar más con ?sections=a,b
 exports.getAll = async (req, res, next) => {
   try {
-    const data = await configService.getAll();
+    const sections = req.query.sections ? String(req.query.sections).split(',').map(s => s.trim()) : null;
+    const data = await configService.getAll({ sections });
+    success(res, data);
+  } catch (err) { next(err); }
+};
+
+// Detalle completo de un elemento, para cuando el usuario elige uno del listado.
+exports.getItem = async (req, res, next) => {
+  try {
+    const data = await configService.getItem(req.params.section, req.params.id);
     success(res, data);
   } catch (err) { next(err); }
 };
@@ -24,20 +34,20 @@ exports.getAll = async (req, res, next) => {
 exports.createItem = async (req, res, next) => {
   try {
     const data = await configService.createItem(req.params.section, req.body);
-    success(res, data, 'Item creado exitosamente', 201);
+    success(res, data, null, 201);
   } catch (err) { next(err); }
 };
 
 exports.updateItem = async (req, res, next) => {
   try {
     const data = await configService.updateItem(req.params.section, req.params.id, req.body);
-    success(res, data, 'Item actualizado exitosamente');
+    success(res, data);
   } catch (err) { next(err); }
 };
 
 exports.removeItem = async (req, res, next) => {
   try {
     await configService.deleteItem(req.params.section, req.params.id);
-    success(res, { success: true }, 'Item eliminado exitosamente');
+    noContent(res);
   } catch (err) { next(err); }
 };

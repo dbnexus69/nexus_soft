@@ -1,5 +1,5 @@
 const usersService = require('../services/users.service');
-const { success } = require('../utils/apiResponse');
+const { success, noContent } = require('../utils/apiResponse');
 
 exports.list = async (req, res, next) => {
   try {
@@ -47,22 +47,13 @@ exports.update = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await usersService.removeUser(id);
-    success(res, result);
+    await usersService.removeUser(id);
+    noContent(res);
   } catch (err) {
     next(err);
   }
 };
 
-exports.updatePermissions = async (req, res, next) => {
-  try {
-    const id = parseInt(req.params.id);
-    const result = await usersService.updatePermissions(id, req.body.permissions);
-    success(res, result);
-  } catch (err) {
-    next(err);
-  }
-};
 
 exports.uploadAvatar = async (req, res, next) => {
   try {

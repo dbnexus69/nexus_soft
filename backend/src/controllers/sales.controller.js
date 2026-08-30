@@ -1,5 +1,5 @@
 const salesService = require('../services/sales.service');
-const { success } = require('../utils/apiResponse');
+const { success, noContent } = require('../utils/apiResponse');
 
 exports.list = async (req, res, next) => {
   try {
@@ -17,6 +17,42 @@ exports.list = async (req, res, next) => {
       user: req.user,
       sortBy: req.sortBy,
       sortOrder: req.sortOrder
+    });
+    success(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getProducts = async (req, res, next) => {
+  try {
+    const data = await salesService.getSaleProducts(parseInt(req.params.id));
+    success(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getProductsByCategory = async (req, res, next) => {
+  try {
+    const data = await salesService.getSaleProductsByCategory(
+      parseInt(req.params.id), req.params.category
+    );
+    success(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Cartera de crédito agrupada por cliente, con los totales de toda la cartera.
+exports.creditPortfolio = async (req, res, next) => {
+  try {
+    const result = await salesService.getCreditPortfolio({
+      pagination: req.pagination,
+      search: req.search,
+      status: req.query.status,
+      permissionScope: req.permissionScope,
+      user: req.user,
     });
     success(res, result.data, result.meta);
   } catch (err) {
@@ -47,8 +83,8 @@ exports.voidSale = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await salesService.removeSale(id);
-    success(res, result);
+    await salesService.removeSale(id);
+    noContent(res);
   } catch (err) {
     next(err);
   }
@@ -64,6 +100,9 @@ exports.registerPayment = async (req, res, next) => {
   }
 };
 
+// Excepción deliberada al 204 de los DELETE: borrar un pago recalcula el estado
+// y el monto pagado de la venta. Devolverlos evita que el cliente tenga que
+// volver a pedir la venta entera solo para enterarse.
 exports.deletePayment = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.saleId);
@@ -107,8 +146,8 @@ exports.sendVoucher = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await salesService.createSale(req.body);
-    success(res, result);
+    const result = await salesService.createSale(req.validatedBody || req.body);
+    success(res, result, null, 201);
   } catch (err) {
     next(err);
   }

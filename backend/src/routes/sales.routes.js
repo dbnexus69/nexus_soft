@@ -6,19 +6,32 @@ const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
 const paginate = require('../middleware/paginate');
 const upload = require('../middleware/upload');
+const { validate } = require('../middleware/validate');
+const {
+  createSaleSchema, updateSaleSchema, registerPaymentSchema,
+  voidSaleSchema, reviewStatusSchema
+} = require('../schemas/sales.schema');
 
 router.use(auth);
 
 router.get('/', authorize('sales', 'view'), paginate, salesController.list);
+// Va antes de /:id para que 'credit' no se interprete como un id de venta.
+router.get('/credit', authorize('sales', 'view'), paginate, salesController.creditPortfolio);
 router.get('/:id', authorize('sales', 'view'), salesController.getById);
-router.post('/', authorize('sales', 'create'), salesController.create);
-router.put('/:id', authorize('sales', 'edit'), salesController.update);
-router.patch('/:id/review-status', authorize('sales', 'edit'), salesController.updateReviewStatus);
-router.post('/:id/void', authorize('sales', 'delete'), salesController.voidSale);
+router.post('/', authorize('sales', 'create'), validate(createSaleSchema), salesController.create);
+router.put('/:id', authorize('sales', 'edit'), validate(updateSaleSchema), salesController.update);
+router.patch('/:id/review-status', authorize('sales', 'edit'), validate(reviewStatusSchema), salesController.updateReviewStatus);
+// La anulación es un sub-recurso, no un verbo en la URL.
+router.post('/:id/cancellation', authorize('sales', 'delete'), validate(voidSaleSchema), salesController.voidSale);
 router.delete('/:id', authorize('sales', 'delete'), salesController.remove);
-router.post('/:id/payments', authorize('sales', 'edit'), salesController.registerPayment);
+router.post('/:id/payments', authorize('sales', 'edit'), validate(registerPaymentSchema), salesController.registerPayment);
 router.delete('/:saleId/payments/:paymentId', authorize('sales', 'edit'), salesController.deletePayment);
 router.get('/:id/payments', authorize('sales', 'view'), salesController.listPayments);
+
+// Lectura de productos: la colección completa (la usa el voucher) y una categoría suelta.
+// Simétricos con los POST/PUT/DELETE de producto de más abajo.
+router.get('/:id/products', authorize('sales', 'view'), salesController.getProducts);
+router.get('/:id/products/:category', authorize('sales', 'view'), salesController.getProductsByCategory);
 router.post('/:id/send-voucher', authorize('sales', 'view'), salesController.sendVoucher);
 
 // 15 endpoints de productos
@@ -50,9 +63,9 @@ router.post('/:saleId/products/simcard', authorize('sales', 'create'), productsC
 router.put('/:saleId/products/simcard/:id', authorize('sales', 'edit'), productsController.updateSimcard);
 router.delete('/:saleId/products/simcard/:id', authorize('sales', 'delete'), productsController.deleteSimcard);
 
-router.post('/:saleId/products/car-rental', authorize('sales', 'create'), productsController.createCarRental);
-router.put('/:saleId/products/car-rental/:id', authorize('sales', 'edit'), productsController.updateCarRental);
-router.delete('/:saleId/products/car-rental/:id', authorize('sales', 'delete'), productsController.deleteCarRental);
+router.post('/:saleId/products/car', authorize('sales', 'create'), productsController.createCarRental);
+router.put('/:saleId/products/car/:id', authorize('sales', 'edit'), productsController.updateCarRental);
+router.delete('/:saleId/products/car/:id', authorize('sales', 'delete'), productsController.deleteCarRental);
 
 router.post('/:saleId/products/finca', authorize('sales', 'create'), productsController.createFinca);
 router.put('/:saleId/products/finca/:id', authorize('sales', 'edit'), productsController.updateFinca);
@@ -78,9 +91,9 @@ router.post('/:saleId/products/passport', authorize('sales', 'create'), products
 router.put('/:saleId/products/passport/:id', authorize('sales', 'edit'), productsController.updatePassport);
 router.delete('/:saleId/products/passport/:id', authorize('sales', 'delete'), productsController.deletePassport);
 
-router.post('/:saleId/products/pet-service', authorize('sales', 'create'), productsController.createPetService);
-router.put('/:saleId/products/pet-service/:id', authorize('sales', 'edit'), productsController.updatePetService);
-router.delete('/:saleId/products/pet-service/:id', authorize('sales', 'delete'), productsController.deletePetService);
+router.post('/:saleId/products/pet', authorize('sales', 'create'), productsController.createPetService);
+router.put('/:saleId/products/pet/:id', authorize('sales', 'edit'), productsController.updatePetService);
+router.delete('/:saleId/products/pet/:id', authorize('sales', 'delete'), productsController.deletePetService);
 
 // Voucher upload
 router.post('/:saleId/products/:category/:productId/voucher', authorize('sales', 'edit'), upload.single('file'), productsController.uploadVoucher);

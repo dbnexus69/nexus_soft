@@ -75,8 +75,7 @@ class UsersService {
       avatar: u.avatar,
       birthDate: u.birthDate,
       lastLogin: u.ultimo_login,
-      creado_at: u.creadoAt,
-      customPermissions: undefined
+      creado_at: u.creadoAt
     }));
 
     return {
@@ -86,20 +85,31 @@ class UsersService {
   }
 
   async getUserById(id) {
-    const usuario = await prisma.usuarios.findUnique({
-      where: { id },
-      include: {
-        personas: { include: { tipos_documento: true } },
-        roles: true,
-        permisos_usuario: { include: { permisos: true }, where: { permitido: true } }
-      }
-    });
+    // Además del usuario, el resumen de sus ventas como asesor: cuántas y
+    // cuánto suman. El listado se pide aparte con GET /sales?asesorId=:id,
+    // paginado, en vez de traerse todas para sumarlas en el navegador.
+    const [usuario, resumenVentas] = await Promise.all([
+      prisma.usuarios.findUnique({
+        where: { id },
+        include: {
+          personas: { include: { tipos_documento: true } },
+          roles: true,
+        }
+      }),
+      prisma.ventas.aggregate({
+        where: { usuario_id: id, status: { not: 'anulado' } },
+        _count: { _all: true },
+        _sum: { monto_total: true }
+      })
+    ]);
 
     if (!usuario) {
       throw new NotFoundError('Usuario no encontrado');
     }
 
     return {
+      salesCount: resumenVentas._count._all,
+      salesTotal: resumenVentas._sum.monto_total || 0,
       id: usuario.id,
       name: `${usuario.personas.nombres} ${usuario.personas.apellidos}`,
       firstName: usuario.personas.nombres,
@@ -113,16 +123,7 @@ class UsersService {
       avatar: usuario.personas.avatar_url,
       birthDate: usuario.personas.birth_date,
       lastLogin: usuario.ultimo_login,
-      creado_at: usuario.creadoAt,
-      customPermissions: usuario.permisos_usuario.length > 0 ? usuario.permisos_usuario.reduce((acc, pu) => {
-        if (!acc[pu.permisos.modulo]) acc[pu.permisos.modulo] = {};
-        const val = pu.valor || 'true';
-        const isScopedView = pu.permisos.accion === 'view' && ['dashboard','sales','clients'].includes(pu.permisos.modulo);
-        acc[pu.permisos.modulo][pu.permisos.accion] = isScopedView
-          ? (val === 'own' || val === 'all' || val === 'none' ? val : 'all')
-          : (val === 'true' || val === true);
-        return acc;
-      }, {}) : undefined
+      creado_at: usuario.creadoAt
     };
   }
 
@@ -348,32 +349,6 @@ class UsersService {
     return { message: 'Usuario eliminado' };
   }
 
-  async updatePermissions(id, permissions) {
-    await prisma.permisos_usuario.deleteMany({ where: { usuarioId: id } });
-
-    for (const [modulo, accs] of Object.entries(permissions)) {
-      for (const [accion, value] of Object.entries(accs)) {
-        const encoded = value === 'all' || value === 'own' || value === 'none' ? value
-          : value === true || value === 'true' ? 'true'
-          : value === false || value === 'false' ? 'false'
-          : String(value);
-
-        let permisos = await prisma.permisos.findFirst({ where: { modulo, accion } });
-        if (!permisos) {
-          permisos = await prisma.permisos.create({
-            data: { modulo, accion, descripcion: `${modulo} - ${accion}` }
-          });
-        }
-
-        await prisma.permisos_usuario.create({
-          data: { usuarioId: id, permiso_id: permisos.id, permitido: true, valor: encoded }
-        });
-      }
-    }
-
-    AUTH_CACHE.delete(id);
-    return { message: 'Permisos actualizados' };
-  }
 
   async uploadAvatar(id, file) {
     if (!file) {

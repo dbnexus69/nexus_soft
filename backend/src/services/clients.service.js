@@ -9,28 +9,35 @@ class ClientsService {
   async listClients({ pagination, search, status, permissionScope, user, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
 
+    // Un solo constructor de filtros para el count y para el SQL. Antes el
+    // count ignoraba el search: una búsqueda sin resultados seguía diciendo
+    // que había N clientes, y la paginación salía mal.
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+
     const where = {};
     if (permissionScope === 'own') {
+      push('c.creado_por_id = ?', user.id);
       where.creado_por_id = user.id;
     }
-
-    let searchCondition = '';
     if (search) {
-      // Escapar comillas simples para seguridad SQL basica en raw query
-      const cleanSearch = search.replace(/'/g, "''");
-      searchCondition = `AND (p.nombres ILIKE '%${cleanSearch}%' OR p.apellidos ILIKE '%${cleanSearch}%' OR p.documento ILIKE '%${cleanSearch}%' OR p.email ILIKE '%${cleanSearch}%')`;
+      const q = `%${search}%`;
+      push('(p.nombres ILIKE ? OR p.apellidos ILIKE ? OR p.documento ILIKE ? OR p.email ILIKE ?)', q, q, q, q);
+      const como = { contains: search, mode: 'insensitive' };
+      where.personas = {
+        ...(where.personas || {}),
+        OR: [{ nombres: como }, { apellidos: como }, { documento: como }, { email: como }]
+      };
     }
-    
-    let statusCondition = '';
     if (status) {
-      const cleanStatus = status.replace(/'/g, "''");
-      statusCondition = `AND p.status = '${cleanStatus}'`;
+      push('p.status = ?::"UserStatus"', status);
+      where.personas = { ...(where.personas || {}), status };
     }
-    
-    let ownCondition = '';
-    if (permissionScope === 'own') {
-      ownCondition = `AND c.creado_por_id = ${user.id}`;
-    }
+
+    const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
     const sortFieldMapSQL = {
       'creadoAt': 'c.fecha_registro',
@@ -59,10 +66,10 @@ class ClientsService {
         FROM clientes c
         JOIN personas p ON c.persona_id = p.id
         LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        WHERE 1=1 ${searchCondition} ${statusCondition} ${ownCondition}
+        WHERE 1=1 ${whereSql}
         ORDER BY ${sqlOrderBy} ${orderDirection}
-        LIMIT ${perPage} OFFSET ${skip}
-      `)
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip)
     ]);
 
     const data = clientesRaw.map(c => ({
@@ -91,17 +98,22 @@ class ClientsService {
    * Obtener cliente por ID
    */
   async getClientById(id, includeSales = false) {
-    const cliente = await prisma.clientes.findUnique({
-      where: { id },
-      include: {
-        personas: { include: { tipos_documento: true } },
-        ventas: includeSales ? {
-          include: { detalleVentas: true, usuario: { include: { personas: true } } },
-          orderBy: { creadoAt: 'desc' },
-          take: 50
-        } : false
-      }
-    });
+    // includeSales ya no arrastra las ventas: devuelve solo el resumen
+    // (cuántas y cuánto suman). El historial se pide paginado con
+    // GET /sales?clientId=:id, que es donde vive ese listado.
+    const [cliente, resumen] = await Promise.all([
+      prisma.clientes.findUnique({
+        where: { id },
+        include: { personas: { include: { tipos_documento: true } } }
+      }),
+      includeSales
+        ? prisma.ventas.aggregate({
+            where: { cliente_id: id, status: { not: 'anulado' } },
+            _count: { _all: true },
+            _sum: { monto_total: true }
+          })
+        : null
+    ]);
 
     if (!cliente) {
       throw new NotFoundError('Cliente no encontrado');
@@ -121,13 +133,8 @@ class ClientsService {
       avatar: cliente.personas.avatar_url,
       registrationDate: cliente.fecha_registro,
       createdBy: cliente.creado_por_id,
-      sales: includeSales ? cliente.ventas?.map(v => ({
-        id: v.id,
-        total: v.montoTotal,
-        status: v.status,
-        date: v.creadoAt,
-        asesorName: v.usuario ? `${v.usuario.personas.nombres} ${v.usuario.personas.apellidos}` : null
-      })) : undefined
+      salesCount: resumen ? resumen._count._all : undefined,
+      salesTotal: resumen ? (resumen._sum.monto_total || 0) : undefined
     };
   }
 

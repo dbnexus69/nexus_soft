@@ -1,13 +1,9 @@
 const prisma = require('../config/db');
-const { success, error } = require('../utils/apiResponse');
+const { success, noContent, error } = require('../utils/apiResponse');
+const { randomUUID } = require('crypto');
+// Fuente de verdad de las categorías: un slug, el mismo en URL y en base de datos.
+const { CATALOG } = require('../catalog/products');
 
-const CATEGORIES = {
-  ticket: 'tiqueteria', hotel: 'hoteleria', insurance: 'seguros_viaje',
-  plan: 'planes', checkin: 'checkin', migration: 'documentacion_migratoria',
-  simcard: 'simcard', carRental: 'renta_vehiculos', finca: 'renta_fincas',
-  tour: 'tours', convention: 'centros_convencion', restaurant: 'restaurantes',
-  visa: 'visa', passport: 'pasaporte', petService: 'servicio_mascotas'
-};
 
 async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaId) {
   if (!name && !docNumber) {
@@ -51,19 +47,20 @@ async function getSale(saleId) {
 }
 
 async function createDetalleProducto(tx, venta_id, categoria, data) {
-  return tx.detalleVenta.create({
+  return tx.detalle_venta.create({
     data: {
+      id: randomUUID(),
       venta_id,
       categoria,
-      nombreServicio: data.nombreServicio || null,
+      nombre_servicio: data.nombre_servicio || null,
       subtotal: data.subtotal || 0,
       ta: data.ta || 0,
-      costoProveedor: data.supplierCost || 0,
-      proveedorId: data.supplierId ? parseInt(data.supplierId) : null,
-      metodoPagoProveedorId: data.supplierPaymentMethod ? parseInt(data.supplierPaymentMethod) : null,
-      voucherUrl: data.voucherUrl || null,
-      fechaInicioViaje: data.startDate ? new Date(data.startDate) : null,
-      fechaFinViaje: data.endDate ? new Date(data.endDate) : null,
+      costo_proveedor: data.supplierCost || 0,
+      proveedor_id: data.supplierId ? parseInt(data.supplierId) : null,
+      metodo_pago_proveedor_id: data.supplierPaymentMethod ? parseInt(data.supplierPaymentMethod) : null,
+      voucher_url: data.voucher_url || null,
+      fecha_inicio_viaje: data.startDate ? new Date(data.startDate) : null,
+      fecha_fin_viaje: data.endDate ? new Date(data.endDate) : null,
       origen: data.origin || null,
       destino: data.destination || null,
       observaciones: data.observations || null
@@ -80,7 +77,8 @@ const productHandler = (category, tableName, transformData) => ({
       const data = req.body;
       const result = await prisma.$transaction(async (tx) => {
         const detalle = await createDetalleProducto(tx, venta.id, category, data);
-        const transformed = transformData ? transformData(data, detalle.id) : { detalleVentaId: detalle.id, ...data };
+        const transformed = transformData ? transformData(data, detalle.id) : { detalle_venta_id: detalle.id, ...data };
+        if (!transformed.id) transformed.id = randomUUID();
         const product = await tx[tableName].create({ data: transformed });
 
         const pasajerosDetalleData = [];
@@ -96,10 +94,10 @@ const productHandler = (category, tableName, transformData) => ({
             const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, defaultPersonaId);
             pasajerosDetalleData.push({
               persona_id: resolvedPid,
-              esTitular: p.esTitular ?? true,
+              es_titular: p.esTitular ?? true,
               asiento: p.asiento || p.seat || null,
-              nroReserva: p.nroReserva || null,
-              nroTiquete: p.nroTiquete || null
+              nro_reserva: p.nroReserva || null,
+              nro_tiquete: p.nroTiquete || null
             });
           }
         } else {
@@ -107,32 +105,33 @@ const productHandler = (category, tableName, transformData) => ({
           const docType = data.docType;
           const docNumber = data.docNumber || data.licenseNumber || data.passportNumber || data.idNumber;
           
-          if (passengerName || docNumber || ['checkin', 'documentacion_migratoria', 'simcard', 'tours', 'servicio_mascotas', 'renta_vehiculos'].includes(category)) {
+          if (passengerName || docNumber || ['checkin', 'migration', 'simcard', 'tour', 'pet', 'car'].includes(category)) {
             const resolvedPid = await findOrCreatePersona(tx, passengerName, docType, docNumber, defaultPersonaId);
             pasajerosDetalleData.push({
               persona_id: resolvedPid,
-              esTitular: true,
+              es_titular: true,
               asiento: data.seat || data.seatNumber || null,
-              nroReserva: null,
-              nroTiquete: null
+              nro_reserva: null,
+              nro_tiquete: null
             });
           }
         }
 
         for (const passengerData of pasajerosDetalleData) {
-          await tx.pasajerosDetalle.create({
+          await tx.pasajeros_detalle.create({
             data: {
-              detalleVentaId: detalle.id,
+              id: randomUUID(),
+              detalle_venta_id: detalle.id,
               persona_id: passengerData.persona_id,
-              esTitular: passengerData.esTitular,
+              es_titular: passengerData.esTitular,
               asiento: passengerData.asiento,
-              nroReserva: passengerData.nroReserva,
-              nroTiquete: passengerData.nroTiquete
+              nro_reserva: passengerData.nroReserva,
+              nro_tiquete: passengerData.nroTiquete
             }
           });
         }
 
-        if (tableName === 'prodTiqueteria') {
+        if (tableName === 'prod_tiqueteria') {
           const allLegs = [...(data.legs || [])];
           if (data.returnLeg) allLegs.push(data.returnLeg);
           for (let i = 0; i < allLegs.length; i++) {
@@ -184,14 +183,14 @@ const productHandler = (category, tableName, transformData) => ({
 
             await tx.tramosVuelo.create({
               data: {
-                prodTiqueteriaId: product.id,
-                aeropuertoOrigenId: originAirport.id,
-                aeropuertoDestinoId: destAirport.id,
+                prod_tiqueteria_id: product.id,
+                aeropuerto_origen_id: originAirport.id,
+                aeropuerto_destino_id: destAirport.id,
                 salida: leg.date ? new Date(leg.date) : new Date(),
                 llegada: leg.date ? new Date(leg.date) : new Date(),
-                nroVueloTramo: leg.flightNumber || null,
+                nro_vuelo_tramo: leg.flightNumber || null,
                 asiento: leg.seat || null,
-                nroTiquete: leg.ticketNumber || null,
+                nro_tiquete: leg.ticketNumber || null,
                 aerolinea_id,
                 planEquipajeId,
                 orden: i + 1
@@ -226,7 +225,7 @@ const productHandler = (category, tableName, transformData) => ({
         if (data.passengers || data.passengerInfo || data.guests) {
           const passengers = data.passengers ? data.passengers : (data.passengerInfo ? [data.passengerInfo] : (data.guests || []));
           
-          await tx.pasajerosDetalle.deleteMany({ where: { detalleVentaId: prod.detalleVentaId } });
+          await tx.pasajeros_detalle.deleteMany({ where: { detalle_venta_id: prod.detalle_venta_id } });
 
           const cliente = await tx.clientes.findUnique({
             where: { id: venta.cliente_id },
@@ -239,22 +238,22 @@ const productHandler = (category, tableName, transformData) => ({
             const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, defaultPersonaId);
             pasajerosDetalleData.push({
               persona_id: resolvedPid,
-              esTitular: p.esTitular ?? true,
+              es_titular: p.esTitular ?? true,
               asiento: p.asiento || p.seat || null,
-              nroReserva: p.nroReserva || null,
-              nroTiquete: p.nroTiquete || null
+              nro_reserva: p.nroReserva || null,
+              nro_tiquete: p.nroTiquete || null
             });
           }
 
           for (const passengerData of pasajerosDetalleData) {
-            await tx.pasajerosDetalle.create({
+            await tx.pasajeros_detalle.create({
               data: {
-                detalleVentaId: prod.detalleVentaId,
+                detalle_venta_id: prod.detalle_venta_id,
                 persona_id: passengerData.persona_id,
-                esTitular: passengerData.esTitular,
+                es_titular: passengerData.esTitular,
                 asiento: passengerData.asiento,
-                nroReserva: passengerData.nroReserva,
-                nroTiquete: passengerData.nroTiquete
+                nro_reserva: passengerData.nroReserva,
+                nro_tiquete: passengerData.nroTiquete
               }
             });
           }
@@ -276,10 +275,10 @@ const productHandler = (category, tableName, transformData) => ({
 
       await prisma.$transaction(async (tx) => {
         await tx[tableName].delete({ where: { id } });
-        await tx.detalleVenta.delete({ where: { id: product.detalleVentaId } });
+        await tx.detalle_venta.delete({ where: { id: product.detalle_venta_id } });
       });
 
-      success(res, { message: 'Producto eliminado' });
+      noContent(res);
     } catch (err) {
       next(err);
     }
@@ -292,276 +291,278 @@ const H = productHandler;
 // =========================================================
 // Tiquetería
 // =========================================================
-exports.createTicket = H(CATEGORIES.ticket, 'prodTiqueteria', (d, detalleId) => ({
-  detalleVentaId: detalleId,
+exports.createTicket = H('ticket', 'prod_tiqueteria', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
   aerolinea_id: d.airline ? parseInt(d.airline) : null,
-  nroReserva: d.reservationNumber || null,
-  nroVuelo: d.flightNumber || null,
-  nroTiquete: d.ticketNumber || null,
-  modoVuelo: d.flightMode || 'one_way',
+  nro_reserva: d.reservationNumber || null,
+  nro_vuelo: d.flightNumber || null,
+  nro_tiquete: d.ticketNumber || null,
+  modo_vuelo: d.flightMode || 'one_way',
   planEquipajeId: d.baggagePlan ? parseInt(d.baggagePlan) : null,
-  checkinStatus: 'pendiente'
+  checkin_status: 'pendiente'
 })).create;
 
-exports.updateTicket = H(CATEGORIES.ticket, 'prodTiqueteria').update;
-exports.deleteTicket = H(CATEGORIES.ticket, 'prodTiqueteria').delete;
+exports.updateTicket = H('ticket', 'prod_tiqueteria').update;
+exports.deleteTicket = H('ticket', 'prod_tiqueteria').delete;
 
 // =========================================================
 // Hotelería
 // =========================================================
-exports.createHotel = H(CATEGORIES.hotel, 'prodHoteleria', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  hotelNombre: d.hotelName || null,
-  tipoHotel: d.hotelType || 'hotel',
+exports.createHotel = H('hotel', 'prod_hoteleria', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  hotel_nombre: d.hotelName || null,
+  tipo_hotel: d.hotelType || 'hotel',
   destino: d.destination || null,
-  nroReserva: d.reservationNumber || null,
-  fechaEntrada: d.startDate ? new Date(d.startDate) : null,
+  nro_reserva: d.reservationNumber || null,
+  fecha_entrada: d.startDate ? new Date(d.startDate) : null,
   fecha_salida: d.endDate ? new Date(d.endDate) : null,
   observaciones: d.observations || null
 })).create;
 
-exports.updateHotel = H(CATEGORIES.hotel, 'prodHoteleria').update;
-exports.deleteHotel = H(CATEGORIES.hotel, 'prodHoteleria').delete;
+exports.updateHotel = H('hotel', 'prod_hoteleria').update;
+exports.deleteHotel = H('hotel', 'prod_hoteleria').delete;
 
 // =========================================================
 // Seguros
 // =========================================================
-exports.createInsurance = H(CATEGORIES.insurance, 'prodSeguros', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  tipoSeguro: d.insuranceType || 'basico',
-  coberturaUsd: d.coverageAmount || 0,
-  diasCobertura: d.coverageDays || 0,
-  contactoEmergencia: d.contactName || null,
-  telefonoEmergencia: d.contactNumber || null,
-  direccionAsegurado: d.address || null
+exports.createInsurance = H('insurance', 'prod_seguros', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  tipo_seguro: d.insuranceType || 'basico',
+  cobertura_usd: d.coverageAmount || 0,
+  dias_cobertura: d.coverageDays || 0,
+  // prod_seguros solo tiene telefono_contacto; no hay columna para nombre de
+  // contacto ni dirección del asegurado, así que no se persisten.
+  telefono_contacto: d.contactNumber || null,
+  fecha_inicio_vigencia: d.startDate ? new Date(d.startDate) : null,
+  fecha_fin_vigencia: d.endDate ? new Date(d.endDate) : null
 })).create;
 
-exports.updateInsurance = H(CATEGORIES.insurance, 'prodSeguros').update;
-exports.deleteInsurance = H(CATEGORIES.insurance, 'prodSeguros').delete;
+exports.updateInsurance = H('insurance', 'prod_seguros').update;
+exports.deleteInsurance = H('insurance', 'prod_seguros').delete;
 
 // =========================================================
 // Planes
 // =========================================================
-exports.createPlan = H(CATEGORIES.plan, 'prodPlanes', (d, detalleId) => ({
-  detalleVentaId: detalleId,
+exports.createPlan = H('plan', 'prod_planes', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
   paqueteId: d.packageId ? parseInt(d.packageId) : null,
-  nombrePlan: d.planName || null,
+  nombre_plan: d.planName || null,
   aerolinea_id: d.airline ? parseInt(d.airline) : null,
-  nroReserva: d.reservationNumber || null,
-  nroTiquete: d.ticketNumber || null,
-  fechaViajeInicio: d.startDate ? new Date(d.startDate) : null,
-  fechaViajeFin: d.endDate ? new Date(d.endDate) : null,
-  fechaSalidaVuelo: d.flightDepartureDate ? new Date(d.flightDepartureDate) : null,
-  fechaRegresoVuelo: d.flightReturnDate ? new Date(d.flightReturnDate) : null,
-  adultosCount: d.adultsCount || 0,
-  menoresCount: d.childrenCount || 0,
-  numeroConfirmacion: d.confirmationNumber || null,
+  nro_reserva: d.reservationNumber || null,
+  nro_tiquete: d.ticketNumber || null,
+  fecha_viaje_inicio: d.startDate ? new Date(d.startDate) : null,
+  fecha_viaje_fin: d.endDate ? new Date(d.endDate) : null,
+  fecha_salida_vuelo: d.flightDepartureDate ? new Date(d.flightDepartureDate) : null,
+  fecha_regreso_vuelo: d.flightReturnDate ? new Date(d.flightReturnDate) : null,
+  adultos_count: d.adultsCount || 0,
+  menores_count: d.childrenCount || 0,
+  numero_confirmacion: d.confirmationNumber || null,
   observaciones: d.observations || null
 })).create;
 
-exports.updatePlan = H(CATEGORIES.plan, 'prodPlanes').update;
-exports.deletePlan = H(CATEGORIES.plan, 'prodPlanes').delete;
+exports.updatePlan = H('plan', 'prod_planes').update;
+exports.deletePlan = H('plan', 'prod_planes').delete;
 
 // =========================================================
 // Check-in
 // =========================================================
-exports.createCheckin = H(CATEGORIES.checkin, 'prodCheckins', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  nroVueloReserva: d.flightOrReservation || null,
-  fechaViaje: d.travelDate ? new Date(d.travelDate) : null,
+exports.createCheckin = H('checkin', 'prod_checkins', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  nro_vuelo_reserva: d.flightOrReservation || null,
+  fecha_viaje: d.travelDate ? new Date(d.travelDate) : null,
   asiento: d.seat || null,
-  maletasContadas: d.baggage || null,
-  telefonoContacto: d.phone || null,
-  necesidadesEspeciales: d.specialNeeds || null,
-  usaSillaRuedas: d.needsWheelchair || false
+  maletas_contadas: d.baggage || null,
+  telefono_contacto: d.phone || null,
+  necesidades_especiales: d.specialNeeds || null,
+  usa_silla_ruedas: d.needsWheelchair || false
 })).create;
 
-exports.updateCheckin = H(CATEGORIES.checkin, 'prodCheckins').update;
-exports.deleteCheckin = H(CATEGORIES.checkin, 'prodCheckins').delete;
+exports.updateCheckin = H('checkin', 'prod_checkins').update;
+exports.deleteCheckin = H('checkin', 'prod_checkins').delete;
 
 // =========================================================
 // Migración
 // =========================================================
-exports.createMigration = H(CATEGORIES.migration, 'prodMigracion', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  tipoTramiteMigratorio: d.requestedDocType || null,
+exports.createMigration = H('migration', 'prod_migracion', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  tipo_tramite_migratorio: d.requestedDocType || null,
   nacionalidad: d.nationality || null,
-  pasaporteNro: d.passportNumber || null,
-  pasaporteVence: d.passportExpiry ? new Date(d.passportExpiry) : null,
-  paisDestino: d.destinationCountry || null
+  pasaporte_nro: d.passportNumber || null,
+  pasaporte_vence: d.passportExpiry ? new Date(d.passportExpiry) : null,
+  pais_destino: d.destinationCountry || null
 })).create;
 
-exports.updateMigration = H(CATEGORIES.migration, 'prodMigracion').update;
-exports.deleteMigration = H(CATEGORIES.migration, 'prodMigracion').delete;
+exports.updateMigration = H('migration', 'prod_migracion').update;
+exports.deleteMigration = H('migration', 'prod_migracion').delete;
 
 // =========================================================
 // SIM Card
 // =========================================================
-exports.createSimcard = H(CATEGORIES.simcard, 'prodSimcards', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  paisDestino: d.destinationCountry || null,
-  fechaLlegada: d.arrivalDate ? new Date(d.arrivalDate) : null,
-  duracionViaje: d.tripDuration || null,
-  planDatos: d.dataPlan || null,
-  tipoSim: d.simType || null,
-  metodoEntrega: d.deliveryMethod || null
+exports.createSimcard = H('simcard', 'prod_simcards', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  pais_destino: d.destinationCountry || null,
+  fecha_llegada: d.arrivalDate ? new Date(d.arrivalDate) : null,
+  duracion_viaje: d.tripDuration || null,
+  plan_datos: d.dataPlan || null,
+  tipo_sim: d.simType || null,
+  metodo_entrega: d.deliveryMethod || null
 })).create;
 
-exports.updateSimcard = H(CATEGORIES.simcard, 'prodSimcards').update;
-exports.deleteSimcard = H(CATEGORIES.simcard, 'prodSimcards').delete;
+exports.updateSimcard = H('simcard', 'prod_simcards').update;
+exports.deleteSimcard = H('simcard', 'prod_simcards').delete;
 
 // =========================================================
 // Renta de Autos
 // =========================================================
-exports.createCarRental = H(CATEGORIES.carRental, 'prodAutos', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  conductorNombre: d.mainDriver || null,
-  licenciaNro: d.licenseNumber || null,
-  fechaRecogida: d.pickupDate ? new Date(d.pickupDate) : null,
-  fechaDevolucion: d.returnDate ? new Date(d.returnDate) : null,
-  lugarRecogida: d.pickupLocation || null,
-  categoriaAuto: d.vehicleCategory || null,
-  conductoresAdicionales: d.additionalDrivers || 0,
-  tipoSeguro: d.insuranceType || null,
-  tarjetaGarantiaInfo: d.guaranteeCreditCard || null
+exports.createCarRental = H('car', 'prod_autos', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  conductor_nombre: d.mainDriver || null,
+  licencia_nro: d.licenseNumber || null,
+  fecha_recogida: d.pickupDate ? new Date(d.pickupDate) : null,
+  fecha_devolucion: d.returnDate ? new Date(d.returnDate) : null,
+  lugar_recogida: d.pickupLocation || null,
+  categoria_auto: d.vehicleCategory || null,
+  conductores_adicionales: d.additionalDrivers || 0,
+  tipo_seguro: d.insuranceType || null,
+  tarjeta_garantia_info: d.guaranteeCreditCard || null
 })).create;
 
-exports.updateCarRental = H(CATEGORIES.carRental, 'prodAutos').update;
-exports.deleteCarRental = H(CATEGORIES.carRental, 'prodAutos').delete;
+exports.updateCarRental = H('car', 'prod_autos').update;
+exports.deleteCarRental = H('car', 'prod_autos').delete;
 
 // =========================================================
 // Fincas
 // =========================================================
-exports.createFinca = H(CATEGORIES.finca, 'prodFincas', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  responsableNombre: d.responsibleName || null,
-  documentoResponsable: d.docNumber || null,
-  fechaEntrada: d.checkInDate ? new Date(d.checkInDate) : null,
+exports.createFinca = H('finca', 'prod_fincas', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  responsable_nombre: d.responsibleName || null,
+  documento_responsable: d.docNumber || null,
+  fecha_entrada: d.checkInDate ? new Date(d.checkInDate) : null,
   fecha_salida: d.checkOutDate ? new Date(d.checkOutDate) : null,
-  adultosCount: d.adultsCount || 0,
-  ninosCount: d.childrenCount || 0,
-  tieneMascotas: d.hasPets || false,
-  tipoMascota: d.petType || null,
-  serviciosExtra: d.additionalServices?.join(', ') || null
+  adultos_count: d.adultsCount || 0,
+  ninos_count: d.childrenCount || 0,
+  tiene_mascotas: d.hasPets || false,
+  tipo_mascota: d.petType || null,
+  servicios_extra: d.additionalServices?.join(', ') || null
 })).create;
 
-exports.updateFinca = H(CATEGORIES.finca, 'prodFincas').update;
-exports.deleteFinca = H(CATEGORIES.finca, 'prodFincas').delete;
+exports.updateFinca = H('finca', 'prod_fincas').update;
+exports.deleteFinca = H('finca', 'prod_fincas').delete;
 
 // =========================================================
 // Tours
 // =========================================================
-exports.createTour = H(CATEGORIES.tour, 'prodTours', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  tourNombre: d.selectedTour || null,
-  fechaPreferida: d.preferredDate ? new Date(d.preferredDate) : null,
-  adultosCount: d.adultsCount || 1,
-  menoresCount: d.childrenCount || 0,
-  edadesMenores: d.childrenAges || null,
-  idiomaGuia: d.guideLanguage || null,
-  requiereTransporte: d.needsTransport || false,
-  puntoEncuentro: d.pickupPoint || null,
-  condicionesMedicas: d.medicalConditions || null,
-  telefonoContacto: d.phone || null
+exports.createTour = H('tour', 'prod_tours', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  tour_nombre: d.selectedTour || null,
+  fecha_preferida: d.preferredDate ? new Date(d.preferredDate) : null,
+  adultos_count: d.adultsCount || 1,
+  menores_count: d.childrenCount || 0,
+  edades_menores: d.childrenAges || null,
+  idioma_guia: d.guideLanguage || null,
+  requiere_transporte: d.needsTransport || false,
+  punto_encuentro: d.pickupPoint || null,
+  condiciones_medicas: d.medicalConditions || null,
+  telefono_contacto: d.phone || null
 })).create;
 
-exports.updateTour = H(CATEGORIES.tour, 'prodTours').update;
-exports.deleteTour = H(CATEGORIES.tour, 'prodTours').delete;
+exports.updateTour = H('tour', 'prod_tours').update;
+exports.deleteTour = H('tour', 'prod_tours').delete;
 
 // =========================================================
 // Centros de Convención
 // =========================================================
-exports.createConvention = H(CATEGORIES.convention, 'prodEventos', (d, detalleId) => ({
-  detalleVentaId: detalleId,
+exports.createConvention = H('convention', 'prod_eventos', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
   organizacion: d.organization || null,
-  nombreContacto: d.contactName || null,
-  emailContacto: d.email || null,
+  nombre_contacto: d.contactName || null,
+  email_contacto: d.email || null,
   fechaInicio: d.startDate ? new Date(d.startDate) : null,
   fechaFin: d.endDate ? new Date(d.endDate) : null,
-  asistenciaEstimada: d.estimatedAttendance || 0,
-  espacioRequerido: d.requiredSpace || null,
-  tipoEvento: d.eventType || null,
-  equiposAv: d.avEquipment?.join(', ') || null,
-  requiereCatering: d.hasCatering || false,
-  notasCatering: d.cateringNotes || null
+  asistencia_estimada: d.estimatedAttendance || 0,
+  espacio_requerido: d.requiredSpace || null,
+  tipo_evento: d.eventType || null,
+  equipos_av: d.avEquipment?.join(', ') || null,
+  requiere_catering: d.hasCatering || false,
+  notas_catering: d.cateringNotes || null
 })).create;
 
-exports.updateConvention = H(CATEGORIES.convention, 'prodEventos').update;
-exports.deleteConvention = H(CATEGORIES.convention, 'prodEventos').delete;
+exports.updateConvention = H('convention', 'prod_eventos').update;
+exports.deleteConvention = H('convention', 'prod_eventos').delete;
 
 // =========================================================
 // Restaurantes
 // =========================================================
-exports.createRestaurant = H(CATEGORIES.restaurant, 'prodRestaurantes', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  nombreReserva: d.reservationName || null,
-  fechaHoraReserva: d.dateTime ? new Date(d.dateTime) : null,
-  personasCount: d.peopleCount || 0,
-  preferenciaMesa: d.tablePreference || null,
-  tipoMenu: d.menuType || null,
-  restriccionesDieta: d.dietaryRestrictions?.join(', ') || null,
-  ocasionEspecial: d.specialOccasion || null,
-  telefonoContacto: d.phone || null
+exports.createRestaurant = H('restaurant', 'prod_restaurantes', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  nombre_reserva: d.reservationName || null,
+  fecha_hora_reserva: d.dateTime ? new Date(d.dateTime) : null,
+  personas_count: d.peopleCount || 0,
+  preferencia_mesa: d.tablePreference || null,
+  tipo_menu: d.menuType || null,
+  restricciones_dieta: d.dietaryRestrictions?.join(', ') || null,
+  ocasion_especial: d.specialOccasion || null,
+  telefono_contacto: d.phone || null
 })).create;
 
-exports.updateRestaurant = H(CATEGORIES.restaurant, 'prodRestaurantes').update;
-exports.deleteRestaurant = H(CATEGORIES.restaurant, 'prodRestaurantes').delete;
+exports.updateRestaurant = H('restaurant', 'prod_restaurantes').update;
+exports.deleteRestaurant = H('restaurant', 'prod_restaurantes').delete;
 
 // =========================================================
 // Visa
 // =========================================================
-exports.createVisa = H(CATEGORIES.visa, 'prodVisas', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  nombreCompleto: d.fullName || null,
-  fechaNacimiento: d.birthDate ? new Date(d.birthDate) : null,
+exports.createVisa = H('visa', 'prod_visas', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  nombre_completo: d.fullName || null,
+  fecha_nacimiento: d.birthDate ? new Date(d.birthDate) : null,
   nacionalidad: d.nationality || null,
-  nroPasaporte: d.passportNumber || null,
-  vencimientoPasaporte: d.passportExpiration ? new Date(d.passportExpiration) : null,
-  paisAplicacion: d.countryApplying || null,
-  tipoVisa: d.visaType || null,
-  fechaEstimadaViaje: d.estimatedTravelDate ? new Date(d.estimatedTravelDate) : null,
-  emailContacto: d.email || null
+  nro_pasaporte: d.passportNumber || null,
+  vencimiento_pasaporte: d.passportExpiration ? new Date(d.passportExpiration) : null,
+  pais_aplicacion: d.countryApplying || null,
+  tipo_visa: d.visaType || null,
+  fecha_estimada_viaje: d.estimatedTravelDate ? new Date(d.estimatedTravelDate) : null,
+  email_contacto: d.email || null
 })).create;
 
-exports.updateVisa = H(CATEGORIES.visa, 'prodVisas').update;
-exports.deleteVisa = H(CATEGORIES.visa, 'prodVisas').delete;
+exports.updateVisa = H('visa', 'prod_visas').update;
+exports.deleteVisa = H('visa', 'prod_visas').delete;
 
 // =========================================================
 // Pasaporte
 // =========================================================
-exports.createPassport = H(CATEGORIES.passport, 'prodPasaportes', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  nombreCompleto: d.fullName || null,
-  nroDocumento: d.idNumber || null,
-  fechaNacimiento: d.birthDate ? new Date(d.birthDate) : null,
-  ciudadResidencia: d.residenceCity || null,
-  tipoTramite: d.processType || null,
-  fechaEstimadaViaje: d.estimatedTravelDate ? new Date(d.estimatedTravelDate) : null,
-  telefonoContacto: d.phone || null
+exports.createPassport = H('passport', 'prod_pasaportes', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  nombre_completo: d.fullName || null,
+  nro_documento: d.idNumber || null,
+  fecha_nacimiento: d.birthDate ? new Date(d.birthDate) : null,
+  ciudad_residencia: d.residenceCity || null,
+  tipo_tramite: d.processType || null,
+  fecha_estimada_viaje: d.estimatedTravelDate ? new Date(d.estimatedTravelDate) : null,
+  telefono_contacto: d.phone || null
 })).create;
 
-exports.updatePassport = H(CATEGORIES.passport, 'prodPasaportes').update;
-exports.deletePassport = H(CATEGORIES.passport, 'prodPasaportes').delete;
+exports.updatePassport = H('passport', 'prod_pasaportes').update;
+exports.deletePassport = H('passport', 'prod_pasaportes').delete;
 
 // =========================================================
 // Servicio de Mascotas
 // =========================================================
-exports.createPetService = H(CATEGORIES.petService, 'prodMascotas', (d, detalleId) => ({
-  detalleVentaId: detalleId,
-  mascotaNombre: d.petName || null,
+exports.createPetService = H('pet', 'prod_mascotas', (d, detalleId) => ({
+  detalle_venta_id: detalleId,
+  mascota_nombre: d.petName || null,
   especie: d.species || null,
   raza: d.breed || null,
-  pesoKg: d.weight || 0,
+  peso_kg: d.weight || 0,
   tamanoMascota: d.size === "pequeño" ? "pequeno" : (d.size || null),
-  transporteTipo: d.travelType || null,
-  fechaViaje: d.travelDate ? new Date(d.travelDate) : null,
-  paisDestino: d.destinationCountry || null,
-  condicionesMedicas: d.medicalConditions || null,
-  telefonoContacto: d.phone || null
+  transporte_tipo: d.travelType || null,
+  fecha_viaje: d.travelDate ? new Date(d.travelDate) : null,
+  pais_destino: d.destinationCountry || null,
+  condiciones_medicas: d.medicalConditions || null,
+  telefono_contacto: d.phone || null
 })).create;
 
-exports.updatePetService = H(CATEGORIES.petService, 'prodMascotas').update;
-exports.deletePetService = H(CATEGORIES.petService, 'prodMascotas').delete;
+exports.updatePetService = H('pet', 'prod_mascotas').update;
+exports.deletePetService = H('pet', 'prod_mascotas').delete;
 
 // =========================================================
 // Voucher Upload
@@ -572,11 +573,11 @@ exports.uploadVoucher = async (req, res, next) => {
     if (!req.file) return error(res, 'Archivo requerido', 400);
 
     const productTables = {
-      ticket: 'prodTiqueteria', hotel: 'prodHoteleria', insurance: 'prodSeguros',
-      plan: 'prodPlanes', checkin: 'prodCheckins', migration: 'prodMigracion',
-      simcard: 'prodSimcards', carRental: 'prodAutos', finca: 'prodFincas',
-      tour: 'prodTours', convention: 'prodEventos', restaurant: 'prodRestaurantes',
-      visa: 'prodVisas', passport: 'prodPasaportes', petService: 'prodMascotas'
+      ticket: 'prod_tiqueteria', hotel: 'prod_hoteleria', insurance: 'prod_seguros',
+      plan: 'prod_planes', checkin: 'prod_checkins', migration: 'prod_migracion',
+      simcard: 'prod_simcards', carRental: 'prod_autos', finca: 'prod_fincas',
+      tour: 'prod_tours', convention: 'prod_eventos', restaurant: 'prod_restaurantes',
+      visa: 'prod_visas', passport: 'prod_pasaportes', petService: 'prod_mascotas'
     };
 
     const tableName = productTables[category];
@@ -584,14 +585,14 @@ exports.uploadVoucher = async (req, res, next) => {
 
     const product = await prisma[tableName].findUnique({ where: { id: productId } });
     if (!product) return error(res, 'Producto no encontrado', 404);
-    const voucherUrl = `/uploads/${req.file.filename}`;
+    const voucher_url = `/uploads/${req.file.filename}`;
 
-    await prisma.detalleVenta.update({
-      where: { id: product.detalleVentaId },
-      data: { voucherUrl }
+    await prisma.detalle_venta.update({
+      where: { id: product.detalle_venta_id },
+      data: { voucher_url }
     });
 
-    success(res, { voucherUrl });
+    success(res, { voucher_url });
   } catch (err) {
     next(err);
   }

@@ -121,6 +121,27 @@ su plan**, nunca en el de su propia categoría.
 - Nunca interpolar valores en SQL. Los servicios con `$queryRawUnsafe` usan parámetros
   posicionales. Los enums de Postgres necesitan cast explícito: `?::"UserStatus"`.
 
+### Nombres de Prisma
+
+El schema declara los campos en **snake_case** (`monto_total`, `creado_at`,
+`detalle_venta_id`). Escribirlos en camelCase no da error al programar: Prisma falla en
+ejecución, y solo si esa rama llega a ejecutarse. Así estuvieron rotos durante meses
+`createSale` con productos, los 45 endpoints de producto, `getClientById`,
+`updatePermissions`, `listPayments`, `sendVoucher` y `getResponsableById`.
+
+La excepción es cuando el schema usa `@map`: ahí el nombre que espera Prisma es el del
+**schema**, no el de la columna. `parentDetalleId @map("parent_detalle_id")` se escribe
+`parentDetalleId`.
+
+Antes de subir cambios que toquen consultas:
+
+```bash
+cd backend && pnpm check:prisma
+```
+
+Valida cada llamada contra el modelo correspondiente y sugiere el nombre correcto.
+Sale con código 1 si encuentra algo, así que sirve tal cual en CI.
+
 ## Permisos
 
 Los permisos son **por rol** (`admin`, `asesor`, `freelancer`) y viven en la base de

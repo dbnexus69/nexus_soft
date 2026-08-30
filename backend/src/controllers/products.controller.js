@@ -123,10 +123,10 @@ const productHandler = (category, tableName, transformData) => ({
               id: randomUUID(),
               detalle_venta_id: detalle.id,
               persona_id: passengerData.persona_id,
-              es_titular: passengerData.esTitular,
+              es_titular: passengerData.es_titular,
               asiento: passengerData.asiento,
-              nro_reserva: passengerData.nroReserva,
-              nro_tiquete: passengerData.nroTiquete
+              nro_reserva: passengerData.nro_reserva,
+              nro_tiquete: passengerData.nro_tiquete
             }
           });
         }
@@ -137,8 +137,8 @@ const productHandler = (category, tableName, transformData) => ({
           for (let i = 0; i < allLegs.length; i++) {
             const leg = allLegs[i];
             if (!leg.origin || !leg.destination) continue;
-            const originAirport = await tx.aeropuertos.findFirst({ where: { codigoIata: leg.origin } });
-            const destAirport = await tx.aeropuertos.findFirst({ where: { codigoIata: leg.destination } });
+            const originAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: leg.origin } });
+            const destAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: leg.destination } });
             if (!originAirport || !destAirport) continue;
 
             let aerolinea_id = null;
@@ -164,24 +164,24 @@ const productHandler = (category, tableName, transformData) => ({
                 if (parts.length >= 2) {
                   const airlineName = parts[0];
                   const fareType = parts.slice(1).join(' - ');
-                  const match = await tx.politicasEquipaje.findFirst({
+                  const match = await tx.politicas_equipaje.findFirst({
                     where: {
                       AND: [
-                        { aerolinea: { nombre: airlineName } },
-                        { tipoTarifa: fareType }
+                        { aerolineas: { nombre: airlineName } },
+                        { tipo_tarifa: fareType }
                       ]
                     }
                   });
                   if (match) planEquipajeId = match.id;
                 }
                 if (!planEquipajeId) {
-                  const match = await tx.politicasEquipaje.findFirst({ where: { tipoTarifa: legBaggagePlan } });
+                  const match = await tx.politicas_equipaje.findFirst({ where: { tipo_tarifa: legBaggagePlan } });
                   planEquipajeId = match?.id || null;
                 }
               }
             }
 
-            await tx.tramosVuelo.create({
+            await tx.tramos_vuelo.create({
               data: {
                 prod_tiqueteria_id: product.id,
                 aeropuerto_origen_id: originAirport.id,

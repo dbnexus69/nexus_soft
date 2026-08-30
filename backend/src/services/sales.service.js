@@ -1182,14 +1182,14 @@ class SalesService {
     if (!pdfBase64) throw new BadRequestError('El PDF es requerido (base64)');
     const venta = await prisma.ventas.findUnique({
       where: { id: saleId },
-      include: { cliente: { include: { personas: true } }, usuario: { include: { personas: true } } }
+      include: { clientes: { include: { personas: true } }, usuarios: { include: { personas: true } } }
     });
 
     if (!venta) throw new NotFoundError('Venta no encontrada');
-    const clientEmail = venta.cliente.personas.email;
+    const clientEmail = venta.clientes.personas.email;
     if (!clientEmail) throw new BadRequestError('El cliente no tiene correo electrónico registrado');
 
-    const clientName = `${venta.cliente.personas.nombres} ${venta.cliente.personas.apellidos}`;
+    const clientName = `${venta.clientes.personas.nombres} ${venta.clientes.personas.apellidos}`;
     const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
     const pdfBuffer = Buffer.from(base64Data, 'base64');
 

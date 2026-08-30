@@ -103,7 +103,7 @@ class ResponsablesService {
         personas: { include: { tipos_documento: true } },
         ventas: includeSales ? {
           where: { status: { in: ['credito', 'abonado'] } },
-          orderBy: { creadoAt: 'desc' },
+          orderBy: { creado_at: 'desc' },
           take: 50
         } : false
       }
@@ -117,13 +117,13 @@ class ResponsablesService {
     let ventasDetalladas = [];
     if (includeSales && responsable.ventas) {
       ventasDetalladas = responsable.ventas.map(v => {
-        const saldoPendiente = v.montoTotal - (v.montoPagadoCredito || 0);
+        const saldoPendiente = v.monto_total - (v.monto_pagado_credito || 0);
         deudaTotal += saldoPendiente;
         return {
           id: v.id,
-          date: v.creadoAt,
-          montoTotal: v.montoTotal,
-          montoPagadoCredito: v.montoPagadoCredito || 0,
+          date: v.creado_at,
+          montoTotal: v.monto_total,
+          montoPagadoCredito: v.monto_pagado_credito || 0,
           saldoPendiente,
           status: v.status
         };

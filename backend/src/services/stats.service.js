@@ -95,7 +95,7 @@ class StatsService {
     let totalFlights = 0;
     categoryResult.forEach(c => {
       categoryBreakdown[c.categoria] = { count: c.count, revenue: c.revenue };
-      if (c.categoria === 'tiqueteria') totalFlights = c.count;
+      if (c.categoria === 'ticket') totalFlights = c.count;
     });
 
     return {

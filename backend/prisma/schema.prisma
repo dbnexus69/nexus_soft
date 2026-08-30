@@ -64,7 +64,7 @@ model comisionistas {
 model detalle_venta {
   id                       String              @id
   venta_id                 Int
-  categoria                String
+  categoria                ProductCategory
   nombre_servicio          String?
   subtotal                 Float?              @default(0)
   ta                       Float?              @default(0)
@@ -254,7 +254,6 @@ model permisos {
   accion           String
   descripcion      String?
   permisos_rol     permisos_rol[]
-  permisos_usuario permisos_usuario[]
 }
 
 model permisos_rol {
@@ -268,17 +267,6 @@ model permisos_rol {
   @@unique([rol_id, permiso_id])
 }
 
-model permisos_usuario {
-  id         Int      @id @default(autoincrement())
-  usuario_id Int
-  permiso_id Int
-  permitido  Boolean  @default(true)
-  valor      String   @default("true")
-  permisos   permisos @relation(fields: [permiso_id], references: [id])
-  usuarios   usuarios @relation(fields: [usuario_id], references: [id])
-
-  @@unique([usuario_id, permiso_id])
-}
 
 model personas {
   id                Int                 @id @default(autoincrement())
@@ -653,7 +641,6 @@ model usuarios {
   clientes         clientes[]
   logs_usuarios    logs_usuarios[]
   paquetes         paquetes[]
-  permisos_usuario permisos_usuario[]
   sesiones         sesiones[]
   personas         personas           @relation(fields: [persona_id], references: [id])
   roles            roles              @relation(fields: [rol_id], references: [id])
@@ -694,6 +681,8 @@ model ventas {
   @@index([cliente_id])
   @@index([comisionista_id])
   @@index([usuario_id])
+  // El listado de ventas ordena siempre por esta columna.
+  @@index([creado_at])
 }
 
 model ventas_mensuales {
@@ -709,6 +698,24 @@ model ventas_mensuales {
   transferencias Float?
 
   @@unique([year, month])
+}
+
+enum ProductCategory {
+  ticket
+  hotel
+  insurance
+  plan
+  checkin
+  migration
+  simcard
+  car
+  finca
+  tour
+  convention
+  restaurant
+  visa
+  passport
+  pet
 }
 
 enum AgentStatus {

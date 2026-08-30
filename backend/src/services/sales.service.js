@@ -3,419 +3,13 @@ const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const emailService = require('../utils/emailService');
 
-// Helpers y maps de transformación de productos
-const PRODUCT_INCLUDES = {
-  tiqueteria: {
-    prod_tiqueteria: {
-      include: {
-        tramos_vuelo: { 
-          include: {
-            aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos: true,
-            aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos: true,
-            aerolineas: true,
-            politicas_equipaje: { include: { aerolineas: true } }
-          },
-          orderBy: { orden: 'asc' }
-        },
-        aerolineas: true,
-        politicas_equipaje: true
-      }
-    }
-  },
-  hoteleria: { prod_hoteleria: true },
-  seguros_viaje: { prod_seguros: true },
-  planes: { prod_planes: { include: { paquetes: true, aerolineas: true } } },
-  checkin: { prod_checkins: true },
-  documentacion_migratoria: { prod_migracion: true },
-  simcard: { prod_simcards: true },
-  renta_vehiculos: { prod_autos: true },
-  renta_fincas: { prod_fincas: true },
-  tours: { prod_tours: true },
-  centros_convencion: { prod_eventos: true },
-  restaurantes: { prod_restaurantes: true },
-  visa: { prod_visas: true },
-  pasaporte: { prod_pasaportes: true },
-  servicio_mascotas: { prod_mascotas: true }
-};
-
-
-function mapPassengers(detalle) {
-  return (detalle.pasajeros_detalle || []).map(p => ({
-    id: p.id,
-    persona_id: p.persona_id,
-    esTitular: p.es_titular,
-    asiento: p.asiento,
-    nombreCompleto: p.personas ? `${p.personas.nombres} ${p.personas.apellidos}` : null,
-    tipos_documento: p.personas?.tipo_documento_id,
-    nroDocumento: p.personas?.documento,
-    nroReserva: p.nro_reserva,
-    nroTiquete: p.nro_tiquete
-  }));
-}
-
-const formatColombiaDate = (date) => {
-  if (!date) return null;
-  const formatter = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' });
-  return formatter.format(date);
-};
-
-const formatColombiaTime = (date) => {
-  if (!date) return null;
-  const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Bogota', hour12: false, hour: '2-digit', minute: '2-digit' });
-  return formatter.format(date);
-};
-
-function mapLegs(legs) {
-  const sorted = [...(legs || [])].sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  return sorted.map(l => ({
-    origin: l.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos?.codigo_iata || null,
-    originCity: l.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos?.ciudad || null,
-    originName: l.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos?.nombre || null,
-    destination: l.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos?.codigo_iata || null,
-    destinationCity: l.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos?.ciudad || null,
-    destinationName: l.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos?.nombre || null,
-    flightNumber: l.nro_vuelo_tramo,
-    seat: l.asiento || null,
-    ticketNumber: l.nro_tiquete || null,
-    date: formatColombiaDate(l.salida),
-    time: formatColombiaTime(l.salida),
-    arrivalDate: formatColombiaDate(l.llegada),
-    arrivalTime: formatColombiaTime(l.llegada),
-    airline: l.aerolineas?.nombre || null,
-    baggagePlan: l.politicas_equipaje ? `${l.politicas_equipaje.aerolineas?.nombre || l.aerolineas?.nombre || ''} - ${l.politicas_equipaje.tipo_tarifa}` : null,
-    orden: l.orden
-  }));
-}
-
-const PRODUCT_TRANSFORMS = {
-  tiqueteria(d, passengers, target) {
-    const t = d.prod_tiqueteria;
-    if (!t) return;
-    target.push({
-      id: t.id,
-      airline: String(t.aerolineaId || ''),
-      airlineName: t.aerolineas?.nombre || null,
-      reservationNumber: t.nro_reserva || '',
-      flightNumber: t.nro_vuelo || '',
-      ticketNumber: t.nro_tiquete || '',
-      flightMode: t.modo_vuelo || 'one_way',
-      baggagePlan: String(t.planEquipajeId || ''),
-      baggagePlanName: t.politicas_equipaje ? `${t.politicas_equipaje.aerolineas?.nombre || t.aerolineas?.nombre || ''} - ${t.politicas_equipaje.tipo_tarifa}` : null,
-      checkinStatus: t.checkin_status || 'pendiente',
-      passengers,
-      legs: mapLegs(t.tramos_vuelo),
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  hoteleria(d, passengers, target) {
-    const h = d.prod_hoteleria;
-    if (!h) return;
-    target.push({
-      id: h.id,
-      hotelName: h.hotel_nombre,
-      hotelType: h.tipo_hotel,
-      destination: h.destino,
-      reservationNumber: h.nro_reserva,
-      startDate: h.fecha_entrada?.toISOString() || null,
-      endDate: h.fecha_salida?.toISOString() || null,
-      roomType: h.tipo_habitacion,
-      roomCount: h.cantidad_habitaciones,
-      mealPlan: h.regimen_alimenticio,
-      guests: passengers.map(p => ({
-        name: p.nombreCompleto,
-        docType: String(p.tipos_documento || ''),
-        docNumber: p.nroDocumento || ''
-      })),
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  seguros_viaje(d, passengers, target) {
-    const s = d.prod_seguros;
-    if (!s) return;
-    target.push({
-      id: s.id,
-      insuranceType: s.tipo_seguro,
-      coverageAmount: s.cobertura_usd,
-      coverageDays: s.dias_cobertura,
-      startDate: s.fecha_inicio_vigencia?.toISOString() || null,
-      endDate: s.fecha_fin_vigencia?.toISOString() || null,
-      contactNumber: s.telefono_contacto,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  planes(d, passengers, target) {
-    const p = d.prod_planes;
-    if (!p) return;
-    target.push({
-      id: p.id,
-      packageName: p.paquetes?.nombre || p.nombre_paquete_personalizado,
-      destination: p.destino,
-      startDate: p.fecha_viaje_inicio?.toISOString() || null,
-      endDate: p.fecha_viaje_fin?.toISOString() || null,
-      travelersCount: p.adultos_count ? (p.adultos_count + (p.menores_count || 0)) : null,
-      includesFlight: p.incluye_vuelo,
-      airline: p.aerolineas?.nombre || null,
-      includesHotel: p.incluye_hotel,
-      hotelName: p.nombre_hotel,
-      mealPlan: p.regimen_alimenticio,
-      includesTransfers: p.incluye_traslados,
-      includesTours: p.incluye_tours,
-      includesAssistance: p.incluye_asistencia,
-      packageId: p.paqueteId,
-      travelers: passengers.map(pax => ({
-        name: pax.nombreCompleto,
-        docType: String(pax.tipos_documento || ''),
-        docNumber: pax.nroDocumento || ''
-      })),
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  checkin(d, passengers, target) {
-    const c = d.prod_checkins;
-    if (!c) return;
-    target.push({
-      id: c.id,
-      flightOrReservation: c.nro_vuelo_reserva,
-      travelDate: c.fecha_viaje?.toISOString() || null,
-      seat: c.asiento,
-      baggage: c.maletas_contadas,
-      phone: c.telefono_contacto,
-      specialNeeds: c.necesidades_especiales,
-      usesWheelchair: c.usa_silla_ruedas,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  documentacion_migratoria(d, passengers, target) {
-    const m = d.prod_migracion;
-    if (!m) return;
-    target.push({
-      id: m.id,
-      requestedDocType: m.tipo_tramite_migratorio,
-      nationality: m.nacionalidad,
-      docType: m.tipo_documento,
-      passportNumber: m.pasaporte_nro,
-      passportExpiry: m.pasaporte_vence?.toISOString() || null,
-      destinationCountry: m.pais_destino,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  simcard(d, passengers, target) {
-    const s = d.prod_simcards;
-    if (!s) return;
-    target.push({
-      id: s.id,
-      destinationCountry: s.pais_destino,
-      arrivalDate: s.fecha_llegada?.toISOString() || null,
-      tripDuration: s.duracion_viaje,
-      dataPlan: s.plan_datos,
-      simType: s.tipo_sim,
-      deliveryMethod: s.metodo_entrega,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  renta_vehiculos(d, passengers, target) {
-    const a = d.prod_autos;
-    if (!a) return;
-    target.push({
-      id: a.id,
-      mainDriver: a.conductor_nombre,
-      licenseNumber: a.licencia_nro,
-      pickupDate: a.fecha_recogida?.toISOString() || null,
-      returnDate: a.fecha_devolucion?.toISOString() || null,
-      pickupLocation: a.lugar_recogida,
-      vehicleCategory: a.categoria_auto,
-      additionalDrivers: a.conductores_adicionales,
-      insuranceType: a.tipo_seguro,
-      guaranteeCreditCard: a.tarjeta_garantia_info,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  renta_fincas(d, passengers, target) {
-    const f = d.prod_fincas;
-    if (!f) return;
-    target.push({
-      id: f.id,
-      fincaName: f.nombre_finca,
-      city: f.ciudad_pueblo,
-      address: f.direccion_finca,
-      responsibleName: f.responsable_nombre,
-      docNumber: f.documento_responsable,
-      checkInDate: f.fecha_entrada?.toISOString() || null,
-      checkOutDate: f.fecha_salida?.toISOString() || null,
-      adultsCount: f.adultos_count,
-      childrenCount: f.ninos_count,
-      hasPets: f.tiene_mascotas,
-      petType: f.tipo_mascota,
-      additionalServices: f.servicios_extra,
-      observations: f.observaciones,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  tours(d, passengers, target) {
-    const t = d.prod_tours;
-    if (!t) return;
-    target.push({
-      id: t.id,
-      tourName: t.tour_nombre,
-      preferredDate: t.fecha_preferida?.toISOString() || null,
-      adultsCount: t.adultos_count,
-      childrenCount: t.menores_count,
-      childrenAges: t.edades_menores,
-      guideLanguage: t.idioma_guia,
-      needsTransport: t.requiere_transporte,
-      pickupPoint: t.punto_encuentro,
-      medicalConditions: t.condiciones_medicas,
-      phone: t.telefono_contacto,
-      observations: t.observaciones,
-      guests: passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  centros_convencion(d, passengers, target) {
-    const e = d.prod_eventos;
-    if (!e) return;
-    target.push({
-      id: e.id,
-      organization: e.organizacion,
-      contactName: e.nombre_contacto,
-      email: e.email_contacto,
-      startDate: e.fechaInicio?.toISOString() || null,
-      endDate: e.fechaFin?.toISOString() || null,
-      estimatedAttendance: e.asistencia_estimada,
-      requiredSpace: e.espacio_requerido,
-      eventType: e.tipo_evento,
-      avEquipment: e.equipos_av,
-      hasCatering: e.requiere_catering,
-      cateringNotes: e.notas_catering,
-      venueName: e.nombre_lugar,
-      city: e.ciudad,
-      address: e.direccion,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  restaurantes(d, passengers, target) {
-    const r = d.prod_restaurantes;
-    if (!r) return;
-    target.push({
-      id: r.id,
-      reservationName: r.nombre_reserva,
-      dateTime: r.fecha_hora_reserva?.toISOString() || null,
-      peopleCount: r.personas_count,
-      tablePreference: r.preferencia_mesa,
-      menuType: r.tipo_menu,
-      dietaryRestrictions: r.restricciones_dieta,
-      specialOccasion: r.ocasion_especial,
-      phone: r.telefono_contacto,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0,
-      parentDetalleId: d.parent_detalle_id
-    });
-  },
-  visa(d, passengers, target) {
-    const v = d.prod_visas;
-    if (!v) return;
-    target.push({
-      id: v.id,
-      fullName: v.nombre_completo,
-      birthDate: v.fecha_nacimiento?.toISOString() || null,
-      nationality: v.nacionalidad,
-      docType: v.tipo_documento,
-      passportNumber: v.nro_pasaporte,
-      passportExpiry: v.vencimiento_pasaporte?.toISOString() || null,
-      countryApplying: v.pais_aplicacion,
-      visaType: v.tipo_visa,
-      estimatedTravelDate: v.fecha_estimada_viaje?.toISOString() || null,
-      email: v.email_contacto,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
-    });
-  },
-  pasaporte(d, passengers, target) {
-    const p = d.prod_pasaportes;
-    if (!p) return;
-    target.push({
-      id: p.id,
-      fullName: p.nombre_completo,
-      idNumber: p.nro_documento,
-      birthDate: p.fecha_nacimiento?.toISOString() || null,
-      residenceCity: p.ciudad_residencia,
-      tramiteType: p.tipo_tramite,
-      estimatedTravelDate: p.fecha_estimada_viaje?.toISOString() || null,
-      phone: p.telefono_contacto,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
-    });
-  },
-  servicio_mascotas(d, passengers, target) {
-    const m = d.prod_mascotas;
-    if (!m) return;
-    target.push({
-      id: m.id,
-      petName: m.mascota_nombre,
-      species: m.especie,
-      breed: m.raza,
-      weight: m.peso_kg,
-      size: m.tamanoMascota,
-      transportType: m.transporte_tipo,
-      travelDate: m.fecha_viaje?.toISOString() || null,
-      destinationCountry: m.pais_destino,
-      medicalConditions: m.condiciones_medicas,
-      phone: m.telefono_contacto,
-      transportCompany: m.empresa_transporte,
-      observations: m.observaciones,
-      passengers,
-      supplier: d.proveedores?.nombre || null,
-      supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
-    });
-  }
-};
+// Los includes, transforms y helpers de producto viven en el catálogo:
+// una sola fuente de verdad para las 15 categorías.
+const {
+  CATALOG, SLUGS, CHILD_SLUGS,
+  PRODUCT_INCLUDES, PRODUCT_TRANSFORMS,
+  mapPassengers, mapLegs, labelOf
+} = require('../catalog/products');
 
 const { randomUUID: uuidv4 } = require('crypto');
 
@@ -521,7 +115,7 @@ class SalesService {
               id: detalleId,
               venta_id: ventaId,
               categoria,
-              parent_detalle_id: parentDetalleId,
+              parentDetalleId: parentDetalleId,
               subtotal: Number(item.total || item.subtotal || 0),
               ta: Number(item.ta || 0),
               costo_proveedor: Number(item.supplierCost || 0),
@@ -538,7 +132,7 @@ class SalesService {
         const detalleId = uuidv4();
         const proveedorId = await findProveedorId(t.supplier);
         await tx.detalle_venta.create({
-          data: { id: detalleId, venta_id: ventaId, categoria: 'tiqueteria', parent_detalle_id: parentDetalleId,
+          data: { id: detalleId, venta_id: ventaId, categoria: 'ticket', parentDetalleId: parentDetalleId,
             subtotal: Number(t.total || t.subtotal || 0),
             ta: Number(t.ta || 0),
             costo_proveedor: Number(t.supplierCost || 0),
@@ -640,7 +234,7 @@ class SalesService {
         const detalleId = uuidv4();
         const proveedorId = await findProveedorId(h.supplier);
         await tx.detalle_venta.create({
-          data: { id: detalleId, venta_id: ventaId, categoria: 'hoteleria', parent_detalle_id: parentDetalleId,
+          data: { id: detalleId, venta_id: ventaId, categoria: 'hotel', parentDetalleId: parentDetalleId,
             subtotal: Number(h.total || h.subtotal || 0),
             ta: Number(h.ta || 0), costo_proveedor: Number(h.supplierCost || 0),
             destino: h.destination || null,
@@ -667,7 +261,7 @@ class SalesService {
       for (const s of insuranceData) {
         const detalleId = uuidv4();
         const proveedorId = await findProveedorId(s.supplier);
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'seguros_viaje', parent_detalle_id: parentDetalleId, subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0), proveedor_id: proveedorId } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'insurance', parentDetalleId: parentDetalleId, subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0), proveedor_id: proveedorId } });
         await tx.prod_seguros.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -689,7 +283,7 @@ class SalesService {
       for (const p of planData) {
         const detalleId = uuidv4();
         const proveedorId = await findProveedorId(p.supplier);
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'planes', subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0), proveedor_id: proveedorId } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'plan', subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0), proveedor_id: proveedorId } });
         let planAirlineId = null;
         if (p.airline) {
           const al = await tx.aerolineas.findFirst({ where: { nombre: { contains: p.airline, mode: 'insensitive' } } });
@@ -718,7 +312,7 @@ class SalesService {
       // ── CHECK-IN ──
       for (const c of checkInData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', parent_detalle_id: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', parentDetalleId: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_checkins.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -739,7 +333,7 @@ class SalesService {
       // ── MIGRACIÓN ──
       for (const m of migrationData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'documentacion_migratoria', parent_detalle_id: parentDetalleId, subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'migration', parentDetalleId: parentDetalleId, subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
         await tx.prod_migracion.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -754,7 +348,7 @@ class SalesService {
       // ── SIM CARD ──
       for (const s of simCardData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', parent_detalle_id: parentDetalleId, subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', parentDetalleId: parentDetalleId, subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
         await tx.prod_simcards.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -769,7 +363,7 @@ class SalesService {
       // ── RENTA DE VEHÍCULOS ──
       for (const c of carRentalData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'renta_vehiculos', parent_detalle_id: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'car', parentDetalleId: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_autos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -786,7 +380,7 @@ class SalesService {
       // ── RENTA DE FINCAS ──
       for (const f of fincaData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'renta_fincas', parent_detalle_id: parentDetalleId, subtotal: Number(f.total || f.subtotal || 0), ta: Number(f.ta || 0), costo_proveedor: Number(f.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'finca', parentDetalleId: parentDetalleId, subtotal: Number(f.total || f.subtotal || 0), ta: Number(f.ta || 0), costo_proveedor: Number(f.supplierCost || 0) } });
         await tx.prod_fincas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -806,7 +400,7 @@ class SalesService {
       // ── TOURS ──
       for (const t of tourData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tours', parent_detalle_id: parentDetalleId, subtotal: Number(t.total || t.subtotal || 0), ta: Number(t.ta || 0), costo_proveedor: Number(t.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tour', parentDetalleId: parentDetalleId, subtotal: Number(t.total || t.subtotal || 0), ta: Number(t.ta || 0), costo_proveedor: Number(t.supplierCost || 0) } });
         await tx.prod_tours.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -830,7 +424,7 @@ class SalesService {
       // ── CENTROS DE CONVENCIÓN ──
       for (const c of conventionData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'centros_convencion', parent_detalle_id: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'convention', parentDetalleId: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_eventos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -849,7 +443,7 @@ class SalesService {
       // ── RESTAURANTES ──
       for (const r of restaurantData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurantes', parent_detalle_id: parentDetalleId, subtotal: Number(r.total || r.subtotal || 0), ta: Number(r.ta || 0), costo_proveedor: Number(r.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurant', parentDetalleId: parentDetalleId, subtotal: Number(r.total || r.subtotal || 0), ta: Number(r.ta || 0), costo_proveedor: Number(r.supplierCost || 0) } });
         await tx.prod_restaurantes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -868,7 +462,7 @@ class SalesService {
       // ── VISAS ──
       for (const v of visaData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', parent_detalle_id: parentDetalleId, subtotal: Number(v.total || v.subtotal || 0), ta: Number(v.ta || 0), costo_proveedor: Number(v.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', parentDetalleId: parentDetalleId, subtotal: Number(v.total || v.subtotal || 0), ta: Number(v.ta || 0), costo_proveedor: Number(v.supplierCost || 0) } });
         await tx.prod_visas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -885,7 +479,7 @@ class SalesService {
       // ── PASAPORTES ──
       for (const p of passportData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pasaporte', parent_detalle_id: parentDetalleId, subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'passport', parentDetalleId: parentDetalleId, subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
         await tx.prod_pasaportes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -901,7 +495,7 @@ class SalesService {
       // ── MASCOTAS ──
       for (const m of petServiceData) {
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'servicio_mascotas', parent_detalle_id: parentDetalleId, subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pet', parentDetalleId: parentDetalleId, subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
         await tx.prod_mascotas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -956,35 +550,74 @@ class SalesService {
   async listSales({ pagination, search, status, asesorId, clientId, responsableId, commissionAgentId, dateFrom, dateTo, permissionScope, user, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
 
-    let searchCondition = search ? `AND v.observaciones ILIKE '%${search.replace(/'/g, "''")}%'` : '';
-    let statusCondition = status ? `AND v.status = '${status.replace(/'/g, "''")}'` : '';
-    let asesorCondition = asesorId ? `AND v.usuario_id = ${parseInt(asesorId)}` : '';
-    let clientCondition = clientId ? `AND v.cliente_id = ${parseInt(clientId)}` : '';
-    let responsableCondition = responsableId ? `AND v.responsable_id = ${parseInt(responsableId)}` : '';
-    let commissionCondition = commissionAgentId ? `AND v.comisionista_id = ${parseInt(commissionAgentId)}` : '';
-    let dateCondition = '';
-    if (dateFrom) dateCondition += ` AND v.creado_at >= '${new Date(dateFrom).toISOString()}'`;
-    if (dateTo) dateCondition += ` AND v.creado_at <= '${new Date(dateTo).toISOString()}'`;
-
-    if (permissionScope === 'own') {
-      asesorCondition += ` AND v.usuario_id = ${user.id}`;
-    }
+    // Un solo constructor de filtros para las dos consultas: el count de Prisma
+    // y el SQL del listado. Los valores van como parámetros, nunca interpolados.
+    const filtros = [];
+    const params = [];
+    // Cada '?' del fragmento consume un valor y se convierte en $1, $2, ...
+    const push = (sql, ...valores) => {
+      const resuelto = sql.replace(/\?/g, () => `$${params.push(valores.shift())}`);
+      filtros.push(resuelto);
+    };
 
     const where = {};
-    if (search) where.observaciones = { contains: search, mode: 'insensitive' };
-    if (status) where.status = status;
-    if (asesorId) where.usuario_id = parseInt(asesorId);
-    if (clientId) where.cliente_id = parseInt(clientId);
-    if (responsableId) where.responsable_id = parseInt(responsableId);
-    if (commissionAgentId) where.comisionista_id = parseInt(commissionAgentId);
-    if (dateFrom || dateTo) {
-      where.creado_at = {};
-      if (dateFrom) where.creado_at.gte = new Date(dateFrom);
-      if (dateTo) where.creado_at.lte = new Date(dateTo);
+    if (search) {
+      // La búsqueda cubre lo mismo que cubría el filtro en cliente: cliente,
+      // asesor, comisionista, número de venta y observaciones.
+      const q = `%${search}%`;
+      const como = { contains: search, mode: 'insensitive' };
+      // Si el término es un número, se interpreta como número de venta exacto.
+      // Ambas consultas usan la misma regla para que el total nunca discrepe.
+      const comoId = /^\d+$/.test(search.trim()) ? parseInt(search.trim(), 10) : null;
+
+      push(`(
+        v.observaciones ILIKE ?
+        OR (cp.nombres || ' ' || cp.apellidos) ILIKE ?
+        OR (up.nombres || ' ' || up.apellidos) ILIKE ?
+        OR (comp.nombres || ' ' || comp.apellidos) ILIKE ?
+        ${comoId !== null ? 'OR v.id = ?' : ''}
+      )`, ...(comoId !== null ? [q, q, q, q, comoId] : [q, q, q, q]));
+
+      where.OR = [
+        { observaciones: como },
+        { clientes: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } },
+        { usuarios: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } },
+        { comisionistas: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } },
+        ...(comoId !== null ? [{ id: comoId }] : []),
+      ];
     }
-    if (permissionScope === 'own') {
-      where.usuario_id = user.id;
+    if (status) {
+      push('v.status = ?::"SaleStatus"', status);
+      where.status = status;
     }
+    if (clientId) {
+      push('v.cliente_id = ?', parseInt(clientId));
+      where.cliente_id = parseInt(clientId);
+    }
+    if (responsableId) {
+      push('v.responsable_id = ?', parseInt(responsableId));
+      where.responsable_id = parseInt(responsableId);
+    }
+    if (commissionAgentId) {
+      push('v.comisionista_id = ?', parseInt(commissionAgentId));
+      where.comisionista_id = parseInt(commissionAgentId);
+    }
+    if (dateFrom) {
+      push('v.creado_at >= ?', new Date(dateFrom));
+      where.creado_at = { ...(where.creado_at || {}), gte: new Date(dateFrom) };
+    }
+    if (dateTo) {
+      push('v.creado_at <= ?', new Date(dateTo));
+      where.creado_at = { ...(where.creado_at || {}), lte: new Date(dateTo) };
+    }
+    // El alcance 'own' manda sobre el filtro de asesor que venga por query.
+    const asesorEfectivo = permissionScope === 'own' ? user.id : (asesorId ? parseInt(asesorId) : null);
+    if (asesorEfectivo !== null) {
+      push('v.usuario_id = ?', asesorEfectivo);
+      where.usuario_id = asesorEfectivo;
+    }
+
+    const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
     const sortFieldMap = { 'creadoAt': 'creadoAt', 'date': 'creadoAt', 'total': 'montoTotal', 'status': 'status', 'clientName': 'cliente_id' };
     const effectiveSortBy = sortFieldMap[sortBy] || 'creadoAt';
@@ -1052,23 +685,16 @@ class SalesService {
         JOIN personas up ON u.persona_id = up.id
         LEFT JOIN comisionistas com ON v.comisionista_id = com.id
         LEFT JOIN personas comp ON com.persona_id = comp.id
-        WHERE 1=1 ${searchCondition} ${statusCondition} ${asesorCondition} ${clientCondition} ${responsableCondition} ${commissionCondition} ${dateCondition}
+        WHERE 1=1 ${whereSql}
         ORDER BY ${sqlOrderBy} ${sortOrder === 'desc' ? 'DESC' : 'ASC'}
-        LIMIT ${perPage} OFFSET ${skip}
-      `)
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip)
     ]);
 
     const data = ventasRaw.map(v => {
       const servicesSummary = (v.detalleVentas || []).map(d => {
         const tipo = d.categoria;
-        let label = tipo;
-        const labelMap = {
-          tiqueteria: 'Tiquetería', hoteleria: 'Hotelería', seguros: 'Seguro', planes: 'Plan',
-          checkin: 'Check-in', migracion: 'Migración', simcard: 'SIM Card', autos: 'Renta de Auto',
-          fincas: 'Finca', tours: 'Tour', eventos: 'Evento', restaurantes: 'Restaurante',
-          visas: 'Visa', pasaportes: 'Pasaporte', mascotas: 'Mascota'
-        };
-        if (labelMap[tipo]) label = labelMap[tipo];
+        const label = labelOf(tipo);
         const route = (d.origen && d.destino) ? `${d.origen}→${d.destino}` : null;
         const pax = d.pasajerosDetalle?.[0]?.persona;
         const paxName = pax ? `${pax.nombres} ${pax.apellidos}` : null;
@@ -1115,53 +741,161 @@ class SalesService {
     return { data, meta: buildMeta(total, page, perPage) };
   }
 
-  async getSaleById(id) {
-    const [venta, detalleVentasBase] = await Promise.all([
-      prisma.ventas.findUnique({
-        where: { id },
-        include: {
-          clientes: { include: { personas: true } },
-          usuarios: { include: { personas: true } },
-          comisionistas: { include: { personas: true } },
-          responsables: { include: { personas: true } },
-          metodos_pago: true,
-          pagos_venta: { include: { metodos_pago: true } }
-        }
-      }),
-      prisma.detalle_venta.findMany({
-        where: { venta_id: id },
-        include: { pasajeros_detalle: { include: { personas: true } }, proveedores: true }
-      })
+  // Cartera de crédito agrupada por cliente.
+  //
+  // Antes esto se calculaba en el navegador recorriendo la lista de ventas, que
+  // viene paginada: la cartera salía calculada sobre una página. Aquí se agrupa
+  // en SQL sobre todas las ventas a crédito del cliente.
+  //
+  // Reglas (las mismas que aplicaba creditUtils):
+  //   venta a crédito = es_credito OR status IN ('credito','abonado')
+  //   pagada  -> pagado >= total
+  //   parcial -> pagado > 0          (tiene prioridad sobre vencida)
+  //   vencida -> vence < hoy
+  //   pendiente en cualquier otro caso
+  async getCreditPortfolio({ pagination, search, status, permissionScope, user }) {
+    const { page, perPage, skip } = pagination;
+
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+
+    if (permissionScope === 'own' && user) push('v.usuario_id = ?', user.id);
+    if (search) {
+      const q = `%${search}%`;
+      push(`((cp.nombres || ' ' || cp.apellidos) ILIKE ? OR cp.documento ILIKE ? OR CAST(v.id AS TEXT) ILIKE ?)`, q, q, q);
+    }
+    const extraSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
+
+    // Estado de cada venta, resuelto una sola vez y reutilizado por los agregados.
+    const baseSql = `
+      WITH creditos AS (
+        SELECT
+          v.cliente_id,
+          v.monto_total,
+          COALESCE(v.monto_pagado_credito, 0) AS pagado,
+          v.monto_total - COALESCE(v.monto_pagado_credito, 0) AS pendiente,
+          v.fecha_vence_credito,
+          CASE
+            WHEN COALESCE(v.monto_pagado_credito, 0) >= v.monto_total THEN 'paid'
+            WHEN COALESCE(v.monto_pagado_credito, 0) > 0 THEN 'partial'
+            WHEN v.fecha_vence_credito IS NOT NULL AND v.fecha_vence_credito < CURRENT_DATE THEN 'overdue'
+            ELSE 'pending'
+          END AS estado
+        FROM ventas v
+        JOIN clientes c ON v.cliente_id = c.id
+        JOIN personas cp ON c.persona_id = cp.id
+        WHERE v.deleted_at IS NULL
+          AND v.status <> 'anulado'
+          AND (v.es_credito = true OR v.status IN ('credito', 'abonado'))
+          ${extraSql}
+      ),
+      por_cliente AS (
+        SELECT
+          cliente_id,
+          SUM(monto_total)::float                                                   AS "totalCredit",
+          SUM(pagado)::float                                                        AS "paidAmount",
+          SUM(CASE WHEN estado <> 'paid' THEN pendiente ELSE 0 END)::float          AS "pendingAmount",
+          SUM(CASE WHEN estado = 'overdue' THEN pendiente ELSE 0 END)::float        AS "overdueAmount",
+          COUNT(*)::int                                                             AS "activeCredits",
+          MIN(fecha_vence_credito)                                                  AS "nextDueDate",
+          BOOL_OR(estado = 'overdue')                                               AS "tieneVencida"
+        FROM creditos
+        GROUP BY cliente_id
+      )`;
+
+    const [filas, totales] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        ${baseSql}
+        SELECT
+          pc.*,
+          cp.nombres || ' ' || cp.apellidos AS "clientName",
+          cp.documento  AS "clientDocNumber",
+          cp.email      AS "clientEmail",
+          cp.avatar_url AS "clientAvatar"
+        FROM por_cliente pc
+        JOIN clientes c ON pc.cliente_id = c.id
+        JOIN personas cp ON c.persona_id = cp.id
+        ORDER BY pc."overdueAmount" DESC, pc."nextDueDate" ASC NULLS LAST
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip),
+
+      // Totales de TODA la cartera, no de la página.
+      prisma.$queryRawUnsafe(`
+        ${baseSql}
+        SELECT
+          COUNT(*)::int                                                     AS "clientsCount",
+          COALESCE(SUM("pendingAmount"), 0)::float                          AS "totalPending",
+          COALESCE(SUM("overdueAmount"), 0)::float                          AS "totalOverdue",
+          COALESCE(SUM(CASE WHEN NOT "tieneVencida"
+                             AND "nextDueDate" IS NOT NULL
+                             AND "nextDueDate" <= CURRENT_DATE + INTERVAL '3 days'
+                        THEN "pendingAmount" ELSE 0 END), 0)::float         AS "totalUrgent",
+          -- Desglose por estado, para los contadores de los filtros.
+          COUNT(*) FILTER (WHERE "tieneVencida")::int                       AS "countOverdue",
+          COUNT(*) FILTER (WHERE NOT "tieneVencida"
+                             AND "nextDueDate" IS NOT NULL
+                             AND "nextDueDate" <= CURRENT_DATE + INTERVAL '3 days')::int AS "countUrgent",
+          COUNT(*) FILTER (WHERE NOT "tieneVencida"
+                             AND "nextDueDate" IS NOT NULL
+                             AND "nextDueDate" >  CURRENT_DATE + INTERVAL '3 days'
+                             AND "nextDueDate" <= CURRENT_DATE + INTERVAL '7 days')::int AS "countPending"
+        FROM por_cliente
+      `, ...params),
     ]);
 
-    if (!venta) throw new NotFoundError('Venta no encontrada');
+    const total = totales[0]?.clientsCount || 0;
 
-    const detalleVentas = await Promise.all(
-      detalleVentasBase.map(async (d) => {
-        const tipo = d.categoria;
-        if (PRODUCT_INCLUDES[tipo]) {
-          const relationKey = Object.keys(PRODUCT_INCLUDES[tipo])[0];
-          const includeConfig = PRODUCT_INCLUDES[tipo][relationKey];
-          const queryOptions = { where: { detalle_venta_id: d.id } };
-          if (includeConfig && typeof includeConfig === 'object' && includeConfig.include) {
-            queryOptions.include = includeConfig.include;
-          }
-          const productData = await prisma[relationKey].findUnique(queryOptions);
-          return { ...d, [relationKey]: productData };
-        }
-        return d;
-      })
-    );
+    const data = filas.map(f => {
+      const dias = f.nextDueDate
+        ? Math.ceil((new Date(f.nextDueDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
+        : null;
+      let estadoCliente = 'ok';
+      if (f.tieneVencida) estadoCliente = 'overdue';
+      else if (dias !== null && dias <= 3) estadoCliente = 'urgent';
+      else if (dias !== null && dias <= 7) estadoCliente = 'pending';
 
-    const resultMap = {};
-    for (const d of detalleVentas) {
-      const passengers = mapPassengers(d);
-      const handler = PRODUCT_TRANSFORMS[d.categoria];
-      if (handler) {
-        handler(d, passengers, (resultMap[d.categoria] = resultMap[d.categoria] || []), venta);
-      }
-    }
+      return {
+        client: {
+          id: f.cliente_id,
+          name: f.clientName,
+          docNumber: f.clientDocNumber,
+          email: f.clientEmail,
+          avatar: f.clientAvatar,
+        },
+        totalCredit: f.totalCredit,
+        paidAmount: f.paidAmount,
+        pendingAmount: f.pendingAmount,
+        overdueAmount: f.overdueAmount,
+        activeCredits: f.activeCredits,
+        nextDueDate: f.nextDueDate,
+        status: estadoCliente,
+      };
+    });
 
+    const filtrada = status && status !== 'all' ? data.filter(d => d.status === status) : data;
+
+    return {
+      data: filtrada,
+      meta: {
+        ...buildMeta(total, page, perPage),
+        totals: {
+          clientsCount: total,
+          totalPending: totales[0]?.totalPending || 0,
+          totalOverdue: totales[0]?.totalOverdue || 0,
+          totalUrgent: totales[0]?.totalUrgent || 0,
+          countOverdue: totales[0]?.countOverdue || 0,
+          countUrgent: totales[0]?.countUrgent || 0,
+          countPending: totales[0]?.countPending || 0,
+        },
+      },
+    };
+  }
+
+  // Campos de cabecera de una venta, sin productos.
+  _saleHeader(venta) {
     return {
       id: venta.id,
       clientId: venta.cliente_id,
@@ -1196,24 +930,129 @@ class SalesService {
         date: p.fecha_pago,
         amount: p.monto,
         method: p.metodos_pago?.nombre || null
-      })),
-      ticketData: resultMap.tiqueteria || [],
-      hotelData: resultMap.hoteleria || [],
-      insuranceData: resultMap.seguros_viaje || [],
-      planData: resultMap.planes || [],
-      checkInData: resultMap.checkin || [],
-      migrationData: resultMap.documentacion_migratoria || [],
-      simCardData: resultMap.simcard || [],
-      carRentalData: resultMap.renta_vehiculos || [],
-      fincaData: resultMap.renta_fincas || [],
-      tourData: resultMap.tours || [],
-      conventionData: resultMap.centros_convencion || [],
-      restaurantData: resultMap.restaurantes || [],
-      visaData: resultMap.visa || [],
-      passportData: resultMap.pasaporte || [],
-      petServiceData: resultMap.servicio_mascotas || []
+      }))
     };
   }
+
+  // Carga los detalles de venta indicados y los pasa por el transform de su categoría.
+  // Devuelve { [slug]: [productos...] }.
+  async _loadProducts(where) {
+    const base = await prisma.detalle_venta.findMany({
+      where,
+      include: { pasajeros_detalle: { include: { personas: true } }, proveedores: true }
+    });
+
+    const detalles = await Promise.all(base.map(async (d) => {
+      const entry = CATALOG[d.categoria];
+      if (!entry) return d;
+      const inner = entry.include[entry.relationKey];
+      const queryOptions = { where: { detalle_venta_id: d.id } };
+      if (inner && typeof inner === 'object' && inner.include) queryOptions.include = inner.include;
+      const productData = await prisma[entry.relationKey].findUnique(queryOptions);
+      return { ...d, [entry.relationKey]: productData };
+    }));
+
+    const byCategory = {};
+    for (const d of detalles) {
+      const entry = CATALOG[d.categoria];
+      if (!entry) continue;
+      const arr = byCategory[d.categoria] = byCategory[d.categoria] || [];
+      // El transform emite el id del prod_*, no el del detalle_venta. El vínculo
+      // padre-hijo va por detalle_venta, así que lo sellamos aquí.
+      const desde = arr.length;
+      entry.transform(d, mapPassengers(d), arr);
+      for (let i = desde; i < arr.length; i++) arr[i].detalleId = d.id;
+    }
+    return byCategory;
+  }
+
+  // Cabecera de la venta, sin los datos de los productos.
+  // Los productos se piden aparte con getSaleProducts / getSaleProductsByCategory.
+  async getSaleById(id) {
+    const [venta, inventario] = await Promise.all([
+      prisma.ventas.findUnique({
+        where: { id },
+        include: {
+          clientes: { include: { personas: true } },
+          usuarios: { include: { personas: true } },
+          comisionistas: { include: { personas: true } },
+          responsables: { include: { personas: true } },
+          metodos_pago: true,
+          pagos_venta: { include: { metodos_pago: true } }
+        }
+      }),
+      // Inventario: solo productos de primer nivel. Los hijos de un plan
+      // se cuentan dentro de su plan, no como entradas propias.
+      prisma.detalle_venta.groupBy({
+        by: ['categoria'],
+        where: { venta_id: id, parentDetalleId: null },
+        _count: { _all: true }
+      })
+    ]);
+
+    if (!venta) throw new NotFoundError('Venta no encontrada');
+
+    return {
+      ...this._saleHeader(venta),
+      products: inventario
+        .filter(r => CATALOG[r.categoria])
+        .map(r => ({ category: r.categoria, label: labelOf(r.categoria), count: r._count._all }))
+    };
+  }
+
+  // Todos los productos de la venta. Lo usa el voucher, que necesita la venta entera.
+  async getSaleProducts(id) {
+    const venta = await prisma.ventas.findUnique({ where: { id }, select: { id: true } });
+    if (!venta) throw new NotFoundError('Venta no encontrada');
+
+    const byCategory = await this._loadProducts({ venta_id: id, parentDetalleId: null });
+    const children = await this._loadProducts({ venta_id: id, parentDetalleId: { not: null } });
+    this._attachChildren(byCategory, children);
+
+    const out = {};
+    for (const slug of SLUGS) out[CATALOG[slug].responseKey] = byCategory[slug] || [];
+    return out;
+  }
+
+  // Una sola categoría. Un producto hijo de un plan no sale aquí:
+  // solo aparece dentro del GET de su plan.
+  async getSaleProductsByCategory(id, category) {
+    const entry = CATALOG[category];
+    if (!entry) throw new NotFoundError(`Categoría de producto desconocida: ${category}`);
+
+    const venta = await prisma.ventas.findUnique({ where: { id }, select: { id: true } });
+    if (!venta) throw new NotFoundError('Venta no encontrada');
+
+    const byCategory = await this._loadProducts({
+      venta_id: id, categoria: category, parentDetalleId: null
+    });
+
+    if (category === 'plan') {
+      const children = await this._loadProducts({
+        venta_id: id, parentDetalleId: { not: null }
+      });
+      this._attachChildren(byCategory, children);
+    }
+
+    return byCategory[category] || [];
+  }
+
+  // Cuelga cada producto hijo bajo el plan al que pertenece.
+  _attachChildren(byCategory, children) {
+    const planes = byCategory.plan || [];
+    if (!planes.length) return;
+    const porId = new Map(planes.map(p => [p.detalleId, p]));
+    for (const slug of CHILD_SLUGS) {
+      for (const child of children[slug] || []) {
+        const padre = porId.get(child.parentDetalleId);
+        if (!padre) continue;
+        padre.includedProducts = padre.includedProducts || {};
+        padre.includedProducts[slug] = padre.includedProducts[slug] || [];
+        padre.includedProducts[slug].push(child);
+      }
+    }
+  }
+
 
   async voidSale(id, reason) {
     if (!reason) throw new BadRequestError('Debe proporcionar un motivo para anular la venta');

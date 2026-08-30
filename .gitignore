@@ -86,3 +86,34 @@ coverage/
 *.csv
 *.xlsx
 !backend/prisma/seed.js
+
+# ==========================================
+# Herramientas de agentes (Claude Code / skills)
+# ==========================================
+# Las skills instaladas son herramientas del entorno, no del producto.
+# skills-lock.json SI se versiona: es el manifiesto para reinstalarlas con
+#   npx skills add <owner/repo@skill>
+# Se conservan en el repo solo las que el equipo usa en este proyecto.
+.claude/settings.local.json
+.claude/cache/
+.agents/**/node_modules/
+.agents/**/__pycache__/
+.agents/**/*.pyc
+
+# ==========================================
+# Temporales de trabajo y respaldos
+# ==========================================
+*.bak
+*.orig
+*.rej
+.scratch/
+_tmp*
+_check*.js
+_test*.js
+
+# ==========================================
+# Prisma
+# ==========================================
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/migrations/dev.db*

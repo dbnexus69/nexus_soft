@@ -25,10 +25,6 @@ export async function deleteUser(id: number) {
   await api.delete(`/users/${id}`);
 }
 
-export async function updateUserPermissions(id: number, permissions: Record<string, unknown>) {
-  const res = await api.put(`/users/${id}/permissions`, { permissions });
-  return res.data.data;
-}
 
 export async function updateRolePermissions(role: string, permissions: Record<string, unknown>) {
   const res = await api.put(`/roles/${role}/permissions`, { permissions });

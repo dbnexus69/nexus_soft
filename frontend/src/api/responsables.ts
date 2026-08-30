@@ -20,7 +20,7 @@ export async function updateResponsable(id: number, data: Record<string, unknown
   return res.data;
 }
 
+// DELETE responde 204 sin cuerpo.
 export async function deleteResponsable(id: number) {
-  const res = await api.delete(`/responsables/${id}`);
-  return res.data;
+  await api.delete(`/responsables/${id}`);
 }

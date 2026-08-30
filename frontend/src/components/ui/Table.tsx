@@ -1,39 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './Button';
 
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}
-
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
-  return (
-    <div className="flex items-center justify-center gap-2 mt-4">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-      >
-        <ChevronLeft size={16} />
-      </Button>
-      <span className="text-sm text-gray-600">
-        Pagina {currentPage} de {totalPages}
-      </span>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-      >
-        <ChevronRight size={16} />
-      </Button>
-    </div>
-  );
-}
+// La paginación vive en un único sitio: components/ui/Pagination.tsx
 
 interface TableProps {
   headers?: React.ReactNode[];

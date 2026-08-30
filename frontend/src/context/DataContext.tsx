@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
-import { AppData, User, Client, Sale, Flight, RolePermissions, normalizeRolePermissions } from '../types';
+import { AppData, User, Client, Sale, Flight, Responsable, CommissionAgent, CommissionSettlement, RolePermissions, ADMIN_PERMISSIONS, normalizeRolePermissions } from '../types';
 import * as api from '../api';
+import { fetchAllPages } from '../api/fetchAll';
 import { useAuth } from './AuthContext';
 import { getCurrentMonth } from '../utils/formatters';
 import {
@@ -76,7 +77,6 @@ interface DataContextType {
   addUser: (user: Omit<User, 'id'>) => Promise<User>;
   updateUser: (id: number, user: Partial<User>) => Promise<void>;
   deleteUser: (id: number) => Promise<void>;
-  updateUserPermissions: (id: number, permissions: RolePermissions) => Promise<void>;
   addClient: (client: Omit<Client, 'id'>) => Promise<Client>;
   updateClient: (id: number, client: Partial<Client>) => Promise<void>;
   toggleClientStatus: (id: number) => Promise<void>;
@@ -179,10 +179,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Ya no se llama en el arranque. Sigue aquí porque addSale/updateSale
+  // mantienen data.sales, pero ningún componente lo lee: retirar esa rama
+  // entera del contexto es una limpieza aparte.
   const fetchSales = useCallback(async () => {
     setSalesLoading(true);
     try {
-      const res = await api.listSales({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<Sale>(api.listSales, { sortOrder: 'desc' });
       if (res && res.data) {
         const freshSales = res.data;
         setData(prev => {
@@ -199,7 +202,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchClients = useCallback(async () => {
     try {
-      const res = await api.listClients({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<Client>(api.listClients, { sortOrder: 'desc' });
       if (res && res.data) {
         const freshClients = res.data;
         setData(prev => {
@@ -214,7 +217,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchResponsables = useCallback(async () => {
     try {
-      const res = await api.listResponsables({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<Responsable>(api.listResponsables, { sortOrder: 'desc' });
       if (res && res.data) {
         setData(prev => ({ ...prev, responsables: res.data }));
       }
@@ -225,7 +228,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await api.listUsers({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<User>(api.listUsers, { sortOrder: 'desc' });
       if (res && res.data) {
         saveUsersCache(res.data);
         setData(prev => ({ ...prev, users: res.data }));
@@ -237,17 +240,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const [configAll, asesorPerms, freelancerPerms] = await Promise.all([
+      // Los tres roles se leen de la base. 'admin' se pedía nunca y el frontend
+      // usaba una constante inventada en su lugar.
+      const [configAll, asesorPerms, freelancerPerms, adminPerms] = await Promise.all([
         api.getAllConfig().catch((err) => {
           console.error('[DataContext] Error fetching config:', err);
           return {};
         }),
         api.getRolePermissions('asesor').catch(() => null),
         api.getRolePermissions('freelancer').catch(() => null),
+        api.getRolePermissions('admin').catch(() => null),
       ]);
       const resolvedRolePermissions = {
         asesor: asesorPerms ? normalizeRolePermissions(asesorPerms) : emptyData.config.rolePermissions.asesor,
         freelancer: freelancerPerms ? normalizeRolePermissions(freelancerPerms) : emptyData.config.rolePermissions.freelancer,
+        ...(adminPerms ? { admin: normalizeRolePermissions(adminPerms, ADMIN_PERMISSIONS) } : {}),
       };
       if (configAll && Object.keys(configAll).length > 0) {
         const newConfig = {
@@ -278,7 +285,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchFlights = useCallback(async () => {
     try {
-      const res = await api.listFlights({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<Flight>(api.listFlights, { sortOrder: 'desc' });
       if (res && res.data) {
         setData(prev => ({ ...prev, flights: res.data }));
       }
@@ -289,7 +296,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchCommissionAgents = useCallback(async () => {
     try {
-      const res = await api.listCommissionAgents({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<CommissionAgent>(api.listCommissionAgents, { sortOrder: 'desc' });
       if (res && res.data) {
         setData(prev => ({ ...prev, commissionAgents: res.data }));
       }
@@ -300,7 +307,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchSettlements = useCallback(async () => {
     try {
-      const res = await api.listSettlements({ perPage: 100, sortOrder: 'desc' });
+      const res = await fetchAllPages<CommissionSettlement>(api.listSettlements, { sortOrder: 'desc' });
       if (res && res.data) {
         setData(prev => ({ ...prev, commissionSettlements: res.data }));
       }
@@ -334,36 +341,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDashboardLoading(!loadDashboardCache());
     setSalesLoading(!cachedSales);
 
-    // Fetch all data sequentially to prevent connection pool exhaustion on the backend (DB connection limit = 1)
-    const loadBackgroundData = async () => {
-      await fetchConfig();
-      await fetchClients();
-      await fetchUsers();
-      await fetchSales();
-      await fetchResponsables();
-      await fetchCommissionAgents();
-      await fetchSettlements();
-      await fetchFlights();
-    };
-    
+    // Solo lo que hace falta desde el primer render en cualquier pantalla:
+    // los catálogos que alimentan los selectores del wizard de ventas.
+    //
+    // Fuera quedan sales, settlements y flights: cada página los pide al
+    // montarse, y sales además se consulta filtrada por cliente o asesor
+    // donde se necesita. Antes se traían los tres al arrancar aunque el
+    // usuario no llegara a abrir esas pantallas.
+    //
+    // Van en paralelo: la cascada existía para no agotar un pool de una sola
+    // conexión, y ese límite ya no está.
+    const loadBackgroundData = () => Promise.all([
+      fetchConfig(),
+      fetchClients(),
+      fetchUsers(),
+      fetchResponsables(),
+      fetchCommissionAgents(),
+    ]);
+
     loadBackgroundData();
   }, [
     user?.id, 
     fetchConfig, 
     fetchClients, 
     fetchUsers, 
-    fetchSales, 
     fetchResponsables, 
-    fetchCommissionAgents, 
-    fetchSettlements, 
-    fetchFlights
+    fetchCommissionAgents
   ]);
 
   const refreshData = () => { 
-    // Compatibilidad para el botón refrescar del usuario
+    // Compatibilidad para el botón refrescar del usuario.
+    // Ya no refresca sales: ningún componente lee data.sales — el listado vive
+    // en SalesContext y los detalles se piden filtrados por cliente o asesor.
     setDashboardData(null);
     invalidateDashboardCache();
-    fetchSales();
     fetchClients();
     fetchFlights();
   };
@@ -395,13 +406,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateUserPermissions = async (id: number, permissions: RolePermissions) => {
-    await api.updateUserPermissions(id, permissions as any);
-    setData(prev => ({
-      ...prev,
-      users: prev.users.map(u => u.id === id ? { ...u, customPermissions: permissions } : u)
-    }));
-  };
 
   const addClient = async (client: Omit<Client, 'id'>): Promise<Client> => {
     const created = await api.createClient(client as any);
@@ -574,7 +578,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshSettlements = async () => {
-    const res = await api.listSettlements({ perPage: 100 }).catch(() => ({ data: [] }));
+    const res = await fetchAllPages<CommissionSettlement>(api.listSettlements).catch(() => ({ data: [] as any[] }));
     setData(prev => ({ ...prev, commissionSettlements: res.data || [] }));
   };
 
@@ -731,7 +735,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addUser,
       updateUser,
       deleteUser,
-      updateUserPermissions,
       addClient,
       updateClient,
       toggleClientStatus,

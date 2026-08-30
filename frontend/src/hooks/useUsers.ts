@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { listUsers, createUser, updateUser, deleteUser, updateUserPermissions, getRolePermissions, updateRolePermissions } from '../api/users';
+import { listUsers, createUser, updateUser, deleteUser, getRolePermissions, updateRolePermissions } from '../api/users';
 import { User } from '../types';
 
 export function useUsers() {
@@ -63,16 +63,6 @@ export function useUsers() {
     }
   };
 
-  const handleSaveUserPermissions = async (id: number, permissions: Record<string, unknown>) => {
-    try {
-      await updateUserPermissions(id, permissions);
-      await fetchUsers();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar permisos';
-      throw new Error(msg);
-    }
-  };
-
   const handleFetchRolePermissions = async (role: string) => {
     return await getRolePermissions(role);
   };
@@ -93,7 +83,6 @@ export function useUsers() {
     handleCreateUser,
     handleUpdateUser,
     handleDeleteUser,
-    handleSaveUserPermissions,
     handleFetchRolePermissions,
     handleSaveRolePermissions
   };

@@ -16,6 +16,14 @@ export async function getAllConfig() {
   return res.data.data;
 }
 
+// Detalle completo de un elemento. El listado viene ligero: esto se pide
+// cuando el usuario elige uno concreto.
+export async function getConfigItem(section: string, id: number) {
+  const urlSection = SECTION_MAP[section] || section;
+  const res = await api.get(`/config/${urlSection}/${id}`);
+  return res.data.data;
+}
+
 export async function getConfigSection(section: string, params: any = {}) {
   const urlSection = SECTION_MAP[section] || section;
   const res = await api.get(`/config/${urlSection}`, { params });

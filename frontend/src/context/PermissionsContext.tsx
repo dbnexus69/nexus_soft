@@ -17,35 +17,6 @@ interface PermissionsContextType {
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
-function buildPermissionsFromApiPermisos(permisos: { modulo: string; accion: string; valor?: string }[]): RolePermissions {
-  const base: any = {
-    dashboard: { view: 'none' },
-    sales: { view: 'none', create: false, edit: false },
-    clients: { view: 'none', create: false, edit: false },
-    itineraries: { view: 'none', edit: false },
-    commissions: { view: false, create: false, edit: false, delete: false },
-  };
-
-  for (const { modulo, accion, valor } of permisos) {
-    if (!base[modulo]) continue;
-    if (valor !== undefined) {
-      if (valor === 'true') {
-        if (modulo === 'itineraries' && accion === 'view') base[modulo][accion] = 'all';
-        else base[modulo][accion] = true;
-      }
-      else if (valor === 'false') {
-        if (modulo === 'itineraries' && accion === 'view') base[modulo][accion] = 'none';
-        else base[modulo][accion] = false;
-      }
-      else base[modulo][accion] = valor;
-    } else {
-      if (['dashboard', 'sales', 'clients', 'itineraries'].includes(modulo) && accion === 'view') base[modulo].view = 'all';
-      else if (base[modulo][accion] !== undefined) base[modulo][accion] = true;
-    }
-  }
-
-  return normalizeRolePermissions(base as RolePermissions);
-}
 
 export function PermissionsProvider({
   children,
@@ -56,24 +27,18 @@ export function PermissionsProvider({
 }) {
   const { data } = useData();
 
+  // Los permisos de cada rol vienen de la base (GET /roles/:rol/permissions) y
+  // cambian cuando alguien los edita en la pantalla de Usuarios. Las constantes
+  // de abajo son solo la red de seguridad para cuando esa petición aún no ha
+  // respondido o ha fallado: nunca la fuente.
   const permissions = useMemo(() => {
     if (!user) return DEFAULT_ASESOR_PERMISSIONS;
 
+    const deLaBase = data.config.rolePermissions?.[user.role];
+    if (deLaBase) return deLaBase;
+
     if (user.role === 'admin') return ADMIN_PERMISSIONS;
-
-    // Check for API-style permisos (from login response)
-    const apiPermisos = (user as any).permisos;
-    if (apiPermisos && Array.isArray(apiPermisos) && apiPermisos.length > 0) {
-      return buildPermissionsFromApiPermisos(apiPermisos);
-    }
-
-    const defaultPerms = user.role === 'freelancer' 
-      ? (data.config.rolePermissions?.freelancer || DEFAULT_FREELANCER_PERMISSIONS)
-      : (data.config.rolePermissions?.asesor || DEFAULT_ASESOR_PERMISSIONS);
-
-    if (user.customPermissions) return normalizeRolePermissions(user.customPermissions, defaultPerms);
-
-    return defaultPerms;
+    return user.role === 'freelancer' ? DEFAULT_FREELANCER_PERMISSIONS : DEFAULT_ASESOR_PERMISSIONS;
   }, [user, data.config.rolePermissions]);
 
   const can = (module: keyof RolePermissions, action: string): boolean => {

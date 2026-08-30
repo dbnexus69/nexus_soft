@@ -2,7 +2,7 @@ export { login, logout, getMe } from './auth';
 export type { LoginResponse } from './auth';
 export {
   listUsers, getUser, createUser, updateUser, deleteUser,
-  updateUserPermissions, updateRolePermissions, getRolePermissions,
+  updateRolePermissions, getRolePermissions,
 } from './users';
 export {
   listClients, getClient, createClient, updateClient, toggleClientStatus,
@@ -11,7 +11,7 @@ export {
   listResponsables, getResponsable, createResponsable, updateResponsable, deleteResponsable,
 } from './responsables';
 export {
-  listSales, getSale, createSale, updateSale, deleteSale, voidSale,
+  listSales, getSale, getCreditPortfolio, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, deleteSale, voidSale,
   registerPayment, deletePayment, getSalePayments, createProduct, updateProduct, deleteProduct,
   sendVoucher, updateReviewStatus,
 } from './sales';
@@ -23,7 +23,7 @@ export {
   listSettlements, createSettlement,
 } from './commissions';
 export {
-  getAllConfig, getConfigSection, createConfigItem, updateConfigItem, deleteConfigItem,
+  getAllConfig, getConfigSection, getConfigItem, createConfigItem, updateConfigItem, deleteConfigItem,
 } from './config';
 export {
   getDashboard, getSalesHistory, getAsesorPerformance,

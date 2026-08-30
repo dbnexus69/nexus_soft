@@ -15,7 +15,6 @@ export interface LoginResponse {
     docType: string | null;
     docNumber: string;
     lastLogin: string | null;
-    permisos: { modulo: string; accion: string }[];
   };
   token: string;
   expiresAt: string;

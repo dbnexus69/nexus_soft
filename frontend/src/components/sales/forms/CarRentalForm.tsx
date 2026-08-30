@@ -136,12 +136,6 @@ export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={car.voucher} 
-        sendVoucher={car.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

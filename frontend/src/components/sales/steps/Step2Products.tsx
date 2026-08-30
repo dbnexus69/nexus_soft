@@ -43,6 +43,42 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
     (p) => !["tiqueteria", "hoteleria", "seguros_viaje", "planes"].includes(p.id)
   );
 
+  const handleAddAnotherProduct = (productId: SaleProductId, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    let targetKey: string | null = null;
+    let initialFn: any = null;
+
+    switch (productId) {
+      case "tiqueteria": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
+      case "hoteleria": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
+      case "seguros_viaje": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
+      case "planes": targetKey = "plans"; initialFn = INITIAL_PLAN; break;
+      case "checkin": targetKey = "checkIns"; initialFn = INITIAL_CHECKIN; break;
+      case "documentacion_migratoria": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
+      case "simcard": targetKey = "simCards"; initialFn = INITIAL_SIMCARD; break;
+      case "renta_vehiculos": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
+      case "renta_fincas": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
+      case "tours": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
+      case "centros_convencion": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
+      case "restaurantes": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
+      case "visa": targetKey = "visas"; initialFn = INITIAL_VISA; break;
+      case "pasaporte": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
+      case "servicio_mascotas": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
+    }
+
+    if (targetKey && initialFn) {
+      if (!form.selectedProducts.includes(productId)) {
+        toggleProduct(productId);
+      }
+      const currentItems = [...((form as any)[targetKey] || [])];
+      const newItem = initialFn(client);
+      const newIdx = currentItems.length;
+      currentItems.push(newItem);
+      set(targetKey, currentItems);
+      openForm(productId, newIdx);
+    }
+  };
+
   const handleProductClick = (productId: SaleProductId) => {
     const isSelected = form.selectedProducts.includes(productId);
     
@@ -164,6 +200,23 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                     </div>
                   )}
                   <div className={`absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                  {(() => {
+                    const keyMap: Record<string, string> = {
+                      tiqueteria: "tickets", hoteleria: "hotels", seguros_viaje: "insurances", planes: "plans",
+                      checkin: "checkIns", documentacion_migratoria: "migrations", simcard: "simCards",
+                      renta_vehiculos: "carRentals", renta_fincas: "fincas", tours: "tours",
+                      centros_convencion: "conventions", restaurantes: "restaurants", visa: "visas",
+                      pasaporte: "passports", servicio_mascotas: "petServices"
+                    };
+                    const targetKey = keyMap[product.id];
+                    const count = targetKey ? ((form as any)[targetKey]?.length || 0) : 0;
+                    if (count === 0) return null;
+                    return (
+                      <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md border border-white/20">
+                        {count} {count === 1 ? 'añadido' : 'añadidos'}
+                      </div>
+                    );
+                  })()}
                   {selected && (
                     <div className="absolute top-3 right-3 bg-primary text-white p-1.5 rounded-full shadow-lg border-2 border-white animate-scale-in">
                       <Check size={16} strokeWidth={3} />
@@ -272,6 +325,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                     icon: p.icon,
                     idx,
                     targetKey,
+                    linkedToPlanIndex: (item as any).linkedToPlanIndex,
                     // Try to get a descriptive name from the item data
                     detail: (item as any).hotelName || (item as any).planName || (item as any).passengerName || (item as any).passengerInfo?.name || (item as any).petName || (item as any).ownerName || (item as any).mainDriver || "Información pendiente"
                   });
@@ -280,8 +334,14 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
 
               if (allItems.length === 0) {
                 return (
-                  <div className="text-center py-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <p className="text-xs text-gray-400">No has añadido ningún servicio aún.</p>
+                  <div className="text-center py-10 bg-slate-50/70 dark:bg-slate-900/40 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-800 p-6 animate-fade-in">
+                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                      <LuIcons.LuPackagePlus size={24} />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">No hay servicios seleccionados aún</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      Haz clic en una de las tarjetas superiores (Tiquetería, Hotelería, Paquetes, etc.) para agregar el primer servicio a esta venta.
+                    </p>
                   </div>
                 );
               }
@@ -295,7 +355,14 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                           <ProductIcon name={item.icon} size={16} />
                         </div>
                         <div className="truncate">
-                          <p className="text-xs font-bold text-primary truncate">{item.label} #{item.idx + 1}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-bold text-primary truncate">{item.label} #{item.idx + 1}</p>
+                            {item.linkedToPlanIndex !== undefined && item.linkedToPlanIndex !== null && (
+                              <span className="text-[9px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                                🔗 Paquete #{item.linkedToPlanIndex + 1}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[9px] text-gray-400 truncate">{item.detail}</p>
                         </div>
                       </div>
@@ -334,6 +401,28 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                 </div>
               );
             })()}
+
+            {/* Botones para agregar múltiples ítems (Tiquete 2, Hotel 2, Tour 2, etc.) */}
+            {form.selectedProducts.length > 0 && (
+              <div className="pt-4 border-t border-gray-100 space-y-2">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block">
+                  + Agregar ítems adicionales (Tiquete 2, Hotel 2, Tour 2, etc.):
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {SALE_PRODUCTS.filter(p => form.selectedProducts.includes(p.id)).map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={(e) => handleAddAnotherProduct(p.id, e)}
+                      className="px-3 py-1.5 text-xs font-semibold bg-primary/5 text-primary border border-primary/20 rounded-xl hover:bg-primary/10 transition-all flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <LuIcons.LuPlus size={14} />
+                      <span>+ Agregar otro {p.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

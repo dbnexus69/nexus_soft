@@ -106,7 +106,8 @@ const PRODUCT_TRANSFORMS = {
       legs: mapLegs(t.tramos_vuelo),
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   hoteleria(d, passengers, target) {
@@ -130,7 +131,8 @@ const PRODUCT_TRANSFORMS = {
       })),
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   seguros_viaje(d, passengers, target) {
@@ -147,7 +149,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   planes(d, passengers, target) {
@@ -176,7 +179,8 @@ const PRODUCT_TRANSFORMS = {
       })),
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   checkin(d, passengers, target) {
@@ -194,7 +198,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   documentacion_migratoria(d, passengers, target) {
@@ -211,7 +216,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   simcard(d, passengers, target) {
@@ -228,7 +234,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   renta_vehiculos(d, passengers, target) {
@@ -248,7 +255,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   renta_fincas(d, passengers, target) {
@@ -272,7 +280,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   tours(d, passengers, target) {
@@ -294,7 +303,8 @@ const PRODUCT_TRANSFORMS = {
       guests: passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   centros_convencion(d, passengers, target) {
@@ -319,7 +329,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   restaurantes(d, passengers, target) {
@@ -338,7 +349,8 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
-      ta: d.ta || 0
+      ta: d.ta || 0,
+      parentDetalleId: d.parent_detalle_id
     });
   },
   visa(d, passengers, target) {

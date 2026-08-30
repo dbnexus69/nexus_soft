@@ -123,12 +123,6 @@ export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, 
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={restaurant.voucher} 
-        sendVoucher={restaurant.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

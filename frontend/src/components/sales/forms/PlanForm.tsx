@@ -1,9 +1,8 @@
-import { Package, Plane, Users, Briefcase, Trash2, PlusCircle } from "lucide-react";
+import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car, Bus } from "lucide-react";
 import { FormField, Input, Combobox, Select , CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
-import { PlanData, GuestInfo } from "../../../types";
+import { PlanData, GuestInfo, SaleProductId } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
-import { VoucherField } from "./VoucherField";
 
 interface PlanFormProps {
   plan: PlanData;
@@ -11,9 +10,23 @@ interface PlanFormProps {
   data: any;
   triggerError?: (msg: string) => void;
   mainClient?: any;
+  onAddLinkedService?: (productType: SaleProductId, planIdx: number) => void;
+  onEditLinkedService?: (productType: SaleProductId, itemIdx: number) => void;
+  planIndex?: number;
+  linkedServices?: Array<{ productId: SaleProductId; label: string; idx: number }>;
 }
 
-export function PlanForm({ plan, onChange, data, triggerError, mainClient }: PlanFormProps) {
+export function PlanForm({
+  plan,
+  onChange,
+  data,
+  triggerError,
+  mainClient,
+  onAddLinkedService,
+  onEditLinkedService,
+  planIndex = 0,
+  linkedServices = []
+}: PlanFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -57,41 +70,8 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Selector de Tipo de Paquete */}
-      <div className="bg-white p-4 rounded-xl border border-gray-250/60 shadow-sm flex flex-col gap-3">
-        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-          Tipo de Paquete
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onChange({ packageType: "own" })}
-            className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all flex items-center justify-center gap-2 ${
-              plan.packageType !== "supplier"
-                ? "border-primary bg-primary/5 text-primary shadow-sm"
-                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
-            }`}
-          >
-            <Package size={16} />
-            Propio de la Empresa
-          </button>
-          <button
-            type="button"
-            onClick={() => onChange({ packageType: "supplier" })}
-            className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all flex items-center justify-center gap-2 ${
-              plan.packageType === "supplier"
-                ? "border-primary bg-primary/5 text-primary shadow-sm"
-                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
-            }`}
-          >
-            <Users size={16} />
-            Por Proveedor
-          </button>
-        </div>
-      </div>
-
       {/* Selector de Catálogo */}
-      {plan.packageType !== "supplier" && (
+      {packages.length > 0 && (
         <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-4">
           <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
             <Package size={14} className="text-accent" /> Importar desde Catálogo de Paquetes
@@ -108,24 +88,6 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
         </div>
       )}
 
-      {plan.packageType === "supplier" && (
-        <VoucherField
-          multiple={true}
-          vouchers={plan.vouchers || (plan.voucher ? [plan.voucher] : undefined)}
-          sendVoucher={plan.sendVoucher}
-          onChange={(updates) => {
-            if (updates.vouchers) {
-              onChange({ vouchers: updates.vouchers, voucher: updates.vouchers[0] });
-            } else if ('vouchers' in updates) {
-              onChange({ vouchers: undefined, voucher: undefined });
-            }
-            if (updates.sendVoucher !== undefined) {
-              onChange({ sendVoucher: updates.sendVoucher });
-            }
-          }}
-        />
-      )}
-
       <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
         <h4 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
           <Package size={14} />
@@ -140,76 +102,96 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
               maxLength={50}
             />
           </FormField>
-          {plan.packageType !== "supplier" && (
-            <>
-              <FormField label="Nombre del Hotel">
-                <Input
-                  value={plan.hotelName}
-                  onChange={(e) => onChange({ hotelName: e.target.value })}
-                  placeholder="Ej: Riu Palace (Máx 50)"
-                  maxLength={50}
-                />
-              </FormField>
+          <FormField label="Tipo de Transporte">
+            <Select
+              value={plan.transportType || "Aereo"}
+              onChange={(e) => onChange({ transportType: e.target.value as 'Aereo' | 'Terrestre' })}
+            >
+              <option value="Aereo">✈️ Transporte Aéreo (Vuelo / Aerolínea)</option>
+              <option value="Terrestre">🚌 Transporte Terrestre (Bus / Flota / Vehículo)</option>
+            </Select>
+          </FormField>
+          <FormField label="Nombre del Hotel">
+            <Input
+              value={plan.hotelName}
+              onChange={(e) => onChange({ hotelName: e.target.value })}
+              placeholder="Ej: Riu Palace (Máx 50)"
+              maxLength={50}
+            />
+          </FormField>
 
-              <FormField label={plan.transportType === 'Terrestre' ? 'Empresa de Transporte' : 'Aerolínea'}>
-                {plan.transportType === 'Terrestre' ? (
-                  <Input
-                    type="text"
-                    value={plan.airline || ""}
-                    onChange={(e) => onChange({ airline: e.target.value })}
-                    placeholder="Ej: Flota Magdalena, Expreso Brasilia..."
-                    maxLength={50}
-                  />
-                ) : (
-                  <Combobox
-                    value={plan.airline}
-                    onChange={(val) => onChange({ airline: val })}
-                    options={(data?.config?.airlines || []).map((a: any) => ({ value: a.name, label: a.name }))}
-                    placeholder="Seleccionar aerolínea..."
-                  />
-                )}
-              </FormField>
-              <FormField label="Adultos">
-                <Input
-                  type="text"
-                  value={plan.adultsCount !== undefined ? plan.adultsCount : ""}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\D/g, "").slice(0, 3);
-                    onChange({ adultsCount: cleaned === "" ? undefined : Number(cleaned) });
-                  }}
-                  placeholder="Solo números, máx 999"
-                />
-              </FormField>
-              <FormField label="Menores">
-                <Input
-                  type="text"
-                  value={plan.childrenCount !== undefined ? plan.childrenCount : ""}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\D/g, "").slice(0, 3);
-                    onChange({ childrenCount: cleaned === "" ? undefined : Number(cleaned) });
-                  }}
-                  placeholder="Solo números, máx 999"
-                />
-              </FormField>
-            </>
-          )}
+          <FormField label={plan.transportType === 'Terrestre' ? 'Empresa de Transporte Terrestre' : 'Aerolínea'}>
+            {plan.transportType === 'Terrestre' ? (
+              <Combobox
+                value={plan.airline || ""}
+                onChange={(val) => onChange({ airline: val })}
+                options={[
+                  { value: "Flota Magdalena", label: "Flota Magdalena" },
+                  { value: "Expreso Brasilia", label: "Expreso Brasilia" },
+                  { value: "Berlinas del Fonce", label: "Berlinas del Fonce" },
+                  { value: "Copetran", label: "Copetran" },
+                  { value: "Rápido Ochoa", label: "Rápido Ochoa" },
+                  { value: "Coomotor", label: "Coomotor" },
+                  { value: "Transporte Especial Privado", label: "Transporte Especial Privado" },
+                  { value: "Bus de Turismo", label: "Bus de Turismo" },
+                  { value: "Chiva Turística", label: "Chiva Turística" },
+                  { value: "Van Privada", label: "Van Privada" },
+                ]}
+                placeholder="Seleccionar o escribir empresa de transporte..."
+              />
+            ) : (
+              <Combobox
+                value={plan.airline}
+                onChange={(val) => onChange({ airline: val })}
+                options={(data?.config?.airlines || []).map((a: any) => ({ value: a.name, label: a.name }))}
+                placeholder="Seleccionar aerolínea..."
+              />
+            )}
+          </FormField>
+          <FormField label="Adultos">
+            <Input
+              type="text"
+              value={plan.adultsCount !== undefined ? plan.adultsCount : ""}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, "").slice(0, 3);
+                onChange({ adultsCount: cleaned === "" ? undefined : Number(cleaned) });
+              }}
+              placeholder="Solo números, máx 999"
+            />
+          </FormField>
+          <FormField label="Menores">
+            <Input
+              type="text"
+              value={plan.childrenCount !== undefined ? plan.childrenCount : ""}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, "").slice(0, 3);
+                onChange({ childrenCount: cleaned === "" ? undefined : Number(cleaned) });
+              }}
+              placeholder="Solo números, máx 999"
+            />
+          </FormField>
         </div>
       </div>
 
-      {plan.packageType !== "supplier" && (
-        <div className="bg-blue-50/20 dark:bg-blue-500/10 p-4 rounded-xl border border-blue-100 dark:border-blue-500/20">
+      <div className={`p-4 rounded-xl border transition-all ${
+        plan.transportType === 'Terrestre'
+          ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40'
+          : 'bg-blue-50/30 dark:bg-blue-950/20 border-blue-200/80 dark:border-blue-800/40'
+      }`}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-            <h4 className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
-              <Plane size={14} />
-              Reservación y Transporte
+            <h4 className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${
+              plan.transportType === 'Terrestre' ? 'text-emerald-700 dark:text-emerald-300' : 'text-blue-700 dark:text-blue-300'
+            }`}>
+              {plan.transportType === 'Terrestre' ? <Car size={16} /> : <Plane size={16} />}
+              {plan.transportType === 'Terrestre' ? 'Reservación y Transporte Terrestre' : 'Reservación y Transporte Aéreo'}
             </h4>
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-2xs">
               <button
                 type="button"
                 onClick={() => onChange({ transportType: 'Aereo' })}
                 className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
                   plan.transportType !== 'Terrestre'
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 shadow-2xs'
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -220,7 +202,7 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                 onClick={() => onChange({ transportType: 'Terrestre' })}
                 className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
                   plan.transportType === 'Terrestre'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 shadow-2xs'
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -237,11 +219,11 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                   const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
                   onChange({ reservationNumber: cleaned });
                 }}
-                placeholder="Código de hotel (Máx 20)"
+                placeholder="Código de hotel / voucher (Máx 20)"
                 maxLength={20}
               />
             </FormField>
-            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Placa / Vehículo' : 'Número de Vuelo'} <span className="text-red-500">*</span></span>}>
+            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Placa / Vehículo / Bus' : 'Número de Vuelo'} <span className="text-red-500">*</span></span>}>
               <Input
                 required
                 value={plan.flightNumber}
@@ -249,11 +231,11 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                   const cleaned = e.target.value.replace(/[^a-zA-Z0-9- ]/g, "").toUpperCase().slice(0, 8);
                   onChange({ flightNumber: cleaned });
                 }}
-                placeholder={plan.transportType === 'Terrestre' ? "Ej: XYZ-123" : "Ej: AV9301"}
+                placeholder={plan.transportType === 'Terrestre' ? "Ej: XYZ-123 / Bus #4" : "Ej: AV9301"}
                 maxLength={8}
               />
             </FormField>
-            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Puesto / Asiento' : 'Número de Tiquete'} <span className="text-red-500">*</span></span>}>
+            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Silla / Puesto' : 'Número de Tiquete'} <span className="text-red-500">*</span></span>}>
               <Input
                 required
                 value={plan.ticketNumber}
@@ -261,56 +243,56 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
                   const cleaned = e.target.value.replace(/[^a-zA-Z0-9- ]/g, "").slice(0, 14);
                   onChange({ ticketNumber: cleaned });
                 }}
-                placeholder={plan.transportType === 'Terrestre' ? "Ej: P12" : "13 a 14 dígitos numéricos"}
+                placeholder={plan.transportType === 'Terrestre' ? "Ej: Silla #12" : "13 a 14 dígitos numéricos"}
                 maxLength={14}
               />
             </FormField>
-             <FormField label={<span>Confirmación <span className="text-red-500">*</span></span>}>
+             <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Código Reserva Terrestre' : 'Confirmación Vuelo'} <span className="text-red-500">*</span></span>}>
                <Input
                  required
                  value={plan.confirmationNumber || ""}
                  onChange={(e) => {
-                   const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
+                   const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
                    onChange({ confirmationNumber: cleaned });
                  }}
-                 placeholder="6 caracteres (Ej: AB1234)"
-                 maxLength={6}
+                 placeholder={plan.transportType === 'Terrestre' ? "Ej: TER-991" : "Ej: AB1234"}
+                 maxLength={8}
                />
              </FormField>
-            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Salida Ida' : 'Fecha Ida (Vuelo)'} <span className="text-red-500">*</span></span>}>
+            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Salida Origen (Ida)' : 'Fecha Ida (Vuelo)'} <span className="text-red-500">*</span></span>}>
               <DateTimePicker
                 value={plan.flightDepartureDate || ""}
                 onChange={(val) => onChange({ flightDepartureDate: val })}
                 min={minDateTime}
                 triggerError={triggerError}
-                fieldName="Salida de ida del plan"
+                fieldName={plan.transportType === 'Terrestre' ? 'Salida de ida en bus' : 'Salida de ida del vuelo'}
               />
             </FormField>
-            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Llegada Destino' : 'Llegada Ida (Vuelo)'} <span className="text-red-500">*</span></span>}>
+            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Llegada Destino (Ida)' : 'Llegada Ida (Vuelo)'} <span className="text-red-500">*</span></span>}>
               <DateTimePicker
                 value={plan.flightDepartureArrivalDate || ""}
                 onChange={(val) => onChange({ flightDepartureArrivalDate: val })}
                 min={minDateTime}
                 triggerError={triggerError}
-                fieldName="Llegada de ida del plan"
+                fieldName={plan.transportType === 'Terrestre' ? 'Llegada a destino en bus' : 'Llegada de ida del vuelo'}
               />
             </FormField>
-            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Salida Vuelta' : 'Fecha Vuelta (Vuelo)'} <span className="text-red-500">*</span></span>}>
+            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Salida Destino (Regreso)' : 'Fecha Vuelta (Vuelo)'} <span className="text-red-500">*</span></span>}>
               <DateTimePicker
                 value={plan.flightReturnDate || ""}
                 onChange={(val) => onChange({ flightReturnDate: val })}
                 min={minDateTime}
                 triggerError={triggerError}
-                fieldName="Salida de vuelta del plan"
+                fieldName={plan.transportType === 'Terrestre' ? 'Salida de regreso en bus' : 'Salida de vuelta del vuelo'}
               />
             </FormField>
-            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Llegada Origen' : 'Llegada Vuelta (Vuelo)'} <span className="text-red-500">*</span></span>}>
+            <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Llegada Origen (Regreso)' : 'Llegada Vuelta (Vuelo)'} <span className="text-red-500">*</span></span>}>
               <DateTimePicker
                 value={plan.flightReturnArrivalDate || ""}
                 onChange={(val) => onChange({ flightReturnArrivalDate: val })}
                 min={minDateTime}
                 triggerError={triggerError}
-                fieldName="Llegada de vuelta del plan"
+                fieldName={plan.transportType === 'Terrestre' ? 'Llegada a origen en bus' : 'Llegada de vuelta del vuelo'}
               />
             </FormField>
             <FormField label={<span>Ingreso Hotel <span className="text-red-500">*</span></span>}>
@@ -333,7 +315,6 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
             </FormField>
           </div>
         </div>
-      )}
 
       <div className="bg-emerald-50/20 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
         <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -465,6 +446,85 @@ export function PlanForm({ plan, onChange, data, triggerError, mainClient }: Pla
             />
           </FormField>
         </div>
+      </div>
+
+      {/* Sección de Servicios Adicionales Vinculados a este Paquete */}
+      <div className="bg-gradient-to-r from-purple-50/60 to-indigo-50/60 dark:from-purple-950/30 dark:to-indigo-950/30 p-5 rounded-2xl border border-purple-200/80 dark:border-purple-800/40 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-purple-600 text-white rounded-xl shadow-md">
+              <Link2 size={18} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                Servicios Adicionales Vinculados a este Paquete
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Si este paquete requiere servicios extra no incluidos (Tours, Tiquetes, Asistencia Médica, etc.), añádelos aquí.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Lista de servicios ya vinculados a este paquete */}
+        {linkedServices.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {linkedServices.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-purple-100 dark:border-purple-900/50 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                    {item.label} #{item.idx + 1}
+                  </span>
+                  <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                    Vinculado
+                  </span>
+                </div>
+                {onEditLinkedService && (
+                  <button
+                    type="button"
+                    onClick={() => onEditLinkedService(item.productId, item.idx)}
+                    className="text-xs text-primary font-bold hover:underline"
+                  >
+                    Editar
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white/80 dark:bg-slate-900/60 p-3 rounded-xl border border-dashed border-purple-200 dark:border-purple-800 text-center">
+            <p className="text-xs text-slate-500">No hay otros servicios vinculados aún a este paquete.</p>
+          </div>
+        )}
+
+        {/* Botones de acción rápida para añadir servicios directamente al paquete */}
+        {onAddLinkedService && (
+          <div className="pt-2 border-t border-purple-100 dark:border-purple-900/30">
+            <label className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-widest block mb-2">
+              + Añadir servicio adicional a este paquete:
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'tours', label: '+ Tour / Excursión' },
+                { id: 'tiqueteria', label: '+ Tiquete Aéreo' },
+                { id: 'hoteleria', label: '+ Hotel Adicional' },
+                { id: 'seguros_viaje', label: '+ Asistencia Médica' },
+                { id: 'renta_vehiculos', label: '+ Renta Vehículo' },
+                { id: 'renta_fincas', label: '+ Renta Finca' },
+              ].map(btn => (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => onAddLinkedService(btn.id as SaleProductId, planIndex)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all shadow-2xs flex items-center gap-1"
+                >
+                  <Plus size={12} />
+                  {btn.label.replace('+ ', '')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

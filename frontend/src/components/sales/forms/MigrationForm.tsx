@@ -144,12 +144,6 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={migration.voucher} 
-        sendVoucher={migration.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

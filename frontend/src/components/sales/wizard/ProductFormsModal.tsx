@@ -1,5 +1,9 @@
 import React from "react";
-import { ArrowRight, Link2 } from "lucide-react";
+import {
+  ArrowRight, ArrowLeft, Link2, Check, X, Plus, Plane, Building2, ShieldCheck,
+  Package, Luggage, FileInput, Smartphone, Car, TreePine, Compass, Music,
+  UtensilsCrossed, FileText, PawPrint
+} from "lucide-react";
 import { Button } from "../../ui/Button";
 import { SaleProductId } from "../../../types";
 import { WizardFormData, INITIAL_TICKET, INITIAL_HOTEL, INITIAL_INSURANCE, INITIAL_PLAN, INITIAL_CHECKIN, INITIAL_MIGRATION, INITIAL_SIMCARD, INITIAL_CAR_RENTAL, INITIAL_FINCA, INITIAL_TOUR, INITIAL_CONVENTION, INITIAL_RESTAURANT, INITIAL_VISA, INITIAL_PASSPORT, INITIAL_PET_SERVICE } from "../wizardData";
@@ -16,8 +20,45 @@ interface ProductFormsModalProps {
   data: any;
   set: (field: keyof WizardFormData, val: any) => void;
   onCloseForm: () => void;
+  onSwitchForm?: (productId: SaleProductId, idx: number) => void;
   triggerError: (msg: string) => void;
 }
+
+const PRODUCT_ICONS: Record<SaleProductId, any> = {
+  tiqueteria: Plane,
+  hoteleria: Building2,
+  seguros_viaje: ShieldCheck,
+  planes: Package,
+  checkin: Luggage,
+  documentacion_migratoria: FileInput,
+  simcard: Smartphone,
+  renta_vehiculos: Car,
+  renta_fincas: TreePine,
+  tours: Compass,
+  centros_convencion: Music,
+  restaurantes: UtensilsCrossed,
+  visa: FileText,
+  pasaporte: FileInput,
+  servicio_mascotas: PawPrint,
+};
+
+const PRODUCT_MAP: Record<SaleProductId, { key: keyof WizardFormData; labelSingular: string; initialFn: any }> = {
+  tiqueteria: { key: "tickets", labelSingular: "Tiquete", initialFn: INITIAL_TICKET },
+  hoteleria: { key: "hotels", labelSingular: "Hotel", initialFn: INITIAL_HOTEL },
+  seguros_viaje: { key: "insurances", labelSingular: "Seguro", initialFn: INITIAL_INSURANCE },
+  planes: { key: "plans", labelSingular: "Paquete", initialFn: INITIAL_PLAN },
+  checkin: { key: "checkIns", labelSingular: "Check-In", initialFn: INITIAL_CHECKIN },
+  documentacion_migratoria: { key: "migrations", labelSingular: "Trámite Migratorio", initialFn: INITIAL_MIGRATION },
+  simcard: { key: "simCards", labelSingular: "SimCard", initialFn: INITIAL_SIMCARD },
+  renta_vehiculos: { key: "carRentals", labelSingular: "Vehículo", initialFn: INITIAL_CAR_RENTAL },
+  renta_fincas: { key: "fincas", labelSingular: "Finca", initialFn: INITIAL_FINCA },
+  tours: { key: "tours", labelSingular: "Tour", initialFn: INITIAL_TOUR },
+  centros_convencion: { key: "conventions", labelSingular: "Convención", initialFn: INITIAL_CONVENTION },
+  restaurantes: { key: "restaurants", labelSingular: "Restaurante", initialFn: INITIAL_RESTAURANT },
+  visa: { key: "visas", labelSingular: "Visa", initialFn: INITIAL_VISA },
+  pasaporte: { key: "passports", labelSingular: "Pasaporte", initialFn: INITIAL_PASSPORT },
+  servicio_mascotas: { key: "petServices", labelSingular: "Mascota", initialFn: INITIAL_PET_SERVICE },
+};
 
 export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
   activeForm,
@@ -26,11 +67,14 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
   data,
   set,
   onCloseForm,
+  onSwitchForm,
   triggerError
 }) => {
   if (!activeForm || activeIdx === null) return null;
 
   const client = data.clients.find((c: any) => c.name === form.clientId);
+  const currentConfig = activeForm ? PRODUCT_MAP[activeForm] : null;
+  const currentItems = currentConfig ? ((form as any)[currentConfig.key] || []) : [];
 
   const getCurrentItemLinkedPlanIndex = () => {
     if (!activeForm || activeIdx === null || activeForm === 'planes') return '';
@@ -89,19 +133,180 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
   };
 
 
+  const getLinkedServicesForPlan = (planIdx: number) => {
+    const linked: Array<{ productId: SaleProductId; label: string; idx: number }> = [];
+    const map: Array<{ productId: SaleProductId; label: string; key: keyof WizardFormData }> = [
+      { productId: "tiqueteria", label: "Tiquete", key: "tickets" },
+      { productId: "hoteleria", label: "Hotel", key: "hotels" },
+      { productId: "seguros_viaje", label: "Asistencia Médica", key: "insurances" },
+      { productId: "checkin", label: "Check-in", key: "checkIns" },
+      { productId: "renta_vehiculos", label: "Renta Autos", key: "carRentals" },
+      { productId: "renta_fincas", label: "Finca", key: "fincas" },
+      { productId: "tours", label: "Tour", key: "tours" },
+      { productId: "restaurantes", label: "Restaurante", key: "restaurants" },
+      { productId: "visa", label: "Visa", key: "visas" },
+      { productId: "pasaporte", label: "Pasaporte", key: "passports" },
+    ];
+    map.forEach(m => {
+      const items = (form as any)[m.key] || [];
+      items.forEach((item: any, idx: number) => {
+        if (item.linkedToPlanIndex === planIdx) {
+          linked.push({ productId: m.productId, label: m.label, idx });
+        }
+      });
+    });
+    return linked;
+  };
+
+  const handleAddLinkedService = (productId: SaleProductId, planIdx: number) => {
+    let targetKey: keyof WizardFormData | null = null;
+    let initialFn: any = null;
+    switch (productId) {
+      case "tiqueteria": targetKey = "tickets"; initialFn = INITIAL_TICKET; break;
+      case "hoteleria": targetKey = "hotels"; initialFn = INITIAL_HOTEL; break;
+      case "seguros_viaje": targetKey = "insurances"; initialFn = INITIAL_INSURANCE; break;
+      case "checkin": targetKey = "checkIns"; initialFn = INITIAL_CHECKIN; break;
+      case "documentacion_migratoria": targetKey = "migrations"; initialFn = INITIAL_MIGRATION; break;
+      case "simcard": targetKey = "simCards"; initialFn = INITIAL_SIMCARD; break;
+      case "renta_vehiculos": targetKey = "carRentals"; initialFn = INITIAL_CAR_RENTAL; break;
+      case "renta_fincas": targetKey = "fincas"; initialFn = INITIAL_FINCA; break;
+      case "tours": targetKey = "tours"; initialFn = INITIAL_TOUR; break;
+      case "centros_convencion": targetKey = "conventions"; initialFn = INITIAL_CONVENTION; break;
+      case "restaurantes": targetKey = "restaurants"; initialFn = INITIAL_RESTAURANT; break;
+      case "visa": targetKey = "visas"; initialFn = INITIAL_VISA; break;
+      case "pasaporte": targetKey = "passports"; initialFn = INITIAL_PASSPORT; break;
+      case "servicio_mascotas": targetKey = "petServices"; initialFn = INITIAL_PET_SERVICE; break;
+    }
+    if (targetKey && initialFn) {
+      if (!form.selectedProducts.includes(productId)) {
+        set("selectedProducts", [...form.selectedProducts, productId]);
+      }
+      const currentItems = [...((form as any)[targetKey] || [])];
+      const newItem = { ...initialFn(client), linkedToPlanIndex: planIdx };
+      currentItems.push(newItem);
+      set(targetKey, currentItems);
+    }
+  };
+
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col h-full bg-white relative">
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-border bg-slate-50 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 capitalize">
-            {activeForm.replace("_", " ")}
-          </h3>
-          <p className="text-xs text-slate-500">Diligencie los detalles del servicio</p>
+      <div className="px-4 sm:px-6 py-3.5 border-b border-gray-200 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCloseForm}
+            className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs"
+            title="Volver a la selección de servicios"
+          >
+            <ArrowLeft size={16} />
+            <span>Volver</span>
+          </button>
+          <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+          {(() => {
+            const IconComp = PRODUCT_ICONS[activeForm];
+            return (
+              <div className="flex items-center gap-2">
+                {IconComp && (
+                  <div className="p-1.5 bg-primary/10 text-primary rounded-lg shrink-0">
+                    <IconComp size={18} />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 capitalize">
+                    {activeForm.replace("_", " ")}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 hidden sm:block">Diligencie o edite los detalles del servicio</p>
+                </div>
+              </div>
+            );
+          })()}
         </div>
-        <Button type="button" onClick={onCloseForm} className="gap-2">
-          Guardar Servicio <ArrowRight size={16} />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCloseForm}
+            className="text-xs gap-1.5 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X size={15} />
+            <span>Cancelar</span>
+          </Button>
+          <Button
+            type="button"
+            onClick={onCloseForm}
+            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-xs"
+          >
+            <Check size={15} />
+            <span>Guardar Servicio</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Barra de Pestañas e Ítems Múltiples (Tiquete 1, Tiquete 2, + Añadir otro) */}
+      {currentConfig && (
+        <div className="px-4 sm:px-6 py-2.5 bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 overflow-x-auto shrink-0 custom-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 shrink-0">
+              {currentConfig.labelSingular}s ({currentItems.length}):
+            </span>
+            {currentItems.map((item: any, idx: number) => {
+              const isActive = idx === activeIdx;
+              const nameText = item.hotelName || item.planName || item.tourName || item.passengerName || item.passengerInfo?.name || item.fincaName || `${currentConfig.labelSingular} #${idx + 1}`;
+              return (
+                <div
+                  key={idx}
+                  onClick={() => onSwitchForm && onSwitchForm(activeForm, idx)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
+                    isActive
+                      ? "bg-primary text-white border-primary shadow-xs"
+                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50"
+                  }`}
+                >
+                  <span className="truncate max-w-[140px]">{nameText}</span>
+                  {currentItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextItems = currentItems.filter((_: any, i: number) => i !== idx);
+                        set(currentConfig.key, nextItems);
+                        if (nextItems.length === 0) {
+                          onCloseForm();
+                        } else if (activeIdx >= nextItems.length) {
+                          if (onSwitchForm) onSwitchForm(activeForm, nextItems.length - 1);
+                        }
+                      }}
+                      className={`p-0.5 rounded-full hover:bg-black/20 ${isActive ? 'text-white' : 'text-slate-400 hover:text-red-500'}`}
+                      title={`Eliminar ${currentConfig.labelSingular} #${idx + 1}`}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newItem = currentConfig.initialFn(client);
+              const nextItems = [...currentItems, newItem];
+              set(currentConfig.key, nextItems);
+              if (onSwitchForm) {
+                onSwitchForm(activeForm, nextItems.length - 1);
+              }
+            }}
+            className="text-xs font-bold gap-1 bg-white dark:bg-slate-900 text-primary border-primary/30 hover:bg-primary/5 shrink-0"
+          >
+            <Plus size={14} />
+            <span>+ Añadir {currentConfig.labelSingular} #{currentItems.length + 1}</span>
+          </Button>
+        </div>
+      )}
 
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -189,6 +394,9 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   data={data}
                   triggerError={triggerError}
                   mainClient={client}
+                  onAddLinkedService={handleAddLinkedService}
+                  planIndex={activeIdx}
+                  linkedServices={getLinkedServicesForPlan(activeIdx)}
                 />
               );
             case "checkin":
@@ -360,6 +568,38 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
               return null;
           }
         })()}
+      </div>
+
+      {/* Barra Inferior Sticky con Botones de Acción Completa (Volver, Cancelar, Guardar) */}
+      <div className="px-4 sm:px-6 py-3 border-t border-slate-200 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0 sticky bottom-0 z-20 shadow-md">
+        <button
+          type="button"
+          onClick={onCloseForm}
+          className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs"
+        >
+          <ArrowLeft size={16} />
+          <span>Volver a Productos</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCloseForm}
+            className="text-xs gap-1.5 border-slate-300 dark:border-slate-700"
+          >
+            <X size={15} />
+            <span>Cancelar</span>
+          </Button>
+          <Button
+            type="button"
+            onClick={onCloseForm}
+            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-xs"
+          >
+            <Check size={15} />
+            <span>Guardar Servicio</span>
+          </Button>
+        </div>
       </div>
     </form>
   );

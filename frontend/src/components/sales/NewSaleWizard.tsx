@@ -1393,6 +1393,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             data={data}
             set={set}
             onCloseForm={() => { setActiveForm(null); setActiveIdx(null); }}
+            onSwitchForm={(productId, idx) => { setActiveForm(productId); setActiveIdx(idx); }}
             triggerError={triggerError}
           />
         ) : (

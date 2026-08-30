@@ -144,12 +144,6 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, onChange, 
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={finca.voucher} 
-        sendVoucher={finca.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

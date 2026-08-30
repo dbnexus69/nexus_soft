@@ -157,12 +157,6 @@ export function VisaForm({ visa, client, suppliers, paymentMethods, onChange, tr
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={visa.voucher} 
-        sendVoucher={visa.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

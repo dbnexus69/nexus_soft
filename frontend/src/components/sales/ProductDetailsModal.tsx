@@ -42,7 +42,8 @@ import {
   Music,
   UtensilsCrossed,
   FileText,
-  PawPrint
+  PawPrint,
+  Link2
 } from "lucide-react";
 
 interface ProductDetailsModalProps {

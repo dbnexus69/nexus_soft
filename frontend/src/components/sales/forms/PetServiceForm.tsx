@@ -199,12 +199,6 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={pet.voucher} 
-        sendVoucher={pet.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

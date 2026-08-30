@@ -121,12 +121,6 @@ export function SimCardForm({ sim, client, suppliers, paymentMethods, onChange, 
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={sim.voucher} 
-        sendVoucher={sim.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

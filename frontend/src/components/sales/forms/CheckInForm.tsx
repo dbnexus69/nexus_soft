@@ -124,12 +124,6 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={checkIn.voucher} 
-        sendVoucher={checkIn.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

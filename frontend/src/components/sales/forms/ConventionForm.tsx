@@ -192,12 +192,6 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={convention.voucher} 
-        sendVoucher={convention.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

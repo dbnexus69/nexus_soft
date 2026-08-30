@@ -96,12 +96,6 @@ export function PassportForm({ passport, client, suppliers, paymentMethods, onCh
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
       />
-
-      <VoucherField 
-        voucher={passport.voucher} 
-        sendVoucher={passport.sendVoucher} 
-        onChange={(updates) => onChange(updates)} 
-      />
     </div>
   );
 }

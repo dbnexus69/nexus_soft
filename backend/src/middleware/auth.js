@@ -10,10 +10,7 @@ async function auth(req, res, next) {
   try {
     const header = req.headers.authorization;
     if (!header || !header.startsWith('Bearer ')) {
-      // BYPASS PARA PRUEBAS
-      req.user = { id: 1, role: 'admin' };
-      req.permissionScope = 'all';
-      return next();
+      return error(res, 'Token de autorización faltante o formato inválido', 401, 'UNAUTHORIZED');
     }
 
     const token = header.split(' ')[1];

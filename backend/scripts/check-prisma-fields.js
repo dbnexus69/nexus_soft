@@ -145,7 +145,34 @@ for (const [f, lista] of Object.entries(porArchivo)) {
 }
 console.log(`\n  total: ${hallazgos.length} usos, ${new Set(hallazgos.map(h => h.modelo + '.' + h.clave)).size} campos distintos`);
 
-if (hallazgos.length || modelosMalos.length) {
+// ── Objetos construidos aparte y pasados por variable ──────────────────────
+// El escáner de arriba solo ve literales dentro de la llamada. Los transforms
+// de products.controller.js construyen el objeto en una función y lo pasan como
+// variable, así que se validan por separado: ahí se escaparon aerolineaId y
+// plan_equipaje_id.
+const transformesMalos = [];
+{
+  const f = 'src/controllers/products.controller.js';
+  if (fs.existsSync(f)) {
+    const src = fs.readFileSync(f, 'utf8');
+    const re = /H\('([a-z]+)', '(prod_\w+)', \(d, detalleId\) => \(\{([\s\S]*?)\}\)\)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const [, cat, modelo, cuerpo] = m;
+      const info = modelos.get(modelo);
+      if (!info) continue;
+      for (const c of [...cuerpo.matchAll(/^\s*([a-zA-Z_][\w]*)\s*:/gm)].map(x => x[1])) {
+        if (!info.campos.has(c)) transformesMalos.push({ cat, modelo, clave: c });
+      }
+    }
+  }
+}
+console.log('\n=== transforms de producto ===');
+if (!transformesMalos.length) console.log('  ninguno');
+transformesMalos.forEach(t => console.log(`  ${t.cat.padEnd(12)} ${t.modelo}.${t.clave}`));
+
+
+if (hallazgos.length || modelosMalos.length || transformesMalos.length) {
   console.log('\n  Corrige estos usos: fallarían en ejecución con PrismaClientValidationError.');
   process.exit(1);
 }

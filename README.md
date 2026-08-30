@@ -142,6 +142,11 @@ cd backend && pnpm check:prisma
 Valida cada llamada contra el modelo correspondiente y sugiere el nombre correcto.
 Sale con código 1 si encuentra algo, así que sirve tal cual en CI.
 
+Cubre los literales dentro de la llamada y los objetos que `products.controller.js`
+construye en sus *transforms*. Lo que **no** puede ver es un objeto armado en una
+variable y pasado después a `create`: para eso está la prueba de humo, que ejercita
+los endpoints de verdad.
+
 ## Permisos
 
 Los permisos son **por rol** (`admin`, `asesor`, `freelancer`) y viven en la base de

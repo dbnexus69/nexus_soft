@@ -97,38 +97,35 @@ class ResponsablesService {
    * Obtener responsable por ID
    */
   async getResponsableById(id, includeSales = false) {
-    const responsable = await prisma.responsables.findUnique({
-      where: { id },
-      include: {
-        personas: { include: { tipos_documento: true } },
-        ventas: includeSales ? {
-          where: { status: { in: ['credito', 'abonado'] } },
-          orderBy: { creado_at: 'desc' },
-          take: 50
-        } : false
-      }
-    });
+    // La deuda se suma en SQL sobre TODAS sus ventas a crédito, igual que en el
+    // listado. Antes se traían 50 ventas para sumarlas aquí, así que con más de
+    // 50 el total salía corto; y el array de ventas que devolvía no lo usaba
+    // nadie: el modal pide las suyas paginadas con GET /sales?responsableId=.
+    const [responsable, resumen] = await Promise.all([
+      prisma.responsables.findUnique({
+        where: { id },
+        include: { personas: { include: { tipos_documento: true } } }
+      }),
+      includeSales
+        ? prisma.ventas.aggregate({
+            where: {
+              responsable_id: id,
+              status: { in: ['credito', 'abonado'] },
+              deleted_at: null,
+            },
+            _count: { _all: true },
+            _sum: { monto_total: true, monto_pagado_credito: true },
+          })
+        : null,
+    ]);
 
     if (!responsable || responsable.deleted_at) {
       throw new NotFoundError('Responsable no encontrado');
     }
 
-    let deudaTotal = 0;
-    let ventasDetalladas = [];
-    if (includeSales && responsable.ventas) {
-      ventasDetalladas = responsable.ventas.map(v => {
-        const saldoPendiente = v.monto_total - (v.monto_pagado_credito || 0);
-        deudaTotal += saldoPendiente;
-        return {
-          id: v.id,
-          date: v.creado_at,
-          montoTotal: v.monto_total,
-          montoPagadoCredito: v.monto_pagado_credito || 0,
-          saldoPendiente,
-          status: v.status
-        };
-      });
-    }
+    const deudaTotal = resumen
+      ? (resumen._sum.monto_total || 0) - (resumen._sum.monto_pagado_credito || 0)
+      : 0;
 
     return {
       id: responsable.id,
@@ -143,9 +140,9 @@ class ResponsablesService {
       email: responsable.personas.email,
       birthDate: responsable.personas.birth_date,
       status: responsable.status,
-      creadoAt: responsable.creadoAt,
+      creadoAt: responsable.creado_at,
       deudaTotal,
-      ventas: ventasDetalladas
+      salesCount: resumen ? resumen._count._all : undefined,
     };
   }
 

@@ -183,6 +183,7 @@ const productHandler = (category, tableName, transformData) => ({
 
             await tx.tramos_vuelo.create({
               data: {
+                id: randomUUID(),
                 prod_tiqueteria_id: product.id,
                 aeropuerto_origen_id: originAirport.id,
                 aeropuerto_destino_id: destAirport.id,
@@ -192,7 +193,7 @@ const productHandler = (category, tableName, transformData) => ({
                 asiento: leg.seat || null,
                 nro_tiquete: leg.ticketNumber || null,
                 aerolinea_id,
-                planEquipajeId,
+                plan_equipaje_id: planEquipajeId,
                 orden: i + 1
               }
             });
@@ -293,7 +294,7 @@ const H = productHandler;
 // =========================================================
 exports.createTicket = H('ticket', 'prod_tiqueteria', (d, detalleId) => ({
   detalle_venta_id: detalleId,
-  aerolinea_id: d.airline ? parseInt(d.airline) : null,
+  aerolineaId: d.airline ? parseInt(d.airline) : null,
   nro_reserva: d.reservationNumber || null,
   nro_vuelo: d.flightNumber || null,
   nro_tiquete: d.ticketNumber || null,
@@ -347,7 +348,7 @@ exports.createPlan = H('plan', 'prod_planes', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   paqueteId: d.packageId ? parseInt(d.packageId) : null,
   nombre_plan: d.planName || null,
-  aerolinea_id: d.airline ? parseInt(d.airline) : null,
+  aerolineaId: d.airline ? parseInt(d.airline) : null,
   nro_reserva: d.reservationNumber || null,
   nro_tiquete: d.ticketNumber || null,
   fecha_viaje_inicio: d.startDate ? new Date(d.startDate) : null,

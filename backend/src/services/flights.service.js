@@ -2,8 +2,14 @@ const prisma = require('../config/db');
 const { buildMeta } = require('../utils/paginationHelper');
 
 class FlightsService {
-  async listFlights({ pagination, dateFrom, dateTo, permissionScope, user }) {
+  async listFlights({ pagination, dateFrom, dateTo, checkinStatus, search, permissionScope, user }) {
     const { page, perPage, skip } = pagination;
+
+    // Las ventas anuladas o borradas se excluyen aquí, en el where, no después
+    // de traer las filas: si no, el count las contaba y la paginación mentía.
+    const ventaVigente = { deleted_at: null, status: { not: 'anulado' } };
+    const detalleVenta = { ventas: { ...ventaVigente } };
+    const tiqueteria = {};
 
     const where = {};
     if (dateFrom || dateTo) {
@@ -13,12 +19,28 @@ class FlightsService {
     }
 
     if (permissionScope === 'own' && user) {
-      where.prod_tiqueteria = {
-        detalle_venta: {
-          ventas: { usuario_id: user.id }
-        }
-      };
+      detalleVenta.ventas.usuario_id = user.id;
     }
+
+    // Estado de check-in: pendiente / realizado / critico
+    if (checkinStatus) {
+      tiqueteria.checkin_status = checkinStatus;
+    }
+
+    // Búsqueda por pasajero, titular, localizador o número de vuelo.
+    if (search) {
+      const como = { contains: search, mode: 'insensitive' };
+      where.OR = [
+        { nro_vuelo_tramo: como },
+        { nro_tiquete: como },
+        { prod_tiqueteria: { nro_reserva: como } },
+        { prod_tiqueteria: { nro_vuelo: como } },
+        { prod_tiqueteria: { detalle_venta: { pasajeros_detalle: { some: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } } } } },
+        { prod_tiqueteria: { detalle_venta: { ventas: { clientes: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } } } } },
+      ];
+    }
+
+    where.prod_tiqueteria = { ...tiqueteria, detalle_venta: detalleVenta };
 
     const [total, tramos] = await Promise.all([
       prisma.tramos_vuelo.count({ where }),
@@ -29,7 +51,7 @@ class FlightsService {
             include: {
               detalle_venta: {
                 include: {
-                  ventas: { include: { clientes: { include: { personas: true } } } },
+                  ventas: { include: { clientes: { include: { personas: { include: { tipos_documento: true } } } } } },
                   pasajeros_detalle: { include: { personas: true } }
                 }
               },
@@ -53,10 +75,8 @@ class FlightsService {
       return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Bogota', hour12: false, hour: '2-digit', minute: '2-digit' }).format(dt);
     };
 
-    const filteredTramos = tramos.filter(t => {
-      const venta = t.prod_tiqueteria?.detalle_venta?.ventas;
-      return venta && !venta.deleted_at && venta.status !== 'anulado';
-    });
+    // Ya vienen filtrados por el where; se conserva el nombre para el resto del método.
+    const filteredTramos = tramos;
 
     const productTramos = {};
     for (const t of filteredTramos) {
@@ -88,9 +108,11 @@ class FlightsService {
       const aeropuertoOrigen = t.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos;
       const aeropuertoDestino = t.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos;
 
-      const routeStr = (t.aeropuertoOrigen?.codigoIata || dv?.origen) && (t.aeropuertoDestino?.codigoIata || dv?.destino) 
-        ? `${t.aeropuertoOrigen?.codigoIata || dv?.origen} - ${t.aeropuertoDestino?.codigoIata || dv?.destino}`
-        : (t.aeropuertoOrigen?.codigoIata || dv?.origen || t.aeropuertoDestino?.codigoIata || dv?.destino || '');
+      const codOrigen = aeropuertoOrigen?.codigo_iata || dv?.origen;
+      const codDestino = aeropuertoDestino?.codigo_iata || dv?.destino;
+      const routeStr = codOrigen && codDestino
+        ? `${codOrigen} - ${codDestino}`
+        : (codOrigen || codDestino || '');
       const paxStr = paxList.length > 0 ? paxList.join(', ') : (clientePersona ? `${clientePersona.nombres} ${clientePersona.apellidos}` : '');
 
       return {
@@ -116,6 +138,12 @@ class FlightsService {
         checkin: t.prod_tiqueteria?.checkin_status || 'pendiente',
         passengerName: paxStr,
         passenger: paxStr,
+        clientId: venta?.cliente_id || null,
+        clientName: clientePersona ? `${clientePersona.nombres} ${clientePersona.apellidos}` : null,
+        clientAvatar: clientePersona?.avatar_url || null,
+        clientEmail: clientePersona?.email || null,
+        clientDocType: clientePersona?.tipos_documento?.abreviatura || null,
+        clientDocNumber: clientePersona?.documento || null,
         ticketNumber: t.nro_tiquete || t.prod_tiqueteria?.nro_tiquete || '',
         seat: t.asiento || null,
         orden: t.orden,

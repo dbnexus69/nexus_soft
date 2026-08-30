@@ -28,13 +28,24 @@ class CommissionsService {
     const where = {};
     if (status) where.status = status;
 
-    let statusCondition = '';
-    if (status) statusCondition = `AND c.status = '${status.replace(/'/g, "''")}'`;
-    let searchCondition = '';
+    // Un solo constructor de filtros para el count y el SQL, con parámetros.
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+    if (status) push('c.status = ?::"AgentStatus"', status);
     if (search) {
-      const cleanSearch = search.replace(/'/g, "''");
-      searchCondition = `AND (p.nombres ILIKE '%${cleanSearch}%' OR p.apellidos ILIKE '%${cleanSearch}%')`;
+      const q = `%${search}%`;
+      push('(p.nombres ILIKE ? OR p.apellidos ILIKE ?)', q, q);
+      where.personas = {
+        OR: [
+          { nombres: { contains: search, mode: 'insensitive' } },
+          { apellidos: { contains: search, mode: 'insensitive' } }
+        ]
+      };
     }
+    const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
     const [total, agentsRaw] = await Promise.all([
       prisma.comisionistas.count({ where }),
@@ -43,7 +54,14 @@ class CommissionsService {
           c.id,
           c.tipo as "type",
           c.status,
-          c.acumulado as "accumulated",
+          -- El acumulado se suma aquí, no en el cliente: c.acumulado es un campo
+          -- denormalizado que se desincroniza, y sumarlo en el frontend obligaba
+          -- a traerse todas las ventas para calcularlo.
+          COALESCE((
+            SELECT SUM(v.monto_comision_neto)
+            FROM ventas v
+            WHERE v.comisionista_id = c.id AND v.comision_liquidada = false
+          ), 0) as "accumulated",
           c.umbral_pago as "paymentThreshold",
           c.banco,
           c.tipo_cuenta as "tipoCuenta",
@@ -58,10 +76,10 @@ class CommissionsService {
         FROM comisionistas c
         JOIN personas p ON c.persona_id = p.id
         LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        WHERE 1=1 ${statusCondition} ${searchCondition}
+        WHERE 1=1 ${whereSql}
         ORDER BY c.id DESC
-        LIMIT ${perPage} OFFSET ${skip}
-      `)
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip)
     ]);
 
     const data = agentsRaw.map(a => ({

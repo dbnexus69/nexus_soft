@@ -8,19 +8,29 @@ class ResponsablesService {
    */
   async listResponsables({ pagination, search, status, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
+    // Un solo constructor de filtros para el count y para el SQL: antes el
+    // count ignoraba el search y la paginación devolvía totales falsos.
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+
     const where = { deleted_at: null };
-
-    let searchCondition = '';
     if (search) {
-      const cleanSearch = search.replace(/'/g, "''");
-      searchCondition = `AND (p.nombres ILIKE '%${cleanSearch}%' OR p.apellidos ILIKE '%${cleanSearch}%' OR p.documento ILIKE '%${cleanSearch}%' OR p.email ILIKE '%${cleanSearch}%')`;
+      const q = `%${search}%`;
+      push('(p.nombres ILIKE ? OR p.apellidos ILIKE ? OR p.documento ILIKE ? OR p.email ILIKE ?)', q, q, q, q);
+      const como = { contains: search, mode: 'insensitive' };
+      where.personas = {
+        OR: [{ nombres: como }, { apellidos: como }, { documento: como }, { email: como }]
+      };
+    }
+    if (status) {
+      push('r.status = ?::"UserStatus"', status);
+      where.status = status;
     }
 
-    let statusCondition = '';
-    if (status) {
-      const cleanStatus = status.replace(/'/g, "''");
-      statusCondition = `AND r.status = '${cleanStatus}'`;
-    }
+    const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
     const sortFieldMapSQL = {
       'creadoAt': 'r.creado_at',
@@ -54,10 +64,10 @@ class ResponsablesService {
         FROM responsables r
         JOIN personas p ON r.persona_id = p.id
         LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        WHERE r.deleted_at IS NULL ${searchCondition} ${statusCondition}
+        WHERE r.deleted_at IS NULL ${whereSql}
         ORDER BY ${sqlOrderBy} ${orderDirection}
-        LIMIT ${perPage} OFFSET ${skip}
-      `)
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip)
     ]);
 
     const data = responsablesRaw.map(r => ({

@@ -7,6 +7,8 @@ exports.list = async (req, res, next) => {
       pagination: req.pagination,
       dateFrom: req.query.dateFrom,
       dateTo: req.query.dateTo,
+      checkinStatus: req.query.checkinStatus,
+      search: req.search,
       permissionScope: req.permissionScope,
       user: req.user
     });

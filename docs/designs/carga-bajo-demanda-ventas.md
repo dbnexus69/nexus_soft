@@ -1,5 +1,9 @@
 # Carga bajo demanda en el módulo de ventas
 
+> **Estado: implementado.** Este documento se escribió como plan y se conserva como
+> registro de las decisiones. Lo que finalmente se construyó difiere en dos puntos,
+> marcados más abajo como *(cambió)*.
+
 ## Problema
 
 `GET /sales/:id` devuelve la venta entera en una sola respuesta: cabecera, pagos y las
@@ -158,7 +162,38 @@ para renderizar el PDF; no puede ir por secciones. Por eso existe
 "todos los productos de esta venta" y evita tener que meter un `?include=all` que
 volvería a abrir la puerta al payload monolítico.
 
-### 4. El listado deja de mentir
+### 4. Jerarquía: los productos que van dentro de un plan
+
+Un plan puede contener vuelos, hotelería y seguros. Esos detalles se guardan como
+filas propias de `detalle_venta` con `parentDetalleId` apuntando al detalle del plan.
+
+**Regla: un producto hijo solo aparece dentro del GET de su plan padre. Nunca en el GET
+de su propia categoría.**
+
+```
+GET /sales/:id/products/plan
+  → los planes, y dentro de cada uno sus vuelos, hoteles y seguros
+
+GET /sales/:id/products/ticket
+  → solo los vuelos sueltos (parentDetalleId = null).
+    Un vuelo que va dentro de un plan NO sale aquí.
+```
+
+El inventario de `GET /sales/:id` cuenta igual: solo productos de primer nivel. Un plan
+con un vuelo dentro es `{ category: "plan", count: 1 }`, no dos entradas.
+
+Esto se traduce en un `where: { parentDetalleId: null }` en el agrupamiento de primer
+nivel, y en una consulta de hijos al resolver la categoría `plan`.
+
+**Hoy esto no se cumple.** `getSaleById` agrupa por `d.categoria` sin mirar el padre
+(`sales.service.js`, construcción de `resultMap`), así que un vuelo hijo de un plan
+saldría también en `ticketData`. No se manifiesta porque no hay ningún registro con
+padre en la base, pero se activará en cuanto se cree el primer plan con productos
+dentro. Corregirlo requiere tocar frontend a la vez: hoy no hay ningún componente que
+renderice los hijos anidados en el plan, así que filtrarlos en el backend sin más los
+haría desaparecer de la pantalla.
+
+### 5. El listado deja de mentir
 
 `GET /sales` gana los filtros que hoy se aplican en cliente (`dateFrom`/`dateTo` ya
 existen en el backend pero el frontend no los usa) y el frontend empieza a mandar
@@ -171,7 +206,7 @@ Se unifican en un único constructor de filtros, y los valores dejan de interpol
 el SQL (hoy `search` entra con un escape de comillas hecho a mano) para pasar como
 parámetros.
 
-### 5. El consumidor
+### 6. El consumidor
 
 - Fuera el `onMouseEnter` de `SalesTable.tsx:164`. La tabla no pide detalle nunca.
 - `SaleDetailModal` pide `GET /sales/:id` al abrirse y `GET /sales/:id/products/:cat`
@@ -188,6 +223,7 @@ parámetros.
 | Vocabulario ganador | Inglés, el de las rutas de escritura | El español de la BD | Si el GET usara otro vocabulario que el POST/PUT/DELETE, la asimetría vuelve por la puerta de atrás y media API queda en cada idioma. |
 | Valores en BD | Migrar a los slugs en inglés + enum | Mapear inglés↔español en el catálogo | No hay nada en producción: la migración es barata hoy y evita convivir para siempre con dos nombres por categoría. El enum además impide categorías inexistentes. |
 | Venta completa para el PDF | `GET /sales/:id/products` | `GET /sales/:id?include=all` | Una colección es REST correcto y no reabre la puerta al payload monolítico por parámetro. |
+| Productos dentro de un plan | El hijo solo sale en el GET del plan | Que salga en las dos categorías | Aparecería duplicado en el payload y en la UI, y el inventario contaría dos veces el mismo servicio. |
 | Prefetch en hover | Eliminarlo | Debounce / caché de detalles | El modal ya carga al abrirse. El prefetch resuelve un problema que no existe y crea uno que sí. |
 | Estado en frontend | Seguir con contexts + localStorage | TanStack Query | Fuera de alcance por decisión explícita. |
 
@@ -264,3 +300,34 @@ Cada paso es verificable por separado y la aplicación sigue funcionando entre u
 10. **Resolver `Responsables.tsx`** — decidir entre endpoint de agregación o `perPage`
     alto, según lo que muestre esa pantalla. *Verificable:* los totales por responsable
     coinciden con los de antes del cambio.
+
+---
+
+## Resultado real
+
+Medido sobre la venta 24, que tiene las 15 categorías de producto:
+
+| | Antes | Después |
+|---|---|---|
+| `GET /sales/:id` | ~15 KB | **1,5 KB** |
+| `GET /sales/:id/products/ticket` | — | 1,3 KB |
+| `GET /sales/:id/products` (voucher) | — | 2,6 KB |
+| Carga inicial de la aplicación | 10–19 s con errores 500 | **2,6–3,0 s, sin errores** |
+
+### Lo que cambió respecto al plan
+
+**El índice en `ventas.creado_at` sí se añadió.** Estaba en «fuera de alcance», pero al
+conectar la paginación real pasó a ser el orden de cada consulta del listado.
+
+**El tamaño de página es 10, no 20.** Se unificó en backend (`parsePagination`) y
+frontend. Los modales de detalle usan 5, que es deliberado.
+
+### Lo que apareció por el camino y no estaba en el plan
+
+- `parentDetalleId` estaba mal escrito en las 15 lecturas **y en las 15 escrituras**
+  (`parent_detalle_id`, que Prisma rechaza). Crear una venta con productos estaba roto.
+- Los 45 endpoints `POST/PUT/DELETE /sales/:id/products/*` estaban escritos contra un
+  schema inexistente (`tx.detalleVenta`, 88 campos en camelCase).
+- `products.service.js` era una copia muerta del controller. Eliminado.
+- El `count` de Prisma y el SQL divergían en `sales`, `clients`, `responsables` y
+  `flights`: una búsqueda sin resultados seguía informando del total sin filtrar.

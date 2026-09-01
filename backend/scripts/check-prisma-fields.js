@@ -41,6 +41,13 @@ const OPERADORES = new Set([
   'cursor','distinct','by','having','omit','sort','nulls',
 ]);
 
+/** Elimina comentarios, que si no se leen como si fueran claves de objeto. */
+function sinComentarios(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')     // bloque
+    .replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1'); // línea (sin tocar "http://")
+}
+
 /** Devuelve el bloque {...} que empieza en `desde`, balanceando llaves. */
 function bloque(src, desde) {
   let prof = 0;
@@ -83,7 +90,7 @@ const hallazgos = [];
 const archivos = execSync('find src -name "*.js"').toString().trim().split('\n');
 
 for (const f of archivos) {
-  const src = fs.readFileSync(f, 'utf8');
+  const src = sinComentarios(fs.readFileSync(f, 'utf8'));
   const re = new RegExp(`\\b(?:prisma|tx)\\.([a-zA-Z_][\\w]*)\\.(${METODOS})\\s*\\(\\s*\\{`, 'g');
   let m;
   while ((m = re.exec(src)) !== null) {
@@ -154,7 +161,7 @@ const transformesMalos = [];
 {
   const f = 'src/controllers/products.controller.js';
   if (fs.existsSync(f)) {
-    const src = fs.readFileSync(f, 'utf8');
+    const src = sinComentarios(fs.readFileSync(f, 'utf8'));
     const re = /H\('([a-z]+)', '(prod_\w+)', \(d, detalleId\) => \(\{([\s\S]*?)\}\)\)/g;
     let m;
     while ((m = re.exec(src)) !== null) {

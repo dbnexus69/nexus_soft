@@ -13,6 +13,15 @@ const {
 
 const { randomUUID: uuidv4 } = require('crypto');
 
+// El selector de tamaño de mascota envía "pequeño" con eñe, pero el enum
+// TamanoMascota de Postgres es `pequeno`. Un valor fuera del enum hace fallar
+// el insert entero, así que se normaliza aquí.
+const TAMANOS_MASCOTA = { pequeno: 'pequeno', 'pequeño': 'pequeno', mediano: 'mediano', grande: 'grande', gigante: 'gigante' };
+function normalizarTamanoMascota(valor) {
+  if (!valor) return null;
+  return TAMANOS_MASCOTA[String(valor).trim().toLowerCase()] || null;
+}
+
 class SalesService {
   // Resuelve de una vez todos los catálogos que la venta va a necesitar
   // (proveedores, aerolíneas, aeropuertos y personas por documento).
@@ -427,6 +436,7 @@ class SalesService {
             fecha_llegada: s.arrivalDate ? new Date(s.arrivalDate) : null,
             duracion_viaje: s.tripDuration ? String(s.tripDuration) : null,
             plan_datos: s.dataPlan || null, tipo_sim: s.simType || null,
+            metodo_entrega: s.deliveryMethod || null,
           }
         });
       }
@@ -483,6 +493,8 @@ class SalesService {
             adultos_count: Number(t.adultsCount || 1),
             menores_count: Number(t.childrenCount || 0),
             edades_menores: t.childrenAges || null,
+            idioma_guia: t.guideLanguage || null,
+            requiere_transporte: t.needsTransport ?? false,
             punto_encuentro: t.pickupPoint || null,
             condiciones_medicas: t.medicalConditions || null,
             observaciones: t.observations || null,
@@ -561,8 +573,11 @@ class SalesService {
         await tx.prod_pasaportes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
-            nombre_completo: p.fullName || null, nro_documento: p.docNumber || null,
-            ciudad_residencia: p.residenceCity || null, tipo_tramite: p.tramiteType || null,
+            nombre_completo: p.fullName || null,
+            // El formulario envía idNumber y processType; se aceptan ambos nombres.
+            nro_documento: p.idNumber || p.docNumber || null,
+            ciudad_residencia: p.residenceCity || null,
+            tipo_tramite: p.processType || p.tramiteType || null,
             fecha_nacimiento: p.birthDate ? new Date(p.birthDate) : null,
             fecha_estimada_viaje: p.estimatedTravelDate ? new Date(p.estimatedTravelDate) : null,
             telefono_contacto: p.phone || null,
@@ -580,7 +595,13 @@ class SalesService {
             id: uuidv4(), detalle_venta_id: detalleId,
             mascota_nombre: m.petName || null, especie: m.species || null,
             raza: m.breed || null, peso_kg: Number(m.weight || 0),
-            transporte_tipo: m.transportCompany || null,
+            // tamanoMascota es un enum de Postgres sin eñe y el formulario envía
+            // "pequeño": hay que normalizarlo antes de guardar.
+            tamanoMascota: normalizarTamanoMascota(m.size),
+            // travelType es cómo viaja (cabina/bodega/terrestre) y transportCompany
+            // la empresa: son dos columnas distintas.
+            transporte_tipo: m.travelType || null,
+            empresa_transporte: m.transportCompany || null,
             fecha_viaje: m.travelDate ? new Date(m.travelDate) : null,
             pais_destino: m.destinationCountry || null,
             condiciones_medicas: m.medicalConditions || null,

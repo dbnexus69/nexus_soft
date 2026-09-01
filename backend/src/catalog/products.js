@@ -301,6 +301,9 @@ const PRODUCT_TRANSFORMS = {
       phone: t.telefono_contacto,
       observations: t.observaciones,
       guests: passengers,
+      // El detalle muestra un "Nombre Pasajero": se toma el titular, y si no
+      // hay ninguno marcado, el primero de la lista.
+      passengerName: (passengers.find(p => p.esTitular) || passengers[0])?.nombreCompleto || null,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
       ta: d.ta || 0,
@@ -384,6 +387,9 @@ const PRODUCT_TRANSFORMS = {
       idNumber: p.nro_documento,
       birthDate: p.fecha_nacimiento?.toISOString() || null,
       residenceCity: p.ciudad_residencia,
+      // El modal de detalle lee processType; se mantiene tramiteType por si
+      // algún consumidor antiguo lo espera.
+      processType: p.tipo_tramite,
       tramiteType: p.tipo_tramite,
       estimatedTravelDate: p.fecha_estimada_viaje?.toISOString() || null,
       phone: p.telefono_contacto,
@@ -404,6 +410,8 @@ const PRODUCT_TRANSFORMS = {
       breed: m.raza,
       weight: m.peso_kg,
       size: m.tamanoMascota,
+      // El modal lee travelType (cómo viaja); transportType queda como alias.
+      travelType: m.transporte_tipo,
       transportType: m.transporte_tipo,
       travelDate: m.fecha_viaje?.toISOString() || null,
       destinationCountry: m.pais_destino,

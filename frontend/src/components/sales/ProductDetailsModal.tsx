@@ -4,6 +4,17 @@ import { Badge } from "../ui/Badge";
 import { formatDate, formatDateTime } from "../../utils/formatters";
 import { type AirportInfo } from "../../utils/airportInfo";
 
+// El enum TamanoMascota de Postgres no lleva eñe; aquí se muestra legible.
+// El backend guarda el valor del enum, sin eñe; aquí se muestra legible.
+const TAMANO_MASCOTA: Record<string, string> = {
+  pequeno: "Pequeño", mediano: "Mediano", grande: "Grande", gigante: "Gigante",
+};
+
+// Mismas etiquetas que el selector del formulario.
+const TIPO_TRANSPORTE_MASCOTA: Record<string, string> = {
+  cabina: "En Cabina", bodega: "En Bodega", terrestre: "Terrestre",
+};
+
 // Format time in 12-hour AM/PM
 const formatTimeAMPM = (time24: string) => {
   if (!time24) return '';
@@ -59,13 +70,13 @@ function safe(val: any, fallback = "-") {
 function renderPassengers(items: any[]) {
   if (!items || items.length === 0) return null;
   return (
-    <div className="bg-gray-50 rounded-lg p-3 mt-3">
-      <p className="text-xs font-bold text-gray-600 mb-2 uppercase">Personas ({items.length})</p>
-      <ul className="list-disc list-inside text-sm space-y-1 text-gray-700">
+    <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 mt-3">
+      <p className="text-xs font-bold text-gray-600 dark:text-slate-300 mb-2 uppercase">Personas ({items.length})</p>
+      <ul className="list-disc list-inside text-sm space-y-1 text-gray-700 dark:text-slate-200">
         {items.map((p: any, i: number) => (
           <li key={i}>
             {p.name || p.nombreCompleto || p.fullName || "-"}
-            <span className="text-xs text-gray-400 ml-1">
+            <span className="text-xs text-gray-400 dark:text-slate-500 ml-1">
               ({p.docType || p.tipoDocumento || p.idNumber || ""} {p.docNumber || p.nroDocumento || ""})
             </span>
           </li>
@@ -78,24 +89,24 @@ function renderPassengers(items: any[]) {
 function renderTicketPassengers(items: any[]) {
   if (!items || items.length === 0) return null;
   return (
-    <div className="bg-gray-50 rounded-lg p-3 mt-3 border border-gray-100">
-      <p className="text-xs font-bold text-gray-600 mb-2 uppercase">Pasajeros ({items.length})</p>
+    <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 mt-3 border border-gray-100 dark:border-slate-700/50">
+      <p className="text-xs font-bold text-gray-600 dark:text-slate-300 mb-2 uppercase">Pasajeros ({items.length})</p>
       <div className="space-y-2">
         {items.map((p: any, i: number) => (
-          <div key={i} className="text-xs flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+          <div key={i} className="text-xs flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 dark:border-slate-700/50 last:border-0 pb-2 last:pb-0">
             <div>
-              <div className="font-semibold text-gray-800">
+              <div className="font-semibold text-gray-800 dark:text-white">
                 {p.name || p.nombreCompleto || "-"}
                 {p.esTitular && <span className="ml-2 text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase font-bold">PASAJERO PRINCIPAL</span>}
               </div>
-              <div className="text-[10px] text-gray-500 mt-0.5">
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
                 {p.docType || p.tipoDocumento || ""} {p.docNumber || p.nroDocumento || ""}
               </div>
             </div>
-            <div className="flex gap-3 mt-1 sm:mt-0 text-[10px] text-gray-600 text-right">
-              {p.nroReserva && <div><span className="font-semibold uppercase text-gray-400">Reserva:</span> {p.nroReserva}</div>}
-              {p.nroTiquete && <div><span className="font-semibold uppercase text-gray-400">Tiquete:</span> <span className="break-all">{p.nroTiquete}</span></div>}
-              {p.asiento && <div><span className="font-semibold uppercase text-gray-400">Asiento:</span> {p.asiento}</div>}
+            <div className="flex gap-3 mt-1 sm:mt-0 text-[10px] text-gray-600 dark:text-slate-300 text-right">
+              {p.nroReserva && <div><span className="font-semibold uppercase text-gray-400 dark:text-slate-500">Reserva:</span> {p.nroReserva}</div>}
+              {p.nroTiquete && <div><span className="font-semibold uppercase text-gray-400 dark:text-slate-500">Tiquete:</span> <span className="break-all">{p.nroTiquete}</span></div>}
+              {p.asiento && <div><span className="font-semibold uppercase text-gray-400 dark:text-slate-500">Asiento:</span> {p.asiento}</div>}
             </div>
           </div>
         ))}
@@ -109,8 +120,8 @@ function renderGrid(items: { label: string; value: any }[]) {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
       {items.map((item, i) => (
         <div key={i} className="min-w-0">
-          <span className="block text-xs text-gray-500 truncate" title={item.label}>{item.label}</span>
-          <span className="font-semibold text-sm text-gray-800 block break-all whitespace-normal">{safe(item.value)}</span>
+          <span className="block text-xs text-gray-500 dark:text-slate-400 truncate" title={item.label}>{item.label}</span>
+          <span className="font-semibold text-sm text-gray-800 dark:text-white block break-all whitespace-normal">{safe(item.value)}</span>
         </div>
       ))}
     </div>
@@ -214,7 +225,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
           const returnTypeLabel = returnLegs.length > 1 ? "Con Escalas" : (returnLegs.length === 1 ? "Directo" : "");
 
           return (
-            <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+            <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
               <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
                 <Plane size={16} className="text-accent" /> Ticket #{idx + 1}
                 {mainPassenger?.name && ` - ${mainPassenger.name}`}
@@ -229,9 +240,9 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
               {/* Outbound Flights (Trayecto de Ida) */}
               {outboundLegs.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                  <div className="flex items-center justify-between mb-2 pb-1 border-b border-gray-200">
-                    <p className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1">
+                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 border border-gray-100 dark:border-slate-700/50">
+                  <div className="flex items-center justify-between mb-2 pb-1 border-b border-gray-200 dark:border-slate-700">
+                    <p className="text-xs font-bold text-gray-700 dark:text-slate-200 uppercase flex items-center gap-1">
                       <ArrowRight size={11} className="text-primary" />
                       Trayecto de Ida
                     </p>
@@ -240,35 +251,35 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                     </span>
                   </div>
                   {outboundLegs.map((leg: any, lIdx: number) => (
-                    <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-8 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-gray-150 items-center">
-                      <div className="font-semibold text-gray-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Aerolínea</span>
-                        <span className="font-medium text-gray-800">{leg.airline || ticket.airlineName || ticket.airline || "-"}</span>
+                    <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-8 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-gray-150 dark:border-slate-700 items-center">
+                      <div className="font-semibold text-gray-800 dark:text-white">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 dark:text-slate-500 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Aerolínea</span>
+                        <span className="font-medium text-gray-800 dark:text-white">{leg.airline || ticket.airlineName || ticket.airline || "-"}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Equipaje</span>
-                        <span className="font-medium text-gray-800">{leg.baggagePlanName || ticket.baggagePlanName || "-"}</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Equipaje</span>
+                        <span className="font-medium text-gray-800 dark:text-white">{leg.baggagePlanName || ticket.baggagePlanName || "-"}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Salida</span>
                         {leg.date ? `${formatDate(leg.date)} ${formatTimeAMPM(leg.time)}` : "-"}
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Llegada</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Llegada</span>
                         {leg.arrivalDate ? `${formatDate(leg.arrivalDate)} ${formatTimeAMPM(leg.arrivalTime)}` : "-"}
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Vuelo</span>
-                        <span className="font-medium text-gray-800">{leg.flightNumber || "-"}{leg.isStop ? " (Escala)" : ""}</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Vuelo</span>
+                        <span className="font-medium text-gray-800 dark:text-white">{leg.flightNumber || "-"}{leg.isStop ? " (Escala)" : ""}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Asiento</span>
-                        <span className="font-medium text-gray-800">{leg.seat || "-"}</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Asiento</span>
+                        <span className="font-medium text-gray-800 dark:text-white">{leg.seat || "-"}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">N° Tiquete</span>
-                        <span className="font-medium text-gray-800 break-all">{leg.ticketNumber || "-"}</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">N° Tiquete</span>
+                        <span className="font-medium text-gray-800 dark:text-white break-all">{leg.ticketNumber || "-"}</span>
                       </div>
                     </div>
                   ))}
@@ -289,33 +300,33 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
                   </div>
                   {returnLegs.map((leg: any, lIdx: number) => (
                     <div key={lIdx} className="grid grid-cols-1 sm:grid-cols-8 gap-2 text-xs mb-2 pb-2 last:border-0 last:pb-0 border-b border-blue-50 items-center">
-                      <div className="font-semibold text-blue-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Aerolínea</span>
+                      <div className="font-semibold text-blue-800">{getAirport(leg.origin, airportMap)} <span className="text-gray-400 dark:text-slate-500 mx-1">→</span> {getAirport(leg.destination, airportMap)}</div>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Aerolínea</span>
                         <span className="font-medium text-blue-800">{leg.airline || ticket.airlineName || ticket.airline || "-"}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Equipaje</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Equipaje</span>
                         <span className="font-medium text-blue-800">{leg.baggagePlanName || ticket.baggagePlanName || "-"}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Salida</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Salida</span>
                         {leg.date ? `${formatDate(leg.date)} ${formatTimeAMPM(leg.time)}` : "-"}
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Llegada</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Llegada</span>
                         {leg.arrivalDate ? `${formatDate(leg.arrivalDate)} ${formatTimeAMPM(leg.arrivalTime)}` : "-"}
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Vuelo</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Vuelo</span>
                         <span className="font-medium text-blue-800">{leg.flightNumber || "-"}{leg.isStop ? " (Escala)" : ""}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">Asiento</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">Asiento</span>
                         <span className="font-medium text-blue-800">{leg.seat || "-"}</span>
                       </div>
-                      <div className="text-gray-600">
-                        <span className="font-bold text-[10px] text-gray-400 block uppercase mb-0.5">N° Tiquete</span>
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <span className="font-bold text-[10px] text-gray-400 dark:text-slate-500 block uppercase mb-0.5">N° Tiquete</span>
                         <span className="font-medium text-blue-800 break-all">{leg.ticketNumber || "-"}</span>
                       </div>
                     </div>
@@ -329,7 +340,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Hotelería":
         return product.data.map((hotel, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <Building2 size={16} className="text-accent" /> Hotel #{idx + 1} - {hotel.hotelName || "Sin Nombre"}
             </h4>
@@ -341,14 +352,14 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
             ])}
             {renderPassengers(hotel.guests || hotel.passengers)}
             {hotel.observations && (
-              <p className="text-xs text-gray-500 mt-2 italic">{hotel.observations}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 italic">{hotel.observations}</p>
             )}
           </div>
         ));
 
       case "Seguros":
         return product.data.map((ins, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <ShieldCheck size={16} className="text-accent" /> Seguro #{idx + 1}
             </h4>
@@ -373,7 +384,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
       case "Planes":
         return product.data.map((plan, idx) => {
           return (
-            <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+            <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
               <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
                 <Package size={16} className="text-accent" /> Paquete #{idx + 1} - {plan.planName || "Sin Nombre"}
               </h4>
@@ -404,7 +415,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               )}
               {renderPassengers(plan.guests || plan.passengers || plan.members)}
               {plan.observations && (
-                <p className="text-xs text-gray-500 mt-2 italic">{plan.observations}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 italic">{plan.observations}</p>
               )}
             </div>
           );
@@ -412,7 +423,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "CheckIn":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <Luggage size={16} className="text-accent" /> Check-in #{idx + 1}
             </h4>
@@ -425,8 +436,8 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Usa Silla Ruedas", value: item.needsWheelchair ? "Sí" : "No" },
             ])}
             {item.specialNeeds && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Necesidades Especiales</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Necesidades Especiales</span>
                 {item.specialNeeds}
               </div>
             )}
@@ -435,7 +446,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Migración":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <FileInput size={16} className="text-accent" /> Migración #{idx + 1}
             </h4>
@@ -451,7 +462,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "SimCard":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <Smartphone size={16} className="text-accent" /> SIM Card #{idx + 1}
             </h4>
@@ -468,7 +479,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "AlquilerAutos":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <Car size={16} className="text-accent" /> Alquiler de Auto #{idx + 1}
             </h4>
@@ -488,7 +499,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Finca":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <TreePine size={16} className="text-accent" /> Renta de Finca #{idx + 1}
             </h4>
@@ -503,8 +514,8 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Tipo Mascota", value: item.petType },
             ])}
             {item.additionalServices && item.additionalServices.length > 0 && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Servicios Adicionales</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Servicios Adicionales</span>
                 {Array.isArray(item.additionalServices) ? item.additionalServices.join(", ") : item.additionalServices}
               </div>
             )}
@@ -513,7 +524,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Tour":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <Compass size={16} className="text-accent" /> Actividad o Tour #{idx + 1}
             </h4>
@@ -529,14 +540,14 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
             ])}
             {renderPassengers(item.guests)}
             {item.medicalConditions && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100 mb-2">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Condiciones Médicas</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 mb-2">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Condiciones Médicas</span>
                 {item.medicalConditions}
               </div>
             )}
             {item.observations && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Toures</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Toures</span>
                 {item.observations}
               </div>
             )}
@@ -545,7 +556,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Evento":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <Music size={16} className="text-accent" /> Convención o Evento #{idx + 1}
             </h4>
@@ -562,8 +573,8 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Requiere Catering", value: item.hasCatering ? "Sí" : "No" },
             ])}
             {item.cateringNotes && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Notas de Catering</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Notas de Catering</span>
                 {item.cateringNotes}
               </div>
             )}
@@ -572,7 +583,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Restaurante":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <UtensilsCrossed size={16} className="text-accent" /> Reserva en Restaurante #{idx + 1}
             </h4>
@@ -586,8 +597,8 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Teléfono", value: item.phone },
             ])}
             {item.dietaryRestrictions && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Restricciones Alimenticias</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Restricciones Alimenticias</span>
                 {Array.isArray(item.dietaryRestrictions) ? item.dietaryRestrictions.join(", ") : item.dietaryRestrictions}
               </div>
             )}
@@ -596,7 +607,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Visa":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <FileText size={16} className="text-accent" /> Visa #{idx + 1}
             </h4>
@@ -616,7 +627,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Pasaporte":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <FileText size={16} className="text-accent" /> Pasaporte #{idx + 1}
             </h4>
@@ -634,7 +645,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       case "Mascotas":
         return product.data.map((item, idx) => (
-          <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-4 shadow-sm">
             <h4 className="font-bold text-primary flex items-center gap-2 mb-3 pb-2 border-b">
               <PawPrint size={16} className="text-accent" /> Mascotas #{idx + 1}
             </h4>
@@ -643,15 +654,15 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
               { label: "Especie", value: item.species },
               { label: "Raza", value: item.breed },
               { label: "Peso (Kg)", value: item.weight ? `${item.weight} kg` : "-" },
-              { label: "Tamaño", value: item.size },
-              { label: "Tipo de Transporte", value: item.travelType },
+              { label: "Tamaño", value: TAMANO_MASCOTA[item.size] || item.size },
+              { label: "Tipo de Transporte", value: TIPO_TRANSPORTE_MASCOTA[item.travelType] || item.travelType },
               { label: "Fecha de Viaje", value: item.travelDate ? formatDate(item.travelDate) : "-" },
               { label: "País Destino", value: item.destinationCountry },
               { label: "Teléfono", value: item.phone },
             ])}
             {item.medicalConditions && (
-              <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                <span className="font-bold block text-[10px] text-gray-400 uppercase">Condiciones Médicas</span>
+              <div className="mt-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                <span className="font-bold block text-[10px] text-gray-400 dark:text-slate-500 uppercase">Condiciones Médicas</span>
                 {item.medicalConditions}
               </div>
             )}
@@ -660,10 +671,10 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
 
       default:
         return (
-          <div className="bg-gray-50 p-4 rounded-xl text-center text-gray-500 italic">
+          <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl text-center text-gray-500 dark:text-slate-400 italic">
             Visualización detallada para {product.type} no disponible aún.
             {product.data && product.data.length > 0 && (
-              <pre className="text-left text-xs mt-2 bg-white p-2 rounded border overflow-auto max-h-40">
+              <pre className="text-left text-xs mt-2 bg-white dark:bg-slate-900 p-2 rounded border overflow-auto max-h-40">
                 {JSON.stringify(product.data, null, 2)}
               </pre>
             )}

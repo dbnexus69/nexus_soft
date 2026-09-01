@@ -14,6 +14,63 @@ const {
 const { randomUUID: uuidv4 } = require('crypto');
 
 class SalesService {
+  // Resuelve de una vez todos los catálogos que la venta va a necesitar
+  // (proveedores, aerolíneas, aeropuertos y personas por documento).
+  //
+  // Estas consultas son solo lectura y antes vivían dentro de la transacción,
+  // repetidas dentro de los bucles de producto. Con ~150 ms por consulta contra
+  // Supabase, una venta con muchos productos superaba el timeout de 5 s de
+  // Prisma y la transacción moría a media escritura:
+  //   "Transaction not found ... refers to an old closed transaction".
+  //
+  // Sacarlas fuera deja dentro de la transacción solo las escrituras.
+  async _precargarCatalogos(body) {
+    const CAMPOS = [
+      'ticketData', 'hotelData', 'insuranceData', 'planData', 'checkInData',
+      'migrationData', 'simCardData', 'carRentalData', 'fincaData', 'tourData',
+      'conventionData', 'restaurantData', 'visaData', 'passportData', 'petServiceData',
+    ];
+    const items = CAMPOS.flatMap(c => Array.isArray(body[c]) ? body[c] : []);
+
+    const codigosIata = new Set();
+    const documentos = new Set();
+    for (const it of items) {
+      for (const leg of [...(it.legs || []), ...(it.outboundStops || []),
+                         ...(it.returnLeg ? [it.returnLeg] : []), ...(it.returnStops || [])]) {
+        if (leg?.origin) codigosIata.add(leg.origin);
+        if (leg?.destination) codigosIata.add(leg.destination);
+      }
+      for (const p of [...(it.passengers || []), ...(it.guests || []), ...(it.travelers || [])]) {
+        if (p?.docNumber) documentos.add(String(p.docNumber));
+      }
+      if (it.docNumber) documentos.add(String(it.docNumber));
+    }
+    codigosIata.add('UNK'); // el comodín para tramos sin aeropuerto conocido
+
+    const [proveedores, aerolineas, aeropuertos, personas] = await Promise.all([
+      prisma.proveedores.findMany({ select: { id: true, nombre: true } }),
+      prisma.aerolineas.findMany({ select: { id: true, nombre: true } }),
+      prisma.aeropuertos.findMany({
+        where: { codigo_iata: { in: [...codigosIata] } },
+        select: { id: true, codigo_iata: true },
+      }),
+      documentos.size
+        ? prisma.personas.findMany({
+            where: { documento: { in: [...documentos] } },
+            select: { id: true, documento: true },
+          })
+        : [],
+    ]);
+
+    return {
+      proveedores,
+      aerolineas,
+      // Se indexan para que la búsqueda dentro de la transacción sea O(1).
+      aeropuertos: new Map(aeropuertos.map(a => [a.codigo_iata, a.id])),
+      personas: new Map(personas.map(p => [p.documento, p.id])),
+    };
+  }
+
   async createSale(body) {
     const {
       clientId, asesorId, total, paymentMethod, payments = [],
@@ -51,6 +108,9 @@ class SalesService {
       }
     }
 
+    // Los catálogos se resuelven fuera: dentro de la transacción solo escrituras.
+    const catalogos = await this._precargarCatalogos(body);
+
     const created = await prisma.$transaction(async (tx) => {
       // 1. Create sale record
       const venta = await tx.ventas.create({
@@ -78,24 +138,39 @@ class SalesService {
       const ventaId = venta.id;
 
       // Helper: find or create persona
+      // La búsqueda por documento ya viene resuelta; solo el alta toca la base.
+      // El mapa se actualiza al crear, para que dos pasajeros con el mismo
+      // documento en la misma venta reutilicen la persona en vez de duplicarla.
       const findOrCreatePersona = async (name, docType, docNumber) => {
         if (!name && !docNumber) return null;
+        const doc = docNumber ? String(docNumber) : null;
+        if (doc && catalogos.personas.has(doc)) return catalogos.personas.get(doc);
+
         const parts = (name || '').trim().split(' ');
         const nombres = parts.slice(0, Math.ceil(parts.length / 2)).join(' ') || name || '';
         const apellidos = parts.slice(Math.ceil(parts.length / 2)).join(' ') || '';
-        const existing = docNumber ? await tx.personas.findFirst({ where: { documento: docNumber } }) : null;
-        if (existing) return existing.id;
         const created = await tx.personas.create({
-          data: { nombres, apellidos, documento: docNumber || null, tipo_documento_id: null }
+          data: { nombres, apellidos, documento: doc, tipo_documento_id: null }
         });
+        if (doc) catalogos.personas.set(doc, created.id);
         return created.id;
       };
 
-      // Helper: find proveedor by name
-      const findProveedorId = async (nombre) => {
+      // Del catálogo precargado, con el mismo criterio que antes:
+      // igualdad de nombre sin distinguir mayúsculas.
+      const findProveedorId = (nombre) => {
         if (!nombre) return null;
-        const p = await tx.proveedores.findFirst({ where: { nombre: { equals: nombre, mode: 'insensitive' } } });
+        const buscado = String(nombre).toLowerCase();
+        const p = catalogos.proveedores.find(x => (x.nombre || '').toLowerCase() === buscado);
         return p ? p.id : null;
+      };
+
+      // Mismo criterio que el findFirst con `contains`, insensible a mayúsculas.
+      const findAerolineaId = (nombre) => {
+        if (!nombre) return null;
+        const buscado = String(nombre).toLowerCase();
+        const a = catalogos.aerolineas.find(x => (x.nombre || '').toLowerCase().includes(buscado));
+        return a ? a.id : null;
       };
 
       const getParentDetalleId = (item) => {
@@ -116,7 +191,7 @@ class SalesService {
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'plan', subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0), proveedor_id: proveedorId } });
         let planAirlineId = null;
         if (p.airline) {
-          const al = await tx.aerolineas.findFirst({ where: { nombre: { contains: p.airline, mode: 'insensitive' } } });
+          const al = findAerolineaId(p.airline) ? { id: findAerolineaId(p.airline) } : null;
           if (al) planAirlineId = al.id;
         }
         await tx.prod_planes.create({
@@ -158,7 +233,7 @@ class SalesService {
         const ticketId = uuidv4();
         let airlineId = null;
         if (t.airline) {
-          const al = await tx.aerolineas.findFirst({ where: { nombre: { contains: t.airline, mode: 'insensitive' } } });
+          const al = findAerolineaId(t.airline) ? { id: findAerolineaId(t.airline) } : null;
           if (al) airlineId = al.id;
         }
         await tx.prod_tiqueteria.create({
@@ -184,20 +259,18 @@ class SalesService {
           const leg = allLegs[i];
           if (!leg || !leg.origin || !leg.destination) continue;
 
-          let origAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: leg.origin } });
-          let destAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: leg.destination } });
-          if (!origAirport) {
-            origAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: 'UNK' } });
-            if (!origAirport) {
-              origAirport = await tx.aeropuertos.create({ data: { codigo_iata: 'UNK', nombre: 'Desconocido', ciudad: '' } });
-            }
-          }
-          if (!destAirport) {
-            destAirport = await tx.aeropuertos.findFirst({ where: { codigo_iata: 'UNK' } });
-            if (!destAirport) {
-              destAirport = await tx.aeropuertos.create({ data: { codigo_iata: 'UNK', nombre: 'Desconocido', ciudad: '' } });
-            }
-          }
+          // Del mapa precargado. Si el aeropuerto no existe se usa el comodín
+          // UNK, que solo se crea la primera vez que hace falta.
+          const idComodin = async () => {
+            if (catalogos.aeropuertos.has('UNK')) return catalogos.aeropuertos.get('UNK');
+            const creado = await tx.aeropuertos.create({
+              data: { codigo_iata: 'UNK', nombre: 'Desconocido', ciudad: '' }
+            });
+            catalogos.aeropuertos.set('UNK', creado.id);
+            return creado.id;
+          };
+          const origAirport = { id: catalogos.aeropuertos.get(leg.origin) ?? await idComodin() };
+          const destAirport = { id: catalogos.aeropuertos.get(leg.destination) ?? await idComodin() };
           
           let salidaDt = new Date();
           if (leg.date) {
@@ -219,7 +292,7 @@ class SalesService {
 
           let legAirlineId = airlineId;
           if (leg.airline && leg.airline !== t.airline) {
-            const al2 = await tx.aerolineas.findFirst({ where: { nombre: { contains: leg.airline, mode: 'insensitive' } } });
+            const al2 = findAerolineaId(leg.airline) ? { id: findAerolineaId(leg.airline) } : null;
             if (al2) legAirlineId = al2.id;
           }
           await tx.tramos_vuelo.create({
@@ -536,6 +609,12 @@ class SalesService {
       }
 
       return venta;
+    }, {
+      // Con los catálogos ya resueltos, una venta grande cabe de sobra en este
+      // margen. Se deja explícito porque el defecto de Prisma son 5 s y una
+      // venta con muchos productos los rozaba.
+      timeout: 30000,
+      maxWait: 10000,
     });
 
     // Return the new sale in the same format used by listSales

@@ -468,7 +468,7 @@ export default function ProductDetailsModal({ product, onClose, airportMap }: Pr
             </h4>
             {renderGrid([
               { label: "País Destino", value: item.destinationCountry },
-              { label: "Fecha de Llegada", value: item.arrivalDate ? formatDate(item.arrivalDate) : "-" },
+              { label: "Fecha de Llegada", value: item.arrivalDate ? formatDateTime(item.arrivalDate) : "-" },
               { label: "Duración Viaje", value: item.tripDuration },
               { label: "Plan de Datos", value: item.dataPlan },
               { label: "Tipo SIM", value: item.simType },

@@ -9,13 +9,18 @@ const idRequerido = (que) => z.union([z.string().min(1), z.number()], {
 const dinero = z.coerce.number().min(0, 'No puede ser negativo').optional();
 const fecha = z.string().datetime({ offset: true }).or(z.string().min(1)).nullable().optional();
 
+// passthrough, igual que el schema de la venta: sin él Zod recorta las claves
+// que no estén declaradas. El wizard envía `method` con el id del método de
+// pago, y al no figurar aquí se perdía en silencio: el pago se guardaba sin
+// método asociado.
 const paymentSchema = z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor que cero'),
+  method: id,
   methodId: id,
   methodName: z.string().nullable().optional(),
   reference: z.string().nullable().optional(),
   date: fecha,
-});
+}).passthrough();
 
 // El detalle de cada producto lo valida su transform del catálogo; aquí solo
 // se comprueba que sea una lista. Las claves aceptadas salen del catálogo,

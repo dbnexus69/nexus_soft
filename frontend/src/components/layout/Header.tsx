@@ -9,7 +9,7 @@ const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
   '/sales': 'Ventas',
   '/clients': 'Clientes',
-  '/itineraries': 'Itinerarios',
+  '/flights': 'Vuelos',
   '/users': 'Usuarios',
   '/config': 'Catálogos',
   '/commissions': 'Comisionistas',
@@ -58,7 +58,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
       else if (path === '/config') await fetchConfig();
       else if (path === '/commissions') await fetchCommissionAgents();
       else if (path === '/clients') await fetchClients();
-      else if (path === '/itineraries') await fetchFlights();
+      else if (path === '/flights') await fetchFlights();
       else if (path === '/sales') {
         await Promise.all([refetchSales(), fetchClients(), fetchResponsables(), fetchCommissionAgents()]);
       }

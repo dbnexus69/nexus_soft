@@ -69,7 +69,7 @@ mirando la pantalla.
 | Acumulado de un comisionista | `GET /commissions/agents` → `accumulated` (SUM en SQL) |
 | Compras de un cliente | `GET /clients/:id?includeSales=true` → `salesCount`, `salesTotal` |
 | Ventas de un asesor | `GET /users/:id` → `salesCount`, `salesTotal` |
-| Check-ins urgentes / completados | `GET /flights?checkinStatus=...&perPage=1` → `meta.total` |
+| Check-ins por estado | `GET /flights/checkins` → `meta.counts` (pendiente, crítico, realizado, cancelado) |
 
 ### Cargar solo lo que se pide
 
@@ -110,6 +110,64 @@ categoría se hace en el catálogo y en el enum, no repartido por quince sitios.
 **Productos dentro de un plan:** un plan puede contener vuelos, hotelería y seguros.
 Se guardan con `parentDetalleId` apuntando al plan, y **solo aparecen dentro del GET de
 su plan**, nunca en el de su propia categoría.
+
+### Vuelos y check-in
+
+La pantalla vive en `/flights` (antes `/itineraries`, que redirige) y la sirve
+`/api/flights`. El módulo de permisos sigue llamándose `itineraries`, porque es una clave
+almacenada en `permisos_rol`.
+
+```
+GET  /flights                              calendario: un tramo por fila, filtrable por fechas
+GET  /flights/checkins                     check-ins, con meta.counts por estado
+PUT  /flights/:id/checkin                  registra el check-in de UN tramo y envía los adjuntos
+POST /flights/:id/checkin/cancellation     cancela el check-in; el motivo es obligatorio
+```
+
+**El estado del check-in vive en `tramos_vuelo.checkin_status`, por tramo.** No en el
+producto: el check-in aéreo se hace vuelo a vuelo, y con el estado a nivel de
+`prod_tiqueteria` hacer el check-in de la ida marcaría el regreso como realizado y lo
+haría desaparecer de la lista de pendientes sin que nadie lo hubiera hecho.
+
+`prod_tiqueteria.checkin_status` se conserva porque la lee el detalle de venta
+(`catalog/products.js`), y se mantiene como **agregado**: pasa a `realizado` solo cuando
+lo están todos los tramos del producto. Ese recálculo va en la misma transacción que la
+escritura del tramo.
+
+**`critico` no se almacena.** Depende de la hora actual, así que guardarlo exigiría un
+cron y quedaría desincronizado. Se deriva: pendiente y salida dentro de las próximas 48
+horas. Por eso `?status=critico` no es una igualdad de enum sino un predicado compuesto,
+y por eso `meta.counts.critico` sale de un `count` aparte y no del `groupBy` —agrupar por
+la columna daría siempre 0—. Es un **subconjunto** de `pendiente`, no un estado disjunto:
+si excluyera a los críticos de la lista de pendientes, los vuelos más urgentes
+desaparecerían justo de la pantalla que sirve para no olvidarlos.
+
+`checkin_status` es nullable, así que el filtro de pendientes casa también los NULL. Con
+la igualdad a secas, una fila con NULL se mostraría como pendiente pero no la encontraría
+ningún filtro ni la contaría ningún contador.
+
+El correo del check-in se envía **después** del commit, nunca dentro de la transacción, y
+un fallo de envío no revierte el check-in: se devuelve `emailSent: false` con el motivo.
+
+**La cancelación es un recurso aparte,** no un valor más del `PUT`. Cancelar exige un
+motivo (`reasonCanceled`, 5-255 caracteres, `trim` antes de medir), y como endpoint propio
+esa obligación la impone el schema en vez de una validación condicional según el estado
+pedido, que es la clase de regla que se escapa. Guarda `canceled_at` y `reason_canceled`,
+y limpia `checkin_at` porque el check-in deja de estar hecho.
+
+`cancelado` es **terminal y disjunto**: no cuenta como pendiente, así que nunca es crítico
+—sale gratis, porque el predicado de pendiente solo casa `pendiente` y NULL—. El
+invariante de los contadores es `pendiente + realizado + cancelado == total`, con
+`critico <= pendiente`. Revertir una cancelación equivocada se hace con el `PUT`, que
+limpia los dos campos: dejar el motivo puesto contradiría al estado.
+
+En el rollup, **un tramo cancelado no bloquea**: si el resto está hecho el producto queda
+`realizado`, porque un tramo que ya no se vuela no puede dejarlo pendiente para siempre.
+Si todos están cancelados, el producto es `cancelado`.
+
+En el calendario el **rojo es cancelado**. Antes lo usaba "vencido", que pasó a ámbar: con
+los dos en rojo el color no distinguiría "el check-in se pasó de fecha" de "el vuelo se
+canceló".
 
 ### Otras reglas
 

@@ -48,7 +48,11 @@ function AppRoutes() {
         <Route path="sales" element={<Sales />} />
         <Route path="clients" element={<Clients />} />
         <Route path="responsables" element={<AdminRoute><Responsables /></AdminRoute>} />
-        <Route path="itineraries" element={<Itineraries />} />
+        <Route path="flights" element={<Itineraries />} />
+        {/* La pantalla vivía en /itineraries. Sin este redirect, un marcador
+            viejo caería en el catch-all de abajo y aterrizaría en el Dashboard
+            sin explicación. */}
+        <Route path="itineraries" element={<Navigate to="/flights" replace />} />
         <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
         <Route path="config" element={<AdminRoute><Config /></AdminRoute>} />
         <Route path="commissions" element={<CommissionAgents />} />

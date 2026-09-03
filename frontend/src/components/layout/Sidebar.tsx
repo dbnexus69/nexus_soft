@@ -69,7 +69,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       else if (path === '/config') await fetchConfig();
       else if (path === '/commissions') await fetchCommissionAgents();
       else if (path === '/clients') await fetchClients();
-      else if (path === '/itineraries') await fetchFlights();
+      else if (path === '/flights') await fetchFlights();
       else if (path === '/sales') {
         await Promise.all([refetchSales(), fetchClients(), fetchResponsables(), fetchCommissionAgents()]);
       }
@@ -99,7 +99,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     { to: "/", icon: Compass, label: "Dashboard", permission: 'dashboard' as const },
     { to: "/sales", icon: Wallet, label: "Ventas", permission: 'sales' as const },
     { to: "/clients", icon: Contact, label: "Clientes", permission: 'clients' as const },
-    { to: "/itineraries", icon: Globe, label: "Vuelos", permission: 'itineraries' as const },
+    { to: "/flights", icon: Globe, label: "Vuelos", permission: 'itineraries' as const },
     { to: "/commissions", icon: BadgePercent, label: "Comisionistas", permission: 'commissions' as const },
   ];
 

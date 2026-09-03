@@ -611,12 +611,42 @@ export interface Flight {
   date: string;
   time: string;
   type: "ida" | "regreso";
-  checkin: "pendiente" | "realizado" | "critico";
+  checkin: "pendiente" | "realizado" | "critico" | "cancelado";
   flightNumber?: string;
   seat?: string | null;
   reservationNumber?: string;
   source?: "ticket" | "plan";
   additionalPassengers?: number;
+  // El backend ya devolvía estos campos y la pantalla los pintaba con
+  // `(flight as any)`. Declararlos quita los casts y deja que el compilador
+  // avise si el contrato cambia.
+  saleId?: string | null;
+  clientId?: string | null;
+  clientName?: string | null;
+  clientAvatar?: string | null;
+  clientEmail?: string | null;
+  clientDocType?: string | null;
+  clientDocNumber?: string | null;
+  checkinStatus?: "pendiente" | "realizado" | "critico" | "cancelado";
+  checkinAt?: string | null;
+  checkinDocs?: { url: string; filename: string }[] | null;
+  canceledAt?: string | null;
+  reasonCanceled?: string | null;
+}
+
+/** Estados por los que se puede filtrar el listado de check-ins. */
+export type CheckinStatusFilter = "pendiente" | "realizado" | "critico" | "cancelado";
+
+/**
+ * Contadores por estado que devuelve `GET /flights/checkins` en `meta.counts`.
+ * `critico` es un subconjunto de `pendiente`, así que no suma en el total.
+ */
+export interface CheckinCounts {
+  pendiente: number;
+  realizado: number;
+  cancelado: number;
+  critico: number;
+  total: number;
 }
 
 export interface CommissionAgent {

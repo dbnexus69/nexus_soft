@@ -16,7 +16,7 @@ export {
   sendVoucher, updateReviewStatus,
 } from './sales';
 export {
-  listFlights, updateCheckin,
+  listFlights, listCheckins, updateCheckin, cancelCheckin,
 } from './flights';
 export {
   listCommissionAgents, createCommissionAgent, updateCommissionAgent, deleteCommissionAgent,

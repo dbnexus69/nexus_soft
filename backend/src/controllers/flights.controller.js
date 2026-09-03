@@ -18,19 +18,35 @@ exports.list = async (req, res, next) => {
   }
 };
 
-exports.listAirlines = async (req, res, next) => {
+exports.listCheckins = async (req, res, next) => {
   try {
-    const data = await flightsService.listAirlines();
-    success(res, data);
+    const result = await flightsService.listCheckins({
+      pagination: req.pagination,
+      status: req.query.status,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      search: req.search,
+      // Sin reenviar el ámbito, un asesor con view:'own' vería los check-ins
+      // de todas las ventas, no solo de las suyas.
+      permissionScope: req.permissionScope,
+      user: req.user
+    });
+    success(res, result.data, result.meta);
   } catch (err) {
     next(err);
   }
 };
 
-exports.listAirports = async (req, res, next) => {
+exports.cancelCheckin = async (req, res, next) => {
   try {
-    const data = await flightsService.listAirports();
-    success(res, data);
+    // req.validatedBody lo deja el middleware `validate`: ya viene con el
+    // motivo recortado y comprobado (5-255 caracteres).
+    const result = await flightsService.cancelCheckin(
+      req.params.id,
+      req.validatedBody,
+      { permissionScope: req.permissionScope, user: req.user }
+    );
+    success(res, result);
   } catch (err) {
     next(err);
   }
@@ -48,9 +64,13 @@ exports.getById = async (req, res, next) => {
 
 exports.updateCheckin = async (req, res, next) => {
   try {
-    // const id = parseInt(req.params.id);
-    // const result = await flightsService.updateCheckin(id, req.body, req.files);
-    success(res, { message: 'Flight updateCheckin placeholder' });
+    const result = await flightsService.updateCheckin(
+      req.params.id,
+      req.body,
+      req.files,
+      { permissionScope: req.permissionScope, user: req.user }
+    );
+    success(res, result);
   } catch (err) {
     next(err);
   }

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plane, X, Calendar as CalendarIcon, 
   UserCheck, PlaneTakeoff, PlaneLanding, Search, Filter, AlertCircle,
-  Clock, CheckCircle2, UploadCloud, ExternalLink, Package
+  Clock, CheckCircle2, XCircle, UploadCloud, ExternalLink, Package
 } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -11,14 +11,67 @@ import { useData } from '../context/DataContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { Modal } from '../components/ui/Modal';
 import { FormField } from '../components/ui/Form';
-import { formatDate } from '../utils/formatters';
+import { formatDate, formatDateTime } from '../utils/formatters';
 import { Pagination } from '../components/ui/Pagination';
 import * as api from '../api';
-import { Flight } from '../types';
+import { Flight, CheckinCounts, CheckinStatusFilter } from '../types';
 import LoadingScreen from '../components/ui/LoadingScreen';
+
+/** Mínimo y máximo del motivo de cancelación; los mismos que valida el servidor. */
+const MOTIVO_MIN = 5;
+const MOTIVO_MAX = 255;
 
 /** Vuelos pendientes de check-in por página. */
 const CHECKIN_PER_PAGE = 10;
+
+/**
+ * Los tres estados que acepta `GET /flights/checkins`. Fuera del componente
+ * para que el array no se recree en cada render.
+ */
+const FILTROS_CHECKIN: { id: CheckinStatusFilter; label: string }[] = [
+  { id: 'pendiente', label: 'Pendientes' },
+  { id: 'critico', label: 'Críticos' },
+  { id: 'realizado', label: 'Realizados' },
+  { id: 'cancelado', label: 'Cancelados' },
+];
+
+/** Contadores en cero, mientras la primera respuesta no ha llegado. */
+const COUNTS_VACIOS: CheckinCounts = { pendiente: 0, realizado: 0, cancelado: 0, critico: 0, total: 0 };
+
+const TITULOS_CHECKIN: Record<CheckinStatusFilter, string> = {
+  pendiente: 'Pasajeros Pendientes',
+  critico: 'Check-ins Críticos',
+  realizado: 'Check-ins Realizados',
+  cancelado: 'Check-ins Cancelados',
+};
+
+/** Cómo se nombra cada estado dentro del mensaje de lista vacía. */
+const VACIO_CHECKIN: Record<CheckinStatusFilter, string> = {
+  pendiente: 'pendiente para los próximos vuelos',
+  critico: 'crítico en las próximas 48 horas',
+  realizado: 'realizado',
+  cancelado: 'cancelado',
+};
+
+/**
+ * Color del punto de estado en el calendario.
+ *
+ * El ROJO queda reservado para cancelado, que es lo que pidió el usuario. Antes
+ * lo usaba "vencido", y con los dos en rojo el color no distinguiría "el
+ * check-in se pasó de fecha" de "el vuelo se canceló". Vencido pasa a ámbar,
+ * que además le encaja mejor: es un aviso, no una cancelación.
+ */
+const ESTADO_PUNTO = (cancelado: boolean, realizado: boolean, vencido: boolean) =>
+  cancelado ? 'bg-red-500 ring-2 ring-red-200 dark:ring-red-900/50'
+    : realizado ? 'bg-green-500'
+    : vencido ? 'bg-amber-500'
+    : 'bg-yellow-400';
+
+const ESTADO_TITULO = (cancelado: boolean, realizado: boolean, vencido: boolean) =>
+  cancelado ? 'Check-in cancelado'
+    : realizado ? 'Check-in realizado'
+    : vencido ? 'Check-in vencido'
+    : 'Check-in pendiente';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
@@ -43,10 +96,18 @@ export default function Itineraries() {
   const [selectedFlightForCheckin, setSelectedFlightForCheckin] = useState<Flight | null>(null);
   const [checkinFiles, setCheckinFiles] = useState<File[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [flightToCancel, setFlightToCancel] = useState<Flight | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const getFlightStatus = (flight: Flight) => {
+    // Cancelado manda sobre todo lo demás: un vuelo cancelado no está vencido
+    // ni urgente, ya no hay nada que hacer con él.
+    if (flight.checkin === 'cancelado') {
+      return { isCancelado: true, isRealizado: false, isVencido: false, isUrgente: false };
+    }
     if (flight.checkin === 'realizado') {
-      return { isRealizado: true, isVencido: false, isUrgente: false };
+      return { isCancelado: false, isRealizado: true, isVencido: false, isUrgente: false };
     }
     const [yr, mo, dy] = flight.date.split('-').map(Number);
     const [hr, mn] = (flight.time || '00:00').split(':').map(Number);
@@ -54,7 +115,7 @@ export default function Itineraries() {
     const now = new Date();
     const isVencido = flightDateTime < now;
     const isUrgente = !isVencido && (flightDateTime.getTime() <= now.getTime() + (48 * 60 * 60 * 1000));
-    return { isRealizado: false, isVencido, isUrgente };
+    return { isCancelado: false, isRealizado: false, isVencido, isUrgente };
   };
 
   // ── Datos del calendario: solo los vuelos del mes visible ────────────────
@@ -76,22 +137,27 @@ export default function Itineraries() {
     return () => { vivo = false; };
   }, [currentMonth, currentYear]);
 
-  // ── Check-in: paginado de 10 y buscado en el servidor ────────────────────
+  // ── Check-in: una sola petición, paginada y buscada en el servidor ───────
+  //
+  // Antes eran tres llamadas a GET /flights con filtros distintos: la lista y
+  // dos con perPage:1 de las que solo se leía meta.total. Ahora los contadores
+  // vienen en meta.counts de esta misma respuesta, calculados en SQL.
   const [pending, setPending] = useState<Flight[]>([]);
   const [pendingMeta, setPendingMeta] = useState({ total: 0, totalPages: 0 });
   const [pendingPage, setPendingPage] = useState(1);
   const [pendingLoading, setPendingLoading] = useState(false);
-  const [urgentCount, setUrgentCount] = useState(0);
+  const [counts, setCounts] = useState<CheckinCounts>(COUNTS_VACIOS);
+  const [checkinStatus, setCheckinStatus] = useState<CheckinStatusFilter>('pendiente');
 
-  // Volver a la primera página al cambiar la búsqueda.
-  useEffect(() => { setPendingPage(1); }, [checkinSearch]);
+  // Volver a la primera página al cambiar la búsqueda o el filtro de estado.
+  useEffect(() => { setPendingPage(1); }, [checkinSearch, checkinStatus]);
 
   useEffect(() => {
     let vivo = true;
     setPendingLoading(true);
     const t = setTimeout(() => {
-      api.listFlights({
-        checkinStatus: 'pendiente',
+      api.listCheckins({
+        status: checkinStatus,
         search: checkinSearch || undefined,
         page: pendingPage,
         perPage: CHECKIN_PER_PAGE,
@@ -100,41 +166,21 @@ export default function Itineraries() {
           if (!vivo) return;
           setPending(res?.data || []);
           setPendingMeta({ total: res?.meta?.total || 0, totalPages: res?.meta?.totalPages || 0 });
+          setCounts(res?.meta?.counts || COUNTS_VACIOS);
         })
-        .catch(() => { if (vivo) setPending([]); })
+        .catch(() => { if (vivo) { setPending([]); setCounts(COUNTS_VACIOS); } })
         .finally(() => { if (vivo) setPendingLoading(false); });
     }, checkinSearch ? 300 : 0);
     return () => { vivo = false; clearTimeout(t); };
-  }, [pendingPage, checkinSearch, refreshToken]);
-
-  // Los contadores se piden como agregados: una sola fila y se lee meta.total,
-  // sin traerse la lista entera solo para hacerle length.
-  const [doneCount, setDoneCount] = useState(0);
-
-  useEffect(() => {
-    const ahora = new Date();
-    const en48h = new Date(ahora.getTime() + 48 * 60 * 60 * 1000);
-    let vivo = true;
-    Promise.all([
-      api.listFlights({ checkinStatus: 'pendiente', dateFrom: ahora.toISOString(), dateTo: en48h.toISOString(), perPage: 1 }),
-      api.listFlights({ checkinStatus: 'realizado', perPage: 1 }),
-    ])
-      .then(([urgentes, hechos]: any[]) => {
-        if (!vivo) return;
-        setUrgentCount(urgentes?.meta?.total || 0);
-        setDoneCount(hechos?.meta?.total || 0);
-      })
-      .catch(() => { if (vivo) { setUrgentCount(0); setDoneCount(0); } });
-    return () => { vivo = false; };
-  }, [refreshToken]);
+  }, [pendingPage, checkinSearch, checkinStatus, refreshToken]);
 
   // El vuelo ya trae los datos de su titular: no hace falta cruzarlo con el
   // catálogo de clientes.
   const modalClient = selectedFlightForCheckin
     ? {
-        docType: (selectedFlightForCheckin as any).clientDocType,
-        docNumber: (selectedFlightForCheckin as any).clientDocNumber,
-        email: (selectedFlightForCheckin as any).clientEmail,
+        docType: selectedFlightForCheckin.clientDocType,
+        docNumber: selectedFlightForCheckin.clientDocNumber,
+        email: selectedFlightForCheckin.clientEmail,
       }
     : null;
 
@@ -169,6 +215,34 @@ export default function Itineraries() {
       setSelectedFlightForCheckin(flight);
       setIsCheckinModalOpen(true);
       setCheckinFiles([]);
+    }
+  };
+
+  const handleOpenCancel = (flight: Flight) => {
+    setFlightToCancel(flight);
+    setCancelReason('');
+  };
+
+  // El mínimo se comprueba también aquí para dar aviso inmediato; el servidor lo
+  // valida igual y es quien manda (422 con el detalle por campo).
+  const cancelReasonValido = cancelReason.trim().length >= MOTIVO_MIN;
+
+  const confirmCancel = async () => {
+    if (!flightToCancel || !cancelReasonValido) return;
+    setIsCanceling(true);
+    try {
+      await api.cancelCheckin(flightToCancel.id, cancelReason.trim());
+      setFlightToCancel(null);
+      setCancelReason('');
+      setRefreshToken(t => t + 1);
+      setSuccessMessage(`Check-in cancelado para ${flightToCancel.passenger}`);
+      setShowSuccess(true);
+    } catch (err: any) {
+      const detalle = err?.response?.data?.error;
+      setErrorMessage(detalle?.details?.[0]?.message || detalle?.message || 'Error al cancelar el check-in');
+      setShowError(true);
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -309,11 +383,13 @@ export default function Itineraries() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all relative ${activeTab === 'checkin' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
           >
             <UserCheck size={16} /> Check-in
-            {pendingMeta.total > 0 && (
+            {/* Siempre los pendientes: pendingMeta.total depende del filtro
+                activo, así que en "Realizados" mostraría el número equivocado. */}
+            {counts.pendiente > 0 ? (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
-                {pendingMeta.total}
+                {counts.pendiente}
               </span>
-            )}
+            ) : null}
           </button>
         </div>
       </div>
@@ -411,10 +487,10 @@ export default function Itineraries() {
                         <div className="space-y-1">
                           {displayFlights.map(flight => {
                             const client = {
-                              avatar: (flight as any).clientAvatar,
-                              name: (flight as any).clientName,
-                              docType: (flight as any).clientDocType,
-                              docNumber: (flight as any).clientDocNumber,
+                              avatar: flight.clientAvatar,
+                              name: flight.clientName,
+                              docType: flight.clientDocType,
+                              docNumber: flight.clientDocNumber,
                             };
                             const docInfo = client ? `\n${client.docType}: ${client.docNumber}` : '';
                             const isPlan = flight.source === 'plan';
@@ -434,10 +510,10 @@ export default function Itineraries() {
                               <span className="truncate flex-1">{flight.passenger}</span>
                               <span className="opacity-60 shrink-0">{flight.time}</span>
                               {!isPlan && (() => {
-                                 const { isRealizado, isVencido } = getFlightStatus(flight);
+                                 const { isCancelado, isRealizado, isVencido } = getFlightStatus(flight);
                                  return (
-                                   <span title={isRealizado ? 'Check-in realizado' : isVencido ? 'Check-in vencido' : 'Check-in pendiente'}
-                                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRealizado ? 'bg-green-500' : isVencido ? 'bg-red-500' : 'bg-yellow-400'}`}
+                                   <span title={ESTADO_TITULO(isCancelado, isRealizado, isVencido)}
+                                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_PUNTO(isCancelado, isRealizado, isVencido)}`}
                                    />
                                  );
                                })()}
@@ -502,14 +578,14 @@ export default function Itineraries() {
                                 <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Paquete</span>
                               </>
                             ) : (() => {
-                              const { isRealizado, isVencido } = getFlightStatus(flight);
+                              const { isCancelado, isRealizado, isVencido } = getFlightStatus(flight);
                               return (
                                 <>
-                                  <span title={isRealizado ? 'Check-in realizado' : isVencido ? 'Check-in vencido' : 'Check-in pendiente'}
-                                    className={`w-2 h-2 rounded-full ${isRealizado ? 'bg-green-500' : isVencido ? 'bg-red-500' : 'bg-yellow-400'}`}
+                                  <span title={ESTADO_TITULO(isCancelado, isRealizado, isVencido)}
+                                    className={`w-2 h-2 rounded-full ${ESTADO_PUNTO(isCancelado, isRealizado, isVencido)}`}
                                   />
-                                  <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">
-                                    {isRealizado ? 'Listo' : isVencido ? 'Vencido' : 'Pendiente'}
+                                  <span className={`text-[9px] font-semibold uppercase tracking-wider ${isCancelado ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
+                                    {isCancelado ? 'Cancelado' : isRealizado ? 'Listo' : isVencido ? 'Vencido' : 'Pendiente'}
                                   </span>
                                 </>
                               );
@@ -535,8 +611,26 @@ export default function Itineraries() {
             <div className="md:col-span-2 space-y-4">
               <Card className="border-none shadow-lg">
                 <CardHeader actions={
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    {/* Filtro de estado: sin esto no habría forma de ver los
+                        check-ins ya realizados desde la pantalla. */}
+                    <div className="flex items-center gap-1 bg-gray-50 dark:bg-slate-800/80 p-1 rounded-lg">
+                      {FILTROS_CHECKIN.map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => setCheckinStatus(f.id)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${
+                            checkinStatus === f.id
+                              ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                              : 'text-gray-500 dark:text-slate-400 hover:text-primary dark:hover:text-white'
+                          }`}
+                        >
+                          {f.label} ({counts[f.id]})
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="text"
                         placeholder="Buscar pasajero o ruta..."
@@ -544,14 +638,15 @@ export default function Itineraries() {
                         value={checkinSearch}
                         onChange={e => setCheckinSearch(e.target.value)}
                       />
-                    {checkinSearch && (
-                      <button onClick={() => setCheckinSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
-                        <X size={14} />
-                      </button>
-                    )}
+                      {checkinSearch ? (
+                        <button onClick={() => setCheckinSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                          <X size={14} />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 }>
-                  Pasajeros Pendientes
+                  {TITULOS_CHECKIN[checkinStatus]}
                 </CardHeader>
                 <CardBody className="p-0">
                   {filteredPending.length > 0 ? (
@@ -606,22 +701,55 @@ export default function Itineraries() {
                                   <span className="flex items-center gap-1"><Filter size={12} /> {flight.route}</span>
                                   <span className="flex items-center gap-1"><Clock size={12} /> {formatDate(flight.date)} - {flight.time}</span>
                                   <span className="font-medium text-primary/60 dark:text-slate-500">{flight.airline}</span>
-                                  {flight.reservationNumber && (
+                                  {flight.reservationNumber ? (
                                     <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[10px] border border-blue-150 dark:border-blue-900/50 font-semibold">
                                       Reserva: {flight.reservationNumber}
                                     </span>
-                                  )}
+                                  ) : null}
                                 </div>
+                                {flight.checkin === 'cancelado' && flight.reasonCanceled ? (
+                                  <p className="text-xs text-red-600 dark:text-red-400 mt-1.5 flex items-start gap-1">
+                                    <XCircle size={12} className="shrink-0 mt-0.5" />
+                                    <span className="italic">{flight.reasonCanceled}</span>
+                                  </p>
+                                ) : null}
                               </div>
                             </div>
-                            {canEditItinerary('itineraries') && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleMarkCheckin(flight.id, flight.passenger)}
-                                className="shadow-md shadow-primary/10 w-full sm:w-auto justify-center"
-                              >
-                                <UserCheck size={16} /> Realizar Check-in
-                              </Button>
+                            {/* Cancelado es terminal: se muestra cuándo y por
+                                qué, sin ofrecer acciones. En realizado se
+                                muestra la fecha y se deja cancelar, porque una
+                                aerolínea puede cancelar el vuelo después. */}
+                            {flight.checkin === 'cancelado' ? (
+                              <span className="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
+                                <XCircle size={14} />
+                                {flight.canceledAt ? formatDateTime(flight.canceledAt) : 'Cancelado'}
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2 w-full sm:w-auto">
+                                {flight.checkin === 'realizado' ? (
+                                  <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                                    <CheckCircle2 size={14} />
+                                    {flight.checkinAt ? formatDateTime(flight.checkinAt) : 'Realizado'}
+                                  </span>
+                                ) : canEditItinerary('itineraries') ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMarkCheckin(flight.id, flight.passenger)}
+                                    className="shadow-md shadow-primary/10 flex-1 sm:flex-initial justify-center"
+                                  >
+                                    <UserCheck size={16} /> Realizar Check-in
+                                  </Button>
+                                ) : null}
+                                {canEditItinerary('itineraries') ? (
+                                  <button
+                                    onClick={() => handleOpenCancel(flight)}
+                                    title="Cancelar el check-in de este vuelo"
+                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors whitespace-nowrap"
+                                  >
+                                    <XCircle size={14} /> Cancelar
+                                  </button>
+                                ) : null}
+                              </div>
                             )}
                           </div>
                         );
@@ -633,12 +761,18 @@ export default function Itineraries() {
                         <CheckCircle2 size={32} />
                       </div>
                       <p className="font-bold text-gray-600 dark:text-slate-400">
-                        {pendingLoading ? 'Cargando...' : (checkinSearch ? 'Sin coincidencias' : '¡Todo al día!')}
+                        {pendingLoading
+                          ? 'Cargando...'
+                          : checkinSearch
+                            ? 'Sin coincidencias'
+                            : checkinStatus === 'realizado'
+                              ? 'Aún no hay check-ins realizados'
+                              : '¡Todo al día!'}
                       </p>
                       <p className="text-sm">
                         {checkinSearch
-                          ? 'Ningún check-in pendiente coincide con la búsqueda.'
-                          : 'No hay check-ins pendientes para los próximos vuelos.'}
+                          ? `Ningún check-in ${VACIO_CHECKIN[checkinStatus]} coincide con la búsqueda.`
+                          : `No hay check-ins ${VACIO_CHECKIN[checkinStatus]}.`}
                       </p>
                     </div>
                   )}
@@ -666,7 +800,7 @@ export default function Itineraries() {
                   </div>
                   <h3 className="text-sm font-medium text-white/80 dark:text-slate-300 uppercase tracking-wider">Check-ins Críticos</h3>
                   <p className="text-3xl font-bold mt-1">
-                    {urgentCount}
+                    {counts.critico}
                   </p>
                   <p className="text-xs text-white/60 dark:text-slate-400 mt-4 leading-relaxed">
                     Recuerda que el check-in debe realizarse al menos 24 horas antes de la salida para evitar inconvenientes.
@@ -674,29 +808,33 @@ export default function Itineraries() {
                 </CardBody>
               </Card>
 
+              {/* Las tres cifras salen del mismo meta.counts, así que son
+                  coherentes entre sí. Antes "Salidas" y "Regresos" eran del mes
+                  visible del calendario y "Completados" un total global: tres
+                  números de ámbitos distintos, uno al lado del otro. */}
               <Card className="border-none shadow-lg">
-                <CardHeader>Resumen de Vuelos</CardHeader>
+                <CardHeader>Resumen de Check-in</CardHeader>
                 <CardBody className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-lg"><PlaneTakeoff size={18} /></div>
-                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Salidas</span>
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-lg"><Clock size={18} /></div>
+                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Pendientes</span>
                     </div>
-                    <span className="font-bold text-primary dark:text-white">{flightsIda.length}</span>
+                    <span className="font-bold text-primary dark:text-white">{counts.pendiente}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded-lg"><PlaneLanding size={18} /></div>
-                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Regresos</span>
+                      <div className="p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 rounded-lg"><AlertCircle size={18} /></div>
+                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Críticos</span>
                     </div>
-                    <span className="font-bold text-primary dark:text-white">{flightsRegreso.length}</span>
+                    <span className="font-bold text-primary dark:text-white">{counts.critico}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300 rounded-lg"><CheckCircle2 size={18} /></div>
-                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Completados</span>
+                      <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Realizados</span>
                     </div>
-                    <span className="font-bold text-primary dark:text-white">{doneCount}</span>
+                    <span className="font-bold text-primary dark:text-white">{counts.realizado}</span>
                   </div>
                 </CardBody>
               </Card>
@@ -844,6 +982,62 @@ export default function Itineraries() {
           <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-700">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <p>Al confirmar, el documento se enviará automáticamente al correo registrado del cliente.</p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de cancelación del check-in */}
+      <Modal
+        isOpen={!!flightToCancel}
+        onClose={() => setFlightToCancel(null)}
+        title="Cancelar Check-in"
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" onClick={() => setFlightToCancel(null)} disabled={isCanceling}>
+              Volver
+            </Button>
+            <Button
+              onClick={confirmCancel}
+              disabled={!cancelReasonValido || isCanceling}
+              className="bg-red-600 hover:bg-red-700 border-red-600"
+            >
+              <XCircle size={16} /> {isCanceling ? 'Cancelando...' : 'Cancelar Check-in'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 rounded-lg">
+            <p className="font-bold text-primary dark:text-white text-sm">{flightToCancel?.passenger}</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+              {flightToCancel?.route} · {flightToCancel ? formatDate(flightToCancel.date) : ''} {flightToCancel?.time}
+              {flightToCancel?.flightNumber ? ` · Vuelo ${flightToCancel.flightNumber}` : ''}
+            </p>
+          </div>
+
+          <FormField label={`Motivo de la cancelación (mínimo ${MOTIVO_MIN} caracteres)`} required>
+            <textarea
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              maxLength={MOTIVO_MAX}
+              rows={3}
+              autoFocus
+              placeholder="Ej: La aerolínea canceló el vuelo por mantenimiento"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-border dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:text-white resize-none"
+            />
+            <div className="flex justify-between items-center mt-1">
+              <span className={`text-[11px] ${cancelReasonValido ? 'text-gray-400 dark:text-slate-500' : 'text-red-500'}`}>
+                {cancelReasonValido ? 'Queda registrado junto a la cancelación.' : `Faltan ${MOTIVO_MIN - cancelReason.trim().length} caracteres.`}
+              </span>
+              <span className="text-[11px] text-gray-400 dark:text-slate-500">
+                {cancelReason.length}/{MOTIVO_MAX}
+              </span>
+            </div>
+          </FormField>
+
+          <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-lg text-[10px] text-amber-700 dark:text-amber-400">
+            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            <p>El vuelo pasará a estado cancelado y se mostrará en rojo en el calendario. No se enviará ningún correo al cliente.</p>
           </div>
         </div>
       </Modal>

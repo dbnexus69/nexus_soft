@@ -615,6 +615,15 @@ model tramos_vuelo {
   asiento                                                     String?
   orden                                                       Int                 @default(1)
   checkin_status                                              CheckinStatus?      @default(pendiente)
+  // Cuándo se hizo el check-in de ESTE tramo, y los documentos que se
+  // adjuntaron. Sin guardar las rutas, un fallo de correo dejaría el archivo
+  // huérfano en uploads/ con un nombre aleatorio, sin forma de reenviarlo.
+  checkin_at                                                  DateTime?
+  checkin_docs                                                Json?
+  // Cancelación del check-in. El motivo es obligatorio al cancelar (mín. 5
+  // caracteres), y la columna lo topa en 255.
+  canceled_at                                                 DateTime?
+  reason_canceled                                             String?             @db.VarChar(255)
   nro_tiquete                                                 String?
   aerolinea_id                                                Int?
   plan_equipaje_id                                            Int?
@@ -727,6 +736,7 @@ enum CheckinStatus {
   pendiente
   realizado
   critico
+  cancelado
 }
 
 enum Cobertura {

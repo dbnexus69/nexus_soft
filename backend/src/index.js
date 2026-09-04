@@ -34,9 +34,14 @@ app.use(cors({
     const cleanOrigin = origin.replace(/\/$/, '');
     const cleanAllowedOrigins = allowedOrigins.map(url => url.replace(/\/$/, ''));
     
-    const isAllowed = cleanAllowedOrigins.includes(cleanOrigin) || 
-                      cleanAllowedOrigins.includes('*') ||
-                      cleanOrigin.endsWith('.vercel.app'); // Permite URLs de Vercel de producción y vistas previas
+    // Se retiró el comodín `.endsWith('.vercel.app')`.
+    //
+    // Con `credentials: true`, ese comodín dejaba que CUALQUIER sitio
+    // alojado en vercel.app —no solo los nuestros— hiciera peticiones
+    // autenticadas desde el navegador de un usuario con la sesión abierta.
+    // Cuando haya un dominio de despliegue, va en FRONTEND_URL, explícito.
+    const isAllowed = cleanAllowedOrigins.includes(cleanOrigin) ||
+                      cleanAllowedOrigins.includes('*');
     
     if (isAllowed) {
       callback(null, true);

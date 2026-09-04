@@ -45,8 +45,8 @@ DIRECT_URL=postgresql://<usuario>:<clave>@aws-1-us-east-1.pooler.supabase.com:54
 ```
 
 No es opcional. `prisma db push` y `prisma generate --sql` usan `directUrl`, y con el
-host viejo los dos fallan con `P1001 Can't reach database server`. **Eso incluye el build
-de Render**, porque `npm run build` ejecuta `prisma generate --sql`.
+host viejo los dos fallan con `P1001 Can't reach database server`. Como `pnpm build`
+ejecuta `prisma generate --sql`, sin este valor no se puede ni generar el cliente.
 
 ## Convenciones de la API
 

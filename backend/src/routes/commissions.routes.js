@@ -5,6 +5,8 @@ const auth = require('../middleware/auth');
 const paginate = require('../middleware/paginate');
 const { validate } = require('../middleware/validate');
 const { createAgentSchema, updateAgentSchema, createSettlementSchema } = require('../schemas/commissions.schema');
+const { validateQuery } = require('../middleware/validate');
+const { dateRangeSchema } = require('../schemas/common.schema');
 
 router.use(auth);
 
@@ -15,7 +17,7 @@ router.put('/agents/:id', validate(updateAgentSchema), commissionsController.upd
 router.delete('/agents/:id', commissionsController.deleteAgent);
 
 // Liquidaciones
-router.get('/settlements', paginate, commissionsController.listSettlements);
+router.get('/settlements', validateQuery(dateRangeSchema), paginate, commissionsController.listSettlements);
 router.post('/settlements', validate(createSettlementSchema), commissionsController.createSettlement);
 
 module.exports = router;

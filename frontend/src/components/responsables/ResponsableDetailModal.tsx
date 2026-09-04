@@ -26,7 +26,9 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
     if (isOpen && responsable) {
       fetchSales();
     }
-  }, [isOpen, responsable, page]);
+    // Dependencia primitiva: con el objeto en la lista basta con que el padre
+    // pase una identidad nueva en un render para repetir la petición.
+  }, [isOpen, responsable?.id, page]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -135,7 +137,10 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
                       currentPage={page}
                       totalPages={totalPages}
                       onPageChange={setPage}
-                    />
+                      // Mismo caso que el detalle de cliente: con pocas ventas hay una
+                // sola página y el paginador se ocultaba entero, total incluido.
+                alwaysShowRange
+              />
                   </div>
                 )}
               </>

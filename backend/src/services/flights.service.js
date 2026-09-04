@@ -219,6 +219,10 @@ function buscarTramos(where, skip, take) {
     where,
     skip,
     take,
+    // Un solo JOIN lateral en vez de una consulta por nivel de relación. Con el
+    // include anidado, una página de 10 filas costaba 11 viajes al pooler
+    // (~75-160ms cada uno) más su BEGIN/COMMIT: unos 2s por petición.
+    relationLoadStrategy: 'join',
     include: {
       prod_tiqueteria: {
         include: {
@@ -302,8 +306,13 @@ class FlightsService {
     const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, user });
     const where = combinar(whereBase, predicadoEstado(status, ahora));
 
-    const [total, tramos, grupos, criticos] = await Promise.all([
-      prisma.tramos_vuelo.count({ where }),
+    // Tres consultas, no cuatro: el `count` para `meta.total` sobraba, porque
+    // cuenta exactamente lo mismo que el contador del estado pedido. Derivarlo
+    // ahorra un viaje al pooler (con su BEGIN/COMMIT) y, más importante,
+    // garantiza que el total y los contadores no puedan discrepar nunca: salen
+    // del mismo sitio. La regla del repo es que el count y las filas se
+    // construyan con el mismo filtro; aquí ya es imposible incumplirla.
+    const [tramos, grupos, criticos] = await Promise.all([
       buscarTramos(where, skip, perPage),
       // Los contadores se calculan sobre whereBase, SIN la condición de estado:
       // al filtrar por uno, los demás siguen mostrando su total.
@@ -328,6 +337,10 @@ class FlightsService {
       counts[clave] += n;
       counts.total += n;
     }
+
+    // El total del listado es el contador del estado pedido; sin filtro, el de
+    // todos. `critico` incluido: su contador se cuenta con su mismo predicado.
+    const total = status ? counts[status] : counts.total;
 
     const tipos = resolverTipos(tramos);
     const data = tramos.map(t => mapearTramo(t, tipos[t.id]));

@@ -48,7 +48,9 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
       .catch(() => { if (vivo) setUserSales([]); })
       .finally(() => { if (vivo) setLoading(false); });
     return () => { vivo = false; };
-  }, [isOpen, user, page]);
+    // Dependencia primitiva: con el objeto en la lista basta con que el padre
+    // pase una identidad nueva en un render para repetir la petición.
+  }, [isOpen, user?.id, page]);
 
   if (!user) return null;
 
@@ -137,7 +139,10 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
             perPage={PER_PAGE}
             loading={loading}
             onPageChange={setPage}
-          />
+            // Mismo caso que el detalle de cliente: con pocas ventas hay una
+                // sola página y el paginador se ocultaba entero, total incluido.
+                alwaysShowRange
+              />
         </div>
       </div>
     </Modal>

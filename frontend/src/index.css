@@ -21,6 +21,15 @@
     
     --color-accent: #8D99AE;
     --color-accent-dark: #748299;
+
+    /* Acento con fuerza, para el detalle de venta.
+       #8D99AE es demasiado apagado para marcar énfasis: la vista se lee plana
+       porque nada destaca. Este teal marino no choca con los tres colores
+       semánticos que ya existen (verde éxito, ámbar aviso, rojo peligro) ni con
+       el navy de la marca, y es el color del producto: Caribe. */
+    --color-highlight: #0F7B8A;
+    --color-highlight-soft: #E2F2F4;
+    --color-highlight-ink: #0A5A66;
   }
 
   .dark {
@@ -41,7 +50,12 @@
     
     --color-accent: #7E8A9F;
     --color-accent-dark: #687487;
-  }
+  
+    /* Más luminoso sobre el fondo oscuro, para mantener el contraste. */
+    --color-highlight: #3FB8C7;
+    --color-highlight-soft: #10323A;
+    --color-highlight-ink: #8FDDE6;
+}
   
   body {
     @apply bg-[var(--color-bg-base)] text-[var(--color-text-main)] transition-colors duration-200;

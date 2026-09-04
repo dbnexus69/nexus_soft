@@ -16,6 +16,13 @@ export default {
         },
         accent: "var(--color-accent)",
         "accent-dark": "var(--color-accent-dark)",
+        // Acento con fuerza para el detalle de venta. Ver el comentario en
+        // index.css: el `accent` de la marca es demasiado apagado para énfasis.
+        highlight: {
+          DEFAULT: "var(--color-highlight)",
+          soft: "var(--color-highlight-soft)",
+          ink: "var(--color-highlight-ink)",
+        },
         "gray-light": "var(--color-bg-base)",
         "gray-border": "var(--color-border-main)",
         success: "#16a34a",

@@ -68,6 +68,8 @@ interface DataContextType {
   fetchUsers: () => Promise<void>;
   fetchConfig: () => Promise<void>;
   fetchFlights: () => Promise<void>;
+  /** Se incrementa cuando alguien pide refrescar los vuelos. */
+  flightsRefreshToken: number;
   fetchCommissionAgents: () => Promise<void>;
   fetchSettlements: () => Promise<void>;
   refreshData: () => void;
@@ -80,7 +82,7 @@ interface DataContextType {
   addResponsable: (responsable: any) => Promise<any>;
   updateResponsable: (id: number, responsable: any) => Promise<void>;
   deleteResponsable: (id: number) => Promise<void>;
-  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<void>;
+  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<any>;
   refreshSettlements: () => Promise<void>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
@@ -92,7 +94,7 @@ interface DataContextType {
 }
 
 const emptyData: AppData = {
-  users: [], clients: [], responsables: [], flights: [],
+  users: [], clients: [], responsables: [],
   commissionAgents: [], commissionSettlements: [],
   config: {
     cards: [], paymentMethods: [], documentTypes: [],
@@ -245,15 +247,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [flightsRefreshToken, setFlightsRefreshToken] = useState(0);
+
+  /**
+   * Señal de refresco para la pantalla de vuelos.
+   *
+   * Antes recorría TODAS las páginas de vuelos con fetchAllPages y guardaba el
+   * resultado en `data.flights`, que ningún componente leía para renderizar: su
+   * único uso era un parche optimista sobre una lista invisible. Se pagaba en el
+   * arranque y en cada pulsación de refrescar, y crecía con la tabla.
+   *
+   * Y el botón de refrescar en /flights no refrescaba nada, porque la pantalla
+   * relee con su propio contador. Ahora esta función incrementa ese contador, que
+   * es lo que el botón siempre quiso hacer. Mismo arreglo que se hizo con la rama
+   * `sales` del contexto.
+   */
   const fetchFlights = useCallback(async () => {
-    try {
-      const res = await fetchAllPages<Flight>(api.listFlights, { sortOrder: 'desc' });
-      if (res && res.data) {
-        setData(prev => ({ ...prev, flights: res.data }));
-      }
-    } catch (err) {
-      console.warn('[DataContext] Error fetching flights:', err);
-    }
+    setFlightsRefreshToken(t => t + 1);
   }, []);
 
   const fetchCommissionAgents = useCallback(async () => {
@@ -420,11 +430,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   const updateFlight = async (id: string, flightUpdate: Partial<Flight> | FormData) => {
-    const result = await api.updateCheckin(id, flightUpdate as any);
-    setData(prev => ({
-      ...prev,
-      flights: prev.flights.map(f => f.id === id ? { ...f, checkin: result.checkinStatus } : f)
-    }));
+    // Devuelve el resultado para que la pantalla decida qué hacer. Ya no parchea
+    // `data.flights`: esa lista no existe (ver fetchFlights).
+    return api.updateCheckin(id, flightUpdate as any);
   };
 
 
@@ -578,6 +586,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchUsers,
       fetchConfig,
       fetchFlights,
+      flightsRefreshToken,
       fetchResponsables,
       fetchCommissionAgents,
       fetchSettlements,

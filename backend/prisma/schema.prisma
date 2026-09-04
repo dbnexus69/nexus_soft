@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // relationJoins permite `relationLoadStrategy: 'join'`: resuelve un include
+  // anidado con un solo JOIN lateral en vez de una consulta por nivel de
+  // relación. En el listado de vuelos eran 11 viajes al pooler por página.
+  previewFeatures = ["relationJoins", "typedSql"]
 }
 
 datasource db {

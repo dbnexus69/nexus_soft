@@ -36,6 +36,18 @@ la aplicación agota el `pool_timeout` y devuelve errores 500. Medido con las mi
 
 El archivo `.env` no se versiona: cada persona debe aplicar este valor en el suyo.
 
+**`DIRECT_URL` debe apuntar al pooler en modo sesión, no al host directo.** Supabase
+dejó de exponer `db.<proyecto>.supabase.co:5432` por IPv4, así que ese host **no
+responde**: es el mismo pooler, puerto 5432 y sin los parámetros de pgbouncer.
+
+```
+DIRECT_URL=postgresql://<usuario>:<clave>@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+```
+
+No es opcional. `prisma db push` y `prisma generate --sql` usan `directUrl`, y con el
+host viejo los dos fallan con `P1001 Can't reach database server`. **Eso incluye el build
+de Render**, porque `npm run build` ejecuta `prisma generate --sql`.
+
 ## Convenciones de la API
 
 ### Paginación
@@ -54,8 +66,66 @@ por petición para que un `?perPage=99999` no tumbe el servidor.
 
 **El `count` y las filas deben construirse con el mismo filtro.** Es el error que más
 veces ha aparecido en este repo: el SQL filtraba y el `count` de Prisma no, así que una
-búsqueda sin resultados seguía informando de que había N registros. Cada servicio con
-`$queryRawUnsafe` construye sus condiciones una sola vez y las comparte entre ambos.
+búsqueda sin resultados seguía informando de que había N registros.
+
+La forma de no volver a cometerlo es **no escribir el filtro dos veces**. Con el API de
+objetos hay un solo `where` y lo comparten `count` y `findMany`, así que es imposible que
+discrepen. Con `$queryRawUnsafe` hay que mantener a mano el texto del SQL y el `where` de
+Prisma en paralelo, que es de donde salió el bug.
+
+### SQL tipado para lo que el API no expresa
+
+Las consultas que necesitan `SUM`, `CASE`, `COUNT FILTER` o CTEs viven en
+`backend/prisma/sql/*.sql` y se llaman con `$queryRawTyped()`. Prisma **las valida contra
+la base al generar el cliente**, así que una columna mal escrita o un cast imposible
+rompen el build en vez de la petición — es la red de seguridad que `check:prisma` no
+puede dar, porque no puede mirar dentro de una cadena de SQL.
+
+Requisitos y avisos:
+
+- `previewFeatures = ["typedSql"]` en el generador. Es una *preview*.
+- `build` y `db:generate` llevan `--sql`. **Sin él, `@prisma/client/sql` no existe** en un
+  clon nuevo y el servicio falla al importar.
+- El build **necesita conexión a la base** (ver `DIRECT_URL` arriba).
+- **Los filtros opcionales van dentro del SQL**, no concatenados: TypedSQL necesita una
+  consulta estática. El patrón es `AND ($1::timestamptz IS NULL OR creado_at >= $1)`.
+- En este backend, que es JavaScript sin `tsc`, **la comprobación de tipos en compilación
+  no aporta nada**: nadie lee los `.d.ts` generados. Lo que se gana es la validación del
+  SQL en el build y que la parametrización sea obligatoria por API.
+
+### No partir una consulta agregada en varias
+
+Es tentador mover cada agregado a `count()`/`aggregate()` de Prisma. Va al revés: lo que
+cuesta es el viaje a la base, no el cálculo. Medido, cuatro agregados sobre `ventas`:
+
+```
+1 consulta SQL con los cuatro:            408 ms
+4 consultas de objetos en paralelo:       889 ms
+```
+
+`dashboardAggregates.sql` calcula **doce** en una sola consulta. Por la misma razón se
+descartó doblar el `count` de los listados dentro de la consulta de filas con
+`COUNT(*) OVER()`: las dos ya iban en `Promise.all`, así que el ahorro era cero, y una
+página vacía no devuelve total y obliga a contar aparte — 520 ms → 892 ms en una búsqueda
+sin coincidencias.
+
+**Con una base a decenas o cientos de milisegundos de distancia, lo que importa no es el
+número de consultas sino cuántas van en serie.** Reducir consultas paralelas no hace nada.
+
+### Objetos o SQL crudo
+
+**Por defecto, el API de objetos.** Con `relationLoadStrategy: 'join'` resuelve el árbol
+en una sola consulta, así que el argumento clásico de "SQL crudo para no hacer N viajes"
+ya no aplica. Medido convirtiendo `listClients` y `listUsers`, 13 casos con salida
+idéntica: **~483-530 ms → ~375 ms**, mismo número de consultas. Además queda cubierto por
+`pnpm check:prisma`, que no puede mirar dentro de una cadena de SQL.
+
+**SQL crudo solo para lo que el API no expresa:** `SUM`, `COUNT(*) FILTER`, CTEs, `CASE`.
+Es el caso de `sales.getCreditPortfolio`, `commissions.listAgents`,
+`responsables.listResponsables` y `stats.*` — 13 de las 15 consultas crudas del repo.
+
+Cuando toque SQL crudo: **parámetros posicionales, nunca interpolación**. `listUsers`
+metía los valores en el texto y los escapaba con `replace(/'/g, "''")`; eso ya no está.
 
 ### Nunca calcular totales en el navegador
 
@@ -85,6 +155,18 @@ GET /sales/:id/products             todas (lo usa el voucher, que necesita la ve
 Lo mismo en configuración: `GET /config/packages` devuelve un listado ligero y
 `GET /config/packages/:id` el detalle completo. `select` e **include son excluyentes**
 en Prisma, y un `include` de cinco relaciones son seis viajes a la base por fila.
+
+**Cuando el `include` anidado hace falta, usar `relationLoadStrategy: 'join'`**
+(preview `relationJoins`, activada en el generador). Resuelve todo el árbol con un JOIN
+lateral en vez de una consulta por nivel. Medido en `GET /flights/checkins`, que anida
+cuatro niveles: **27 consultas y ~1900 ms por petición → 12 consultas y ~350 ms**. Cada
+viaje al pooler cuesta 75-160 ms, así que el coste no era el SQL sino el número de idas
+y vueltas.
+
+Lo que queda son en su mayoría `BEGIN`/`COMMIT`/`DEALLOCATE ALL`: Prisma envuelve cada
+operación en su transacción implícita. **No agruparlas con `$transaction([...])`**: las
+consultas independientes van hoy en `Promise.all` y se solapan; dentro de una
+transacción se ejecutarían en serie y el tiempo de pared empeoraría.
 
 ### Selectores con muchas opciones
 

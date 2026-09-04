@@ -28,7 +28,6 @@ import { buildAirportMap } from "../utils/airportInfo";
 import { Sale } from "../types";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import NewSaleWizard from "../components/sales/NewSaleWizard";
-import ProductDetailsModal from "../components/sales/ProductDetailsModal";
 import SaleDetailModal from "../components/sales/SaleDetailModal";
 import SaleEditModal from "../components/sales/SaleEditModal";
 import SalesTable from "../components/sales/SalesTable";
@@ -76,10 +75,6 @@ export default function Sales() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [activeTab, setActiveTab] = useState<'list' | 'credit'>('list');
-  const [detailedProduct, setDetailedProduct] = useState<{
-    type: string;
-    data: any[];
-  } | null>(null);
   const [voidConfirm, setVoidConfirm] = useState<Sale | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
@@ -632,21 +627,13 @@ export default function Sales() {
       />
 
       {/* ===== DETAIL MODAL (Ver Detalle) ===== */}
+      {/* El detalle de cada servicio se despliega dentro de este modal: ya no
+          hay un segundo modal por categoría. */}
       <SaleDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         selectedSale={salesDetails[selectedSale?.id || 0] || selectedSale}
-        onViewProductDetails={setDetailedProduct}
       />
-
-      {/* Detalle Específico de Producto */}
-      {detailedProduct && (
-        <ProductDetailsModal
-          product={detailedProduct}
-          onClose={() => setDetailedProduct(null)}
-          airportMap={airportMap}
-        />
-      )}
 
       {/* ===== CONFIRMAR ANULACIÓN ===== */}
       <Modal

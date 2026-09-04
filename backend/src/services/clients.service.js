@@ -9,88 +9,75 @@ class ClientsService {
   async listClients({ pagination, search, status, permissionScope, user, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
 
-    // Un solo constructor de filtros para el count y para el SQL. Antes el
-    // count ignoraba el search: una búsqueda sin resultados seguía diciendo
-    // que había N clientes, y la paginación salía mal.
-    const filtros = [];
-    const params = [];
-    const push = (sql, ...valores) => {
-      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
-    };
-
+    // UN solo `where`, compartido por el count y por las filas.
+    //
+    // Antes esto era SQL crudo y cada filtro se escribía DOS veces: una para el
+    // texto del SQL y otra para el `where` de Prisma que usaba el count. Es el
+    // origen del error que más veces ha aparecido en este repo —una búsqueda sin
+    // resultados que seguía informando de N registros—, y con un solo objeto ya
+    // no puede ocurrir. Además queda cubierto por `pnpm check:prisma`, que no ve
+    // dentro del SQL crudo.
     const where = {};
-    if (permissionScope === 'own') {
-      push('c.creado_por_id = ?', user.id);
-      where.creado_por_id = user.id;
-    }
+    if (permissionScope === 'own') where.creado_por_id = user.id;
+
+    const personas = {};
     if (search) {
-      const q = `%${search}%`;
-      push('(p.nombres ILIKE ? OR p.apellidos ILIKE ? OR p.documento ILIKE ? OR p.email ILIKE ?)', q, q, q, q);
       const como = { contains: search, mode: 'insensitive' };
-      where.personas = {
-        ...(where.personas || {}),
-        OR: [{ nombres: como }, { apellidos: como }, { documento: como }, { email: como }]
-      };
+      personas.OR = [
+        { nombres: como }, { apellidos: como }, { documento: como }, { email: como },
+      ];
     }
-    if (status) {
-      push('p.status = ?::"UserStatus"', status);
-      where.personas = { ...(where.personas || {}), status };
-    }
+    if (status) personas.status = status;
+    if (Object.keys(personas).length) where.personas = personas;
 
-    const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
+    const dir = sortOrder === 'desc' ? 'desc' : 'asc';
+    // Ordenar por nombre ahora ordena por el nombre. El SQL anterior ordenaba
+    // por `persona_id`, que es la clave ajena, no el nombre.
+    const orderBy = sortBy === 'name' ? { personas: { nombres: dir } } : { fecha_registro: dir };
 
-    const sortFieldMapSQL = {
-      'creadoAt': 'c.fecha_registro',
-      'name': 'c.persona_id',
-      'date': 'c.fecha_registro'
-    };
-    const sqlOrderBy = sortFieldMapSQL[sortBy] || 'c.fecha_registro';
-    const orderDirection = sortOrder === 'desc' ? 'DESC' : 'ASC';
-
-    const [total, clientesRaw] = await Promise.all([
+    const [total, filas] = await Promise.all([
       prisma.clientes.count({ where }),
-      prisma.$queryRawUnsafe(`
-        SELECT 
-          c.id,
-          c.fecha_registro as "fecha_registro",
-          c.creado_por_id as "creado_por_id",
-          p.nombres as "firstName",
-          p.apellidos as "lastName",
-          p.documento as "docNumber",
-          p.telefono as "phone",
-          p.email,
-          p.birth_date as "birthDate",
-          p.status,
-          p.avatar_url as "avatar",
-          td.abreviatura as "docType"
-        FROM clientes c
-        JOIN personas p ON c.persona_id = p.id
-        LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        WHERE 1=1 ${whereSql}
-        ORDER BY ${sqlOrderBy} ${orderDirection}
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip)
+      prisma.clientes.findMany({
+        where,
+        skip,
+        take: perPage,
+        orderBy,
+        // Un JOIN, no una consulta por relación.
+        relationLoadStrategy: 'join',
+        select: {
+          id: true,
+          fecha_registro: true,
+          creado_por_id: true,
+          personas: {
+            select: {
+              nombres: true, apellidos: true, documento: true, telefono: true,
+              email: true, birth_date: true, status: true, avatar_url: true,
+              tipos_documento: { select: { abreviatura: true } },
+            },
+          },
+        },
+      }),
     ]);
 
-    const data = clientesRaw.map(c => ({
+    const data = filas.map(c => ({
       id: c.id,
-      firstName: c.firstName,
-      lastName: c.lastName,
-      name: `${c.firstName} ${c.lastName}`,
-      docType: c.docType || null,
-      docNumber: c.docNumber,
-      phone: c.phone,
-      email: c.email,
-      birthDate: c.birthDate,
-      status: c.status,
-      avatar: c.avatar,
+      firstName: c.personas.nombres,
+      lastName: c.personas.apellidos,
+      name: `${c.personas.nombres} ${c.personas.apellidos}`,
+      docType: c.personas.tipos_documento?.abreviatura || null,
+      docNumber: c.personas.documento,
+      phone: c.personas.telefono,
+      email: c.personas.email,
+      birthDate: c.personas.birth_date,
+      status: c.personas.status,
+      avatar: c.personas.avatar_url,
       registrationDate: c.fecha_registro,
-      createdBy: c.creado_por_id
+      createdBy: c.creado_por_id,
     }));
 
     return {
       data,
-      meta: buildMeta(total, page, perPage)
+      meta: buildMeta(total, page, perPage),
     };
   }
 
@@ -108,7 +95,11 @@ class ClientsService {
       }),
       includeSales
         ? prisma.ventas.aggregate({
-            where: { cliente_id: id, status: { not: 'anulado' } },
+            // `deleted_at: null` es obligatorio: el borrado de ventas es lógico
+            // y sin esto el importe acumulado del cliente seguía sumando las
+            // que ya se habían borrado. `listSales` sí las excluye, así que el
+            // resumen y el listado discrepaban.
+            where: { cliente_id: id, deleted_at: null, status: { not: 'anulado' } },
             _count: { _all: true },
             _sum: { monto_total: true }
           })

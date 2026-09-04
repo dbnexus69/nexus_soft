@@ -95,7 +95,18 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div className={`p-4 sm:p-6 bg-gray-light flex-1 ${contentClassName ? "" : "overflow-y-auto"} ${footer ? "" : "rounded-b-2xl"} ${contentClassName}`}>
+        {/*
+          El scroll del cuerpo se aplica salvo que quien llama gestione el
+          overflow por su cuenta.
+
+          Antes la condición era `contentClassName ? "" : "overflow-y-auto"`:
+          cualquier clase que se pasara —aunque fuese solo `!p-0` para quitar el
+          padding— dejaba el cuerpo SIN scroll. Con el `max-h-[90vh]` de arriba,
+          el contenido se recortaba y no había forma de llegar a lo de abajo. En
+          el detalle de cliente eso escondía el paginador del historial de
+          compras, y parecía que las compras no se paginaban.
+        */}
+        <div className={`p-4 sm:p-6 bg-gray-light flex-1 ${/\boverflow-/.test(contentClassName) ? "" : "overflow-y-auto"} ${footer ? "" : "rounded-b-2xl"} ${contentClassName}`}>
           {children}
         </div>
 

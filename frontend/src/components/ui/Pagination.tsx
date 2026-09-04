@@ -20,6 +20,15 @@ interface PaginationProps {
   /** Deshabilita los controles mientras llega la página. */
   loading?: boolean;
   className?: string;
+  /**
+   * Muestra el rango ("Mostrando 1-7 de 7") aunque haya una sola página.
+   *
+   * Por defecto el componente se oculta entero con `totalPages <= 1`, que es lo
+   * que quieren la mayoría de las tablas. Pero eso también esconde el total, y
+   * en una lista con filtros deja la sensación de que no hay paginación. Opt-in
+   * para no cambiar el aspecto de las demás pantallas que ya lo usan.
+   */
+  alwaysShowRange?: boolean;
 }
 
 const VENTANA = 5; // cuántos números de página se ven a la vez
@@ -37,6 +46,7 @@ export const Pagination = memo(function Pagination({
   perPage,
   loading = false,
   className = '',
+  alwaysShowRange = false,
 }: PaginationProps) {
   // Los números visibles se derivan durante el render: no son estado.
   const paginas = useMemo(() => {
@@ -46,7 +56,9 @@ export const Pagination = memo(function Pagination({
     return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
   }, [currentPage, totalPages]);
 
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1 && !alwaysShowRange) return null;
+  // Con una sola página no hay a dónde navegar: se muestra solo el rango.
+  const soloRango = totalPages <= 1;
 
   const primera = paginas[0];
   const ultima = paginas[paginas.length - 1];
@@ -72,6 +84,7 @@ export const Pagination = memo(function Pagination({
         </p>
       ) : <span />}
 
+      {soloRango ? null : (
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -124,6 +137,7 @@ export const Pagination = memo(function Pagination({
           <ChevronRight size={18} />
         </button>
       </div>
+      )}
     </div>
   );
 });

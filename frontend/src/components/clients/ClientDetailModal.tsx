@@ -44,13 +44,22 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
       .catch(() => { if (vivo) setClientSales([]); })
       .finally(() => { if (vivo) setLoading(false); });
     return () => { vivo = false; };
-  }, [isOpen, client, page]);
+    // `client.id`, no `client`: con el objeto en las dependencias basta con que
+    // el padre pase una identidad nueva en un render para que el efecto vuelva
+    // a disparar y se repita la petición. Hoy `selectedClient` es estado y no
+    // pasa, pero es una trampa de un solo `.find()` de distancia.
+  }, [isOpen, client?.id, page]);
 
   if (!client) return null;
 
   // Totales de TODAS las compras, no solo de la página visible.
+  //
+  // El conteo del encabezado sale de `meta.total`, que es el del listado que se
+  // está mostrando. `salesCount` del resumen excluye las anuladas, así que
+  // "Historial de Compras (4)" podía convivir con cinco filas debajo. El
+  // importe sí usa el resumen: ahí excluir las anuladas es lo correcto.
   const totalCompras = resumen.salesTotal ?? 0;
-  const numeroCompras = resumen.salesCount ?? meta.total;
+  const numeroCompras = meta.total;
 
   return (
     <Modal
@@ -149,6 +158,10 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
                     perPage={PER_PAGE}
                     loading={loading}
                     onPageChange={setPage}
+                    // Con 5 por página y 5 compras hay una sola página y el
+                    // componente se ocultaba entero, incluido el total: parecía
+                    // que el historial no se paginaba.
+                    alwaysShowRange
                     className="px-5 py-3 border-t border-gray-100 dark:border-slate-700/50 mt-0"
                   />
                 </div>

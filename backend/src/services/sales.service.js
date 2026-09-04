@@ -49,7 +49,11 @@ class SalesService {
         if (leg?.origin) codigosIata.add(leg.origin);
         if (leg?.destination) codigosIata.add(leg.destination);
       }
-      for (const p of [...(it.passengers || []), ...(it.guests || []), ...(it.travelers || [])]) {
+      // `members` son los asegurados, y faltaba: su documento no se precargaba,
+      // así que findOrCreatePersona no lo encontraba en la caché y creaba una
+      // persona con un documento que ya existía -> P2002 -> 409 al registrar.
+      for (const p of [...(it.passengers || []), ...(it.guests || []),
+                       ...(it.travelers || []), ...(it.members || [])]) {
         if (p?.docNumber) documentos.add(String(p.docNumber));
       }
       if (it.docNumber) documentos.add(String(it.docNumber));
@@ -158,9 +162,28 @@ class SalesService {
         const parts = (name || '').trim().split(' ');
         const nombres = parts.slice(0, Math.ceil(parts.length / 2)).join(' ') || name || '';
         const apellidos = parts.slice(Math.ceil(parts.length / 2)).join(' ') || '';
-        const created = await tx.personas.create({
-          data: { nombres, apellidos, documento: doc, tipo_documento_id: null }
-        });
+
+        // `upsert`, no `create`. La caché es el camino rápido, no la garantía:
+        // basta con que alguien añada un array de personas nuevo y se olvide de
+        // sumarlo a la precarga para que volvamos a crear un documento
+        // duplicado y la venta entera falle con un 409. Con upsert un fallo de
+        // caché devuelve la persona existente en lugar de reventar, y sigue
+        // siendo UN solo viaje a la base.
+        //
+        // Sin documento no hay con qué identificar a la persona, así que ahí no
+        // queda más que crear.
+        const created = doc
+          ? await tx.personas.upsert({
+              where: { documento: doc },
+              update: {},
+              create: { nombres, apellidos, documento: doc, tipo_documento_id: null },
+              select: { id: true },
+            })
+          : await tx.personas.create({
+              data: { nombres, apellidos, documento: null, tipo_documento_id: null },
+              select: { id: true },
+            });
+
         if (doc) catalogos.personas.set(doc, created.id);
         return created.id;
       };
@@ -666,12 +689,18 @@ class SalesService {
       filtros.push(resuelto);
     };
 
-    const where = {};
+    // El filtro se escribe UNA vez.
+    //
+    // Antes cada una de las nueve condiciones se duplicaba: el texto del SQL
+    // para las filas y un objeto `where` de Prisma para el count. Mantener ese
+    // par a mano es el origen del error recurrente del repo. Esta consulta no
+    // puede dejar de ser cruda (json_agg de pagos y detalles), así que la
+    // solución es que el count también sea crudo y comparta el mismo `whereSql`
+    // y los mismos parámetros: ya no hay dos versiones que discrepen.
     if (search) {
       // La búsqueda cubre lo mismo que cubría el filtro en cliente: cliente,
       // asesor, comisionista, número de venta y observaciones.
       const q = `%${search}%`;
-      const como = { contains: search, mode: 'insensitive' };
       // Si el término es un número, se interpreta como número de venta exacto.
       // Ambas consultas usan la misma regla para que el total nunca discrepe.
       const comoId = /^\d+$/.test(search.trim()) ? parseInt(search.trim(), 10) : null;
@@ -684,43 +713,29 @@ class SalesService {
         ${comoId !== null ? 'OR v.id = ?' : ''}
       )`, ...(comoId !== null ? [q, q, q, q, comoId] : [q, q, q, q]));
 
-      where.OR = [
-        { observaciones: como },
-        { clientes: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } },
-        { usuarios: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } },
-        { comisionistas: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } },
-        ...(comoId !== null ? [{ id: comoId }] : []),
-      ];
     }
     if (status) {
       push('v.status = ?::"SaleStatus"', status);
-      where.status = status;
     }
     if (clientId) {
       push('v.cliente_id = ?', parseInt(clientId));
-      where.cliente_id = parseInt(clientId);
     }
     if (responsableId) {
       push('v.responsable_id = ?', parseInt(responsableId));
-      where.responsable_id = parseInt(responsableId);
     }
     if (commissionAgentId) {
       push('v.comisionista_id = ?', parseInt(commissionAgentId));
-      where.comisionista_id = parseInt(commissionAgentId);
     }
     if (dateFrom) {
       push('v.creado_at >= ?', new Date(dateFrom));
-      where.creado_at = { ...(where.creado_at || {}), gte: new Date(dateFrom) };
     }
     if (dateTo) {
       push('v.creado_at <= ?', new Date(dateTo));
-      where.creado_at = { ...(where.creado_at || {}), lte: new Date(dateTo) };
     }
     // El alcance 'own' manda sobre el filtro de asesor que venga por query.
     const asesorEfectivo = permissionScope === 'own' ? user.id : (asesorId ? parseInt(asesorId) : null);
     if (asesorEfectivo !== null) {
       push('v.usuario_id = ?', asesorEfectivo);
-      where.usuario_id = asesorEfectivo;
     }
 
     const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
@@ -729,8 +744,19 @@ class SalesService {
     const effectiveSortBy = sortFieldMap[sortBy] || 'creadoAt';
     const sqlOrderBy = effectiveSortBy === 'montoTotal' ? 'v.monto_total' : (effectiveSortBy === 'status' ? 'v.status' : 'v.creado_at');
 
-    const [total, ventasRaw] = await Promise.all([
-      prisma.ventas.count({ where }),
+    // Mismo FROM y mismo WHERE que las filas, con los mismos parámetros.
+    const fromSql = `
+        FROM ventas v
+        JOIN clientes c ON v.cliente_id = c.id
+        JOIN personas cp ON c.persona_id = cp.id
+        JOIN usuarios u ON v.usuario_id = u.id
+        JOIN personas up ON u.persona_id = up.id
+        LEFT JOIN comisionistas com ON v.comisionista_id = com.id
+        LEFT JOIN personas comp ON com.persona_id = comp.id
+        WHERE v.deleted_at IS NULL ${whereSql}`;
+
+    const [totalRows, ventasRaw] = await Promise.all([
+      prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS total ${fromSql}`, ...params),
       prisma.$queryRawUnsafe(`
         SELECT 
           v.id,
@@ -784,14 +810,7 @@ class SalesService {
             FROM detalle_venta dv WHERE dv.venta_id = v.id
           ), '[]'::json) as "detalleVentas"
 
-        FROM ventas v
-        JOIN clientes c ON v.cliente_id = c.id
-        JOIN personas cp ON c.persona_id = cp.id
-        JOIN usuarios u ON v.usuario_id = u.id
-        JOIN personas up ON u.persona_id = up.id
-        LEFT JOIN comisionistas com ON v.comisionista_id = com.id
-        LEFT JOIN personas comp ON com.persona_id = comp.id
-        WHERE 1=1 ${whereSql}
+        ${fromSql}
         ORDER BY ${sqlOrderBy} ${sortOrder === 'desc' ? 'DESC' : 'ASC'}
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `, ...params, perPage, skip)
@@ -844,7 +863,7 @@ class SalesService {
       };
     });
 
-    return { data, meta: buildMeta(total, page, perPage) };
+    return { data, meta: buildMeta(Number(totalRows[0]?.total || 0), page, perPage) };
   }
 
   // Cartera de crédito agrupada por cliente.

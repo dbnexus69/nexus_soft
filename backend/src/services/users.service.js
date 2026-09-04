@@ -10,77 +10,72 @@ class UsersService {
   async listUsers({ pagination, search, role, status }) {
     const { page, perPage, skip } = pagination;
 
-    let searchCondition = '';
+    // UN solo `where`, compartido por el count y por las filas.
+    //
+    // Antes esto era SQL crudo que INTERPOLABA los valores en el texto de la
+    // consulta y los escapaba a mano con `replace(/'/g, "''")`. El README lo
+    // prohíbe expresamente ("Nunca interpolar valores en SQL"): el escapado
+    // artesanal es exactamente lo que se acaba haciendo mal. Con el API de
+    // objetos la parametrización es por construcción, no por disciplina.
+    const where = { personas: { deleted_at: null } };
+
     if (search) {
-      const cleanSearch = search.replace(/'/g, "''");
-      searchCondition = `AND (p.nombres ILIKE '%${cleanSearch}%' OR p.apellidos ILIKE '%${cleanSearch}%' OR u.email ILIKE '%${cleanSearch}%')`;
-    }
-
-    let roleCondition = '';
-    if (role) roleCondition = `AND r.nombre = '${role.replace(/'/g, "''")}'`;
-
-    let statusCondition = '';
-    if (status) statusCondition = `AND u.status = '${status.replace(/'/g, "''")}'`;
-
-    const where = {};
-    if (search) {
+      const como = { contains: search, mode: 'insensitive' };
       where.OR = [
-        { personas: { nombres: { contains: search, mode: 'insensitive' } } },
-        { personas: { apellidos: { contains: search, mode: 'insensitive' } } },
-        { email: { contains: search, mode: 'insensitive' } }
+        { personas: { nombres: como } },
+        { personas: { apellidos: como } },
+        { email: como },
       ];
     }
     if (role) where.roles = { nombre: role };
     if (status) where.status = status;
-    where.personas = { ...where.personas, deleted_at: null };
 
-    const [total, usuariosRaw] = await Promise.all([
+    const [total, filas] = await Promise.all([
       prisma.usuarios.count({ where }),
-      prisma.$queryRawUnsafe(`
-        SELECT 
-          u.id, 
-          u.email, 
-          u.status, 
-          u.ultimo_login as "ultimo_login", 
-          u.creado_at as "creadoAt",
-          p.nombres as "firstName", 
-          p.apellidos as "lastName", 
-          p.telefono as "phone", 
-          p.documento as "docNumber", 
-          p.birth_date as "birthDate", 
-          p.avatar_url as "avatar",
-          td.abreviatura as "docType",
-          r.nombre as "role"
-        FROM usuarios u
-        JOIN personas p ON u.persona_id = p.id
-        LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        JOIN roles r ON u.rol_id = r.id
-        WHERE p.deleted_at IS NULL ${searchCondition} ${roleCondition} ${statusCondition}
-        ORDER BY u.id DESC
-        LIMIT ${perPage} OFFSET ${skip}
-      `)
+      prisma.usuarios.findMany({
+        where,
+        skip,
+        take: perPage,
+        orderBy: { id: 'desc' },
+        relationLoadStrategy: 'join',
+        select: {
+          id: true,
+          email: true,
+          status: true,
+          ultimo_login: true,
+          creado_at: true,
+          personas: {
+            select: {
+              nombres: true, apellidos: true, telefono: true, documento: true,
+              birth_date: true, avatar_url: true,
+              tipos_documento: { select: { abreviatura: true } },
+            },
+          },
+          roles: { select: { nombre: true } },
+        },
+      }),
     ]);
 
-    const data = usuariosRaw.map(u => ({
+    const data = filas.map(u => ({
       id: u.id,
-      name: `${u.firstName} ${u.lastName}`,
-      firstName: u.firstName,
-      lastName: u.lastName,
+      name: `${u.personas.nombres} ${u.personas.apellidos}`,
+      firstName: u.personas.nombres,
+      lastName: u.personas.apellidos,
       email: u.email,
-      role: u.role,
-      phone: u.phone,
-      docType: u.docType || null,
-      docNumber: u.docNumber,
+      role: u.roles?.nombre,
+      phone: u.personas.telefono,
+      docType: u.personas.tipos_documento?.abreviatura || null,
+      docNumber: u.personas.documento,
       status: u.status,
-      avatar: u.avatar,
-      birthDate: u.birthDate,
+      avatar: u.personas.avatar_url,
+      birthDate: u.personas.birth_date,
       lastLogin: u.ultimo_login,
-      creado_at: u.creadoAt
+      creado_at: u.creado_at,
     }));
 
     return {
       data,
-      meta: buildMeta(total, page, perPage)
+      meta: buildMeta(total, page, perPage),
     };
   }
 

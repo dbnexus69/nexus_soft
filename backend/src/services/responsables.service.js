@@ -16,18 +16,19 @@ class ResponsablesService {
       filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
     };
 
-    const where = { deleted_at: null };
+    // El filtro se escribe UNA vez. Antes cada condición se duplicaba: el texto
+    // del SQL para las filas y un objeto `where` de Prisma para el count. Ese
+    // par que hay que mantener a mano es el origen del error recurrente del
+    // repo (el count sin el filtro). Como esta consulta no puede dejar de ser
+    // cruda —`deudaTotal` es un SUM correlacionado—, la solución es que el
+    // count también sea crudo y comparta el mismo `whereSql` y los mismos
+    // parámetros. Así no hay dos versiones que puedan discrepar.
     if (search) {
       const q = `%${search}%`;
       push('(p.nombres ILIKE ? OR p.apellidos ILIKE ? OR p.documento ILIKE ? OR p.email ILIKE ?)', q, q, q, q);
-      const como = { contains: search, mode: 'insensitive' };
-      where.personas = {
-        OR: [{ nombres: como }, { apellidos: como }, { documento: como }, { email: como }]
-      };
     }
     if (status) {
       push('r.status = ?::"UserStatus"', status);
-      where.status = status;
     }
 
     const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
@@ -40,8 +41,22 @@ class ResponsablesService {
     const sqlOrderBy = sortFieldMapSQL[sortBy] || 'r.creado_at';
     const orderDirection = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
-    const [total, responsablesRaw] = await Promise.all([
-      prisma.responsables.count({ where }),
+    // Dos consultas EN PARALELO, no una con COUNT(*) OVER().
+    //
+    // Se probó doblar el total dentro de la consulta de filas con una función de
+    // ventana. Reduce el número de consultas pero NO el tiempo: las dos ya se
+    // solapan en Promise.all, así que el viaje que cuenta es uno igual. Y con la
+    // ventana, una página vacía no devuelve total y hay que contar aparte, esta
+    // vez en serie: medido, 441ms -> 440ms con resultados, pero 520ms -> 892ms
+    // en una búsqueda sin coincidencias. Menos consultas no es menos latencia.
+    const [totalRows, responsablesRaw] = await Promise.all([
+      // Mismo FROM y mismo WHERE que las filas, con los mismos parámetros.
+      prisma.$queryRawUnsafe(`
+        SELECT COUNT(*)::int AS total
+        FROM responsables r
+        JOIN personas p ON r.persona_id = p.id
+        WHERE r.deleted_at IS NULL ${whereSql}
+      `, ...params),
       prisma.$queryRawUnsafe(`
         SELECT 
           r.id,
@@ -89,7 +104,7 @@ class ResponsablesService {
 
     return {
       data,
-      meta: buildMeta(total, page, perPage)
+      meta: buildMeta(Number(totalRows[0]?.total || 0), page, perPage)
     };
   }
 

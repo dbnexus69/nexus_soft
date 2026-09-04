@@ -6,7 +6,8 @@ const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
 const paginate = require('../middleware/paginate');
 const upload = require('../middleware/upload');
-const { validate } = require('../middleware/validate');
+const { validate, validateQuery } = require('../middleware/validate');
+const { dateRangeSchema } = require('../schemas/common.schema');
 const {
   createSaleSchema, updateSaleSchema, registerPaymentSchema,
   voidSaleSchema, reviewStatusSchema
@@ -14,7 +15,7 @@ const {
 
 router.use(auth);
 
-router.get('/', authorize('sales', 'view'), paginate, salesController.list);
+router.get('/', authorize('sales', 'view'), validateQuery(dateRangeSchema), paginate, salesController.list);
 // Va antes de /:id para que 'credit' no se interprete como un id de venta.
 router.get('/credit', authorize('sales', 'view'), paginate, salesController.creditPortfolio);
 router.get('/:id', authorize('sales', 'view'), salesController.getById);

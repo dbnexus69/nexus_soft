@@ -1,51 +1,58 @@
 const prisma = require('../config/db');
+// SQL tipado: la consulta vive en `prisma/sql/dashboardAggregates.sql` y Prisma
+// la valida contra la base al generar (`prisma generate --sql`), así que una
+// columna mal escrita rompe el build en vez de la petición.
+const { dashboardAggregates } = require('@prisma/client/sql');
 
 class StatsService {
   async getDashboardStats({ dateFrom, dateTo, permissionScope, user }) {
     const currentYear = new Date().getFullYear();
-    let dateCondition = '';
-    if (dateFrom && dateTo) {
-      dateCondition = `AND creado_at >= '${new Date(dateFrom).toISOString()}' AND creado_at <= '${new Date(dateTo).toISOString()}'`;
-    } else if (dateFrom) {
-      dateCondition = `AND creado_at >= '${new Date(dateFrom).toISOString()}'`;
-    } else if (dateTo) {
-      dateCondition = `AND creado_at <= '${new Date(dateTo).toISOString()}'`;
-    }
+    const scopeUserId = permissionScope === 'own' ? user.id : null;
 
-    let userCondition = '';
-    let userDetalleCondition = '';
-    let userClientCondition = '';
-    if (permissionScope === 'own') {
-      userCondition = `AND usuario_id = '${user.id}'`;
-      userDetalleCondition = `AND v.usuario_id = '${user.id}'`;
-      userClientCondition = `AND creado_por_id = '${user.id}'`;
-    }
+    /**
+     * Condiciones de fecha y de ámbito con parámetros posicionales.
+     *
+     * Antes los valores se metían en el texto del SQL: las fechas con
+     * `toISOString()` y el id con `'${user.id}'`. No había hueco de inyección
+     * —el id viene del JWT y la fecha pasa por `Date`— pero era seguro por
+     * accidente de la coerción, no por construcción, y una fecha inválida
+     * hacía que `toISOString()` lanzara un RangeError con un 500 ilegible (eso
+     * ahora lo corta `validateQuery(dateRangeSchema)` en la ruta, con un 422).
+     *
+     * Cada consulta necesita su propia numeración de placeholders, así que se
+     * construye una vez por consulta, con el prefijo de alias que le toque.
+     * Antes esto se resolvía con un `dateCondition.replace(/creado_at/g, ...)`
+     * sobre el SQL ya construido.
+     */
+    const condiciones = (prefijo = '') => {
+      const filtros = [];
+      const params = [];
+      const push = (sql, ...valores) => {
+        filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+      };
+      if (dateFrom) push(`${prefijo}creado_at >= ?`, new Date(dateFrom));
+      if (dateTo) push(`${prefijo}creado_at <= ?`, new Date(dateTo));
+      if (scopeUserId !== null) push(`${prefijo}usuario_id = ?`, scopeUserId);
+      return { sql: filtros.length ? 'AND ' + filtros.join(' AND ') : '', params };
+    };
 
-    const aggregatesSql = `
-      SELECT
-        COUNT(*)::int as "totalOperations",
-        COALESCE(SUM(CASE WHEN status = 'pagado' THEN ta_total WHEN status = 'abonado' AND monto_total > 0 THEN (ta_total * (COALESCE(monto_pagado_credito, 0) / monto_total)) ELSE 0 END), 0) as "totalRevenue",
-        COALESCE(SUM(CASE WHEN status IN ('credito', 'abonado') THEN (monto_total - COALESCE(monto_pagado_credito, 0)) ELSE 0 END), 0) as "pendingBalance",
-        COUNT(CASE WHEN status IN ('credito', 'abonado') THEN 1 END)::int as "pendingCount",
-        COALESCE(SUM(CASE WHEN status = 'pagado' THEN costo_proveedor_total WHEN status = 'abonado' AND monto_total > 0 THEN (costo_proveedor_total * (COALESCE(monto_pagado_credito, 0) / monto_total)) ELSE 0 END), 0) as "suppliersTotal",
-        COALESCE(SUM(CASE WHEN status = 'pagado' THEN monto_total ELSE 0 END), 0) as "paids",
-        COALESCE(SUM(CASE WHEN status = 'credito' THEN monto_total ELSE 0 END), 0) as "credits",
-        COALESCE(SUM(CASE WHEN status = 'abonado' THEN monto_total ELSE 0 END), 0) as "partPaids",
-        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear} THEN monto_total ELSE 0 END), 0) as "currentYearSales",
-        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear - 1} THEN monto_total ELSE 0 END), 0) as "prevYearSales",
-        COALESCE(SUM(CASE WHEN status IN ('credito', 'abonado') AND monto_total > 0 THEN (costo_proveedor_total * ((monto_total - COALESCE(monto_pagado_credito, 0)) / monto_total)) ELSE 0 END), 0) as "creditProveedores",
-        COALESCE(SUM(CASE WHEN status IN ('credito', 'abonado') AND monto_total > 0 THEN (ta_total * ((monto_total - COALESCE(monto_pagado_credito, 0)) / monto_total)) ELSE 0 END), 0) as "creditTa"
-      FROM ventas
-      WHERE deleted_at IS NULL ${dateCondition} ${userCondition}
-    `;
+    const cDetalle = condiciones('v.'); // JOIN ventas v
+
 
     const categorySql = `
       SELECT categoria, COUNT(d.id)::int as count, COALESCE(SUM(d.subtotal), 0)::float as revenue
       FROM detalle_venta d
       JOIN ventas v ON d.venta_id = v.id
-      WHERE v.deleted_at IS NULL ${dateCondition.replace(/creado_at/g, 'v.creado_at')} ${userDetalleCondition}
+      WHERE v.deleted_at IS NULL ${cDetalle.sql}
       GROUP BY categoria
     `;
+
+    // Solo el ámbito de usuario, sin fechas.
+    const cTendencia = (() => {
+      const params = [];
+      const sql = scopeUserId !== null ? `AND usuario_id = $${params.push(scopeUserId)}` : '';
+      return { sql, params };
+    })();
 
     const monthlyTrendSql = `
       SELECT 
@@ -53,7 +60,8 @@ class StatsService {
         SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear} THEN monto_total ELSE 0 END)::float as "currentYear",
         SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear - 1} THEN monto_total ELSE 0 END)::float as "previousYear"
       FROM ventas
-      WHERE deleted_at IS NULL ${userCondition}
+      -- La tendencia compara dos años completos: no lleva el filtro de fechas.
+      WHERE deleted_at IS NULL ${cTendencia.sql}
       GROUP BY EXTRACT(MONTH FROM creado_at)
       ORDER BY month ASC
     `;
@@ -69,11 +77,19 @@ class StatsService {
     }
 
     const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount, recentSales] = await Promise.all([
-      prisma.$queryRawUnsafe(aggregatesSql),
+      // Doce agregados en una consulta. Los filtros son opcionales dentro del
+      // SQL con `($n IS NULL OR ...)`, así que la consulta es estática y
+      // TypedSQL puede analizarla.
+      prisma.$queryRawTyped(dashboardAggregates(
+        dateFrom ? new Date(dateFrom) : null,
+        dateTo ? new Date(dateTo) : null,
+        scopeUserId,
+        currentYear,
+      )),
       prisma.clientes.count({ where: { ...clientsWhere, personas: { status: 'active' } } }),
       prisma.clientes.count({ where: clientsWhere }),
-      prisma.$queryRawUnsafe(categorySql),
-      prisma.$queryRawUnsafe(monthlyTrendSql),
+      prisma.$queryRawUnsafe(categorySql, ...cDetalle.params),
+      prisma.$queryRawUnsafe(monthlyTrendSql, ...cTendencia.params),
       prisma.proveedores.count({ where: { status: 'active' } }),
       prisma.ventas.findMany({
         where: {
@@ -82,6 +98,7 @@ class StatsService {
         },
         orderBy: { creado_at: 'desc' },
         take: 5,
+        relationLoadStrategy: 'join',
         include: { clientes: { include: { personas: true } } }
       })
     ]);

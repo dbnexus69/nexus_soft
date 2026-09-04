@@ -25,10 +25,11 @@ const splitFullName = (fullName) => {
 class CommissionsService {
   async listAgents({ pagination, search, status }) {
     const { page, perPage, skip } = pagination;
-    const where = {};
-    if (status) where.status = status;
-
-    // Un solo constructor de filtros para el count y el SQL, con parámetros.
+    // El filtro se escribe UNA vez, con parámetros posicionales. Antes cada
+    // condición se duplicaba: el texto del SQL para las filas y un objeto
+    // `where` de Prisma para el count. Esta consulta no puede dejar de ser
+    // cruda (`acumulado` es un SUM correlacionado), así que el count también es
+    // crudo y comparte el mismo `whereSql` y los mismos parámetros.
     const filtros = [];
     const params = [];
     const push = (sql, ...valores) => {
@@ -38,17 +39,16 @@ class CommissionsService {
     if (search) {
       const q = `%${search}%`;
       push('(p.nombres ILIKE ? OR p.apellidos ILIKE ?)', q, q);
-      where.personas = {
-        OR: [
-          { nombres: { contains: search, mode: 'insensitive' } },
-          { apellidos: { contains: search, mode: 'insensitive' } }
-        ]
-      };
     }
     const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    const [total, agentsRaw] = await Promise.all([
-      prisma.comisionistas.count({ where }),
+    const [totalRows, agentsRaw] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        SELECT COUNT(*)::int AS total
+        FROM comisionistas c
+        JOIN personas p ON c.persona_id = p.id
+        WHERE 1=1 ${whereSql}
+      `, ...params),
       prisma.$queryRawUnsafe(`
         SELECT 
           c.id,
@@ -101,7 +101,7 @@ class CommissionsService {
 
     return {
       data,
-      meta: buildMeta(total, page, perPage)
+      meta: buildMeta(Number(totalRows[0]?.total || 0), page, perPage)
     };
   }
 
@@ -265,23 +265,29 @@ class CommissionsService {
 
   async listSettlements({ pagination, agentId, dateFrom, dateTo }) {
     const { page, perPage, skip } = pagination;
-    const where = {};
-    if (agentId) where.comisionistaId = parseInt(agentId);
-    if (dateFrom || dateTo) {
-      where.fecha = {};
-      if (dateFrom) where.fecha.gte = new Date(dateFrom);
-      if (dateTo) where.fecha.lte = new Date(dateTo);
-    }
+    // Un solo filtro, con parámetros posicionales.
+    //
+    // Antes los valores se metían en el texto del SQL: el id con `parseInt` y
+    // las fechas con `toISOString()`. No había hueco de inyección, pero era
+    // seguro por accidente de la coerción, no por construcción — y una fecha
+    // inválida hacía que `toISOString()` lanzara un RangeError en vez de un 422.
+    // Y el filtro estaba duplicado con el `where` de Prisma del count.
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+    if (agentId) push('lc.comisionista_id = ?', parseInt(agentId));
+    if (dateFrom) push('lc.fecha >= ?', new Date(dateFrom));
+    if (dateTo) push('lc.fecha <= ?', new Date(dateTo));
+    const whereLiq = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    let agentCondition = '';
-    if (agentId) agentCondition = `AND lc.comisionista_id = ${parseInt(agentId)}`;
-
-    let dateCondition = '';
-    if (dateFrom) dateCondition += ` AND lc.fecha >= '${new Date(dateFrom).toISOString()}'`;
-    if (dateTo) dateCondition += ` AND lc.fecha <= '${new Date(dateTo).toISOString()}'`;
-
-    const [total, settlementsRaw] = await Promise.all([
-      prisma.liquidaciones_comision.count({ where }),
+    const [totalLiqRows, settlementsRaw] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        SELECT COUNT(*)::int AS total
+        FROM liquidaciones_comision lc
+        WHERE 1=1 ${whereLiq}
+      `, ...params),
       prisma.$queryRawUnsafe(`
         SELECT 
           lc.id,
@@ -301,10 +307,10 @@ class CommissionsService {
         JOIN comisionistas c ON lc.comisionista_id = c.id
         JOIN personas p ON c.persona_id = p.id
         LEFT JOIN metodos_pago mp ON lc.metodo_pago_id = mp.id
-        WHERE 1=1 ${agentCondition} ${dateCondition}
+        WHERE 1=1 ${whereLiq}
         ORDER BY lc.creado_at DESC
-        LIMIT ${perPage} OFFSET ${skip}
-      `)
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip)
     ]);
 
     const data = settlementsRaw.map(s => {
@@ -326,7 +332,7 @@ class CommissionsService {
 
     return {
       data,
-      meta: buildMeta(total, page, perPage)
+      meta: buildMeta(Number(totalLiqRows[0]?.total || 0), page, perPage)
     };
   }
 

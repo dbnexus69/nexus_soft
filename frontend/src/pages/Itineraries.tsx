@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, memo } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plane, X, Calendar as CalendarIcon, 
   UserCheck, PlaneTakeoff, PlaneLanding, Search, Filter, AlertCircle,
@@ -73,11 +73,130 @@ const ESTADO_TITULO = (cancelado: boolean, realizado: boolean, vencido: boolean)
     : vencido ? 'Check-in vencido'
     : 'Check-in pendiente';
 
+/**
+ * Presentación de cada estado del check-in.
+ *
+ * Esto es el arreglo del fallo: la fila decidía su icono y su insignia SOLO con
+ * aritmética de fechas (`isVencido`/`isUrgente`), sin leer nunca `flight.checkin`.
+ * Resultado: un check-in cancelado o realizado se pintaba igual que uno
+ * pendiente a futuro —avión azul, sin insignia—, así que al cambiar de filtro
+ * las filas parecían las mismas y el filtro daba la impresión de no funcionar.
+ *
+ * El estado guardado manda; vencido y urgente solo matizan a los pendientes.
+ */
+const ESTADO_FILA = {
+  cancelado: {
+    label: 'CANCELADO',
+    insignia: 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/60',
+    icono: 'bg-red-50 dark:bg-red-950/40 border-red-100 dark:border-red-900/40 text-red-500 dark:text-red-400',
+  },
+  realizado: {
+    label: 'REALIZADO',
+    insignia: 'bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/60',
+    icono: 'bg-green-50 dark:bg-green-950/40 border-green-100 dark:border-green-900/40 text-green-600 dark:text-green-400',
+  },
+  urgente: {
+    label: 'URGENTE',
+    insignia: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50',
+    icono: 'bg-red-50 dark:bg-red-950/40 border-red-100 dark:border-red-900/40 text-red-500 dark:text-red-400 animate-pulse',
+  },
+  vencido: {
+    // Ámbar, no rojo: el rojo queda para cancelado en toda la pantalla.
+    label: 'VENCIDO',
+    insignia: 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60',
+    icono: 'bg-amber-50 dark:bg-amber-950/40 border-amber-100 dark:border-amber-900/40 text-amber-600 dark:text-amber-400',
+  },
+  pendiente: {
+    label: 'PENDIENTE',
+    insignia: 'bg-yellow-100 dark:bg-yellow-950/50 text-yellow-800 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900/60',
+    icono: 'bg-blue-50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900/40 text-blue-500 dark:text-blue-400',
+  },
+} as const;
+
+type ClaveEstadoFila = keyof typeof ESTADO_FILA;
+
+/** Resuelve qué presentación toca. El estado guardado tiene prioridad. */
+function claveEstadoFila(checkin: string | undefined, vencido: boolean, urgente: boolean): ClaveEstadoFila {
+  if (checkin === 'cancelado') return 'cancelado';
+  if (checkin === 'realizado') return 'realizado';
+  if (urgente) return 'urgente';
+  if (vencido) return 'vencido';
+  return 'pendiente';
+}
+
+/**
+ * Insignia de estado. Fuera del componente y memoizada: se pintan hasta 10 por
+ * página y no dependen de nada más que de su propia clave.
+ */
+const InsigniaEstado = memo(function InsigniaEstado({ clave }: { clave: ClaveEstadoFila }) {
+  const e = ESTADO_FILA[clave];
+  return (
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide ${e.insignia}`}>
+      {e.label}
+    </span>
+  );
+});
+
+/** Filas de esqueleto en la primera carga, cuando aún no hay contadores. */
+const ESQUELETO_POR_DEFECTO = 3;
+
+/**
+ * Fila fantasma mientras llega la respuesta.
+ *
+ * Reproduce la geometría de una fila real —icono de 48px, dos líneas de texto y
+ * el hueco de la acción— para que al llegar los datos no salte la maquetación.
+ * Fuera del componente y memoizada: no depende de nada, así que se monta una vez
+ * por posición y no se vuelve a renderizar.
+ */
+const FilaEsqueleto = memo(function FilaEsqueleto() {
+  return (
+    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse">
+      <div className="flex items-start gap-4 flex-1">
+        <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-slate-700/60 shrink-0" />
+        <div className="min-w-0 flex-1 space-y-2 pt-1">
+          <div className="flex items-center gap-2">
+            <div className="h-3.5 w-40 max-w-[45%] rounded bg-gray-200 dark:bg-slate-700/60" />
+            <div className="h-3 w-16 rounded bg-gray-100 dark:bg-slate-800" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-3 w-24 rounded bg-gray-100 dark:bg-slate-800" />
+            <div className="h-3 w-28 rounded bg-gray-100 dark:bg-slate-800" />
+            <div className="h-3 w-20 rounded bg-gray-100 dark:bg-slate-800" />
+          </div>
+        </div>
+      </div>
+      <div className="h-8 w-36 rounded-lg bg-gray-200 dark:bg-slate-700/60 shrink-0" />
+    </div>
+  );
+});
+
+/**
+ * Esqueleto para cuando lo que va a llegar es una lista vacía.
+ *
+ * Antes, con la predicción a 0, no se pintaba nada y se mostraba el mensaje de
+ * "no hay registros" de inmediato. Eso afirma un resultado que todavía no ha
+ * llegado: si los contadores están rancios —se busca algo que deja un estado en
+ * 0 y luego se borra la búsqueda— aparecía el mensaje de vacío y después las
+ * filas. Mejor esperar mostrando que se está esperando.
+ *
+ * Copia la geometría del bloque vacío (p-12, círculo de 64px, dos líneas) para
+ * que al resolverse no cambie la altura.
+ */
+const EsqueletoVacio = memo(function EsqueletoVacio() {
+  return (
+    <div className="flex flex-col items-center justify-center p-12 animate-pulse">
+      <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-slate-700/60 mb-4" />
+      <div className="h-4 w-44 rounded bg-gray-200 dark:bg-slate-700/60 mb-2" />
+      <div className="h-3 w-64 max-w-full rounded bg-gray-100 dark:bg-slate-800" />
+    </div>
+  );
+});
+
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 
 export default function Itineraries() {
-  const { data, updateFlight } = useData();
+  const { data, updateFlight, flightsRefreshToken } = useData();
   const { canEdit: canEditItinerary, canView } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
   // Se incrementa tras un check-in para releer las listas del servidor.
@@ -135,7 +254,8 @@ export default function Itineraries() {
       .catch(() => { if (vivo) setMonthFlights([]); })
       .finally(() => { if (vivo) setIsLoading(false); });
     return () => { vivo = false; };
-  }, [currentMonth, currentYear]);
+    // flightsRefreshToken: el botón de refrescar de la cabecera y del menú.
+  }, [currentMonth, currentYear, refreshToken, flightsRefreshToken]);
 
   // ── Check-in: una sola petición, paginada y buscada en el servidor ───────
   //
@@ -147,10 +267,38 @@ export default function Itineraries() {
   const [pendingPage, setPendingPage] = useState(1);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [counts, setCounts] = useState<CheckinCounts>(COUNTS_VACIOS);
+  /**
+   * Si los contadores en memoria sirven para predecir la próxima respuesta.
+   *
+   * Falso en la primera carga (aún son cero, y "cero" no es lo mismo que
+   * "todavía no sé") y tras cambiar la búsqueda: los contadores se calculan
+   * sobre el filtro base, que INCLUYE la búsqueda, así que al cambiarla los que
+   * hay en memoria son de la búsqueda anterior. Con el estado, en cambio, siguen
+   * siendo válidos, porque no dependen de él.
+   */
+  const [prediccionValida, setPrediccionValida] = useState(false);
   const [checkinStatus, setCheckinStatus] = useState<CheckinStatusFilter>('pendiente');
 
-  // Volver a la primera página al cambiar la búsqueda o el filtro de estado.
-  useEffect(() => { setPendingPage(1); }, [checkinSearch, checkinStatus]);
+  // El reseteo de página va en los manejadores, NO en un efecto.
+  //
+  // Con `useEffect(() => setPendingPage(1), [checkinStatus])` el cambio de
+  // filtro disparaba DOS peticiones: la primera con el estado nuevo y la página
+  // vieja, y la segunda ya con página 1. Estando en la página 2 y cambiando de
+  // filtro, la primera pedía una página que en el estado nuevo puede no existir
+  // y la lista aparecía vacía; si además las respuestas se cruzaban, se quedaba
+  // vacía. Un filtro que responde con una lista vacía parece un filtro roto.
+  const cambiarEstado = (estado: CheckinStatusFilter) => {
+    setCheckinStatus(estado);
+    setPendingPage(1);
+  };
+
+  const cambiarBusqueda = (texto: string) => {
+    setCheckinSearch(texto);
+    setPendingPage(1);
+    // Los contadores que hay en memoria son de la búsqueda anterior: dejan de
+    // servir para predecir la forma de la espera.
+    setPrediccionValida(false);
+  };
 
   useEffect(() => {
     let vivo = true;
@@ -167,12 +315,13 @@ export default function Itineraries() {
           setPending(res?.data || []);
           setPendingMeta({ total: res?.meta?.total || 0, totalPages: res?.meta?.totalPages || 0 });
           setCounts(res?.meta?.counts || COUNTS_VACIOS);
+          setPrediccionValida(true);
         })
-        .catch(() => { if (vivo) { setPending([]); setCounts(COUNTS_VACIOS); } })
+        .catch(() => { if (vivo) { setPending([]); setCounts(COUNTS_VACIOS); setPrediccionValida(true); } })
         .finally(() => { if (vivo) setPendingLoading(false); });
     }, checkinSearch ? 300 : 0);
     return () => { vivo = false; clearTimeout(t); };
-  }, [pendingPage, checkinSearch, checkinStatus, refreshToken]);
+  }, [pendingPage, checkinSearch, checkinStatus, refreshToken, flightsRefreshToken]);
 
   // El vuelo ya trae los datos de su titular: no hace falta cruzarlo con el
   // catálogo de clientes.
@@ -195,6 +344,39 @@ export default function Itineraries() {
 
   // La lista del check-in ya viene filtrada y paginada del servidor.
   const filteredPending = pending;
+
+  /**
+   * Cuántas filas fantasma pintar mientras llega la respuesta.
+   *
+   * Los contadores de `meta.counts` NO dependen del filtro de estado —se
+   * calculan sobre el filtro base—, así que al cambiar de filtro el contador del
+   * estado nuevo ya está en memoria y predice exactamente cuántas filas trae la
+   * página 1. El esqueleto sale con la altura final y no hay salto.
+   *
+   * Un 0 no significa "no esperes": significa que la espera se dibuja con la
+   * forma del bloque vacío en vez de con filas (ver EsqueletoVacio).
+   */
+  const filasEsqueleto = prediccionValida
+    ? Math.min(counts[checkinStatus], CHECKIN_PER_PAGE)
+    : ESQUELETO_POR_DEFECTO;
+
+  // Mientras carga se muestra esqueleto SIEMPRE. La predicción no decide si
+  // esperar, solo qué forma tiene la espera: filas si se esperan filas, o el
+  // bloque vacío si se espera que no haya ninguna.
+  const mostrandoEsqueleto = pendingLoading;
+
+  /**
+   * Total y páginas que muestra el paginador.
+   *
+   * `pendingMeta` es del filtro ANTERIOR mientras la petición está en vuelo, así
+   * que durante la carga mostraría "Mostrando 1-6 de 6" junto a un esqueleto de
+   * dos filas. Se usa el contador del estado nuevo, que ya es el valor correcto:
+   * `meta.total` y `counts[status]` cuentan lo mismo con el mismo filtro.
+   */
+  const totalPaginador = pendingLoading && prediccionValida ? counts[checkinStatus] : pendingMeta.total;
+  const paginasPaginador = pendingLoading && prediccionValida
+    ? Math.ceil(counts[checkinStatus] / CHECKIN_PER_PAGE)
+    : pendingMeta.totalPages;
 
   const getDaysInMonth = (month: number, year: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (month: number, year: number) => new Date(year, month, 1).getDay();
@@ -542,10 +724,10 @@ export default function Itineraries() {
                   <div className="space-y-3">
                     {currentMonthFlights.map(flight => {
                       const client = {
-                              avatar: (flight as any).clientAvatar,
-                              name: (flight as any).clientName,
-                              docType: (flight as any).clientDocType,
-                              docNumber: (flight as any).clientDocNumber,
+                              avatar: flight.clientAvatar,
+                              name: flight.clientName,
+                              docType: flight.clientDocType,
+                              docNumber: flight.clientDocNumber,
                             };
                       const parts = flight.date.split('-');
                       const dayStr = parts[2] || '';
@@ -618,7 +800,7 @@ export default function Itineraries() {
                       {FILTROS_CHECKIN.map(f => (
                         <button
                           key={f.id}
-                          onClick={() => setCheckinStatus(f.id)}
+                          onClick={() => cambiarEstado(f.id)}
                           className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${
                             checkinStatus === f.id
                               ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
@@ -636,10 +818,10 @@ export default function Itineraries() {
                         placeholder="Buscar pasajero o ruta..."
                         className="pl-9 pr-10 py-1.5 text-sm bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
                         value={checkinSearch}
-                        onChange={e => setCheckinSearch(e.target.value)}
+                        onChange={e => cambiarBusqueda(e.target.value)}
                       />
                       {checkinSearch ? (
-                        <button onClick={() => setCheckinSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                        <button onClick={() => cambiarBusqueda('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
                           <X size={14} />
                         </button>
                       ) : null}
@@ -649,30 +831,44 @@ export default function Itineraries() {
                   {TITULOS_CHECKIN[checkinStatus]}
                 </CardHeader>
                 <CardBody className="p-0">
-                  {filteredPending.length > 0 ? (
+                  {/* El esqueleto va PRIMERO: sin él la lista seguía mostrando
+                      las filas del filtro anterior hasta que llegaba la
+                      respuesta, y eso es lo que se percibe como retardo. */}
+                  {mostrandoEsqueleto ? (
+                    <div role="status" aria-busy="true" aria-label="Cargando check-ins">
+                      {filasEsqueleto > 0 ? (
+                        <div className="divide-y divide-gray-border">
+                          {Array.from({ length: filasEsqueleto }, (_, i) => <FilaEsqueleto key={i} />)}
+                        </div>
+                      ) : (
+                        <EsqueletoVacio />
+                      )}
+                    </div>
+                  ) : filteredPending.length > 0 ? (
                     <div className="divide-y divide-gray-border">
                       {filteredPending.map(flight => {
                         const { isVencido, isUrgente } = getFlightStatus(flight);
+                        const claveEstado = claveEstadoFila(flight.checkin, isVencido, isUrgente);
                         const client = {
-                              avatar: (flight as any).clientAvatar,
-                              name: (flight as any).clientName,
-                              docType: (flight as any).clientDocType,
-                              docNumber: (flight as any).clientDocNumber,
+                              avatar: flight.clientAvatar,
+                              name: flight.clientName,
+                              docType: flight.clientDocType,
+                              docNumber: flight.clientDocNumber,
                             };
 
                         return (
                           <div key={flight.id} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors ${isVencido ? 'opacity-85' : ''}`}>
                             <div className="flex items-start gap-4">
                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shrink-0 ${
-                                isVencido 
-                                  ? 'bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-400 dark:text-slate-400' 
-                                  : isUrgente 
-                                    ? 'bg-red-50 dark:bg-red-950/40 border-red-100 dark:border-red-900/40 text-red-500 dark:text-red-400 animate-pulse' 
-                                    : flight.source === 'plan' 
-                                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-900/40 text-emerald-500 dark:text-emerald-400' 
-                                      : 'bg-blue-50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900/40 text-blue-500 dark:text-blue-400'
+                                claveEstado === 'pendiente' && flight.source === 'plan'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-900/40 text-emerald-500 dark:text-emerald-400'
+                                  : ESTADO_FILA[claveEstado].icono
                               }`}>
-                                {flight.source === 'plan' ? (
+                                {claveEstado === 'cancelado' ? (
+                                  <XCircle size={24} />
+                                ) : claveEstado === 'realizado' ? (
+                                  <CheckCircle2 size={24} />
+                                ) : flight.source === 'plan' ? (
                                   <Package size={24} />
                                 ) : (
                                   <Plane size={24} className={flight.type === 'regreso' ? 'rotate-180' : ''} />
@@ -686,11 +882,7 @@ export default function Itineraries() {
                                       {client.docType}: {client.docNumber}
                                     </span>
                                   )}
-                                  {isVencido ? (
-                                    <Badge variant="danger" className="text-[10px] py-0 bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/50">VENCIDO</Badge>
-                                  ) : isUrgente ? (
-                                    <Badge variant="danger" className="text-[10px] py-0 bg-red-500/10 dark:bg-red-500/20 text-red-500 dark:text-red-400 border-transparent">URGENTE</Badge>
-                                  ) : null}
+                                  <InsigniaEstado clave={claveEstado} />
                                   {flight.source === 'plan' && flight.additionalPassengers && flight.additionalPassengers > 0 ? (
                                     <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/50">
                                       +{flight.additionalPassengers} acompañantes
@@ -761,12 +953,12 @@ export default function Itineraries() {
                         <CheckCircle2 size={32} />
                       </div>
                       <p className="font-bold text-gray-600 dark:text-slate-400">
-                        {pendingLoading
-                          ? 'Cargando...'
-                          : checkinSearch
-                            ? 'Sin coincidencias'
-                            : checkinStatus === 'realizado'
-                              ? 'Aún no hay check-ins realizados'
+                        {checkinSearch
+                          ? 'Sin coincidencias'
+                          : checkinStatus === 'realizado'
+                            ? 'Aún no hay check-ins realizados'
+                            : checkinStatus === 'cancelado'
+                              ? 'No hay check-ins cancelados'
                               : '¡Todo al día!'}
                       </p>
                       <p className="text-sm">
@@ -778,11 +970,16 @@ export default function Itineraries() {
                   )}
                   <Pagination
                     currentPage={pendingPage}
-                    totalPages={pendingMeta.totalPages}
-                    total={pendingMeta.total}
+                    totalPages={paginasPaginador}
+                    total={totalPaginador}
                     perPage={CHECKIN_PER_PAGE}
                     loading={pendingLoading}
                     onPageChange={setPendingPage}
+                    // Con 10 por página y menos de 10 check-ins hay una sola
+                    // página y el componente se ocultaba entero, incluido el
+                    // total. En una lista con filtros eso parece falta de
+                    // paginación, así que aquí el rango se muestra siempre.
+                    alwaysShowRange
                     className="px-4 py-3 border-t border-gray-border mt-0"
                   />
                 </CardBody>

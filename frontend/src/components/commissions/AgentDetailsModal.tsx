@@ -20,7 +20,9 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
     if (isOpen && agent) {
       fetchAgentSales(1);
     }
-  }, [isOpen, agent]);
+    // Dependencia primitiva: con el objeto en la lista basta con que el padre
+    // pase una identidad nueva en un render para repetir la petición.
+  }, [isOpen, agent?.id]);
 
   const fetchAgentSales = async (page: number) => {
     setIsLoading(true);
@@ -121,7 +123,10 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
               currentPage={salesMeta.page}
               totalPages={salesMeta.totalPages}
               onPageChange={fetchAgentSales}
-            />
+              // Mismo caso que el detalle de cliente: con pocas ventas hay una
+                // sola página y el paginador se ocultaba entero, total incluido.
+                alwaysShowRange
+              />
           </div>
         )}
       </div>

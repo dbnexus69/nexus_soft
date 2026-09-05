@@ -20,42 +20,62 @@ export interface User {
   permisos?: { modulo: string; accion: string }[];
 }
 
+/**
+ * Forma de los permisos por rol, y debe coincidir con `MODULE_ACTIONS` y
+ * `SCOPED_VIEW_MODULES` del backend (`roles.service.js`).
+ *
+ * `responsables` era `all | own | none` y ahora es sí/no: su tabla no tiene
+ * columna de dueño, así que un 'own' se habría comportado como 'all' sin
+ * avisar. `users` y `config` faltaban, y son configurables desde el backend.
+ */
 export interface RolePermissions {
   dashboard: { view: "all" | "own" | "none" };
   sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
   clients: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
-  responsables: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
+  responsables: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   itineraries: { view: "all" | "own" | "none"; edit: boolean };
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  users: { view: boolean };
+  config: { view: boolean };
 }
 
 export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
   sales: { view: "own", create: true, edit: true },
   clients: { view: "own", create: true, edit: true },
-  responsables: { view: "own", create: true, edit: true },
+  // El backend los niega por defecto; aquí concedían view/create/edit.
+  responsables: { view: false, create: false, edit: false, delete: false },
   itineraries: { view: "own", edit: false },
   commissions: { view: false, create: false, edit: false, delete: false },
+  users: { view: true },
+  config: { view: true },
 };
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
   sales: { view: "own", create: true, edit: true },
   clients: { view: "own", create: true, edit: true },
-  responsables: { view: "own", create: true, edit: true },
+  // El backend los niega por defecto; aquí concedían view/create/edit.
+  responsables: { view: false, create: false, edit: false, delete: false },
   itineraries: { view: "own", edit: false },
   commissions: { view: false, create: false, edit: false, delete: false },
+  users: { view: true },
+  config: { view: true },
 };
 
 export const ADMIN_PERMISSIONS: RolePermissions = {
   dashboard: { view: "all" },
   sales: { view: "all", create: true, edit: true },
   clients: { view: "all", create: true, edit: true },
-  responsables: { view: "all", create: true, edit: true },
+  responsables: { view: true, create: true, edit: true, delete: true },
   itineraries: { view: "all", edit: true },
   commissions: { view: true, create: true, edit: true, delete: true },
+  users: { view: true },
+  config: { view: true },
 };
 
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'responsables', 'itineraries'];
+// Los mismos que `SCOPED_VIEW_MODULES` del backend. `responsables` sale de la
+// lista: sin columna de dueño, su `view` es un sí/no.
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
 export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTemplate: RolePermissions = DEFAULT_ASESOR_PERMISSIONS): RolePermissions {
   const normalized = JSON.parse(JSON.stringify(baseTemplate)) as RolePermissions;
@@ -765,8 +785,11 @@ export interface ConfigData {
   }[];
   packages: TravelPackage[];
   rolePermissions: {
+    // `admin` faltaba aunque DataContext lo escribe en tiempo de ejecución
+    // (`{ admin: normalizeRolePermissions(adminPerms, ADMIN_PERMISSIONS) }`).
     asesor: RolePermissions;
     freelancer: RolePermissions;
+    admin: RolePermissions;
   };
 }
 

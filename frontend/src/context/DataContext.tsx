@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
-import { AppData, User, Client, Sale, Flight, Responsable, CommissionAgent, CommissionSettlement, RolePermissions, ADMIN_PERMISSIONS, normalizeRolePermissions } from '../types';
+import { AppData, User, Client, Sale, Flight, Responsable, CommissionAgent, CommissionSettlement, RolePermissions, ADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
 import * as api from '../api';
 import { fetchAllPages } from '../api/fetchAll';
 import { useAuth } from './AuthContext';
@@ -101,8 +101,14 @@ const emptyData: AppData = {
     airlines: [], suppliers: [], airports: [],
     baggage: [], packages: [],
     rolePermissions: {
-      asesor: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, responsables: { view: 'own', create: true, edit: true }, itineraries: { view: 'own', edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
-      freelancer: { dashboard: { view: 'own' }, sales: { view: 'own', create: true, edit: true }, clients: { view: 'own', create: true, edit: false }, responsables: { view: 'own', create: true, edit: true }, itineraries: { view: 'own', edit: false }, commissions: { view: false, create: false, edit: false, delete: false } },
+      // Reserva mientras GET /roles/:rol/permissions no ha respondido, NUNCA
+      // la fuente. Antes había aquí una CUARTA copia escrita a mano, y con
+      // valores propios: `clients.edit: false` donde las constantes ponen
+      // true, y `responsables` concedido a asesor, que el backend niega.
+      // Ahora reutiliza las constantes de types/index.tsx.
+      asesor: DEFAULT_ASESOR_PERMISSIONS,
+      freelancer: DEFAULT_FREELANCER_PERMISSIONS,
+      admin: ADMIN_PERMISSIONS,
     },
   },
   salesHistory: [],
@@ -218,7 +224,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const resolvedRolePermissions = {
         asesor: asesorPerms ? normalizeRolePermissions(asesorPerms) : emptyData.config.rolePermissions.asesor,
         freelancer: freelancerPerms ? normalizeRolePermissions(freelancerPerms) : emptyData.config.rolePermissions.freelancer,
-        ...(adminPerms ? { admin: normalizeRolePermissions(adminPerms, ADMIN_PERMISSIONS) } : {}),
+        // Siempre presente: si la petición no trajo los del admin, se queda la
+        // constante de reserva. Antes era un spread condicional, así que el
+        // campo podía no existir aunque el tipo lo diera por hecho.
+        admin: adminPerms
+          ? normalizeRolePermissions(adminPerms, ADMIN_PERMISSIONS)
+          : emptyData.config.rolePermissions.admin,
       };
       if (configAll && Object.keys(configAll).length > 0) {
         const newConfig = {

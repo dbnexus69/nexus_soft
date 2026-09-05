@@ -297,16 +297,65 @@ GET  /roles/:rol/permissions
 PUT  /roles/:rol/permissions     body: { permissions: { modulo: { accion: valor } } }
 ```
 
+**La base es la fuente.** `authorize.js` arranca de un objeto por defecto en el código y
+superpone encima lo que diga `permisos_rol`. Comprobado cambiando un valor en la tabla:
+con `sales.view = all` el asesor ve 8 de 8 ventas; con `own`, 1 de 8.
+
 Las constantes de `frontend/src/types/index.tsx` son la red de seguridad para cuando esa
-petición aún no ha respondido o falla, **nunca la fuente**.
+petición aún no ha respondido o falla, **nunca la fuente**. `DataContext` las reutiliza:
+tenía una cuarta copia escrita a mano, con valores propios que contradecían al backend.
+
+### Al añadir un módulo o una acción
+
+Hay que tocar **tres** sitios, y omitir cualquiera falla en silencio:
+
+1. `roles.service.js` → `MODULE_ACTIONS`, y `SCOPED_VIEW_MODULES` si su `view` tiene
+   alcance (`all` / `own` / `none`) en vez de sí/no. `getPermissions` deriva los módulos
+   de `MODULE_ACTIONS`, así que ahí no hay que repetir nada.
+2. `authorize.js` → `ADMIN_PERMISSIONS` y `ROLE_DEFAULT_PERMISSIONS`. **Imprescindible:**
+   la superposición solo aplica un valor `if (pr.accion in mod)`, así que un permiso que
+   no exista en ese objeto se guarda en la base y se ignora sin avisar.
+3. `frontend/src/types/index.tsx` → `RolePermissions` y las tres constantes.
+
+Las filas de la tabla `permisos` no hay que crearlas a mano: `updatePermissions` las crea
+al guardar si no existen.
+
+### La ruta tiene que llamar a `authorize`
+
+`auth` solo comprueba que el token sea válido. Sin `authorize` no hay `req.permissionScope`
+y el servicio devuelve datos globales. Esto costó cuatro agujeros reales:
+
+- **Comisiones**: sus seis rutas iban solo con `auth`. El asesor tenía `commissions.* =
+  false` y podía leer, crear, editar y **borrar** comisionistas y liquidaciones.
+- **Stats**: cuatro de cinco endpoints sin `authorize`. Un asesor veía el rendimiento de
+  todos los demás asesores y los mejores clientes de la agencia.
+- **`GET /roles/:rol/permissions`**: sin comprobar, mientras el `PUT` sí.
+- **Responsables**: cerrado, pero con un `requireAdmin` a mano que comparaba el rol y
+  saltaba el sistema. Ahora va por `authorize('responsables', ...)`.
+
+Que un rechazo devuelva **404 o 422 en lugar de 403** es la señal de que la autorización
+no corrió: la petición llegó al manejador y falló buscando o validando.
+
+### Alcance solo donde se puede aplicar
+
+`responsables` es un sí/no, no `all`/`own`/`none`: su tabla no tiene columna de dueño, así
+que un `own` se comportaría como `all` sin avisar.
+
+`itineraries` sí tiene alcance —`flights.service.js` lo aplica— y faltaba en
+`SCOPED_VIEW_MODULES`: la lectura devolvía `false` para un `own` guardado, así que la
+interfaz lo mostraba apagado mientras el backend seguía dejando pasar.
+
+`users` y `config` ya son configurables. Siguen en `view: true` por defecto porque el
+asistente de ventas necesita los catálogos y la lista de asesores; revocarlos rompe crear
+una venta, pero ahora al menos se puede.
+
+> `authorize.js` mantiene un atajo que concede todo al rol `admin` sin mirar la base. Es
+> deliberado: evita que alguien se bloquee fuera del sistema quitándole permisos al rol
+> admin desde la propia interfaz. **Consecuencia:** editar los permisos del admin no tiene
+> efecto en el backend, y las filas que la tabla guarda para ese rol no las lee nadie.
 
 Los permisos individuales por usuario se retiraron: la tabla estaba vacía y el endpoint
 que los guardaba nunca llegó a funcionar.
-
-> `authorize.js` mantiene un atajo que concede todo al rol `admin`. Es deliberado: evita
-> que alguien se bloquee fuera del sistema quitándole permisos al rol admin desde la
-> propia interfaz. Si se retira, hace falta antes una salvaguarda que impida quitar
-> `users.view` y `config.edit`.
 
 ## Documentación
 

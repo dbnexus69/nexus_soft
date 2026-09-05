@@ -1,9 +1,18 @@
 const { error } = require('../utils/apiResponse');
 
+/**
+ * Punto de partida por rol. NO es la fuente: `getEffectivePermissions`
+ * superpone encima lo que diga `permisos_rol` en la base, que es quien manda.
+ *
+ * Importa que cada módulo/acción configurable APAREZCA aquí: la superposición
+ * solo aplica un valor de la base `if (pr.accion in mod)`, así que un permiso
+ * que no exista en este objeto se guarda en la base y se ignora en silencio.
+ */
 const ADMIN_PERMISSIONS = {
   dashboard: { view: 'all' },
   sales: { view: 'all', create: true, edit: true, delete: true },
   clients: { view: 'all', create: true, edit: true, delete: true },
+  responsables: { view: true, create: true, edit: true, delete: true },
   itineraries: { view: 'all', edit: true, delete: true },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
@@ -15,6 +24,10 @@ const ROLE_DEFAULT_PERMISSIONS = {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: true, edit: true },
     clients: { view: 'own', create: true, edit: true },
+    // Por defecto los responsables son cosa de admin, como cuando esto se
+    // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
+    // puede delegar desde la interfaz.
+    responsables: { view: false, create: false, edit: false, delete: false },
     itineraries: { view: 'own', edit: false },
     commissions: { view: false, create: false, edit: false, delete: false },
     users: { view: true },
@@ -24,6 +37,10 @@ const ROLE_DEFAULT_PERMISSIONS = {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: true, edit: true },
     clients: { view: 'own', create: true, edit: true },
+    // Por defecto los responsables son cosa de admin, como cuando esto se
+    // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
+    // puede delegar desde la interfaz.
+    responsables: { view: false, create: false, edit: false, delete: false },
     itineraries: { view: 'own', edit: false },
     commissions: { view: false, create: false, edit: false, delete: false },
     users: { view: true },

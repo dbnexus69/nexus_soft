@@ -2,37 +2,75 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { AUTH_CACHE } = require('../middleware/auth');
 
+/**
+ * Lo que se puede configurar por rol. Es la ÚNICA lista: `getPermissions`
+ * deriva los módulos de aquí en vez de repetirlos.
+ *
+ * `responsables`, `users` y `config` se añadieron porque no eran configurables:
+ * responsables se cerraba con un `requireAdmin` escrito a mano en su archivo de
+ * rutas —un chequeo por rol que saltaba este sistema— y `users`/`config`
+ * estaban fijos en `view: true` dentro de authorize.js, sin forma de revocarlos
+ * ni desde la interfaz ni desde la base.
+ */
 const MODULE_ACTIONS = {
   dashboard: ['view'],
   sales: ['view', 'create', 'edit'],
   clients: ['view', 'create', 'edit'],
+  responsables: ['view', 'create', 'edit', 'delete'],
   itineraries: ['view', 'edit'],
   commissions: ['view', 'create', 'edit', 'delete'],
+  users: ['view'],
+  config: ['view'],
 };
 
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients'];
+/**
+ * Módulos cuyo `view` tiene alcance (all / own / none) en vez de sí/no.
+ *
+ * `itineraries` estaba fuera y no debía: `authorize.js` respeta un 'own'
+ * guardado y `flights.service.js` lo aplica de verdad, pero la LECTURA
+ * (`parseValor`) lo trataba como booleano y devolvía `false` para un 'own'.
+ * O sea: la interfaz lo mostraba apagado mientras el backend seguía dejando
+ * pasar con alcance propio. Read y write ahora coinciden.
+ *
+ * `responsables` queda fuera a propósito: su tabla no tiene columna de dueño
+ * (solo persona_id, status, creado_at, deleted_at), así que un 'own' no se
+ * podría aplicar y se comportaría como 'all' sin avisar. Es un sí/no.
+ */
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
 const DEFAULT_ROLE_VALUES = {
   asesor: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: 'true', edit: 'true' },
     clients: { view: 'own', create: 'true', edit: 'true' },
-    itineraries: { view: 'true', edit: 'false' },
+    responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
+    itineraries: { view: 'own', edit: 'false' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
+    // Se mantienen en true: el asistente de ventas necesita los catálogos
+    // (aerolíneas, métodos de pago) y la lista de asesores para asignar la
+    // venta. Ahora son revocables, aunque revocarlos rompa crear ventas.
+    users: { view: 'true' },
+    config: { view: 'true' },
   },
   freelancer: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: 'true', edit: 'true' },
     clients: { view: 'own', create: 'true', edit: 'true' },
-    itineraries: { view: 'true', edit: 'false' },
+    responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
+    itineraries: { view: 'own', edit: 'false' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
+    users: { view: 'true' },
+    config: { view: 'true' },
   },
   admin: {
     dashboard: { view: 'all' },
     sales: { view: 'all', create: 'true', edit: 'true' },
     clients: { view: 'all', create: 'true', edit: 'true' },
+    responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     itineraries: { view: 'all', edit: 'true' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    users: { view: 'true' },
+    config: { view: 'true' },
   },
 };
 
@@ -73,7 +111,9 @@ class RolesService {
       include: { permisos: true }
     });
 
-    const MODULES = ['dashboard', 'sales', 'clients', 'itineraries', 'commissions'];
+    // Derivado de MODULE_ACTIONS: antes era una tercera copia de la lista y
+    // añadir un módulo obligaba a acordarse de los tres sitios.
+    const MODULES = Object.keys(MODULE_ACTIONS);
     const defaults = DEFAULT_ROLE_VALUES[role] || DEFAULT_ROLE_VALUES.asesor;
     const grouped = {};
 

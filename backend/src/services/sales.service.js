@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
+const { enHoraColombia } = require('../utils/fechas');
 const emailService = require('../utils/emailService');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
@@ -304,23 +305,16 @@ class SalesService {
           const origAirport = { id: catalogos.aeropuertos.get(leg.origin) ?? await idComodin() };
           const destAirport = { id: catalogos.aeropuertos.get(leg.destination) ?? await idComodin() };
           
-          let salidaDt = new Date();
-          if (leg.date) {
-            if (leg.date.includes('T')) {
-              salidaDt = new Date(leg.date);
-            } else {
-              salidaDt = new Date(`${leg.date}T${leg.departureTime || leg.time || '00:00'}:00`);
-            }
-          }
-          
-          let llegadaDt = new Date(salidaDt.getTime() + 3600000);
-          if (leg.arrivalDate) {
-            if (leg.arrivalDate.includes('T')) {
-              llegadaDt = new Date(leg.arrivalDate);
-            } else {
-              llegadaDt = new Date(`${leg.arrivalDate}T${leg.arrivalTime || '00:00'}:00`);
-            }
-          }
+          // `enHoraColombia` en vez de `new Date('...T06:40:00')`: esa forma,
+          // sin designador de zona, se interpreta como hora LOCAL DEL PROCESO,
+          // así que el instante guardado dependía de dónde corriera el servidor.
+          // En una máquina colombiana salía bien; en un servidor UTC los vuelos
+          // se corrían cinco horas y los de madrugada cambiaban de día.
+          const salidaDt = enHoraColombia(leg.date, leg.departureTime || leg.time) || new Date();
+
+          // Sin hora de llegada se asume una hora de vuelo, como antes.
+          const llegadaDt = enHoraColombia(leg.arrivalDate, leg.arrivalTime)
+            || new Date(salidaDt.getTime() + 3600000);
 
           let legAirlineId = airlineId;
           if (leg.airline && leg.airline !== t.airline) {

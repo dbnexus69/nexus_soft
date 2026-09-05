@@ -3,6 +3,17 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatters";
 import { formaDe } from "./serviceShapes";
 
+/**
+ * Precio de un producto. Misma regla que `precioProducto` del backend.
+ *
+ * `subtotal` es el precio guardado. Antes esto sumaba `ta + supplierCost`, que
+ * lo reconstruye en casi todos los casos pero no en los productos guardados con
+ * un total explícito y sin desglose de costo: ahí la suma daba cero y la fila
+ * salía sin importe.
+ */
+const precioProducto = (it: any) =>
+  Number(it.subtotal) || (Number(it.ta) || 0) + (Number(it.supplierCost) || 0);
+
 interface ServiceRowProps {
   /** Slug de la categoría: ticket, hotel, insurance… */
   categoria: string;
@@ -36,7 +47,7 @@ export const ServiceRow = memo(function ServiceRow({
   // resumen de cada servicio necesita sus datos, que llegan al desplegar.
   const cargados = items || [];
   const resumenes = cargados.map(it => forma.resumen(it));
-  const importe = cargados.reduce((a, it) => a + (Number(it.ta) || 0) + (Number(it.supplierCost) || 0), 0);
+  const importe = cargados.reduce((a, it) => a + precioProducto(it), 0);
 
   return (
     <li className={`border-b border-gray-border dark:border-slate-800 last:border-b-0 transition-colors ${abierta ? "bg-highlight-soft/40 dark:bg-highlight-soft/30" : ""}`}>

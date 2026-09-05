@@ -2,6 +2,25 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { enHoraColombia } = require('../utils/fechas');
+
+/**
+ * Precio de un producto dentro de la venta.
+ *
+ * El asistente NO manda un `total` por producto: pide el costo de proveedor y
+ * la TA (el margen), y el precio es su suma. Como `subtotal` solo se rellenaba
+ * con `x.total`, quedaba en 0 en todas las ventas reales — y `stats.service.js`
+ * calcula los ingresos por categoría con `SUM(d.subtotal)`.
+ *
+ * Medido antes del arreglo: la métrica mostraba 15.580.000 cuando lo real eran
+ * 20.488.000, y categorías con ventas aparecían en cero.
+ *
+ * Si el payload trae un `total` explícito manda ese; si no, se deriva.
+ */
+function precioProducto(x) {
+  const explicito = Number(x.total ?? x.subtotal ?? NaN);
+  if (Number.isFinite(explicito) && explicito > 0) return explicito;
+  return Number(x.ta || 0) + Number(x.supplierCost || 0);
+}
 const emailService = require('../utils/emailService');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
@@ -221,7 +240,7 @@ class SalesService {
         const detalleId = uuidv4();
         p._generatedId = detalleId;
         const proveedorId = await findProveedorId(p.supplier);
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'plan', subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0), proveedor_id: proveedorId } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'plan', subtotal: precioProducto(p), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0), proveedor_id: proveedorId } });
         let planAirlineId = null;
         if (p.airline) {
           const al = findAerolineaId(p.airline) ? { id: findAerolineaId(p.airline) } : null;
@@ -254,7 +273,7 @@ class SalesService {
         const proveedorId = await findProveedorId(t.supplier);
         await tx.detalle_venta.create({
           data: { id: detalleId, venta_id: ventaId, categoria: 'ticket', parentDetalleId: parentDetalleId,
-            subtotal: Number(t.total || t.subtotal || 0),
+            subtotal: precioProducto(t),
             ta: Number(t.ta || 0),
             costo_proveedor: Number(t.supplierCost || 0),
             observaciones: t.observations || null,
@@ -358,7 +377,7 @@ class SalesService {
         const proveedorId = await findProveedorId(h.supplier);
         await tx.detalle_venta.create({
           data: { id: detalleId, venta_id: ventaId, categoria: 'hotel', parentDetalleId: parentDetalleId,
-            subtotal: Number(h.total || h.subtotal || 0),
+            subtotal: precioProducto(h),
             ta: Number(h.ta || 0), costo_proveedor: Number(h.supplierCost || 0),
             destino: h.destination || null,
             proveedor_id: proveedorId,
@@ -385,7 +404,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(s);
         const detalleId = uuidv4();
         const proveedorId = await findProveedorId(s.supplier);
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'insurance', parentDetalleId: parentDetalleId, subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0), proveedor_id: proveedorId } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'insurance', parentDetalleId: parentDetalleId, subtotal: precioProducto(s), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0), proveedor_id: proveedorId } });
         await tx.prod_seguros.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -407,7 +426,7 @@ class SalesService {
       for (const c of checkInData) {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', parentDetalleId: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', parentDetalleId: parentDetalleId, subtotal: precioProducto(c), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_checkins.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -429,7 +448,7 @@ class SalesService {
       for (const m of migrationData) {
         const parentDetalleId = getParentDetalleId(m);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'migration', parentDetalleId: parentDetalleId, subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'migration', parentDetalleId: parentDetalleId, subtotal: precioProducto(m), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
         await tx.prod_migracion.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -445,7 +464,7 @@ class SalesService {
       for (const s of simCardData) {
         const parentDetalleId = getParentDetalleId(s);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', parentDetalleId: parentDetalleId, subtotal: Number(s.total || s.subtotal || 0), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', parentDetalleId: parentDetalleId, subtotal: precioProducto(s), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
         await tx.prod_simcards.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -462,7 +481,7 @@ class SalesService {
       for (const c of carRentalData) {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'car', parentDetalleId: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'car', parentDetalleId: parentDetalleId, subtotal: precioProducto(c), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_autos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -480,7 +499,7 @@ class SalesService {
       for (const f of fincaData) {
         const parentDetalleId = getParentDetalleId(f);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'finca', parentDetalleId: parentDetalleId, subtotal: Number(f.total || f.subtotal || 0), ta: Number(f.ta || 0), costo_proveedor: Number(f.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'finca', parentDetalleId: parentDetalleId, subtotal: precioProducto(f), ta: Number(f.ta || 0), costo_proveedor: Number(f.supplierCost || 0) } });
         await tx.prod_fincas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -501,7 +520,7 @@ class SalesService {
       for (const t of tourData) {
         const parentDetalleId = getParentDetalleId(t);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tour', parentDetalleId: parentDetalleId, subtotal: Number(t.total || t.subtotal || 0), ta: Number(t.ta || 0), costo_proveedor: Number(t.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tour', parentDetalleId: parentDetalleId, subtotal: precioProducto(t), ta: Number(t.ta || 0), costo_proveedor: Number(t.supplierCost || 0) } });
         await tx.prod_tours.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -528,7 +547,7 @@ class SalesService {
       for (const c of conventionData) {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'convention', parentDetalleId: parentDetalleId, subtotal: Number(c.total || c.subtotal || 0), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'convention', parentDetalleId: parentDetalleId, subtotal: precioProducto(c), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_eventos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -548,7 +567,7 @@ class SalesService {
       for (const r of restaurantData) {
         const parentDetalleId = getParentDetalleId(r);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurant', parentDetalleId: parentDetalleId, subtotal: Number(r.total || r.subtotal || 0), ta: Number(r.ta || 0), costo_proveedor: Number(r.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurant', parentDetalleId: parentDetalleId, subtotal: precioProducto(r), ta: Number(r.ta || 0), costo_proveedor: Number(r.supplierCost || 0) } });
         await tx.prod_restaurantes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -568,7 +587,7 @@ class SalesService {
       for (const v of visaData) {
         const parentDetalleId = getParentDetalleId(v);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', parentDetalleId: parentDetalleId, subtotal: Number(v.total || v.subtotal || 0), ta: Number(v.ta || 0), costo_proveedor: Number(v.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', parentDetalleId: parentDetalleId, subtotal: precioProducto(v), ta: Number(v.ta || 0), costo_proveedor: Number(v.supplierCost || 0) } });
         await tx.prod_visas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -586,7 +605,7 @@ class SalesService {
       for (const p of passportData) {
         const parentDetalleId = getParentDetalleId(p);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'passport', parentDetalleId: parentDetalleId, subtotal: Number(p.total || p.subtotal || 0), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'passport', parentDetalleId: parentDetalleId, subtotal: precioProducto(p), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
         await tx.prod_pasaportes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -606,7 +625,7 @@ class SalesService {
       for (const m of petServiceData) {
         const parentDetalleId = getParentDetalleId(m);
         const detalleId = uuidv4();
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pet', parentDetalleId: parentDetalleId, subtotal: Number(m.total || m.subtotal || 0), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pet', parentDetalleId: parentDetalleId, subtotal: precioProducto(m), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
         await tx.prod_mascotas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,

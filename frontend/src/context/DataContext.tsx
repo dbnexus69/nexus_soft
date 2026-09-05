@@ -29,17 +29,12 @@ try { localStorage.removeItem('itea_role_permissions_cache'); } catch {}
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
 
-interface RecentSale {
-  id: number;
-  clientName: string;
-  asesorName: string;
-  date: string;
-  total: number;
-  status: string;
-}
 
 interface DashboardData {
   totalRevenue: number;
+  // La respuesta los devolvía y el tipo no los declaraba.
+  totalOperations: number;
+  salesGrowth: number;
   monthlyRevenue: number;
   pendingBalance: number;
   pendingCount: number;
@@ -48,7 +43,6 @@ interface DashboardData {
   activeClients: number;
   totalFlights: number;
   supplierCount: number;
-  recentSales: RecentSale[];
   categoryDistribution: { name: string; value: number; percentage: number }[];
   carteraStatus: { name: string; value: number; color: string }[];
   monthlyTrend: { month: number; currentYear: number; previousYear: number }[];

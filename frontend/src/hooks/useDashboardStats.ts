@@ -13,6 +13,9 @@ export function useDashboardStats() {
 
     return {
       totalIngresos: d?.totalRevenue ?? 0,
+      // La respuesta ya los traía y el hook no los exponía.
+      totalOperaciones: d?.totalOperations ?? 0,
+      crecimiento: d?.salesGrowth ?? 0,
       monthIngresos: d?.monthlyRevenue ?? 0,
       totalPendiente: d?.pendingBalance ?? 0,
       PendienteCount: d?.pendingCount ?? 0,
@@ -38,7 +41,6 @@ export function useDashboardStats() {
           previous: apiMonth?.previousYear ?? 0,
         };
       }),
-      recentSales: d?.recentSales ?? [],
       carteraData: d?.carteraStatus ?? [
         { name: "Pagado", value: 0, color: "#10b981" },
         { name: "Abonado", value: 0, color: "#3b82f6" },

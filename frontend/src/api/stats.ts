@@ -5,10 +5,6 @@ export async function getDashboard(params: Record<string, unknown> = {}) {
   return res.data.data;
 }
 
-export async function getSalesHistory(year: number) {
-  const res = await api.get('/stats/sales-history', { params: { year } });
-  return res.data.data;
-}
 
 export async function getAsesorPerformance(params: Record<string, unknown> = {}) {
   const res = await api.get('/stats/asesor-performance', { params });
@@ -22,5 +18,15 @@ export async function getTopClients(params: Record<string, unknown> = {}) {
 
 export async function getCategoryDistribution(params: Record<string, unknown> = {}) {
   const res = await api.get('/stats/category-distribution', { params });
+  return res.data.data;
+}
+
+/**
+ * Lo que requiere acción hoy: créditos vencidos, check-ins inminentes y ventas
+ * sin revisar. Un solo endpoint y un solo viaje: tres peticiones separadas
+ * costarían tres veces la latencia.
+ */
+export async function getAttention() {
+  const res = await api.get('/stats/attention');
   return res.data.data;
 }

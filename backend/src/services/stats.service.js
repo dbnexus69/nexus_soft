@@ -76,7 +76,12 @@ class StatsService {
       if (dateTo) clientsWhere.fecha_registro.lte = new Date(dateTo);
     }
 
-    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount, recentSales] = await Promise.all([
+    // Se retiró `recentSales`. Era una consulta más por petición para alimentar
+    // la tabla "Últimas Ventas Aprobadas", que ni filtraba por aprobadas —no
+    // había filtro de estado— ni aportaba nada: mismas columnas que /sales, con
+    // cinco filas y sin búsqueda ni filtros. El dashboard ahora usa
+    // GET /stats/attention, que responde algo que /sales no responde.
+    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount] = await Promise.all([
       // Doce agregados en una consulta. Los filtros son opcionales dentro del
       // SQL con `($n IS NULL OR ...)`, así que la consulta es estática y
       // TypedSQL puede analizarla.
@@ -91,16 +96,6 @@ class StatsService {
       prisma.$queryRawUnsafe(categorySql, ...cDetalle.params),
       prisma.$queryRawUnsafe(monthlyTrendSql, ...cTendencia.params),
       prisma.proveedores.count({ where: { status: 'active' } }),
-      prisma.ventas.findMany({
-        where: {
-          deleted_at: null,
-          ...(permissionScope === 'own' ? { usuario_id: user.id } : {})
-        },
-        orderBy: { creado_at: 'desc' },
-        take: 5,
-        relationLoadStrategy: 'join',
-        include: { clientes: { include: { personas: true } } }
-      })
     ]);
 
     const agg = aggResult[0] || {};
@@ -127,13 +122,6 @@ class StatsService {
       totalFlights,
       categoryBreakdown,
       monthlyTrend: trendResult || [],
-      recentSales: recentSales.map(s => ({
-        id: s.id,
-        date: s.creado_at,
-        clientName: s.clientes?.personas ? `${s.clientes.personas.nombres} ${s.clientes.personas.apellidos}` : 'N/A',
-        amount: s.monto_total,
-        status: s.status
-      })),
       salesGrowth,
       carteraStatus: [
         { name: "Pagado", value: Number(agg.paids) || 0, color: "#10b981" },
@@ -150,43 +138,158 @@ class StatsService {
     };
   }
 
-  async getTopClients(params) {
-    return await prisma.$queryRaw`
-      SELECT p.nombres || ' ' || p.apellidos as name, COALESCE(SUM(v.monto_total), 0)::float as total, COUNT(v.id)::int as count
+  /**
+   * Los tres listados de gestión aceptan ámbito.
+   *
+   * Antes ignoraban `permissionScope`: sus rutas no tenían `authorize`, así que
+   * `req.permissionScope` llegaba undefined y devolvían datos globales. Un
+   * asesor con `dashboard: view: 'own'` veía el rendimiento de todos los demás
+   * asesores y la lista global de mejores clientes.
+   *
+   * `$queryRaw` con plantilla etiquetada parametriza sola, así que interpolar
+   * `${...}` aquí es seguro: Prisma lo convierte en un placeholder.
+   */
+  async getTopClients({ permissionScope, user, limit = 6 } = {}) {
+    const propio = permissionScope === 'own' && user ? Number(user.id) : null;
+    return prisma.$queryRaw`
+      SELECT p.nombres || ' ' || p.apellidos AS name,
+             COALESCE(SUM(v.monto_total), 0)::float AS total,
+             COUNT(v.id)::int AS count
       FROM ventas v
       JOIN clientes c ON v.cliente_id = c.id
       JOIN personas p ON c.persona_id = p.id
       WHERE v.deleted_at IS NULL
+        AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY c.id, p.nombres, p.apellidos
       ORDER BY total DESC
-      LIMIT 6
+      LIMIT ${Math.min(Number(limit) || 6, 50)}
     `;
   }
 
-  async getAsesorPerformance(params) {
-    return await prisma.$queryRaw`
-      SELECT p.nombres || ' ' || p.apellidos as "asesorName", COALESCE(SUM(v.ta_total), 0)::float as "totalIngresos", COUNT(v.id)::int as "totalVentas"
+  async getAsesorPerformance({ permissionScope, user, limit = 6 } = {}) {
+    const propio = permissionScope === 'own' && user ? Number(user.id) : null;
+    return prisma.$queryRaw`
+      SELECT p.nombres || ' ' || p.apellidos AS "asesorName",
+             COALESCE(SUM(v.ta_total), 0)::float AS "totalIngresos",
+             COUNT(v.id)::int AS "totalVentas"
       FROM ventas v
       JOIN usuarios u ON v.usuario_id = u.id
       JOIN personas p ON u.persona_id = p.id
       WHERE v.deleted_at IS NULL
+        AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY u.id, p.nombres, p.apellidos
       ORDER BY "totalIngresos" DESC
-      LIMIT 6
+      LIMIT ${Math.min(Number(limit) || 6, 50)}
     `;
   }
 
-  async getCategoryDistribution(params) {
-    return await prisma.$queryRaw`
-      SELECT mp.nombre as name, COUNT(v.id)::int as value
+  async getCategoryDistribution({ permissionScope, user, limit = 6 } = {}) {
+    const propio = permissionScope === 'own' && user ? Number(user.id) : null;
+    return prisma.$queryRaw`
+      SELECT mp.nombre AS name, COUNT(v.id)::int AS value
       FROM ventas v
       JOIN metodos_pago mp ON v.metodo_pago_principal_id = mp.id
       WHERE v.deleted_at IS NULL
+        AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY mp.id, mp.nombre
       ORDER BY value DESC
-      LIMIT 6
+      LIMIT ${Math.min(Number(limit) || 6, 50)}
     `;
   }
+
+  /**
+   * Lo que requiere atención hoy: créditos vencidos, check-ins inminentes y
+   * ventas sin revisar.
+   *
+   * Va en un solo endpoint y en tres consultas paralelas a propósito. Con la
+   * base a decenas o cientos de milisegundos, tres peticiones HTTP separadas
+   * costarían tres veces la latencia; aquí es un viaje.
+   *
+   * Cada bloque devuelve el conteo, el importe y lo justo para pintar una
+   * línea. La lista completa se ve en su pantalla, que es donde se resuelve.
+   */
+  async getAttention({ permissionScope, user } = {}) {
+    const propio = permissionScope === 'own' && user ? Number(user.id) : null;
+    const ahora = new Date();
+    const en48h = new Date(ahora.getTime() + 48 * 60 * 60 * 1000);
+
+    const ventaVigente = {
+      deleted_at: null,
+      status: { not: 'anulado' },
+      ...(propio !== null ? { usuario_id: propio } : {}),
+    };
+
+    // El filtro de check-ins críticos se escribe UNA vez y lo comparten la fila
+    // de muestra y el conteo. Los dos van dentro del mismo Promise.all: dejar
+    // el conteo fuera lo volvía secuencial y la respuesta pasaba de ~400 ms a
+    // ~1100 ms por un viaje de más.
+    const whereCheckin = {
+      OR: [{ checkin_status: 'pendiente' }, { checkin_status: null }],
+      salida: { gte: ahora, lte: en48h },
+      prod_tiqueteria: { detalle_venta: { ventas: ventaVigente } },
+    };
+
+    const [vencidos, checkins, sinRevisar, checkinsCount] = await Promise.all([
+      // Crédito vencido: la fecha de vencimiento ya pasó y queda saldo.
+      prisma.$queryRaw`
+        SELECT COUNT(*)::int AS count,
+               COALESCE(SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)), 0)::float AS amount,
+               MIN(v.fecha_vence_credito) AS oldest
+        FROM ventas v
+        WHERE v.deleted_at IS NULL
+          AND v.status <> 'anulado'
+          AND (v.es_credito = true OR v.status IN ('credito', 'abonado'))
+          AND v.fecha_vence_credito IS NOT NULL
+          AND v.fecha_vence_credito < CURRENT_DATE
+          AND v.monto_total - COALESCE(v.monto_pagado_credito, 0) > 0
+          AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
+      `,
+      // Check-ins críticos: pendientes con salida en las próximas 48 h. Misma
+      // regla que usa GET /flights/checkins?status=critico.
+      prisma.tramos_vuelo.findMany({
+        where: whereCheckin,
+        orderBy: { salida: 'asc' },
+        take: 1,
+        select: {
+          salida: true,
+          aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos: { select: { codigo_iata: true } },
+          aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos: { select: { codigo_iata: true } },
+        },
+      }),
+      prisma.ventas.aggregate({
+        where: { ...ventaVigente, is_reviewed: false },
+        _count: { _all: true },
+        _sum: { monto_total: true },
+      }),
+      prisma.tramos_vuelo.count({ where: whereCheckin }),
+    ]);
+
+    const v = vencidos[0] || {};
+    const proximo = checkins[0];
+
+    return {
+      overdueCredit: {
+        count: Number(v.count) || 0,
+        amount: Number(v.amount) || 0,
+        oldestDueDate: v.oldest ? new Date(v.oldest).toISOString() : null,
+      },
+      criticalCheckins: {
+        count: checkinsCount,
+        next: proximo
+          ? {
+              departure: proximo.salida.toISOString(),
+              origin: proximo.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos?.codigo_iata || null,
+              destination: proximo.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos?.codigo_iata || null,
+            }
+          : null,
+      },
+      unreviewedSales: {
+        count: sinRevisar._count._all,
+        amount: Number(sinRevisar._sum.monto_total) || 0,
+      },
+    };
+  }
+
 }
 
 module.exports = new StatsService();

@@ -913,3 +913,18 @@ export const CATEGORIA_LABELS: Record<keyof DesgloseCategorias, string> = {
   tiquetes: "Tiquetes",
   otros: "Otros",
 };
+
+/**
+ * Resumen de `GET /stats/attention`: lo que requiere acción hoy.
+ *
+ * Cada bloque trae el conteo, el importe y lo justo para pintar una línea. La
+ * lista completa vive en su pantalla, que es donde se resuelve.
+ */
+export interface AttentionSummary {
+  overdueCredit: { count: number; amount: number; oldestDueDate: string | null };
+  criticalCheckins: {
+    count: number;
+    next: { departure: string; origin: string | null; destination: string | null } | null;
+  };
+  unreviewedSales: { count: number; amount: number };
+}

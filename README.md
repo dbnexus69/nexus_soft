@@ -349,10 +349,28 @@ interfaz lo mostraba apagado mientras el backend seguía dejando pasar.
 asistente de ventas necesita los catálogos y la lista de asesores; revocarlos rompe crear
 una venta, pero ahora al menos se puede.
 
-> `authorize.js` mantiene un atajo que concede todo al rol `admin` sin mirar la base. Es
-> deliberado: evita que alguien se bloquee fuera del sistema quitándole permisos al rol
-> admin desde la propia interfaz. **Consecuencia:** editar los permisos del admin no tiene
-> efecto en el backend, y las filas que la tabla guarda para ese rol no las lee nadie.
+### Los roles fijos y el `superadmin`
+
+Hay dos roles cuyos permisos **no salen de la base**, y por tanto no se editan:
+
+| Rol | Qué puede | Por qué es fijo |
+|---|---|---|
+| `superadmin` | todo, **incluido reescribir permisos** | si alguien pudiera quitarle permisos, nadie podría devolvérselos |
+| `admin` | todo **menos** editar permisos | evita que alguien se bloquee fuera del sistema |
+
+`superadmin` lo tiene el usuario 1 (Admin Nexus). Es el único con
+`permissions.edit`, así que es el único que puede cambiar lo que puede hacer un rol.
+
+`PUT /roles/:rol/permissions` rechaza los dos con un 400: la pantalla los ofrecía como
+editables y guardar no hacía nada, que es peor que no dejar. El selector de la interfaz
+solo lista `asesor` y `freelancer`.
+
+**Editar permisos es su propio módulo, no `config.edit`.** Compartían llave con el
+catálogo (aerolíneas, proveedores, métodos de pago), así que cualquiera que pudiera
+añadir una aerolínea podía además reescribir los permisos de todos los roles.
+
+Y ojo con `PUT /roles/:rol/permissions`: **reemplaza el rol entero**, no fusiona. Enviar
+`{ sales: { view: 'own' } }` deja al rol con ese único permiso y borra los demás.
 
 Los permisos individuales por usuario se retiraron: la tabla estaba vacía y el endpoint
 que los guardaba nunca llegó a funcionar.

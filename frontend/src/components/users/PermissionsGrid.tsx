@@ -5,10 +5,13 @@ import { RolePermissions } from '../../types';
 interface PermissionsGridProps {
   permissions: RolePermissions;
   onChange: (p: RolePermissions) => void;
+  /** Sin `permissions.edit` la rejilla se muestra, pero no se toca. */
+  readOnly?: boolean;
 }
 
-export default function PermissionsGrid({ permissions, onChange }: PermissionsGridProps) {
+export default function PermissionsGrid({ permissions, onChange, readOnly = false }: PermissionsGridProps) {
   const toggle = (module: keyof RolePermissions, type: string) => {
+    if (readOnly) return;
     const next = { ...permissions };
     const modulePerms = { ...(next[module] || {}) } as any;
     if (type in modulePerms) {

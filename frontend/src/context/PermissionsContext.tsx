@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { User, RolePermissions, ADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
+import { User, RolePermissions, ADMIN_PERMISSIONS, SUPERADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
 import { useData } from './DataContext';
 
 type ModulePermission = {
@@ -37,13 +37,24 @@ export function PermissionsProvider({
     const deLaBase = data.config.rolePermissions?.[user.role];
     if (deLaBase) return deLaBase;
 
+    if (user.role === 'superadmin') return SUPERADMIN_PERMISSIONS;
     if (user.role === 'admin') return ADMIN_PERMISSIONS;
     return user.role === 'freelancer' ? DEFAULT_FREELANCER_PERMISSIONS : DEFAULT_ASESOR_PERMISSIONS;
   }, [user, data.config.rolePermissions]);
 
+  /**
+   * El atajo que concede todo sin mirar los permisos.
+   *
+   * `superadmin` lo tiene entero. `admin` lo tiene para todo MENOS
+   * `permissions`: si no, la pantalla le mostraría el botón de guardar y el
+   * backend le devolvería un 403 al pulsarlo, que es la peor combinación.
+   */
+  const atajo = (module: keyof RolePermissions) =>
+    user?.role === 'superadmin' || (user?.role === 'admin' && module !== 'permissions');
+
   const can = (module: keyof RolePermissions, action: string): boolean => {
     const modulePerms = permissions[module] as ModulePermission;
-    if (!modulePerms) return user?.role === 'admin';
+    if (!modulePerms) return atajo(module);
     const actionValue = modulePerms[action];
     if (typeof actionValue === 'boolean') return actionValue;
     if (actionValue === 'all') return true;
@@ -52,7 +63,7 @@ export function PermissionsProvider({
   };
 
   const canEdit = (module: keyof RolePermissions): boolean => {
-    if (user?.role === 'admin') return true;
+    if (atajo(module)) return true;
     const perm = permissions[module] as ModulePermission;
     if (!perm) return false;
     if ('edit' in perm) {
@@ -64,7 +75,7 @@ export function PermissionsProvider({
   };
 
   const canDelete = (module: keyof RolePermissions): boolean => {
-    if (user?.role === 'admin') return true;
+    if (atajo(module)) return true;
     const perm = permissions[module] as ModulePermission;
     if (!perm) return false;
     if ('delete' in perm) return perm.delete === true;
@@ -72,7 +83,7 @@ export function PermissionsProvider({
   };
 
   const canCreate = (module: keyof RolePermissions): boolean => {
-    if (user?.role === 'admin') return true;
+    if (atajo(module)) return true;
     const perm = permissions[module] as ModulePermission;
     if (!perm) return false;
     if ('create' in perm) return perm.create === true;
@@ -80,7 +91,7 @@ export function PermissionsProvider({
   };
 
   const canView = (module: keyof RolePermissions): boolean => {
-    if (user?.role === 'admin') return true;
+    if (atajo(module)) return true;
     const perm = permissions[module] as ModulePermission;
     if (!perm) return true;
     if ('view' in perm) {

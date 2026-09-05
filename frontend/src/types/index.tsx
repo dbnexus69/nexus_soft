@@ -12,7 +12,7 @@ export interface User {
   birthDate?: string;
   email: string;
   password?: string;
-  role: "admin" | "asesor" | "freelancer";
+  role: "superadmin" | "admin" | "asesor" | "freelancer";
   status: "active" | "inactive";
   createdAt?: string;
   lastLogin?: string;
@@ -37,6 +37,14 @@ export interface RolePermissions {
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   users: { view: boolean };
   config: { view: boolean };
+  /**
+   * Reescribir los permisos de un rol. Solo `superadmin` la tiene.
+   *
+   * Es su propio módulo y no `config.edit`, que es la llave del catálogo
+   * (aerolíneas, proveedores): quien puede añadir una aerolínea no debería
+   * poder además reescribir los permisos de todos los roles.
+   */
+  permissions: { view: boolean; edit: boolean };
 }
 
 export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
@@ -49,6 +57,7 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: true },
   config: { view: true },
+  permissions: { view: false, edit: false },
 };
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
@@ -60,6 +69,7 @@ export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: true },
   config: { view: true },
+  permissions: { view: false, edit: false },
 };
 
 export const ADMIN_PERMISSIONS: RolePermissions = {
@@ -71,10 +81,22 @@ export const ADMIN_PERMISSIONS: RolePermissions = {
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true },
   config: { view: true },
+  // El admin ve la pantalla pero no la guarda: eso es de superadmin.
+  permissions: { view: true, edit: false },
 };
 
 // Los mismos que `SCOPED_VIEW_MODULES` del backend. `responsables` sale de la
 // lista: sin columna de dueño, su `view` es un sí/no.
+/**
+ * `superadmin`: el único que puede reescribir permisos. Se lo tiene el usuario
+ * #1 (Admin Nexus) y su rol no es editable desde la interfaz — si alguien
+ * pudiera quitarle permisos, nadie podría devolvérselos.
+ */
+export const SUPERADMIN_PERMISSIONS: RolePermissions = {
+  ...ADMIN_PERMISSIONS,
+  permissions: { view: true, edit: true },
+};
+
 const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
 export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTemplate: RolePermissions = DEFAULT_ASESOR_PERMISSIONS): RolePermissions {

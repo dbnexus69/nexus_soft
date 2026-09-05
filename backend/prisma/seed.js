@@ -43,6 +43,9 @@ async function main() {
   const mpConsignacion   = await upsertByUnique('metodos_pago', { nombre: 'ConsignaciÃƒÂ³n' }, { nombre: 'ConsignaciÃƒÂ³n' });
   console.log('  Ã¢Å“â€œ MÃƒÂ©todos de pago');
 
+  // `superadmin` es el único que puede reescribir los permisos de un rol.
+  // Se reserva para el usuario 1 (Admin Nexus); ver la sección Permisos del README.
+  const rolSuper      = await upsertByUnique('roles', { nombre: 'superadmin' }, { nombre: 'superadmin', descripcion: 'Único rol que puede reescribir permisos' });
   const rolAdmin      = await upsertByUnique('roles', { nombre: 'admin' }, { nombre: 'admin', descripcion: 'Administrador del sistema' });
   const rolAsesor     = await upsertByUnique('roles', { nombre: 'asesor' }, { nombre: 'asesor', descripcion: 'Asesor de ventas' });
   const rolFreelancer = await upsertByUnique('roles', { nombre: 'freelancer' }, { nombre: 'freelancer', descripcion: 'Vendedor independiente' });
@@ -52,7 +55,7 @@ async function main() {
   // 2. PERMISOS
   // =========================================================
 
-  const modulos = ['dashboard', 'sales', 'clients', 'itineraries', 'users', 'config'];
+  const modulos = ['dashboard', 'sales', 'clients', 'responsables', 'itineraries', 'commissions', 'users', 'config', 'permissions'];
   const acciones = ['view', 'create', 'edit', 'delete'];
   const permisosCreados = [];
 
@@ -336,7 +339,7 @@ async function main() {
         status: u.status || 'active'
       }
     );
-    const rol = u.role === 'admin' ? rolAdmin : (u.role === 'freelancer' ? rolFreelancer : rolAsesor);
+    const rol = u.role === 'superadmin' ? rolSuper : (u.role === 'admin' ? rolAdmin : (u.role === 'freelancer' ? rolFreelancer : rolAsesor));
     const usuario = await upsertByUnique(
       'usuarios',
       { email: u.email },

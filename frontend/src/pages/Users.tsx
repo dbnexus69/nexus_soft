@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { ShieldCheck, Plus, Search, X, Users as UsersIcon } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { useUsersContext } from "../context/UsersContext";
+import { usePermissions } from "../context/PermissionsContext";
 import { useToast } from "../context/ToastContext";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -27,6 +28,11 @@ export default function Users() {
     fetchUsers
   } = useUsersContext();
   const { success, error: toastError } = useToast();
+  const { canEdit } = usePermissions();
+
+  // Solo el superadministrador tiene `permissions.edit`. Al admin se le muestra
+  // la pantalla en lectura: puede ver qué puede hacer cada rol, no cambiarlo.
+  const puedeEditarPermisos = canEdit("permissions");
 
   const [activeTab, setActiveTab] = useState<"users" | "permissions">("users");
   const [searchTerm, setSearchTerm] = useState("");
@@ -231,8 +237,10 @@ export default function Users() {
                 Roles de Sistema
               </CardHeader>
               <div className="p-4 space-y-3">
+                {/* `admin` y `superadmin` no se listan: sus permisos están fijados
+                    en el código y el backend rechaza editarlos. La pantalla los
+                    ofrecía y guardar no hacía nada. */}
                 {[
-                  { id: "admin", name: "Administradores", icon: <ShieldCheck size={20} /> },
                   { id: "asesor", name: "Asesores", icon: <UsersIcon size={20} /> },
                   { id: "freelancer", name: "Freelancers", icon: <ShieldCheck size={20} /> }
                 ].map(role => (
@@ -270,9 +278,13 @@ export default function Users() {
                     Configura los privilegios predeterminados que tendrán todos los usuarios bajo este rol.
                   </p>
                 </div>
-                <Button 
-                  onClick={handleSaveRolePermissions} 
-                  className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-white font-bold px-8 h-12 rounded-xl hover:scale-105 active:scale-95 transition-all w-full sm:w-auto"
+                {/* Solo superadmin: el backend responde 403 a los demás, así que
+                    mostrar el botón sería prometer algo que no va a pasar. */}
+                <Button
+                  onClick={handleSaveRolePermissions}
+                  disabled={!puedeEditarPermisos}
+                  title={puedeEditarPermisos ? undefined : "Solo el superadministrador puede cambiar los permisos de un rol"}
+                  className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-white font-bold px-8 h-12 rounded-xl hover:scale-105 active:scale-95 transition-all w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   Guardar Políticas
                 </Button>
@@ -282,6 +294,7 @@ export default function Users() {
                   <PermissionsGrid
                     permissions={editingUserPermissions}
                     onChange={setEditingUserPermissions}
+                    readOnly={!puedeEditarPermisos}
                   />
                 )}
               </div>

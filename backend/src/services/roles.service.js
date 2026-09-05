@@ -21,6 +21,9 @@ const MODULE_ACTIONS = {
   commissions: ['view', 'create', 'edit', 'delete'],
   users: ['view'],
   config: ['view'],
+  // Reescribir los permisos de un rol es su propia llave, no `config.edit`:
+  // esa la comparten las aerolíneas y los proveedores del catálogo.
+  permissions: ['view', 'edit'],
 };
 
 /**
@@ -38,6 +41,15 @@ const MODULE_ACTIONS = {
  */
 const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
+/**
+ * Roles que NO se pueden editar.
+ *
+ * `superadmin` porque si alguien pudiera quitarle permisos nadie podría
+ * devolvérselos, y `admin` porque `authorize.js` le da todo sin mirar la base:
+ * la pantalla dejaba editarlo y no pasaba nada, que es peor que no dejarlo.
+ */
+const ROLES_FIJOS = ['admin', 'superadmin'];
+
 const DEFAULT_ROLE_VALUES = {
   asesor: {
     dashboard: { view: 'own' },
@@ -51,6 +63,7 @@ const DEFAULT_ROLE_VALUES = {
     // venta. Ahora son revocables, aunque revocarlos rompa crear ventas.
     users: { view: 'true' },
     config: { view: 'true' },
+    permissions: { view: 'false', edit: 'false' },
   },
   freelancer: {
     dashboard: { view: 'own' },
@@ -61,6 +74,7 @@ const DEFAULT_ROLE_VALUES = {
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     users: { view: 'true' },
     config: { view: 'true' },
+    permissions: { view: 'false', edit: 'false' },
   },
   admin: {
     dashboard: { view: 'all' },
@@ -71,6 +85,18 @@ const DEFAULT_ROLE_VALUES = {
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     users: { view: 'true' },
     config: { view: 'true' },
+    permissions: { view: 'true', edit: 'false' },
+  },
+  superadmin: {
+    dashboard: { view: 'all' },
+    sales: { view: 'all', create: 'true', edit: 'true' },
+    clients: { view: 'all', create: 'true', edit: 'true' },
+    responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    itineraries: { view: 'all', edit: 'true' },
+    commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    users: { view: 'true' },
+    config: { view: 'true' },
+    permissions: { view: 'true', edit: 'true' },
   },
 };
 
@@ -150,6 +176,12 @@ class RolesService {
       throw new BadRequestError('El objeto de permisos está vacío');
     }
 
+    if (ROLES_FIJOS.includes(role)) {
+      throw new BadRequestError(
+        `El rol ${role} no es editable: sus permisos están fijados en el código.`
+      );
+    }
+
     const roles = await prisma.roles.findUnique({ where: { nombre: role } });
     if (!roles) throw new NotFoundError('Rol no encontrado');
 
@@ -179,4 +211,5 @@ class RolesService {
   }
 }
 
+module.exports.ROLES_FIJOS = ROLES_FIJOS;
 module.exports = new RolesService();

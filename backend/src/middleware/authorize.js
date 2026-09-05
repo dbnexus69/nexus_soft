@@ -17,6 +17,24 @@ const ADMIN_PERMISSIONS = {
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
   config: { view: true, create: true, edit: true, delete: true },
+  // Editar los permisos de un rol NO es `config.edit`.
+  //
+  // Compartían llave con el catálogo (aerolíneas, proveedores, métodos de
+  // pago), así que cualquiera que pudiera añadir una aerolínea podía además
+  // reescribir los permisos de todos los roles. Ahora es su propio módulo, y el
+  // admin solo puede mirarlo.
+  permissions: { view: true, edit: false },
+};
+
+/**
+ * `superadmin`: el único que puede reescribir permisos.
+ *
+ * Como el atajo del admin, ignora la base a propósito: si alguien pudiera
+ * quitarle permisos al superadmin desde la interfaz, nadie podría devolvérselos.
+ */
+const SUPERADMIN_PERMISSIONS = {
+  ...ADMIN_PERMISSIONS,
+  permissions: { view: true, edit: true },
 };
 
 const ROLE_DEFAULT_PERMISSIONS = {
@@ -28,6 +46,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
     // puede delegar desde la interfaz.
     responsables: { view: false, create: false, edit: false, delete: false },
+    permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: false },
     commissions: { view: false, create: false, edit: false, delete: false },
     users: { view: true },
@@ -41,6 +60,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
     // puede delegar desde la interfaz.
     responsables: { view: false, create: false, edit: false, delete: false },
+    permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: false },
     commissions: { view: false, create: false, edit: false, delete: false },
     users: { view: true },
@@ -49,6 +69,10 @@ const ROLE_DEFAULT_PERMISSIONS = {
 };
 
 function getEffectivePermissions(user) {
+  if (user.role === 'superadmin') {
+    return { permissions: SUPERADMIN_PERMISSIONS, scope: 'all' };
+  }
+
   if (user.role === 'admin') {
     return { permissions: ADMIN_PERMISSIONS, scope: 'all' };
   }

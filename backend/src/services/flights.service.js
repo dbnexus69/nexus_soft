@@ -109,31 +109,45 @@ function combinar(whereBase, predicado) {
 }
 
 /**
- * Clasifica cada tramo como ida o regreso. Agrupa por producto y, en un
- * round_trip, la primera mitad es ida.
+ * Clasifica cada tramo como ida o regreso. En un `round_trip`, la primera mitad
+ * de los tramos del producto es la ida.
  *
- * Limitación conocida: se resuelve solo con los tramos de la página actual, así
- * que un round_trip partido entre dos páginas se etiqueta mal. Es un defecto
- * previo que se conserva tal cual; arreglarlo pide resolver el tipo con todos
- * los tramos del producto, no solo los visibles.
+ * Se resuelve con TODOS los tramos del producto, no con los de la página. Antes
+ * se agrupaba solo lo visible, así que un ida y vuelta partido entre dos
+ * páginas se clasificaba sobre la mitad que se veía: los dos tramos de la
+ * página 1 salían como "ida" y "regreso" y los otros dos repetían la etiqueta
+ * en la página 2. La misma fila cambiaba de tipo según la página desde la que
+ * se mirase.
+ *
+ * Cuesta una consulta más, pero de tres columnas y por un índice
+ * (`@@index([prod_tiqueteria_id])`), no el `include` de cuatro niveles.
  */
-function resolverTipos(tramos) {
-  const porProducto = {};
-  for (const t of tramos) {
-    const pid = t.prod_tiqueteria_id;
-    if (!porProducto[pid]) porProducto[pid] = [];
-    porProducto[pid].push(t);
+async function resolverTipos(tramos) {
+  const productos = [...new Set(tramos.map(t => t.prod_tiqueteria_id).filter(Boolean))];
+  if (productos.length === 0) return {};
+
+  const modos = new Map();
+  for (const t of tramos) modos.set(t.prod_tiqueteria_id, t.prod_tiqueteria?.modo_vuelo);
+
+  const hermanos = await prisma.tramos_vuelo.findMany({
+    where: { prod_tiqueteria_id: { in: productos } },
+    select: { id: true, orden: true, prod_tiqueteria_id: true },
+    orderBy: [{ prod_tiqueteria_id: 'asc' }, { orden: 'asc' }],
+  });
+
+  const porProducto = new Map();
+  for (const h of hermanos) {
+    if (!porProducto.has(h.prod_tiqueteria_id)) porProducto.set(h.prod_tiqueteria_id, []);
+    porProducto.get(h.prod_tiqueteria_id).push(h);
   }
 
   const tipos = {};
-  for (const grupo of Object.values(porProducto)) {
-    const modo = grupo[0]?.prod_tiqueteria?.modo_vuelo;
-    grupo.sort((a, b) => a.orden - b.orden);
-    if (modo === 'round_trip') {
+  for (const [pid, grupo] of porProducto) {
+    if (modos.get(pid) === 'round_trip') {
       const mitad = Math.ceil(grupo.length / 2);
-      grupo.forEach((t, i) => { tipos[t.id] = i < mitad ? 'ida' : 'regreso'; });
+      grupo.forEach((h, i) => { tipos[h.id] = i < mitad ? 'ida' : 'regreso'; });
     } else {
-      grupo.forEach(t => { tipos[t.id] = 'ida'; });
+      grupo.forEach(h => { tipos[h.id] = 'ida'; });
     }
   }
   return tipos;
@@ -276,6 +290,23 @@ async function recalcularProducto(tx, prodTiqueteriaId) {
 }
 
 class FlightsService {
+  /**
+   * Un tramo por su id.
+   *
+   * Aplica el mismo filtro que el listado —venta vigente y ámbito de
+   * permisos—, así que un asesor con alcance 'own' recibe 404, no el vuelo de
+   * otro: si un recurso no es visible en la lista, tampoco debe serlo por su
+   * URL directa.
+   */
+  async getFlightById(id, { permissionScope, user } = {}) {
+    const whereBase = construirWhereBase({ permissionScope, user });
+    const [tramo] = await buscarTramos({ AND: [whereBase, { id: String(id) }] }, 0, 1);
+    if (!tramo) throw new NotFoundError('Vuelo no encontrado');
+
+    const tipos = await resolverTipos([tramo]);
+    return mapearTramo(tramo, tipos[tramo.id]);
+  }
+
   async listFlights({ pagination, dateFrom, dateTo, checkinStatus, search, permissionScope, user }) {
     const { page, perPage, skip } = pagination;
     const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, user });
@@ -288,7 +319,7 @@ class FlightsService {
       buscarTramos(where, skip, perPage),
     ]);
 
-    const tipos = resolverTipos(tramos);
+    const tipos = await resolverTipos(tramos);
     const data = tramos.map(t => mapearTramo(t, tipos[t.id]));
 
     return { data, meta: buildMeta(total, page, perPage) };
@@ -342,7 +373,7 @@ class FlightsService {
     // todos. `critico` incluido: su contador se cuenta con su mismo predicado.
     const total = status ? counts[status] : counts.total;
 
-    const tipos = resolverTipos(tramos);
+    const tipos = await resolverTipos(tramos);
     const data = tramos.map(t => mapearTramo(t, tipos[t.id]));
 
     return { data, meta: { ...buildMeta(total, page, perPage), counts } };

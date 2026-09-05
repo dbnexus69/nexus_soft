@@ -54,9 +54,13 @@ exports.cancelCheckin = async (req, res, next) => {
 
 exports.getById = async (req, res, next) => {
   try {
-    // const id = parseInt(req.params.id);
-    // const data = await flightsService.getFlightById(id);
-    success(res, { message: 'Flight getById placeholder' });
+    // El id de un tramo es un uuid en texto, no un entero: el `parseInt` que
+    // sugería el esqueleto comentado habría dado NaN contra una columna String.
+    const data = await flightsService.getFlightById(req.params.id, {
+      permissionScope: req.permissionScope,
+      user: req.user,
+    });
+    success(res, data);
   } catch (err) {
     next(err);
   }

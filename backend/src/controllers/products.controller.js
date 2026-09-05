@@ -5,6 +5,7 @@ const { randomUUID } = require('crypto');
 const { CATALOG } = require('../catalog/products');
 // El dinero de la venta lo deriva el servidor: misma regla que usa `createSale`.
 const { recalcularVenta, precioProducto } = require('../services/saleTotals');
+const { enHoraColombia } = require('../utils/fechas');
 
 
 async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaId) {
@@ -183,14 +184,23 @@ const productHandler = (category, tableName, transformData) => ({
               }
             }
 
+            const salidaTramo = enHoraColombia(leg.date, leg.departureTime || leg.time) || new Date();
+
             await tx.tramos_vuelo.create({
               data: {
                 id: randomUUID(),
                 prod_tiqueteria_id: product.id,
                 aeropuerto_origen_id: originAirport.id,
                 aeropuerto_destino_id: destAirport.id,
-                salida: leg.date ? new Date(leg.date) : new Date(),
-                llegada: leg.date ? new Date(leg.date) : new Date(),
+                // Mismo criterio que `createSale`: la hora se interpreta en
+                // Colombia, no en la zona del proceso. Aquí, además, la hora se
+                // perdía entera —ambas columnas guardaban `new Date(leg.date)`,
+                // sin `departureTime`— y la llegada quedaba idéntica a la
+                // salida, así que todo tramo dado de alta por este endpoint
+                // salía a medianoche y con duración cero.
+                salida: salidaTramo,
+                llegada: enHoraColombia(leg.arrivalDate || leg.date, leg.arrivalTime)
+                  || new Date(salidaTramo.getTime() + 3600000),
                 nro_vuelo_tramo: leg.flightNumber || null,
                 asiento: leg.seat || null,
                 nro_tiquete: leg.ticketNumber || null,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Pagination } from '../ui/Pagination';
 import * as api from '../../api';
@@ -16,26 +16,42 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
   const [salesMeta, setSalesMeta] = useState<any>({ page: 1, perPage: 5, total: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Guarda contra respuestas obsoletas: cada petición se queda con su número y
+  // solo escribe en el estado si sigue siendo la última. Sin esto, abrir un
+  // comisionista y saltar enseguida a otro —o pasar páginas rápido— deja que la
+  // respuesta lenta de la primera pise a la de la segunda, y la modal enseña
+  // las ventas de un comisionista bajo el nombre de otro.
+  const peticionActual = useRef(0);
+
+  const fetchAgentSales = useCallback(async (page: number) => {
+    if (!agent) return;
+    const miPeticion = ++peticionActual.current;
+    setIsLoading(true);
+    try {
+      const res = await api.listSales({ commissionAgentId: agent.id, page, perPage: 5, sortOrder: 'desc' });
+      if (miPeticion !== peticionActual.current) return;
+      setSales(res.data || []);
+      if (res.meta) setSalesMeta(res.meta);
+    } catch (error) {
+      if (miPeticion !== peticionActual.current) return;
+      console.error("Error fetching agent sales:", error);
+    } finally {
+      if (miPeticion === peticionActual.current) setIsLoading(false);
+    }
+  }, [agent?.id]);
+
   useEffect(() => {
     if (isOpen && agent) {
+      // La lista del comisionista anterior se limpia antes de pedir la nueva:
+      // si no, la modal se abre mostrando las ventas de otro hasta que llega la
+      // respuesta.
+      setSales([]);
+      setSalesMeta({ page: 1, perPage: 5, total: 0, totalPages: 0 });
       fetchAgentSales(1);
     }
     // Dependencia primitiva: con el objeto en la lista basta con que el padre
     // pase una identidad nueva en un render para repetir la petición.
-  }, [isOpen, agent?.id]);
-
-  const fetchAgentSales = async (page: number) => {
-    setIsLoading(true);
-    try {
-      const res = await api.listSales({ commissionAgentId: agent.id, page, perPage: 5, sortOrder: 'desc' });
-      setSales(res.data || []);
-      if (res.meta) setSalesMeta(res.meta);
-    } catch (error) {
-      console.error("Error fetching agent sales:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [isOpen, agent?.id, fetchAgentSales]);
 
   if (!agent) return null;
 

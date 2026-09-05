@@ -14,6 +14,7 @@ import { FormField } from '../components/ui/Form';
 import { formatDate, formatDateTime } from '../utils/formatters';
 import { Pagination } from '../components/ui/Pagination';
 import * as api from '../api';
+import { fetchAllPages } from '../api/fetchAll';
 import { Flight, CheckinCounts, CheckinStatusFilter } from '../types';
 import LoadingScreen from '../components/ui/LoadingScreen';
 
@@ -245,12 +246,16 @@ export default function Itineraries() {
     const desde = new Date(currentYear, currentMonth, 1);
     const hasta = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
     let vivo = true;
-    api.listFlights({
+    // `fetchAllPages`, no `perPage: 100` a pelo: el backend topa perPage en 100
+    // y aquí no se leía `meta.totalPages`, así que un mes con más de cien
+    // tramos perdía el resto sin decir nada — los días afectados salían vacíos
+    // en el calendario como si no hubiera vuelos. El rango es un mes, así que
+    // recorrer sus páginas está acotado por construcción.
+    fetchAllPages<Flight>(api.listFlights, {
       dateFrom: desde.toISOString(),
       dateTo: hasta.toISOString(),
-      perPage: 100,
     })
-      .then((res: any) => { if (vivo) setMonthFlights(res?.data || []); })
+      .then((res) => { if (vivo) setMonthFlights(res.data); })
       .catch(() => { if (vivo) setMonthFlights([]); })
       .finally(() => { if (vivo) setIsLoading(false); });
     return () => { vivo = false; };

@@ -107,7 +107,7 @@ exports.deletePayment = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.saleId);
     const paymentId = req.params.paymentId;
-    const result = await salesService.deletePayment(saleId, paymentId, req.body);
+    const result = await salesService.deletePayment(saleId, paymentId);
     success(res, result);
   } catch (err) {
     next(err);

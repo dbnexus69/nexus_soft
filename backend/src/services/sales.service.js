@@ -2,25 +2,7 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { enHoraColombia } = require('../utils/fechas');
-
-/**
- * Precio de un producto dentro de la venta.
- *
- * El asistente NO manda un `total` por producto: pide el costo de proveedor y
- * la TA (el margen), y el precio es su suma. Como `subtotal` solo se rellenaba
- * con `x.total`, quedaba en 0 en todas las ventas reales — y `stats.service.js`
- * calcula los ingresos por categoría con `SUM(d.subtotal)`.
- *
- * Medido antes del arreglo: la métrica mostraba 15.580.000 cuando lo real eran
- * 20.488.000, y categorías con ventas aparecían en cero.
- *
- * Si el payload trae un `total` explícito manda ese; si no, se deriva.
- */
-function precioProducto(x) {
-  const explicito = Number(x.total ?? x.subtotal ?? NaN);
-  if (Number.isFinite(explicito) && explicito > 0) return explicito;
-  return Number(x.ta || 0) + Number(x.supplierCost || 0);
-}
+const { recalcularVenta, aCentimos, precioProducto } = require('./saleTotals');
 const emailService = require('../utils/emailService');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
@@ -665,7 +647,10 @@ class SalesService {
         });
       }
 
-      return venta;
+      // Con los productos y los pagos ya escritos, la cabecera se deriva de
+      // ellos. El `total` del cuerpo de la petición deja de decidir cuánto
+      // debe el cliente: solo lo dice la suma de lo que se le vendió.
+      return recalcularVenta(tx, ventaId);
     }, {
       // Con los catálogos ya resueltos, una venta grande cabe de sobra en este
       // margen. Se deja explícito porque el defecto de Prisma son 5 s y una
@@ -1211,80 +1196,80 @@ class SalesService {
     return { message: 'Venta eliminada' };
   }
 
-  async registerPayment(id, { amount, isTotal, method, reference, currentPaidAmount, saleTotal }) {
+  async registerPayment(id, { amount, isTotal, method, reference }) {
     const { randomUUID } = require('crypto');
-    let newPaidAmount, newStatus;
     let metodo_pago_id = null;
     if (method) {
       const m = await prisma.metodos_pago.findFirst({ where: { nombre: method } });
       if (m) metodo_pago_id = m.id;
     }
 
-    if (saleTotal !== undefined && currentPaidAmount !== undefined) {
-      newPaidAmount = isTotal ? saleTotal : (currentPaidAmount || 0) + Number(amount);
-      newStatus = (isTotal || newPaidAmount >= saleTotal) ? 'pagado' : 'abonado';
-    } else {
-      const venta = await prisma.ventas.findUnique({ where: { id }, select: { monto_total: true, monto_pagado_credito: true } });
-      if (!venta) throw new NotFoundError('Venta no encontrada');
-      const currentPaid = venta.monto_pagado_credito || 0;
-      newPaidAmount = isTotal ? venta.monto_total : currentPaid + Number(amount);
-      newStatus = (isTotal || newPaidAmount >= venta.monto_total) ? 'pagado' : 'abonado';
-    }
-
-    let newPayment;
-    await prisma.$transaction(async (tx) => {
-      newPayment = await tx.pagos_venta.create({
-        data: { id: randomUUID(), venta_id: id, monto: Number(amount), metodo_pago_id, referencia: reference || null }
-      });
-      await tx.ventas.update({
+    // Antes había dos ramas: si el cuerpo traía `saleTotal` y `currentPaidAmount`
+    // se calculaba con ellos, y solo si faltaban se miraba la base. Eso ponía el
+    // importe de la deuda en manos del cliente: un POST de un peso con
+    // `saleTotal: 1` dejaba una venta de 3.000.000 en `pagado`. Ningún cliente
+    // los enviaba —eran superficie de ataque y nada más—, así que se van.
+    const resultado = await prisma.$transaction(async (tx) => {
+      const venta = await tx.ventas.findUnique({
         where: { id },
-        data: { monto_pagado_credito: newPaidAmount, status: newStatus }
+        select: { monto_total: true, monto_pagado_credito: true, status: true },
       });
+      if (!venta) throw new NotFoundError('Venta no encontrada');
+      if (venta.status === 'anulado') {
+        throw new BadRequestError('No se pueden registrar pagos sobre una venta anulada');
+      }
+
+      // `isTotal` significa "salda lo que queda", y cuánto queda lo sabe la base.
+      const pendiente = aCentimos(venta.monto_total - (venta.monto_pagado_credito || 0));
+      const monto = isTotal ? pendiente : aCentimos(amount);
+      if (!(monto > 0)) {
+        throw new BadRequestError('El monto del pago debe ser mayor que cero');
+      }
+
+      const pago = await tx.pagos_venta.create({
+        data: { id: randomUUID(), venta_id: id, monto, metodo_pago_id, referencia: reference || null },
+      });
+
+      // El monto pagado y el estado salen de la suma de los pagos, no de un
+      // acumulado que se va arrastrando y puede desviarse.
+      const actualizada = await recalcularVenta(tx, id);
+      return { pago, actualizada };
     });
 
     return {
-      creditPaidAmount: newPaidAmount,
-      status: newStatus,
+      creditPaidAmount: resultado.actualizada.monto_pagado_credito,
+      status: resultado.actualizada.status,
       payment: {
-        id: newPayment.id,
-        date: newPayment.fecha_pago,
-        amount: newPayment.monto,
+        id: resultado.pago.id,
+        date: resultado.pago.fecha_pago,
+        amount: resultado.pago.monto,
         method: method || null,
-        reference: newPayment.referencia
-      }
+        reference: resultado.pago.referencia,
+      },
     };
   }
 
-  async deletePayment(saleId, paymentId, { currentPayments, saleTotal } = {}) {
-    const payment = await prisma.pagos_venta.findUnique({
-      where: { id: paymentId },
-      select: { id: true, venta_id: true, monto: true }
-    });
-    if (!payment) throw new NotFoundError('Pago no encontrado');
-    if (payment.venta_id !== saleId) throw new BadRequestError('El pago no pertenece a esta venta');
-
-    let newPaidAmount = 0;
-    let newStatus = 'credito';
-
-    if (Array.isArray(currentPayments) && saleTotal !== undefined) {
-      newPaidAmount = currentPayments.filter(p => p.id !== paymentId).reduce((sum, p) => sum + p.amount, 0);
-      newStatus = newPaidAmount >= saleTotal ? 'pagado' : newPaidAmount > 0 ? 'abonado' : 'credito';
-      await prisma.$transaction([
-        prisma.pagos_venta.delete({ where: { id: paymentId } }),
-        prisma.ventas.update({ where: { id: saleId }, data: { monto_pagado_credito: newPaidAmount, status: newStatus } })
-      ]);
-    } else {
-      await prisma.$transaction(async (tx) => {
-        await tx.pagos_venta.delete({ where: { id: paymentId } });
-        const remainingPayments = await tx.pagos_venta.findMany({ where: { venta_id: saleId }, select: { monto: true } });
-        newPaidAmount = remainingPayments.reduce((sum, p) => sum + p.monto, 0);
-        const venta = await tx.ventas.findUnique({ where: { id: saleId }, select: { monto_total: true } });
-        newStatus = newPaidAmount >= venta.monto_total ? 'pagado' : newPaidAmount > 0 ? 'abonado' : 'credito';
-        await tx.ventas.update({ where: { id: saleId }, data: { monto_pagado_credito: newPaidAmount, status: newStatus } });
+  async deletePayment(saleId, paymentId) {
+    // Misma corrección que en `registerPayment`: la rama que aceptaba
+    // `currentPayments` y `saleTotal` del cuerpo dejaba que el cliente
+    // decidiera el estado de cobro resultante.
+    const actualizada = await prisma.$transaction(async (tx) => {
+      const pago = await tx.pagos_venta.findUnique({
+        where: { id: paymentId },
+        select: { id: true, venta_id: true },
       });
-    }
+      if (!pago) throw new NotFoundError('Pago no encontrado');
+      if (pago.venta_id !== saleId) throw new BadRequestError('El pago no pertenece a esta venta');
 
-    return { message: 'Pago eliminado', creditPaidAmount: newPaidAmount, status: newStatus };
+      await tx.pagos_venta.delete({ where: { id: paymentId } });
+      return recalcularVenta(tx, saleId);
+    });
+
+    return {
+      message: 'Pago eliminado',
+      creditPaidAmount: actualizada.monto_pagado_credito,
+      status: actualizada.status,
+    };
   }
 
   async updateReviewStatus(saleId, isReviewed) {

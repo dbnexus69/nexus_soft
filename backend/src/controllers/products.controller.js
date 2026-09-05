@@ -3,6 +3,8 @@ const { success, noContent, error } = require('../utils/apiResponse');
 const { randomUUID } = require('crypto');
 // Fuente de verdad de las categorías: un slug, el mismo en URL y en base de datos.
 const { CATALOG } = require('../catalog/products');
+// El dinero de la venta lo deriva el servidor: misma regla que usa `createSale`.
+const { recalcularVenta, precioProducto } = require('../services/saleTotals');
 
 
 async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaId) {
@@ -53,9 +55,9 @@ async function createDetalleProducto(tx, venta_id, categoria, data) {
       venta_id,
       categoria,
       nombre_servicio: data.nombre_servicio || null,
-      subtotal: data.subtotal || 0,
-      ta: data.ta || 0,
-      costo_proveedor: data.supplierCost || 0,
+      subtotal: precioProducto(data),
+      ta: Number(data.ta) || 0,
+      costo_proveedor: Number(data.supplierCost) || 0,
       proveedor_id: data.supplierId ? parseInt(data.supplierId) : null,
       metodo_pago_proveedor_id: data.supplierPaymentMethod ? parseInt(data.supplierPaymentMethod) : null,
       voucher_url: data.voucher_url || null,
@@ -200,6 +202,10 @@ const productHandler = (category, tableName, transformData) => ({
           }
         }
 
+        // Añadir un producto cambia lo que debe el cliente. Sin esto la
+        // cabecera se quedaba con el importe del día de la venta.
+        await recalcularVenta(tx, venta.id);
+
         return { detalle, product };
       });
 
@@ -218,9 +224,22 @@ const productHandler = (category, tableName, transformData) => ({
 
       const data = req.body;
       const product = await prisma.$transaction(async (tx) => {
+        // El cuerpo de la petición NO va directo a Prisma. Antes sí: como en el
+        // update no se pasaba `transformData`, `data` llegaba crudo, así que
+        // cualquier campo que no fuese columna reventaba con un 500 —probado con
+        // un PUT de simcard: `Unknown argument 'ta'`— y los que sí lo eran se
+        // escribían sin filtro. Con el mismo mapeo del POST hay una sola
+        // definición de qué campo del cliente va a qué columna.
+        const transformado = transformData ? transformData(data, null) : {};
+        // La línea de venta a la que pertenece no se reasigna nunca.
+        delete transformado.detalle_venta_id;
+        // Ni se reinicia el progreso: el POST lo fija en 'pendiente', y aplicar
+        // eso en un update borraría un check-in ya realizado.
+        delete transformado.checkin_status;
+
         const prod = await tx[tableName].update({
           where: { id },
-          data: transformData ? transformData(data) : data
+          data: transformado
         });
 
         if (data.passengers || data.passengerInfo || data.guests) {
@@ -260,6 +279,34 @@ const productHandler = (category, tableName, transformData) => ({
           }
         }
         
+        // `detalle_venta` no se tocaba aquí: editar el precio de un producto
+        // actualizaba su tabla de categoría y dejaba intacta la línea de venta,
+        // así que el cambio de importe se perdía sin decir nada.
+        //
+        // Sólo se escribe si la petición trae cifras. Es un PUT parcial: lo que
+        // no venga conserva su valor, en vez de irse a cero.
+        const traeDinero = ['total', 'subtotal', 'ta', 'supplierCost']
+          .some((k) => data[k] !== undefined);
+        if (traeDinero) {
+          const actual = await tx.detalle_venta.findUnique({
+            where: { id: prod.detalle_venta_id },
+            select: { ta: true, costo_proveedor: true },
+          });
+          const ta = data.ta !== undefined ? Number(data.ta) || 0 : (actual?.ta || 0);
+          const costo_proveedor = data.supplierCost !== undefined
+            ? Number(data.supplierCost) || 0
+            : (actual?.costo_proveedor || 0);
+          await tx.detalle_venta.update({
+            where: { id: prod.detalle_venta_id },
+            data: {
+              subtotal: precioProducto({ total: data.total, subtotal: data.subtotal, ta, supplierCost: costo_proveedor }),
+              ta,
+              costo_proveedor,
+            },
+          });
+          await recalcularVenta(tx, venta_id);
+        }
+
         return prod;
       });
 
@@ -275,8 +322,24 @@ const productHandler = (category, tableName, transformData) => ({
       if (!product) return error(res, 'Producto no encontrado', 404);
 
       await prisma.$transaction(async (tx) => {
+        const detalle = await tx.detalle_venta.findUnique({
+          where: { id: product.detalle_venta_id },
+          select: { venta_id: true },
+        });
+
+        // Lo que cuelga del producto se borra antes que él. Sin esto la clave
+        // foránea abortaba la transacción entera —comprobado: un DELETE de una
+        // simcard con pasajero devolvía 400 con
+        // `pasajeros_detalle_detalle_venta_id_fkey`—, así que un producto
+        // creado por este endpoint no se podía borrar nunca.
+        if (tableName === 'prod_tiqueteria') {
+          await tx.tramos_vuelo.deleteMany({ where: { prod_tiqueteria_id: id } });
+        }
+        await tx.pasajeros_detalle.deleteMany({ where: { detalle_venta_id: product.detalle_venta_id } });
+
         await tx[tableName].delete({ where: { id } });
         await tx.detalle_venta.delete({ where: { id: product.detalle_venta_id } });
+        if (detalle) await recalcularVenta(tx, detalle.venta_id);
       });
 
       noContent(res);
@@ -292,7 +355,7 @@ const H = productHandler;
 // =========================================================
 // Tiquetería
 // =========================================================
-exports.createTicket = H('ticket', 'prod_tiqueteria', (d, detalleId) => ({
+const handlerTicket = H('ticket', 'prod_tiqueteria', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   aerolineaId: d.airline ? parseInt(d.airline) : null,
   nro_reserva: d.reservationNumber || null,
@@ -301,15 +364,15 @@ exports.createTicket = H('ticket', 'prod_tiqueteria', (d, detalleId) => ({
   modo_vuelo: d.flightMode || 'one_way',
   planEquipajeId: d.baggagePlan ? parseInt(d.baggagePlan) : null,
   checkin_status: 'pendiente'
-})).create;
-
-exports.updateTicket = H('ticket', 'prod_tiqueteria').update;
-exports.deleteTicket = H('ticket', 'prod_tiqueteria').delete;
+}));
+exports.createTicket = handlerTicket.create;
+exports.updateTicket = handlerTicket.update;
+exports.deleteTicket = handlerTicket.delete;
 
 // =========================================================
 // Hotelería
 // =========================================================
-exports.createHotel = H('hotel', 'prod_hoteleria', (d, detalleId) => ({
+const handlerHotel = H('hotel', 'prod_hoteleria', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   hotel_nombre: d.hotelName || null,
   tipo_hotel: d.hotelType || 'hotel',
@@ -318,15 +381,15 @@ exports.createHotel = H('hotel', 'prod_hoteleria', (d, detalleId) => ({
   fecha_entrada: d.startDate ? new Date(d.startDate) : null,
   fecha_salida: d.endDate ? new Date(d.endDate) : null,
   observaciones: d.observations || null
-})).create;
-
-exports.updateHotel = H('hotel', 'prod_hoteleria').update;
-exports.deleteHotel = H('hotel', 'prod_hoteleria').delete;
+}));
+exports.createHotel = handlerHotel.create;
+exports.updateHotel = handlerHotel.update;
+exports.deleteHotel = handlerHotel.delete;
 
 // =========================================================
 // Seguros
 // =========================================================
-exports.createInsurance = H('insurance', 'prod_seguros', (d, detalleId) => ({
+const handlerInsurance = H('insurance', 'prod_seguros', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   tipo_seguro: d.insuranceType || 'basico',
   cobertura_usd: d.coverageAmount || 0,
@@ -336,15 +399,15 @@ exports.createInsurance = H('insurance', 'prod_seguros', (d, detalleId) => ({
   telefono_contacto: d.contactNumber || null,
   fecha_inicio_vigencia: d.startDate ? new Date(d.startDate) : null,
   fecha_fin_vigencia: d.endDate ? new Date(d.endDate) : null
-})).create;
-
-exports.updateInsurance = H('insurance', 'prod_seguros').update;
-exports.deleteInsurance = H('insurance', 'prod_seguros').delete;
+}));
+exports.createInsurance = handlerInsurance.create;
+exports.updateInsurance = handlerInsurance.update;
+exports.deleteInsurance = handlerInsurance.delete;
 
 // =========================================================
 // Planes
 // =========================================================
-exports.createPlan = H('plan', 'prod_planes', (d, detalleId) => ({
+const handlerPlan = H('plan', 'prod_planes', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   paqueteId: d.packageId ? parseInt(d.packageId) : null,
   nombre_plan: d.planName || null,
@@ -359,15 +422,15 @@ exports.createPlan = H('plan', 'prod_planes', (d, detalleId) => ({
   menores_count: d.childrenCount || 0,
   numero_confirmacion: d.confirmationNumber || null,
   observaciones: d.observations || null
-})).create;
-
-exports.updatePlan = H('plan', 'prod_planes').update;
-exports.deletePlan = H('plan', 'prod_planes').delete;
+}));
+exports.createPlan = handlerPlan.create;
+exports.updatePlan = handlerPlan.update;
+exports.deletePlan = handlerPlan.delete;
 
 // =========================================================
 // Check-in
 // =========================================================
-exports.createCheckin = H('checkin', 'prod_checkins', (d, detalleId) => ({
+const handlerCheckin = H('checkin', 'prod_checkins', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   nro_vuelo_reserva: d.flightOrReservation || null,
   fecha_viaje: d.travelDate ? new Date(d.travelDate) : null,
@@ -376,30 +439,30 @@ exports.createCheckin = H('checkin', 'prod_checkins', (d, detalleId) => ({
   telefono_contacto: d.phone || null,
   necesidades_especiales: d.specialNeeds || null,
   usa_silla_ruedas: d.needsWheelchair || false
-})).create;
-
-exports.updateCheckin = H('checkin', 'prod_checkins').update;
-exports.deleteCheckin = H('checkin', 'prod_checkins').delete;
+}));
+exports.createCheckin = handlerCheckin.create;
+exports.updateCheckin = handlerCheckin.update;
+exports.deleteCheckin = handlerCheckin.delete;
 
 // =========================================================
 // Migración
 // =========================================================
-exports.createMigration = H('migration', 'prod_migracion', (d, detalleId) => ({
+const handlerMigration = H('migration', 'prod_migracion', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   tipo_tramite_migratorio: d.requestedDocType || null,
   nacionalidad: d.nationality || null,
   pasaporte_nro: d.passportNumber || null,
   pasaporte_vence: d.passportExpiry ? new Date(d.passportExpiry) : null,
   pais_destino: d.destinationCountry || null
-})).create;
-
-exports.updateMigration = H('migration', 'prod_migracion').update;
-exports.deleteMigration = H('migration', 'prod_migracion').delete;
+}));
+exports.createMigration = handlerMigration.create;
+exports.updateMigration = handlerMigration.update;
+exports.deleteMigration = handlerMigration.delete;
 
 // =========================================================
 // SIM Card
 // =========================================================
-exports.createSimcard = H('simcard', 'prod_simcards', (d, detalleId) => ({
+const handlerSimcard = H('simcard', 'prod_simcards', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   pais_destino: d.destinationCountry || null,
   fecha_llegada: d.arrivalDate ? new Date(d.arrivalDate) : null,
@@ -407,15 +470,15 @@ exports.createSimcard = H('simcard', 'prod_simcards', (d, detalleId) => ({
   plan_datos: d.dataPlan || null,
   tipo_sim: d.simType || null,
   metodo_entrega: d.deliveryMethod || null
-})).create;
-
-exports.updateSimcard = H('simcard', 'prod_simcards').update;
-exports.deleteSimcard = H('simcard', 'prod_simcards').delete;
+}));
+exports.createSimcard = handlerSimcard.create;
+exports.updateSimcard = handlerSimcard.update;
+exports.deleteSimcard = handlerSimcard.delete;
 
 // =========================================================
 // Renta de Autos
 // =========================================================
-exports.createCarRental = H('car', 'prod_autos', (d, detalleId) => ({
+const handlerCarRental = H('car', 'prod_autos', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   conductor_nombre: d.mainDriver || null,
   licencia_nro: d.licenseNumber || null,
@@ -426,15 +489,15 @@ exports.createCarRental = H('car', 'prod_autos', (d, detalleId) => ({
   conductores_adicionales: d.additionalDrivers || 0,
   tipo_seguro: d.insuranceType || null,
   tarjeta_garantia_info: d.guaranteeCreditCard || null
-})).create;
-
-exports.updateCarRental = H('car', 'prod_autos').update;
-exports.deleteCarRental = H('car', 'prod_autos').delete;
+}));
+exports.createCarRental = handlerCarRental.create;
+exports.updateCarRental = handlerCarRental.update;
+exports.deleteCarRental = handlerCarRental.delete;
 
 // =========================================================
 // Fincas
 // =========================================================
-exports.createFinca = H('finca', 'prod_fincas', (d, detalleId) => ({
+const handlerFinca = H('finca', 'prod_fincas', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   responsable_nombre: d.responsibleName || null,
   documento_responsable: d.docNumber || null,
@@ -445,15 +508,15 @@ exports.createFinca = H('finca', 'prod_fincas', (d, detalleId) => ({
   tiene_mascotas: d.hasPets || false,
   tipo_mascota: d.petType || null,
   servicios_extra: d.additionalServices?.join(', ') || null
-})).create;
-
-exports.updateFinca = H('finca', 'prod_fincas').update;
-exports.deleteFinca = H('finca', 'prod_fincas').delete;
+}));
+exports.createFinca = handlerFinca.create;
+exports.updateFinca = handlerFinca.update;
+exports.deleteFinca = handlerFinca.delete;
 
 // =========================================================
 // Tours
 // =========================================================
-exports.createTour = H('tour', 'prod_tours', (d, detalleId) => ({
+const handlerTour = H('tour', 'prod_tours', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   tour_nombre: d.selectedTour || null,
   fecha_preferida: d.preferredDate ? new Date(d.preferredDate) : null,
@@ -465,15 +528,15 @@ exports.createTour = H('tour', 'prod_tours', (d, detalleId) => ({
   punto_encuentro: d.pickupPoint || null,
   condiciones_medicas: d.medicalConditions || null,
   telefono_contacto: d.phone || null
-})).create;
-
-exports.updateTour = H('tour', 'prod_tours').update;
-exports.deleteTour = H('tour', 'prod_tours').delete;
+}));
+exports.createTour = handlerTour.create;
+exports.updateTour = handlerTour.update;
+exports.deleteTour = handlerTour.delete;
 
 // =========================================================
 // Centros de Convención
 // =========================================================
-exports.createConvention = H('convention', 'prod_eventos', (d, detalleId) => ({
+const handlerConvention = H('convention', 'prod_eventos', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   organizacion: d.organization || null,
   nombre_contacto: d.contactName || null,
@@ -486,15 +549,15 @@ exports.createConvention = H('convention', 'prod_eventos', (d, detalleId) => ({
   equipos_av: d.avEquipment?.join(', ') || null,
   requiere_catering: d.hasCatering || false,
   notas_catering: d.cateringNotes || null
-})).create;
-
-exports.updateConvention = H('convention', 'prod_eventos').update;
-exports.deleteConvention = H('convention', 'prod_eventos').delete;
+}));
+exports.createConvention = handlerConvention.create;
+exports.updateConvention = handlerConvention.update;
+exports.deleteConvention = handlerConvention.delete;
 
 // =========================================================
 // Restaurantes
 // =========================================================
-exports.createRestaurant = H('restaurant', 'prod_restaurantes', (d, detalleId) => ({
+const handlerRestaurant = H('restaurant', 'prod_restaurantes', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   nombre_reserva: d.reservationName || null,
   fecha_hora_reserva: d.dateTime ? new Date(d.dateTime) : null,
@@ -504,15 +567,15 @@ exports.createRestaurant = H('restaurant', 'prod_restaurantes', (d, detalleId) =
   restricciones_dieta: d.dietaryRestrictions?.join(', ') || null,
   ocasion_especial: d.specialOccasion || null,
   telefono_contacto: d.phone || null
-})).create;
-
-exports.updateRestaurant = H('restaurant', 'prod_restaurantes').update;
-exports.deleteRestaurant = H('restaurant', 'prod_restaurantes').delete;
+}));
+exports.createRestaurant = handlerRestaurant.create;
+exports.updateRestaurant = handlerRestaurant.update;
+exports.deleteRestaurant = handlerRestaurant.delete;
 
 // =========================================================
 // Visa
 // =========================================================
-exports.createVisa = H('visa', 'prod_visas', (d, detalleId) => ({
+const handlerVisa = H('visa', 'prod_visas', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   nombre_completo: d.fullName || null,
   fecha_nacimiento: d.birthDate ? new Date(d.birthDate) : null,
@@ -523,15 +586,15 @@ exports.createVisa = H('visa', 'prod_visas', (d, detalleId) => ({
   tipo_visa: d.visaType || null,
   fecha_estimada_viaje: d.estimatedTravelDate ? new Date(d.estimatedTravelDate) : null,
   email_contacto: d.email || null
-})).create;
-
-exports.updateVisa = H('visa', 'prod_visas').update;
-exports.deleteVisa = H('visa', 'prod_visas').delete;
+}));
+exports.createVisa = handlerVisa.create;
+exports.updateVisa = handlerVisa.update;
+exports.deleteVisa = handlerVisa.delete;
 
 // =========================================================
 // Pasaporte
 // =========================================================
-exports.createPassport = H('passport', 'prod_pasaportes', (d, detalleId) => ({
+const handlerPassport = H('passport', 'prod_pasaportes', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   nombre_completo: d.fullName || null,
   nro_documento: d.idNumber || null,
@@ -540,15 +603,15 @@ exports.createPassport = H('passport', 'prod_pasaportes', (d, detalleId) => ({
   tipo_tramite: d.processType || null,
   fecha_estimada_viaje: d.estimatedTravelDate ? new Date(d.estimatedTravelDate) : null,
   telefono_contacto: d.phone || null
-})).create;
-
-exports.updatePassport = H('passport', 'prod_pasaportes').update;
-exports.deletePassport = H('passport', 'prod_pasaportes').delete;
+}));
+exports.createPassport = handlerPassport.create;
+exports.updatePassport = handlerPassport.update;
+exports.deletePassport = handlerPassport.delete;
 
 // =========================================================
 // Servicio de Mascotas
 // =========================================================
-exports.createPetService = H('pet', 'prod_mascotas', (d, detalleId) => ({
+const handlerPetService = H('pet', 'prod_mascotas', (d, detalleId) => ({
   detalle_venta_id: detalleId,
   mascota_nombre: d.petName || null,
   especie: d.species || null,
@@ -560,10 +623,10 @@ exports.createPetService = H('pet', 'prod_mascotas', (d, detalleId) => ({
   pais_destino: d.destinationCountry || null,
   condiciones_medicas: d.medicalConditions || null,
   telefono_contacto: d.phone || null
-})).create;
-
-exports.updatePetService = H('pet', 'prod_mascotas').update;
-exports.deletePetService = H('pet', 'prod_mascotas').delete;
+}));
+exports.createPetService = handlerPetService.create;
+exports.updatePetService = handlerPetService.update;
+exports.deletePetService = handlerPetService.delete;
 
 // =========================================================
 // Voucher Upload

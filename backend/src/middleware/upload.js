@@ -1,4 +1,5 @@
 const multer = require('multer');
+const { BadRequestError } = require('../errors/AppError');
 const path = require('path');
 
 const storage = multer.diskStorage({
@@ -18,7 +19,10 @@ const fileFilter = (req, file, cb) => {
   if (allowed.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Tipo de archivo no permitido'), false);
+    // Un Error pelado no lleva statusCode, así que el manejador lo trataba como
+    // un fallo no previsto: 500 y, antes, con la traza dentro. Es un dato malo
+    // del cliente, o sea un 400 con un mensaje que dice cómo arreglarlo.
+    cb(new BadRequestError(`Tipo de archivo no permitido: ${ext || 'sin extensión'}. Se aceptan ${allowed.join(', ')}`), false);
   }
 };
 

@@ -1,9 +1,36 @@
+const { randomUUID } = require('crypto');
 const { error } = require('../utils/apiResponse');
 
+/**
+ * Manejador de errores.
+ *
+ * Regla: **al cliente solo va lo que se decidió contarle.** Los errores con
+ * `statusCode` los lanza este código a propósito y su mensaje es para el
+ * usuario; todo lo demás es un fallo no previsto y sale como un mensaje
+ * genérico con una referencia.
+ *
+ * Antes la última rama devolvía `err.message + '\n' + err.stack` al cliente,
+ * sin mirar el entorno. Una subida con extensión no permitida contestaba con la
+ * traza completa y las rutas absolutas del servidor dentro. Con eso se regalan
+ * el árbol de directorios, los nombres de los módulos y las versiones.
+ *
+ * No hay rama "si es desarrollo muestro más": esa condición es justo la que
+ * acaba filtrando en producción cuando alguien despliega con NODE_ENV mal
+ * puesto. La información completa está en el log del servidor, y la referencia
+ * la une con lo que vio el usuario.
+ */
 function errorHandler(err, req, res, _next) {
-  console.error('[ERROR]', err.message || err);
-  if (err.meta) console.error('[ERROR META]', JSON.stringify(err.meta));
-  if (err.stack) console.error('[ERROR STACK]', err.stack);
+  // Identificador corto: el usuario lo puede leer por teléfono y aparece
+  // literal en el log del servidor.
+  const referencia = randomUUID().slice(0, 8);
+
+  console.error('[ERROR]', referencia, req.method, req.originalUrl,
+    req.user ? `usuario=${req.user.id}` : 'sin sesión', '|', err.message || err);
+  if (err.meta) console.error('[ERROR META]', referencia, JSON.stringify(err.meta));
+  if (err.stack) console.error('[ERROR STACK]', referencia, err.stack);
+
+  // ── Errores de Prisma que sí conviene traducir ──────────────────────────
+  // Su mensaje describe qué hizo mal quien llamó, no cómo está hecho esto.
 
   if (err.code === 'P2002') {
     const target = err.meta?.target?.join(', ') || 'campo';
@@ -32,12 +59,22 @@ function errorHandler(err, req, res, _next) {
     return error(res, 'El archivo es demasiado grande', 413, 'FILE_TOO_LARGE');
   }
 
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return error(res, 'Demasiados archivos', 413, 'TOO_MANY_FILES');
+  }
+
+  // ── Errores nuestros: el mensaje se escribió para el usuario ────────────
   if (err.statusCode) {
     return error(res, err.message, err.statusCode, err.code || 'BAD_REQUEST');
   }
 
-  const msg = err.stack ? `${err.message || err}\n${err.stack}` : `Error interno: ${err.message || err}`;
-  return error(res, msg, 500, 'INTERNAL_ERROR');
+  // ── Cualquier otra cosa: nada del error sale de aquí ────────────────────
+  return error(
+    res,
+    `Error interno del servidor. Si el problema persiste, reporta la referencia ${referencia}.`,
+    500,
+    'INTERNAL_ERROR'
+  );
 }
 
 module.exports = errorHandler;

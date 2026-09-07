@@ -6,6 +6,8 @@ import { useSalesContext } from '../../context/SalesContext';
 import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils/formatters';
 import { Pagination } from '../ui/Pagination';
+import SortIcon from '../ui/SortIcon';
+import { COLUMNAS, N_COLUMNAS, SENTIDO_NATURAL } from './credit/tabla';
 import { AgingBar } from './credit/AgingBar';
 import { ClientCreditRow, type ClienteEnCartera } from './credit/ClientCreditRow';
 import { CollectPaymentDialog, type CreditoACobrar } from './credit/CollectPaymentDialog';
@@ -65,6 +67,11 @@ export default function CreditDashboard() {
   const [filtro, setFiltro] = useState('all');
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(1);
+  // Sin orden elegido manda el del servidor: lo más vencido primero, que es el
+  // orden en que se cobra. Por eso el estado arranca vacío y no en una columna.
+  const [orden, setOrden] = useState<{ por: string | null; sentido: 'asc' | 'desc' }>(
+    { por: null, sentido: 'desc' },
+  );
 
   const [clientes, setClientes] = useState<ClienteEnCartera[]>([]);
   const [totales, setTotales] = useState(TOTALES_VACIOS);
@@ -75,7 +82,7 @@ export default function CreditDashboard() {
   const [cobrando, setCobrando] = useState<CreditoACobrar | null>(null);
   const [tokenRefresco, setTokenRefresco] = useState(0);
 
-  useEffect(() => { setPage(1); }, [busqueda, filtro]);
+  useEffect(() => { setPage(1); }, [busqueda, filtro, orden]);
 
   useEffect(() => {
     let vivo = true;
@@ -86,6 +93,8 @@ export default function CreditDashboard() {
         perPage: PER_PAGE,
         search: busqueda.trim() || undefined,
         bucket: filtro !== 'all' ? filtro : undefined,
+        sortBy: orden.por || undefined,
+        sortOrder: orden.por ? orden.sentido : undefined,
       })
         .then((res: any) => {
           if (!vivo) return;
@@ -97,7 +106,18 @@ export default function CreditDashboard() {
         .finally(() => { if (vivo) setCargando(false); });
     }, busqueda ? 300 : 0);
     return () => { vivo = false; clearTimeout(t); };
-  }, [page, busqueda, filtro, tokenRefresco]);
+  }, [page, busqueda, filtro, orden, tokenRefresco]);
+
+  // Primer clic: el sentido natural de la columna. Segundo: el contrario.
+  // Tercero: se vuelve al orden por defecto, para poder deshacer sin recargar.
+  const ordenarPor = useCallback((clave: string) => {
+    setOrden(actual => {
+      if (actual.por !== clave) return { por: clave, sentido: SENTIDO_NATURAL[clave] || 'desc' };
+      const natural = SENTIDO_NATURAL[clave] || 'desc';
+      if (actual.sentido === natural) return { por: clave, sentido: natural === 'asc' ? 'desc' : 'asc' };
+      return { por: null, sentido: 'desc' };
+    });
+  }, []);
 
   const alternar = useCallback((clientId: number) => {
     setAbierta(actual => (actual === clientId ? null : clientId));
@@ -230,26 +250,52 @@ export default function CreditDashboard() {
           <table className="w-full min-w-[46rem] text-sm">
             <thead>
               <tr className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                <th scope="col" className="px-3 py-2 text-left">Cliente</th>
-                <th scope="col" className="px-3 py-2 text-right">Créditos</th>
-                <th scope="col" className="px-3 py-2 text-right">Vencido</th>
-                <th scope="col" className="px-3 py-2 text-right">Pendiente</th>
-                <th scope="col" className="px-3 py-2 text-left">Mora</th>
-                <th scope="col" className="px-3 py-2 text-left">Antigüedad</th>
+                {COLUMNAS.map(col => {
+                  const activa = orden.por === col.orden;
+                  return (
+                    <th
+                      key={col.clave}
+                      scope="col"
+                      // `aria-sort` en la celda es lo que anuncia el orden a un
+                      // lector de pantalla; el icono solo lo dice en pantalla.
+                      aria-sort={activa ? (orden.sentido === 'asc' ? 'ascending' : 'descending') : undefined}
+                      className={`px-3 py-2 ${col.derecha ? 'text-right' : 'text-left'}`}
+                    >
+                      {col.orden ? (
+                        <button
+                          type="button"
+                          onClick={() => ordenarPor(col.orden!)}
+                          className={`inline-flex items-center gap-1 rounded font-medium hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 dark:hover:text-slate-200 ${
+                            col.derecha ? 'flex-row-reverse' : ''
+                          } ${activa ? 'text-slate-800 dark:text-slate-200' : ''}`}
+                        >
+                          {col.rotulo}
+                          <SortIcon
+                            field={col.orden}
+                            currentSort={orden.por || ''}
+                            sortOrder={orden.sentido}
+                          />
+                        </button>
+                      ) : (
+                        col.rotulo
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {cargando && clientes.length === 0 ? (
                 Array.from({ length: 4 }, (_, i) => (
                   <tr key={i} className="border-t border-slate-200 dark:border-slate-800">
-                    <td colSpan={6} className="px-3 py-3">
+                    <td colSpan={N_COLUMNAS} className="px-3 py-3">
                       <div className="h-6 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
                     </td>
                   </tr>
                 ))
               ) : sinResultados ? (
                 <tr className="border-t border-slate-200 dark:border-slate-800">
-                  <td colSpan={6} className="px-4 py-14 text-center">
+                  <td colSpan={N_COLUMNAS} className="px-4 py-14 text-center">
                     <p className="font-semibold text-slate-700 dark:text-slate-200">
                       {busqueda.trim()
                         ? 'Ningún cliente coincide con la búsqueda'

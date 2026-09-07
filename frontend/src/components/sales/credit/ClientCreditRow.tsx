@@ -4,6 +4,7 @@ import * as api from '../../../api';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { AgingBar } from './AgingBar';
 import { TRAMO, textoVencimiento, type Aging, type Tramo } from './aging';
+import { N_COLUMNAS } from './tabla';
 import type { CreditoACobrar } from './CollectPaymentDialog';
 
 export interface ClienteEnCartera {
@@ -138,7 +139,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
 
       {abierta && (
         <tr className="bg-slate-50/60 dark:bg-slate-900/40">
-          <td colSpan={6} className="px-3 pb-4 pt-1">
+          <td colSpan={N_COLUMNAS} className="px-3 pb-4 pt-1">
             {cargando && !creditos ? (
               <div className="space-y-2 py-2">
                 {[0, 1].map(i => (

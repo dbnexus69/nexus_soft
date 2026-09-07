@@ -53,6 +53,12 @@ exports.creditPortfolio = async (req, res, next) => {
       status: req.query.status,
       // Tramo del informe de antigüedad: 'overdue' agrupa los cuatro de mora.
       bucket: req.query.bucket,
+      // Del query, no de `req.sortBy`/`req.sortOrder`: el middleware `paginate`
+      // los rellena con 'creadoAt' y 'desc', que aquí no significan nada. Hace
+      // falta distinguir "no lo pidió" para poder aplicar el sentido natural de
+      // cada columna.
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
       permissionScope: req.permissionScope,
       user: req.user,
     });

@@ -147,6 +147,26 @@ const CTE_POR_CLIENTE = `
         FROM por_cliente pc
       )`;
 
+/**
+ * Ordenaciones admitidas de la cartera. Lista blanca: la clave del cliente
+ * elige una expresión ya escrita, nunca se interpola en el SQL.
+ *
+ * `priority` es el orden por defecto y es fijo —lo más vencido primero y, a
+ * igualdad, lo que vence antes—, que es el orden en que se cobra. Las demás
+ * llevan su propio sentido natural: los nombres suben, el dinero y los días
+ * bajan, porque nadie ordena una cartera para ver quién debe menos.
+ */
+const ORDENES_CARTERA = {
+  priority: { sql: 'c2."overdueAmount" DESC, c2."nextDueDate" ASC NULLS LAST', fijo: true },
+  client:   { sql: "cp.nombres || ' ' || cp.apellidos", defecto: 'asc' },
+  credits:  { sql: 'c2."activeCredits"', defecto: 'desc' },
+  overdue:  { sql: 'c2."overdueAmount"', defecto: 'desc' },
+  pending:  { sql: 'c2."pendingAmount"', defecto: 'desc' },
+  days:     { sql: 'c2."daysOverdue"', defecto: 'desc' },
+  // Un crédito sin fecha no debe encabezar la lista en ningún sentido.
+  dueDate:  { sql: 'c2."nextDueDate"', defecto: 'asc', nulos: 'NULLS LAST' },
+};
+
 /** Fila de resumen por cliente, en la forma que consume la pantalla. */
 function mapearResumenCliente(f) {
   return {
@@ -1032,7 +1052,7 @@ class SalesService {
    * array del LIMIT, así que `?status=overdue` devolvía 0 filas informando de
    * `meta.total: 2` y todas las páginas salían vacías.
    */
-  async getCreditPortfolio({ pagination, search, status, bucket, permissionScope, user }) {
+  async getCreditPortfolio({ pagination, search, status, bucket, sortBy, sortOrder, permissionScope, user }) {
     const { page, perPage, skip } = pagination;
     const ESTADOS = ['overdue', 'urgent', 'pending', 'ok'];
 
@@ -1046,6 +1066,25 @@ class SalesService {
         `Tramo de antigüedad inválido: ${bucket}. Válidos: all, overdue, ${TRAMOS_ANTIGUEDAD.join(', ')}`
       );
     }
+    if (sortBy && !ORDENES_CARTERA[sortBy]) {
+      throw new BadRequestError(
+        `Orden inválido: ${sortBy}. Válidos: ${Object.keys(ORDENES_CARTERA).join(', ')}`
+      );
+    }
+    // Sin distinguir mayúsculas: 'ASC' es lo que escribe cualquiera y rechazarlo
+    // no protege de nada.
+    const sentido = sortOrder ? String(sortOrder).toLowerCase() : null;
+    if (sentido && sentido !== 'asc' && sentido !== 'desc') {
+      throw new BadRequestError(`Sentido de orden inválido: ${sortOrder}. Válidos: asc, desc`);
+    }
+
+    // El desempate por cliente va siempre al final: sin él, dos clientes con el
+    // mismo importe pueden cambiar de sitio entre páginas y una fila se ve dos
+    // veces o ninguna.
+    const orden = ORDENES_CARTERA[sortBy] || ORDENES_CARTERA.priority;
+    const ordenSql = orden.fijo
+      ? orden.sql
+      : `${orden.sql} ${(sentido || orden.defecto).toUpperCase()}${orden.nulos ? ` ${orden.nulos}` : ''}`;
 
     const filtros = [];
     const params = [];
@@ -1085,7 +1124,7 @@ class SalesService {
         JOIN clientes c ON c2.cliente_id = c.id
         JOIN personas cp ON c.persona_id = cp.id
         ${filtroSql}
-        ORDER BY c2."overdueAmount" DESC, c2."nextDueDate" ASC NULLS LAST, c2.cliente_id ASC
+        ORDER BY ${ordenSql}, c2.cliente_id ASC
         LIMIT $${iTramo + 1} OFFSET $${iTramo + 2}
       `, ...params, pEstado, pTramo, perPage, skip),
 

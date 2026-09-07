@@ -65,7 +65,7 @@ const Casilla = memo(function Casilla({
       aria-label={etiqueta}
       disabled={readOnly}
       onClick={onToggle}
-      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight/40 ${
+      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${
         activo
           ? 'border-highlight bg-highlight text-white'
           : 'border-gray-border text-transparent hover:border-accent'
@@ -101,10 +101,10 @@ const Alcance = memo(function Alcance({
             aria-checked={activo}
             disabled={readOnly}
             onClick={() => onChange(o.value)}
-            className={`px-2 py-1 text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight/40 ${
+            className={`px-2 py-1 text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight ${
               activo
                 ? 'bg-highlight text-white'
-                : 'text-accent hover:bg-gray-light dark:hover:bg-white/5'
+                : 'text-accent hover:bg-slate-100 dark:hover:bg-white/5'
             } ${readOnly ? 'cursor-not-allowed' : ''}`}
           >
             {o.label}
@@ -141,7 +141,7 @@ const Fila = memo(function Fila({
   modulo, columnas, valores, scopes, readOnly, onCambiar,
 }: FilaProps) {
   return (
-    <tr className="border-t border-gray-border/60 hover:bg-gray-light/60 dark:hover:bg-white/[0.03]">
+    <tr className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-white/[0.03]">
       <th scope="row" className="px-3 py-2.5 text-left font-semibold text-primary dark:text-white">
         {modulo.label}
       </th>

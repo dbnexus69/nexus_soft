@@ -204,7 +204,7 @@ export default function Users() {
                 </select>
                 <Button 
                   onClick={() => handleOpenModal()} 
-                  className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/30 rounded-xl px-6 h-11 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto sm:ml-auto"
+                  className="bg-primary hover:bg-primary-dark text-white shadow-md rounded-xl px-6 h-11 transition-colors"
                 >
                   <Plus size={20} className="mr-1" /> Nuevo Usuario
                 </Button>
@@ -251,7 +251,7 @@ export default function Users() {
                     setEditingUserPermissions(data.config.rolePermissions[role.id]);
                   }}
                   aria-current={activo ? 'page' : undefined}
-                  className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight/40 ${
+                  className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${
                     activo
                       ? 'border-highlight text-highlight'
                       : 'border-transparent text-accent hover:border-gray-border hover:text-primary dark:hover:text-white'

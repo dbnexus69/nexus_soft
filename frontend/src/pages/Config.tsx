@@ -647,18 +647,18 @@ export default function Config() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Main Info */}
               <div className="md:col-span-2 space-y-6">
-                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                <div className="bg-gray-light dark:bg-slate-800/60 p-5 rounded-2xl border border-gray-border">
                   <h4 className="text-sm font-bold text-primary mb-4 flex items-center gap-2">
                     <Info size={16} className="text-accent" /> Información General
                   </h4>
                   <div className="grid grid-cols-2 gap-y-4">
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-bold">Destino</p>
-                      <p className="text-sm font-semibold text-gray-700">{viewingPackage.destination}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Destino</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-slate-100">{viewingPackage.destination}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-bold">Duración</p>
-                      <p className="text-sm font-semibold text-gray-700">{viewingPackage.nights} Noches</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Duración</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-slate-100">{viewingPackage.nights} Noches</p>
                     </div>
                   </div>
                 </div>
@@ -703,14 +703,14 @@ export default function Config() {
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-4">
+                <div className="bg-gray-light dark:bg-slate-800/60 p-5 rounded-2xl border border-gray-border space-y-4">
                   <div>
-                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Servicios Incluidos</h4>
-                    <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">{viewingPackage.includedServices || 'No especificado'}</p>
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Servicios Incluidos</h4>
+                    <p className="text-xs text-gray-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{viewingPackage.includedServices || 'No especificado'}</p>
                   </div>
-                  <div className="pt-4 border-t border-gray-50">
-                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">No Incluye</h4>
-                    <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">{viewingPackage.notIncluded || 'No especificado'}</p>
+                  <div className="pt-4 border-t border-gray-border">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">No Incluye</h4>
+                    <p className="text-xs text-gray-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{viewingPackage.notIncluded || 'No especificado'}</p>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SKELETON } from '../ui/Skeleton';
 import { Modal } from '../ui/Modal';
 import { Pagination } from '../ui/Pagination';
 import * as api from '../../api';
@@ -75,19 +76,52 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
             </div>
           </div>
           <div className="ml-auto text-right">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Acumulado</p>
-            <p className="text-xl font-black text-amber-600 dark:text-amber-400">{formatCurrency(agent.accumulated || 0)}</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">Acumulado</p>
+            <p className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+              {formatCurrency(agent.accumulated || 0)}
+            </p>
           </div>
         </div>
+
+        {/* Dónde se le paga.
+            El backend ya devolvía `banco`, `tipoCuenta` y `numeroCuenta` en el
+            listado y la modal no los pintaba, así que para liquidar a alguien
+            había que abrir su formulario de edición a ver la cuenta. El número
+            va en cifras tabulares: es un dato que se lee dígito a dígito y se
+            copia. */}
+        <dl className="mb-6 grid grid-cols-2 gap-x-6 gap-y-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:grid-cols-3 dark:border-slate-700 dark:bg-slate-800">
+          <div>
+            <dt className="text-xs text-gray-500 dark:text-slate-400">Banco</dt>
+            <dd className="text-sm font-semibold text-gray-800 dark:text-slate-100">
+              {agent.banco || <span className="text-gray-300 dark:text-slate-600">—</span>}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-500 dark:text-slate-400">Tipo de cuenta</dt>
+            <dd className="text-sm font-semibold text-gray-800 dark:text-slate-100">
+              {agent.tipoCuenta || <span className="text-gray-300 dark:text-slate-600">—</span>}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-500 dark:text-slate-400">Número de cuenta</dt>
+            <dd className="text-sm font-semibold tabular-nums text-gray-800 dark:text-slate-100">
+              {agent.numeroCuenta || <span className="text-gray-300 dark:text-slate-600">—</span>}
+            </dd>
+          </div>
+        </dl>
 
         <h4 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
           <FileText size={18} className="text-primary" /> Historial de Ventas
         </h4>
 
         {/* Tabla de ventas */}
-        {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        {/* Filas fantasma, no un spinner centrado: es el efecto de carga del
+            resto de la aplicación, y no hace saltar el alto de la ventana. */}
+        {isLoading && sales.length === 0 ? (
+          <div className="flex-1 space-y-2">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={`${SKELETON} h-10`} />
+            ))}
           </div>
         ) : sales.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-10 bg-gray-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-gray-200 dark:border-slate-700">
@@ -99,10 +133,10 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-slate-800/50">
-                  <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">ID Venta</th>
-                  <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Fecha</th>
-                  <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Estado</th>
-                  <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700 text-right">Comisión Neta</th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700">ID Venta</th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700">Fecha</th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700">Estado</th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700 text-right">Comisión Neta</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">

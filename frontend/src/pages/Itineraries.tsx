@@ -16,7 +16,7 @@ import { Pagination } from '../components/ui/Pagination';
 import * as api from '../api';
 import { fetchAllPages } from '../api/fetchAll';
 import { Flight, CheckinCounts, CheckinStatusFilter } from '../types';
-import LoadingScreen from '../components/ui/LoadingScreen';
+import { SKELETON } from '../components/ui/Skeleton';
 
 /** Mínimo y máximo del motivo de cancelación; los mismos que valida el servidor. */
 const MOTIVO_MIN = 5;
@@ -520,9 +520,13 @@ export default function Itineraries() {
     );
   }
 
-  if (isLoading && monthFlights.length === 0) {
-    return <LoadingScreen fullScreen={false} />;
-  }
+  // Sin retorno temprano.
+  //
+  // Sustituía TODA la pantalla por un spinner en la primera carga, así que los
+  // esqueletos de la lista de check-in —FilaEsqueleto y EsqueletoVacio— no se
+  // veían nunca al entrar, solo al cambiar de filtro. Ahora la pantalla se
+  // pinta y cada parte trae el suyo.
+  const calendarioCargando = isLoading && monthFlights.length === 0;
 
   return (
     <div className="space-y-6 relative">
@@ -654,7 +658,18 @@ export default function Itineraries() {
                   ))}
                 </div>
                 <div className="grid grid-cols-7 border-t border-gray-border/50 dark:border-slate-700">
-                  {calendarDays.map((item, i) => {
+                  {/* Celdas fantasma con la misma altura que las de verdad, así
+                      la rejilla no cambia de tamaño cuando llegan los vuelos. */}
+                  {calendarioCargando
+                    ? Array.from({ length: 35 }, (_, i) => (
+                        <div
+                          key={`hueco-${i}`}
+                          className="min-h-[140px] border-r border-b border-gray-border/50 p-2 dark:border-slate-700"
+                        >
+                          <div className={`${SKELETON} h-4 w-6`} />
+                        </div>
+                      ))
+                    : calendarDays.map((item, i) => {
                     const isOtherMonth = item.month !== currentMonth;
                     const dayKey = getDayKey(item.day, item.month, item.year);
                     const isExpanded = expandedDays.has(dayKey);

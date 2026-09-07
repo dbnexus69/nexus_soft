@@ -92,7 +92,11 @@ class UsersService {
         }
       }),
       prisma.ventas.aggregate({
-        where: { usuario_id: id, status: { not: 'anulado' } },
+        // `deleted_at: null`: sin él el resumen contaba las ventas eliminadas,
+        // así que el detalle del usuario decía "10 ventas" mientras su propia
+        // tabla listaba 5. Los agregados de clientes y responsables ya lo
+        // filtraban; este se había quedado atrás.
+        where: { usuario_id: id, deleted_at: null, status: { not: 'anulado' } },
         _count: { _all: true },
         _sum: { monto_total: true }
       })

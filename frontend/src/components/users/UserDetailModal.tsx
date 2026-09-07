@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Pagination } from '../ui/Pagination';
-import { TrendingUp } from 'lucide-react';
+import { SKELETON } from '../ui/Skeleton';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import * as api from '../../api';
 import { User, Sale } from '../../types';
@@ -17,26 +17,79 @@ interface UserDetailModalProps {
 const PER_PAGE = 5;
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrador",
-  asesor: "Asesor",
-  freelancer: "Freelancer",
+  superadmin: 'Superadministrador',
+  admin: 'Administrador',
+  asesor: 'Asesor',
+  freelancer: 'Freelancer',
 };
 
+/** Un hueco vacío dice "no hay dato" mejor que la palabra "N/A". */
+const Vacio = () => <span className="text-slate-300 dark:text-slate-600">—</span>;
+
+const Dato = memo(function Dato({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-accent">{rotulo}</dt>
+      <dd className="truncate text-sm font-semibold text-primary dark:text-white">{children}</dd>
+    </div>
+  );
+});
+
+const FilaVenta = memo(function FilaVenta({ venta }: { venta: Sale }) {
+  return (
+    <tr className="border-t border-slate-200 dark:border-slate-800">
+      <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{formatDate(venta.date)}</td>
+      <td className="px-3 py-2 text-right font-semibold tabular-nums text-primary dark:text-white">
+        {formatCurrency(venta.total)}
+      </td>
+      <td className="px-3 py-2 text-right">
+        <Badge variant={venta.status}>{venta.status}</Badge>
+      </td>
+    </tr>
+  );
+});
+
+/**
+ * Detalle de un usuario interno: quién es y qué ha vendido.
+ *
+ * Reescrito por tres motivos.
+ *
+ * **Clases que no generaban CSS.** `border-accent/20`, `bg-accent/10` y
+ * `bg-primary/10` no existen en el bundle: los colores del tema son `var()`
+ * pelado y Tailwind 3 no les aplica el modificador de opacidad. El degradado
+ * de la cabecera no se pintaba, el fondo del avatar tampoco, y el borde sin
+ * color caía a `currentColor`, así que la cabecera iba rodeada de una línea del
+ * color del texto —casi blanca en oscuro—.
+ *
+ * **`dark:!text-[#ffffff]` diez veces.** Un hex con `!important` repetido para
+ * forzar el blanco, cuando `index.css` ya reescribe `text-gray-900` al color de
+ * texto del tema en oscuro. Se usa el token, una vez por dato.
+ *
+ * **Repetía lo que ya se sabe.** La modal se titula con el nombre y la cabecera
+ * lo repetía en grande; y el rol salía dos veces, como insignia y como campo.
+ * Lo que sí falta al abrir el detalle de un asesor es cuánto ha vendido, así
+ * que eso es lo que encabeza.
+ */
 export default function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps) {
-  // Las ventas del asesor se piden paginadas y filtradas por su id. Antes
-  // llegaban por props filtrando la lista global, que solo trae una página.
+  // Las ventas se piden paginadas y filtradas por su id. Antes llegaban por
+  // props filtrando la lista global, que solo trae una página.
   const [userSales, setUserSales] = useState<Sale[]>([]);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
   const [resumen, setResumen] = useState<{ salesCount?: number; salesTotal?: number }>({});
   const [loading, setLoading] = useState(false);
 
+  // La página vuelve a 1 al cambiar de usuario, en su propio efecto: mezclarlo
+  // con la carga obligaba a que el efecto que depende de `page` lo reiniciara.
+  useEffect(() => { setPage(1); }, [user?.id, isOpen]);
+
   useEffect(() => {
-    if (!isOpen || !user) { setUserSales([]); setPage(1); setResumen({}); return; }
+    if (!isOpen || !user) { setUserSales([]); setResumen({}); return; }
     let vivo = true;
     setLoading(true);
     Promise.all([
       api.listSales({ asesorId: user.id, page, perPage: PER_PAGE, sortOrder: 'desc' }),
+      // El resumen es del asesor entero, así que se pide una vez y no por página.
       page === 1 ? api.getUser(user.id) : Promise.resolve(null),
     ])
       .then(([lista, detalle]: any[]) => {
@@ -57,81 +110,93 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
   // Totales de todas las ventas del asesor, no solo de la página visible.
   const numeroVentas = resumen.salesCount ?? meta.total;
   const totalFacturado = resumen.salesTotal ?? 0;
+  const activo = user.status === 'active';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Detalle: ${user.name}`}
+      title={user.name}
       size="md"
-      footer={<Button variant="outline" onClick={onClose}>Cerrar</Button>}
+      footer={<Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>}
     >
-      <div className="space-y-4">
-        <div className="flex flex-col items-center text-center p-4 bg-gradient-to-b from-accent/10 to-transparent rounded-2xl border border-accent/20 mb-2">
-          <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-700 shadow-lg mb-3 overflow-hidden bg-accent/10">
-            {user.avatar ? (
-              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xl font-bold text-accent">
-                {user.name.charAt(0)}
-              </div>
-            )}
-          </div>
-          <h2 className="text-lg font-bold text-gray-900 dark:!text-[#ffffff]">{user.name}</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="accent" className="bg-accent/10 border-accent/20 text-accent font-semibold">
-              {ROLE_LABELS[user.role] || user.role}
-            </Badge>
-            <Badge variant={user.status}>
-              {user.status === 'active' ? 'USUARIO ACTIVO' : 'USUARIO INACTIVO'}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/80 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Tipo Doc:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{user.docType}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Número:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{user.docNumber}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Teléfono:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{user.phone || 'N/A'}</span></div>
-          <div className="min-w-0"><span className="text-gray-500 dark:text-slate-400 text-sm block">Correo:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff] block break-all">{user.email}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">F. Nacimiento:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{user.birthDate ? formatDate(user.birthDate) : 'N/A'}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Rol:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{ROLE_LABELS[user.role] || user.role}</span></div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-gray-900 dark:!text-[#ffffff] flex items-center gap-2">
-              <TrendingUp size={16} className="text-accent" /> Historial de Ventas Realizadas ({numeroVentas})
-            </h4>
-            {numeroVentas > 0 ? (
-              <span className="text-xs font-bold text-primary dark:text-teal-400 bg-primary/10 dark:bg-teal-950/40 px-2 py-1 rounded-lg">
-                Total Facturado: {formatCurrency(totalFacturado)}
-              </span>
-            ) : null}
-          </div>
-          {userSales.length > 0 ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left bg-gray-50 dark:bg-slate-800 text-xs text-gray-500 dark:text-slate-400 uppercase">
-                  <th className="p-2 font-semibold">Fecha</th>
-                  <th className="p-2 font-semibold">Valor</th>
-                  <th className="p-2 font-semibold">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                {userSales.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
-                    <td className="p-2 text-gray-600 dark:text-slate-300">{formatDate(s.date)}</td>
-                    <td className="p-2 font-semibold text-gray-900 dark:!text-[#ffffff]">{formatCurrency(s.total)}</td>
-                    <td className="p-2"><Badge variant={s.status}>{s.status}</Badge></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-gray-500 dark:text-slate-400 text-sm italic">
-              {loading ? 'Cargando ventas...' : 'No hay ventas registradas por este usuario'}
+      <div className="space-y-6 px-1 py-1">
+        {/* Lo que distingue a un asesor de otro es cuánto ha vendido, así que
+            esa es la cifra que encabeza. El nombre no se repite: ya es el
+            título de la ventana. */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-heading text-2xl font-semibold tabular-nums text-primary dark:text-white">
+              {formatCurrency(totalFacturado)}
             </p>
+            <p className="mt-0.5 text-sm text-accent">
+              facturado en {numeroVentas} {numeroVentas === 1 ? 'venta' : 'ventas'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="accent">{ROLE_LABELS[user.role] || user.role}</Badge>
+            {/* Punto y etiqueta, el mismo tratamiento de estado de los
+                catálogos. Antes decía "USUARIO ACTIVO" en mayúsculas. */}
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${activo ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                aria-hidden
+              />
+              {activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </div>
+        </div>
+
+        {/* Los datos de identidad y contacto. El rol ya está arriba y no se
+            repite aquí, como hacía antes. */}
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-slate-200 pt-4 dark:border-slate-800 sm:grid-cols-3">
+          <Dato rotulo="Documento">
+            {user.docNumber
+              ? <span className="tabular-nums">{user.docType} {user.docNumber}</span>
+              : <Vacio />}
+          </Dato>
+          <Dato rotulo="Teléfono">
+            {user.phone ? <span className="tabular-nums">{user.phone}</span> : <Vacio />}
+          </Dato>
+          <Dato rotulo="Nacimiento">
+            {user.birthDate ? formatDate(user.birthDate) : <Vacio />}
+          </Dato>
+          <div className="col-span-2 min-w-0 sm:col-span-3">
+            <dt className="text-xs text-accent">Correo</dt>
+            <dd className="break-all text-sm font-semibold text-primary dark:text-white">
+              {user.email || <Vacio />}
+            </dd>
+          </div>
+        </dl>
+
+        <section>
+          <h3 className="text-sm font-semibold text-primary dark:text-white">Ventas</h3>
+
+          {loading && userSales.length === 0 ? (
+            <div className="mt-2 space-y-2">
+              {[0, 1, 2].map(i => <div key={i} className={`${SKELETON} h-8`} />)}
+            </div>
+          ) : userSales.length === 0 ? (
+            <p className="mt-1 text-sm text-accent">
+              Este usuario todavía no ha registrado ninguna venta.
+            </p>
+          ) : (
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs font-medium text-accent">
+                    <th scope="col" className="px-3 pb-2 text-left">Fecha</th>
+                    <th scope="col" className="px-3 pb-2 text-right">Valor</th>
+                    <th scope="col" className="px-3 pb-2 text-right">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userSales.map(s => <FilaVenta key={s.id} venta={s} />)}
+                </tbody>
+              </table>
+            </div>
           )}
+
           <Pagination
             currentPage={page}
             totalPages={meta.totalPages}
@@ -139,11 +204,11 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
             perPage={PER_PAGE}
             loading={loading}
             onPageChange={setPage}
-            // Mismo caso que el detalle de cliente: con pocas ventas hay una
-                // sola página y el paginador se ocultaba entero, total incluido.
-                alwaysShowRange
-              />
-        </div>
+            // Con pocas ventas hay una sola página y el paginador se ocultaba
+            // entero, el total incluido.
+            alwaysShowRange
+          />
+        </section>
       </div>
     </Modal>
   );

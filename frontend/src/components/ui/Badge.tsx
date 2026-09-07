@@ -18,7 +18,12 @@ export const Badge = React.memo(function Badge({ variant, children, className = 
     anulado: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400",
     realizado: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400",
     "pendiente-check": "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400",
-    accent: "bg-accent/20 text-accent dark:bg-accent/20 dark:text-teal-400",
+    // `bg-accent/20` NO generaba fondo: los colores del tema son `var()` pelado
+    // y Tailwind 3 no les aplica el modificador de opacidad, así que la
+    // insignia salía como texto suelto sin pastilla. Y el `teal-400` del modo
+    // oscuro no está en la paleta. `accent` es un gris azulado, así que la
+    // pastilla neutra es lo que le corresponde.
+    accent: "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200",
   };
 
   return (

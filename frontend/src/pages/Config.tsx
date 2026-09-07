@@ -84,6 +84,21 @@ export default function Config() {
 
   useEffect(() => { setPage(1); }, [currentSection, searchTerm, orden]);
 
+  // Al cambiar de catálogo se vacían las filas.
+  //
+  // Sin esto el esqueleto no aparecía nunca al cambiar de pestaña: la condición
+  // es `cargando && filas.length === 0` y las filas seguían siendo las del
+  // catálogo anterior. Y no era solo que faltara el efecto — esas filas se
+  // pintaban un instante con las columnas del catálogo NUEVO, así que se veían
+  // aeropuertos bajo las cabeceras de aerolíneas, con las celdas vacías.
+  //
+  // La búsqueda y el orden NO vacían: ahí conservar las filas mientras se
+  // teclea evita un parpadeo en cada letra, y las columnas son las mismas.
+  useEffect(() => {
+    setPaginatedData([]);
+    setPaginationMeta(null);
+  }, [currentSection]);
+
   // Antes había además `currentData` y `filteredData`: un orden por id y una
   // CUARTA copia de las reglas de búsqueda, esta en el navegador, sobre el
   // catálogo completo que trae `/config/all`. Eran código muerto —

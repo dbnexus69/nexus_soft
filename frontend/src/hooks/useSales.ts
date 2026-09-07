@@ -18,7 +18,11 @@ const META_VACIA: SalesMeta = {
 export function useSales() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [meta, setMeta] = useState<SalesMeta>(META_VACIA);
-  const [loading, setLoading] = useState(false);
+  // Arranca en `true` porque el hook pide los datos al montarse: con `false`,
+  // el primer render caía en el estado vacío —"no hay ventas"— antes de
+  // que la petición empezara, y el esqueleto salía después. Se veía el mensaje
+  // equivocado durante un fotograma.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Los filtros viajan al servidor: la tabla ya no filtra sobre una página suelta.

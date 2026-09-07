@@ -4,7 +4,11 @@ import { Client } from '../types';
 
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Arranca en `true` porque el hook pide los datos al montarse: con `false`,
+  // el primer render caía en el estado vacío —"no hay clientes"— antes de
+  // que la petición empezara, y el esqueleto salía después. Se veía el mensaje
+  // equivocado durante un fotograma.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

@@ -84,8 +84,10 @@ class UsersService {
     // cuánto suman. El listado se pide aparte con GET /sales?asesorId=:id,
     // paginado, en vez de traerse todas para sumarlas en el navegador.
     const [usuario, resumenVentas] = await Promise.all([
-      prisma.usuarios.findUnique({
-        where: { id },
+      // `findFirst` con la persona vigente: un usuario dado de baja seguía
+      // siendo legible por su id aunque no apareciera en el listado.
+      prisma.usuarios.findFirst({
+        where: { id, personas: { deleted_at: null } },
         include: {
           personas: { include: { tipos_documento: true } },
           roles: true,
@@ -126,6 +128,50 @@ class UsersService {
     };
   }
 
+  /**
+   * Vuelve a poner en servicio a un usuario que se había dado de baja.
+   *
+   * Es lo que ocurre al "crear" un usuario cuya persona ya existía como usuario
+   * inhabilitado. No es un alta nueva: mantiene el mismo id, así que sus ventas
+   * y los clientes que creó siguen apuntando a él.
+   */
+  async reactivarUsuario(id, data, { password_hash, tipo_documento_id }) {
+    const existente = await prisma.usuarios.findUnique({
+      where: { id },
+      select: { persona_id: true },
+    });
+    if (!existente) throw new NotFoundError('Usuario no encontrado');
+
+    const rol = data.role
+      ? await prisma.roles.findUnique({ where: { nombre: data.role } })
+      : null;
+
+    await prisma.$transaction([
+      prisma.personas.update({
+        where: { id: existente.persona_id },
+        data: {
+          deleted_at: null,
+          status: 'active',
+          ...(data.firstName ? { nombres: data.firstName } : {}),
+          ...(data.lastName ? { apellidos: data.lastName } : {}),
+          ...(data.email ? { email: data.email } : {}),
+          ...(data.phone ? { telefono: data.phone } : {}),
+          ...(tipo_documento_id ? { tipo_documento_id } : {}),
+        },
+      }),
+      prisma.usuarios.update({
+        where: { id },
+        data: {
+          status: data.status === 'inactive' ? 'inactive' : 'active',
+          ...(rol ? { rol_id: rol.id } : {}),
+          ...(password_hash ? { password_hash } : {}),
+        },
+      }),
+    ]);
+
+    return this.getUserById(id);
+  }
+
   async createUser(data) {
     const password_hash = await bcrypt.hash(data.password, 12);
 
@@ -144,6 +190,14 @@ class UsersService {
       if (existingUser && !existingUser.personas.deleted_at) {
         throw new BadRequestError('Este número de documento ya está registrado como usuario activo');
       }
+        // Si la persona quedó como usuario dado de baja, se REVIVE esa fila en
+        // vez de crear otra. `usuarios.persona_id` es `@unique`, así que crear
+        // una nueva fallaba con un 409 sobre `persona_id` —un mensaje que no
+        // decía nada útil—. Reactivar además conserva el historial: sus ventas
+        // y los clientes que creó siguen teniendo autor.
+        if (existingUser) {
+          return this.reactivarUsuario(existingUser.id, data, { password_hash, tipo_documento_id });
+        }
     }
 
     let persona;
@@ -246,7 +300,10 @@ class UsersService {
   }
 
   async updateUser(id, data) {
-    const usuario = await prisma.usuarios.findUnique({ where: { id }, include: { personas: true } });
+    const usuario = await prisma.usuarios.findFirst({
+      where: { id, personas: { deleted_at: null } },
+      include: { personas: true },
+    });
     if (!usuario) {
       throw new NotFoundError('Usuario no encontrado');
     }
@@ -324,37 +381,102 @@ class UsersService {
     };
   }
 
-  async removeUser(id) {
-    const usuario = await prisma.usuarios.findUnique({ where: { id }, include: { personas: true } });
+  /**
+   * Dar de baja a un usuario.
+   *
+   * Se borra de verdad cuando NO tiene historial, y se inhabilita cuando lo
+   * tiene. Antes siempre se inhabilitaba dejando la fila de `usuarios`, y como
+   * `persona_id` es `@unique`, volver a dar de alta a la misma persona fallaba
+   * para siempre con un 409 sobre `persona_id`: se borraba a alguien y no se
+   * podía volver a añadir. `createUser` ya intentaba permitirlo —comprueba si
+   * la persona está borrada— pero chocaba con esa fila que nadie retiraba.
+   *
+   * El historial que impide el borrado real son las ventas que registró, los
+   * clientes que creó y los paquetes que armó: son de otra gente y tienen que
+   * seguir sabiendo quién las hizo. Las sesiones y el registro de accesos son
+   * suyos y se van con él.
+   */
+  async removeUser(id, { requestedBy } = {}) {
+    const usuario = await prisma.usuarios.findFirst({
+      where: { id, personas: { deleted_at: null } },
+      include: { personas: true, roles: true },
+    });
     if (!usuario) {
       throw new NotFoundError('Usuario no encontrado');
     }
 
-    const hasActiveRelations = await prisma.clientes.findFirst({ where: { persona_id: usuario.persona_id } })
-      || await prisma.comisionistas.findFirst({ where: { persona_id: usuario.persona_id } });
-
-    await prisma.usuarios.update({
-      where: { id },
-      data: { status: 'inactive' }
-    });
-
-    if (!hasActiveRelations) {
-      await prisma.personas.update({
-        where: { id: usuario.persona_id },
-        data: { deleted_at: new Date(), status: 'inactive' }
-      });
+    // Nadie se borra a sí mismo: quedaría con una sesión abierta sobre una
+    // cuenta inhabilitada, y si además es el único superadministrador se cierra
+    // la puerta desde dentro.
+    if (requestedBy && Number(requestedBy) === Number(id)) {
+      throw new BadRequestError('No puedes dar de baja tu propia cuenta');
     }
 
-    return { message: 'Usuario eliminado' };
-  }
+    // Y no puede quedar la aplicación sin superadministrador: es el único rol
+    // que puede reescribir los permisos, así que perderlo no tiene vuelta
+    // desde la interfaz.
+    if (usuario.roles.nombre === 'superadmin') {
+      const otros = await prisma.usuarios.count({
+        where: {
+          id: { not: id },
+          status: 'active',
+          roles: { nombre: 'superadmin' },
+          personas: { deleted_at: null },
+        },
+      });
+      if (otros === 0) {
+        throw new BadRequestError(
+          'Es el único superadministrador activo. Asigna ese rol a otro usuario antes de darlo de baja.'
+        );
+      }
+    }
 
+    const [ventas, clientesCreados, paquetesCreados] = await Promise.all([
+      prisma.ventas.count({ where: { usuario_id: id } }),
+      prisma.clientes.count({ where: { creado_por_id: id } }),
+      prisma.paquetes.count({ where: { creado_por_id: id } }),
+    ]);
+    const conHistorial = ventas + clientesCreados + paquetesCreados > 0;
+
+    // La persona puede ser además cliente o comisionista: en ese caso sigue
+    // viva aunque el usuario se vaya.
+    const personaCompartida = Boolean(
+      await prisma.clientes.findFirst({ where: { persona_id: usuario.persona_id } })
+      || await prisma.comisionistas.findFirst({ where: { persona_id: usuario.persona_id } })
+    );
+
+    if (conHistorial) {
+      await prisma.$transaction([
+        prisma.usuarios.update({ where: { id }, data: { status: 'inactive' } }),
+        ...(personaCompartida ? [] : [prisma.personas.update({
+          where: { id: usuario.persona_id },
+          data: { deleted_at: new Date(), status: 'inactive' },
+        })]),
+      ]);
+      return {
+        message: 'Usuario inhabilitado',
+        deleted: false,
+        reason: 'Tiene historial en el sistema, así que se conserva para no dejar sus registros sin autor.',
+        history: { sales: ventas, clients: clientesCreados, packages: paquetesCreados },
+      };
+    }
+
+    await prisma.$transaction([
+      prisma.sesiones.deleteMany({ where: { usuario_id: id } }),
+      prisma.logs_usuarios.deleteMany({ where: { usuario_id: id } }),
+      prisma.usuarios.delete({ where: { id } }),
+      ...(personaCompartida ? [] : [prisma.personas.delete({ where: { id: usuario.persona_id } })]),
+    ]);
+
+    return { message: 'Usuario eliminado', deleted: true };
+  }
 
   async uploadAvatar(id, file) {
     if (!file) {
       throw new BadRequestError('Archivo requerido');
     }
 
-    const usuario = await prisma.usuarios.findUnique({ where: { id } });
+    const usuario = await prisma.usuarios.findFirst({ where: { id, personas: { deleted_at: null } } });
     if (!usuario) {
       throw new NotFoundError('Usuario no encontrado');
     }

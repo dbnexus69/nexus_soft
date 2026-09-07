@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { listUsers, createUser, updateUser, deleteUser, getRolePermissions, updateRolePermissions } from '../api/users';
+import { invalidateUsersCache } from '../utils/usersCache';
 import { User } from '../types';
 
 export function useUsers() {
@@ -29,6 +30,7 @@ export function useUsers() {
     setLoading(true);
     try {
       const newUser = await createUser(data);
+      invalidateUsersCache();
       await fetchUsers();
       return newUser;
     } catch (err: unknown) {
@@ -43,6 +45,7 @@ export function useUsers() {
     setLoading(true);
     try {
       const updated = await updateUser(id, data);
+      invalidateUsersCache();
       await fetchUsers();
       return updated;
     } catch (err: unknown) {
@@ -55,8 +58,13 @@ export function useUsers() {
 
   const handleDeleteUser = async (id: number) => {
     try {
-      await deleteUser(id);
+      const resultado = await deleteUser(id);
+      // La caché de localStorage siembra `data.users` de DataContext al
+      // arrancar. Sin invalidarla, un usuario dado de baja seguía apareciendo
+      // como asesor elegible en el asistente de venta.
+      invalidateUsersCache();
       await fetchUsers();
+      return resultado;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al eliminar usuario';
       throw new Error(msg);

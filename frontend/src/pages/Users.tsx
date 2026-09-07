@@ -105,13 +105,23 @@ export default function Users() {
   };
 
   const handleDeleteUser = async (user: User) => {
-    if (window.confirm(`¿Estás seguro de inhabilitar al usuario ${user.name}?`)) {
-      try {
-        await deleteUser(user.id);
-        success("Usuario inhabilitado");
-      } catch (err: any) {
-        toastError("Error al eliminar usuario");
+    // El aviso no promete un borrado: puede que el usuario tenga historial y
+    // solo se inhabilite. Lo decide el backend y lo dice en su respuesta.
+    if (!window.confirm(`¿Dar de baja a ${user.name}?`)) return;
+    try {
+      const resultado = await deleteUser(user.id);
+      // Se cuenta lo que ocurrió de verdad. Antes decía siempre "Usuario
+      // inhabilitado", aunque se hubiera borrado, y aunque no se hubiera
+      // podido tocar.
+      if (resultado?.deleted) {
+        success(`${user.name} se eliminó del sistema`);
+      } else {
+        success(`${user.name} queda inhabilitado. ${resultado?.reason || ''}`.trim());
       }
+    } catch (err: any) {
+      // El motivo del backend, no un mensaje genérico: puede ser que sea el
+      // único superadministrador o que sea tu propia cuenta.
+      toastError(err?.response?.data?.error?.message || "No se pudo dar de baja al usuario");
     }
   };
 

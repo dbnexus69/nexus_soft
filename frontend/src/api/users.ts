@@ -21,8 +21,26 @@ export async function updateUser(id: number, data: Partial<User>) {
   return res.data.data;
 }
 
-export async function deleteUser(id: number) {
-  await api.delete(`/users/${id}`);
+export interface ResultadoBaja {
+  message: string;
+  /** true si el usuario se borró de verdad; false si solo se inhabilitó. */
+  deleted: boolean;
+  /** Por qué no se pudo borrar, cuando `deleted` es false. */
+  reason?: string;
+  history?: { sales: number; clients: number; packages: number };
+}
+
+/**
+ * Da de baja a un usuario.
+ *
+ * Devuelve qué ocurrió: un usuario sin historial se borra, y uno con ventas o
+ * clientes a su nombre se inhabilita para no dejar esos registros sin autor.
+ * Antes el endpoint respondía 204 y la pantalla decía siempre lo mismo, así
+ * que no había forma de distinguir una cosa de la otra.
+ */
+export async function deleteUser(id: number): Promise<ResultadoBaja> {
+  const res = await api.delete(`/users/${id}`);
+  return res.data.data;
 }
 
 

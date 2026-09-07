@@ -47,8 +47,13 @@ exports.update = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    await usersService.removeUser(id);
-    noContent(res);
+    // `requestedBy` para que el servicio pueda impedir que alguien se dé de
+    // baja a sí mismo.
+    const resultado = await usersService.removeUser(id, { requestedBy: req.user?.id });
+    // No es 204: la respuesta dice si se borró de verdad o solo se inhabilitó,
+    // y por qué. La pantalla necesita ese matiz para no prometer un borrado
+    // que no ha ocurrido.
+    success(res, resultado);
   } catch (err) {
     next(err);
   }

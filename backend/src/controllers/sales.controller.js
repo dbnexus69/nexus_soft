@@ -177,8 +177,9 @@ exports.create = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
   try {
-    // updateSale not yet implemented
-    success(res, { message: 'Sale updated' });
+    // `paramsNumericos` ya garantiza que :id es un entero dentro de int4.
+    const data = await salesService.updateSale(Number(req.params.id), req.validatedBody || req.body);
+    success(res, data);
   } catch (err) {
     next(err);
   }

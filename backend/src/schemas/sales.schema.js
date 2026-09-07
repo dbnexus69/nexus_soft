@@ -96,11 +96,31 @@ const createSaleSchema = z.object(baseSale).passthrough().refine(
 );
 
 // En una actualización todo es opcional salvo lo que venga.
+/**
+ * `PUT /sales/:id` solo acepta la cabecera, y solo lo que no se deriva.
+ *
+ * El schema anterior era `{...baseSale, clientId, total}.partial()`: declaraba
+ * el total, el estado, los pagos y los quince arrays de producto. O sea, todo
+ * lo que el servicio ahora rechaza. Declarar un campo que no se va a guardar
+ * es la misma mentira que contaba el endpoint cuando devolvía 200 sin escribir.
+ *
+ * `passthrough` es deliberado: lo que no esté aquí llega al servicio, que lo
+ * rechaza nombrándolo y diciendo por dónde se cambia (`CAMPOS_EDITABLES` y
+ * `NO_EDITABLES` en sales.service). Con `strict` el mensaje sería el genérico
+ * de Zod y quien mande `total` no sabría que lo suman los productos.
+ */
 const updateSaleSchema = z.object({
-  ...baseSale,
   clientId: id,
-  total: z.coerce.number().min(0).optional(),
-}).partial().passthrough();
+  responsableId: id,
+  paymentMethod: id,
+  commissionAgentId: id,
+  commissionAgentAmount: dinero,
+  commissionAgentRetentionPercentage: z.coerce.number().min(0).max(100).optional(),
+  commissionAgentNetPayment: dinero,
+  isCredit: z.boolean().optional(),
+  creditDueDate: fecha,
+  observations: z.string().nullable().optional(),
+}).passthrough();
 
 const registerPaymentSchema = z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor que cero'),

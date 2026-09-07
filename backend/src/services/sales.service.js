@@ -25,6 +25,151 @@ function normalizarTamanoMascota(valor) {
 }
 
 /**
+ * Lo que se puede editar de la CABECERA de una venta, y lo que no.
+ *
+ * `PUT /sales/:id` devolvía 200 con "Sale updated" sin escribir nada. Al
+ * implementarlo, la pregunta de verdad no es cómo guardar, es QUÉ se acepta:
+ * el schema que lo custodiaba declaraba `total`, `status`, `payments` y los
+ * quince arrays de producto, así que un cliente podía mandar el total de la
+ * venta y el estado de cobro.
+ *
+ * Esos campos son DERIVADOS desde 8006dfa: `recalcularVenta` calcula
+ * `monto_total`, `ta_total`, `costo_proveedor_total` y `monto_pagado_credito`
+ * sumando las líneas y los pagos, y `estadoSegunPago` decide el estado. Si el
+ * cliente pudiera escribirlos volveríamos a lo de antes: totales que no cuadran
+ * con sus líneas y ventas con saldo marcadas como pagadas.
+ *
+ * Llegar con un campo derivado es un 400 que lo nombra y dice por dónde se
+ * cambia. Recortarlo en silencio —lo que hacía el `.partial()` de Zod— es peor
+ * que rechazarlo: quien lo manda cree que se guardó.
+ */
+const CAMPOS_EDITABLES = {
+  clientId: {
+    columna: 'cliente_id', tipo: 'idRel', obligatorio: true,
+    modelo: 'clientes', vigente: true, etiqueta: 'El cliente',
+  },
+  responsableId: {
+    columna: 'responsable_id', tipo: 'idRel',
+    modelo: 'responsables', vigente: true, etiqueta: 'El responsable',
+  },
+  paymentMethod: {
+    columna: 'metodo_pago_principal_id', tipo: 'idRel',
+    modelo: 'metodos_pago', etiqueta: 'El método de pago',
+  },
+  commissionAgentId: {
+    columna: 'comisionista_id', tipo: 'idRel',
+    modelo: 'comisionistas', etiqueta: 'El comisionista',
+  },
+  commissionAgentAmount: { columna: 'monto_comision_bruto', tipo: 'dinero' },
+  commissionAgentRetentionPercentage: { columna: 'porcentaje_retencion_comision', tipo: 'porcentaje' },
+  commissionAgentNetPayment: { columna: 'monto_comision_neto', tipo: 'dinero' },
+  isCredit: { columna: 'es_credito', tipo: 'bool' },
+  creditDueDate: { columna: 'fecha_vence_credito', tipo: 'fecha' },
+  observations: { columna: 'observaciones', tipo: 'texto' },
+};
+
+/** Por qué se rechaza cada campo que el cliente podría creer editable. */
+const NO_EDITABLES = {
+  // Las quince claves de producto salen del catálogo, así que añadir una
+  // categoría no obliga a acordarse de este archivo.
+  ...Object.fromEntries(SLUGS.map(slug => [
+    CATALOG[slug].responseKey,
+    'los productos se editan en /sales/:saleId/products/:categoria',
+  ])),
+  total: 'el total lo suman los productos',
+  ta: 'el TA lo suman los productos',
+  supplierCost: 'el costo de proveedor lo suman los productos',
+  status: 'el estado lo deciden los pagos',
+  paidAmount: 'lo suman los pagos',
+  products: 'los productos se editan en /sales/:saleId/products/...',
+  payments: 'los abonos se registran en POST /sales/:id/payments',
+  asesorId: 'la venta no cambia de asesor por aquí',
+  isReviewed: 'se marca en PATCH /sales/:id/review-status',
+};
+
+const CLAVES_COMISION = [
+  'commissionAgentId',
+  'commissionAgentAmount',
+  'commissionAgentRetentionPercentage',
+  'commissionAgentNetPayment',
+];
+
+/**
+ * Los nombres de columna se comprueban contra el schema al arrancar.
+ *
+ * `updateSale` escribe con `data[def.columna]` y valida las relaciones con
+ * `prisma[def.modelo]`: claves dinámicas, y `scripts/check-prisma-fields.js`
+ * solo mira los objetos literales, así que este mapa es invisible para él. Un
+ * `costo_proveedor` mal escrito no fallaría al programar sino al guardar una
+ * venta. Es exactamente el fallo que dio el 500 de las aerolíneas
+ * (`prod_tiqueteria.aerolinea_id`, que en realidad es `aerolineaId`).
+ */
+function comprobarCamposEditables() {
+  const { Prisma } = require('@prisma/client');
+  const modelos = new Map(
+    Prisma.dmmf.datamodel.models.map(m => [m.name, new Set(m.fields.map(f => f.name))])
+  );
+  const ventas = modelos.get('ventas');
+  const errores = [];
+  for (const [clave, def] of Object.entries(CAMPOS_EDITABLES)) {
+    if (!ventas.has(def.columna)) errores.push(`${clave}: ventas.${def.columna} no existe`);
+    if (!def.modelo) continue;
+    const campos = modelos.get(def.modelo);
+    if (!campos) errores.push(`${clave}: el modelo ${def.modelo} no existe`);
+    else if (def.vigente && !campos.has('deleted_at')) {
+      errores.push(`${clave}: ${def.modelo} no tiene deleted_at y se filtra por él`);
+    }
+  }
+  for (const clave of CLAVES_COMISION) {
+    if (!(clave in CAMPOS_EDITABLES)) errores.push(`${clave} no está en CAMPOS_EDITABLES`);
+  }
+  if (errores.length) {
+    throw new Error(`Campos editables mal declarados en sales.service:\n  ${errores.join('\n  ')}`);
+  }
+}
+comprobarCamposEditables();
+
+/** Convierte un valor del cliente al tipo de su columna, o lo rechaza. */
+function leerCampo(clave, def, valor) {
+  const vacio = valor === null || valor === undefined || valor === '';
+  switch (def.tipo) {
+    case 'idRel': {
+      if (vacio) {
+        if (def.obligatorio) throw new BadRequestError(`${def.etiqueta} no puede quedar vacío`);
+        return null;
+      }
+      const n = Number(valor);
+      if (!Number.isInteger(n) || n <= 0) throw new BadRequestError(`${def.etiqueta} no es válido`);
+      return n;
+    }
+    case 'dinero': {
+      if (vacio) return 0;
+      const n = Number(valor);
+      if (!Number.isFinite(n) || n < 0) throw new BadRequestError(`${clave} debe ser un importe positivo`);
+      return aCentimos(n);
+    }
+    case 'porcentaje': {
+      if (vacio) return 0;
+      const n = Number(valor);
+      if (!Number.isFinite(n) || n < 0 || n > 100) throw new BadRequestError(`${clave} debe estar entre 0 y 100`);
+      return n;
+    }
+    case 'bool':
+      return valor === true || valor === 'true' || valor === 1 || valor === '1';
+    case 'fecha': {
+      if (vacio) return null;
+      const d = new Date(valor);
+      if (Number.isNaN(d.getTime())) throw new BadRequestError(`${clave} no es una fecha válida`);
+      return d;
+    }
+    case 'texto':
+      return vacio ? null : String(valor).trim();
+    default:
+      throw new Error(`Tipo no soportado en CAMPOS_EDITABLES: ${def.tipo}`);
+  }
+}
+
+/**
  * Tramos del informe de antigüedad de cartera, el estándar en cobranza:
  * corriente (aún no vence) y mora repartida en 1-30, 31-60, 61-90 y +90 días.
  *
@@ -1567,6 +1712,95 @@ class SalesService {
       creditPaidAmount: actualizada.monto_pagado_credito,
       status: actualizada.status,
     };
+  }
+
+  /**
+   * Editar la cabecera de una venta.
+   *
+   * Antes de esto el endpoint devolvía `200 {"message":"Sale updated"}` sin
+   * tocar la base: la interfaz decía que había guardado y no guardaba nada.
+   *
+   * Lo editable es la cabecera y solo lo que no se deriva —ver
+   * `CAMPOS_EDITABLES` y `NO_EDITABLES`, donde está el razonamiento—. El
+   * cuerpo se compara contra esa lista y lo que no encaje sale por un 400 que
+   * dice por dónde se cambia; los productos y los abonos tienen sus propios
+   * endpoints, y el total y el estado no los decide nadie desde fuera.
+   *
+   * Tres invariantes que se comprueban antes de escribir, porque después ya no
+   * se pueden distinguir de un dato válido:
+   *
+   * - **Las relaciones existen.** Un `clientId` inexistente daría un error de
+   *   clave ajena de Postgres, que llega como 500 y sin decir qué campo era.
+   * - **La comisión liquidada no se toca.** Ya se pagó al comisionista;
+   *   cambiar el importe ahora descuadra la liquidación que lo incluyó.
+   * - **A crédito, con fecha de vencimiento.** El alta ya lo exige; aquí hay
+   *   que reevaluarlo porque una edición puede dejar a crédito una venta sin
+   *   fecha, y sin fecha no hay mora que reclamar.
+   */
+  async updateSale(id, body = {}) {
+    const ventaId = Number(id);
+
+    const invalidos = Object.keys(body)
+      .filter(clave => !(clave in CAMPOS_EDITABLES))
+      .map(clave => (NO_EDITABLES[clave] ? `${clave} (${NO_EDITABLES[clave]})` : clave));
+    if (invalidos.length) {
+      throw new BadRequestError(
+        `Campos no editables: ${invalidos.join('; ')}. ` +
+        `Se aceptan: ${Object.keys(CAMPOS_EDITABLES).join(', ')}`
+      );
+    }
+    if (!Object.keys(body).length) throw new BadRequestError('No se envió ningún campo que editar');
+
+    const venta = await prisma.ventas.findFirst({ where: { id: ventaId, deleted_at: null } });
+    if (!venta) throw new NotFoundError('Venta no encontrada');
+    // Una venta anulada ya salió del circuito de cobro, y `voidSale` deja el
+    // motivo en las observaciones: reescribirlas borraría la traza.
+    if (venta.status === 'anulado') throw new BadRequestError('Una venta anulada no se puede editar');
+
+    const data = {};
+    for (const [clave, valor] of Object.entries(body)) {
+      data[CAMPOS_EDITABLES[clave].columna] = leerCampo(clave, CAMPOS_EDITABLES[clave], valor);
+    }
+
+    if (venta.comision_liquidada && CLAVES_COMISION.some(clave => clave in body)) {
+      throw new BadRequestError('La comisión de esta venta ya fue liquidada y no se puede modificar');
+    }
+    // Quitar el comisionista sin borrar sus importes dejaría una comisión sin
+    // dueño en el informe de liquidaciones.
+    if ('commissionAgentId' in body && data.comisionista_id === null) {
+      data.monto_comision_bruto = 0;
+      data.porcentaje_retencion_comision = 0;
+      data.monto_comision_neto = 0;
+    }
+
+    for (const clave of Object.keys(body)) {
+      const def = CAMPOS_EDITABLES[clave];
+      const valor = data[def.columna];
+      if (!def.modelo || valor === null) continue;
+      const filtro = { id: valor };
+      if (def.vigente) filtro.deleted_at = null;
+      const existe = await prisma[def.modelo].findFirst({ where: filtro, select: { id: true } });
+      if (!existe) throw new BadRequestError(`${def.etiqueta} no existe`);
+    }
+
+    const esCredito = 'es_credito' in data ? data.es_credito : Boolean(venta.es_credito);
+    const conSaldo = aCentimos(venta.monto_pagado_credito) < aCentimos(venta.monto_total);
+    const vence = 'fecha_vence_credito' in data ? data.fecha_vence_credito : venta.fecha_vence_credito;
+    if ((esCredito || conSaldo) && !vence) {
+      throw new BadRequestError('Una venta a crédito necesita fecha de vencimiento (creditDueDate)');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.ventas.update({ where: { id: ventaId }, data });
+      // Ningún campo editable mueve dinero, así que el recálculo es un no-op
+      // hoy. Va igual: si mañana entra un campo que sí lo mueva, el total y el
+      // estado no podrán quedarse atrás sin que nadie se acuerde.
+      await recalcularVenta(tx, ventaId);
+    });
+
+    // La venta entera, no el parche: quien edita necesita ver el resultado, y
+    // el estado y el total pueden haber cambiado sin que los mandara.
+    return this.getSaleById(ventaId);
   }
 
   async updateReviewStatus(saleId, isReviewed) {

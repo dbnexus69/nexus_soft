@@ -8,10 +8,16 @@ import {
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-import { Input, Select, Combobox, FormField, CurrencyInput } from "../ui/Form";
+import { Input, Select, FormField, CurrencyInput } from "../ui/Form";
 import * as api from "../../api";
 import { formatCurrency, formatDate } from "../../utils/formatters";
 import { Sale, Client, User, PaymentRecord } from "../../types";
+
+const ETIQUETA_ESTADO: Record<string, string> = {
+  pagado: "Finalizada",
+  abonado: "Abonada",
+  credito: "Crédito",
+};
 
 interface SaleEditModalProps {
   isOpen: boolean;
@@ -108,7 +114,6 @@ export default function SaleEditModal({
     method: "Efectivo",
     reference: "",
   });
-  const [localStatus, setLocalStatus] = useState<string>("");
   const [localCreditDueDate, setLocalCreditDueDate] = useState<string>("");
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -119,7 +124,6 @@ export default function SaleEditModal({
   useEffect(() => {
     if (editingSale) {
       setPayments((editingSale.payments as PaymentRecord[]) || []);
-      setLocalStatus(editingSale.status);
       setLocalCreditDueDate(
         editingSale.creditDueDate
           ? new Date(editingSale.creditDueDate).toISOString().split("T")[0]
@@ -154,24 +158,18 @@ export default function SaleEditModal({
   const totalPaidAmount = payments.reduce((acc, p) => acc + p.amount, 0);
   const remainingBalance = totalSaleAmount - totalPaidAmount;
 
-  // Automatically force 'Finalizada' (pagado) state when sale total is covered by payments
-  useEffect(() => {
-    if (totalSaleAmount === 0) return;
-
-    if (totalPaidAmount >= totalSaleAmount) {
-      if (localStatus !== "pagado") {
-        setLocalStatus("pagado");
-      }
-    } else if (totalPaidAmount === 0) {
-      if (localStatus !== "credito") {
-        setLocalStatus("credito");
-      }
-    } else {
-      if (localStatus !== "abonado") {
-        setLocalStatus("abonado");
-      }
-    }
-  }, [totalPaidAmount, totalSaleAmount, localStatus]);
+  // El estado no se elige: lo dicen los pagos.
+  //
+  // Aquí había un desplegable "Estado de la Venta *" que no podía cambiar
+  // nada: un efecto lo forzaba al valor que sale del dinero, `getStatusOptions`
+  // solo ofrecía ese mismo valor, y el PUT al que se enviaba lo ignoraba. Tres
+  // capas para no mover un dato.
+  //
+  // La regla es la del backend —`estadoSegunPago` en services/saleTotals.js—,
+  // copiada al carácter para que la interfaz no anuncie un estado distinto del
+  // que va a quedar guardado.
+  const estado =
+    totalPaidAmount >= totalSaleAmount ? "pagado" : totalPaidAmount > 0 ? "abonado" : "credito";
 
   if (!isOpen || !editingSale) return null;
 
@@ -217,32 +215,38 @@ export default function SaleEditModal({
     });
   };
 
-  const getStatusOptions = () => {
-    if (totalSaleAmount > 0 && totalPaidAmount >= totalSaleAmount) {
-      return [{ value: "pagado", label: "Completada" }];
-    }
-    if (totalPaidAmount > 0 && totalPaidAmount < totalSaleAmount) {
-      return [
-        { value: "credito", label: "Crédito" },
-        { value: "abonado", label: "Abonada" },
-      ];
-    }
-    return [{ value: "credito", label: "Crédito" }];
-  };
-
+  /**
+   * Guarda lo único de la cabecera que se edita en esta ventana: la fecha de
+   * vencimiento del crédito.
+   *
+   * Antes mandaba `{ status, isCredit }` —los dos derivados— a un endpoint que
+   * respondía 200 sin escribir. Y arrancaba con `if (payments.length === 0)
+   * return;`, así que en una venta a crédito sin abonos el botón no hacía
+   * nada y tampoco lo decía; ahora no hay nada que justifique esa guarda,
+   * porque la fecha de vencimiento es justo lo que hay que poder editar
+   * cuando aún no se ha cobrado nada.
+   */
   const handleUpdate = async () => {
-    if (payments.length === 0) return; // Do not allow update with 0 payments
+    // Con saldo pendiente la fecha es obligatoria: sin ella la venta no cae en
+    // ningún tramo de mora y no hay nada que reclamar. El backend la exige
+    // igual; comprobarlo aquí solo ahorra el viaje.
+    if (remainingBalance > 0 && !localCreditDueDate) {
+      setLocalErrors({ creditDueDate: "Con saldo pendiente, la fecha de vencimiento es obligatoria" });
+      return;
+    }
     setIsSaving(true);
+    setLocalErrors({});
     try {
       if (onUpdateSale) {
-        await onUpdateSale(sale.id, {
-          status: localStatus,
-          isCredit: localStatus === "credito" || localStatus === "abonado"
-        });
+        await onUpdateSale(sale.id, { creditDueDate: localCreditDueDate || null });
       }
       onClose();
     } catch (err) {
-      console.error("Error al actualizar abonos:", err);
+      // Antes era un `console.error`: la ventana se quedaba abierta sin decir
+      // nada y no había forma de saber que había fallado.
+      setLocalErrors({
+        general: err instanceof Error ? err.message : "No se pudo guardar el cambio",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -268,7 +272,7 @@ export default function SaleEditModal({
           <Button 
             onClick={handleUpdate} 
             className="px-8 font-medium bg-[#0b396b] hover:bg-[#072445] disabled:bg-slate-400 disabled:hover:bg-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isSaving || payments.length === 0}
+            disabled={isSaving}
           >
             {isSaving ? "Actualizando..." : "Actualizar"}
           </Button>
@@ -282,13 +286,9 @@ export default function SaleEditModal({
               <h4 className="font-bold text-primary flex items-center gap-2">
                 <Receipt size={18} /> Resumen de Venta #{sale.id}
               </h4>
-              <Badge variant={sale.status}>
-                {sale.status === "pagado"
-                  ? "Finalizado"
-                  : sale.status === "abonado"
-                    ? "Abonado"
-                    : "Crédito"}
-              </Badge>
+              {/* El estado del listado puede llevar minutos en memoria; el
+                  derivado de los abonos que se están viendo, no. */}
+              <Badge variant={estado as typeof sale.status}>{ETIQUETA_ESTADO[estado]}</Badge>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
               <div>
@@ -544,19 +544,43 @@ export default function SaleEditModal({
                 )}
               </div>
             </div>
-            {/* CONFIGURACIÓN DEL ESTADO editable (Al final de la modal) */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-              <FormField label="Estado de la Venta *" error={localErrors.status}>
-                <Combobox
-                  value={localStatus}
-                  onChange={(val) => {
-                    setLocalStatus(val);
-                  }}
-                  placeholder="Selecciona un estado..."
-                  options={getStatusOptions()}
-                  error={localErrors.status}
-                />
-              </FormField>
+            {/* Lo editable de la cabecera —la fecha de vencimiento— y el estado,
+                que se muestra porque lo calculan los pagos. */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm mb-4 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <span className="block text-xs font-medium text-gray-500 mb-0.5">
+                    Estado de la venta
+                  </span>
+                  <span className="font-semibold text-gray-800">{ETIQUETA_ESTADO[estado]}</span>
+                </div>
+                <span className="text-xs text-gray-500 text-right max-w-[14rem]">
+                  Lo calculan los pagos registrados; no se elige a mano.
+                </span>
+              </div>
+
+              {remainingBalance > 0 && (
+                <FormField
+                  label="Vencimiento del crédito *"
+                  error={localErrors.creditDueDate}
+                >
+                  <Input
+                    type="date"
+                    value={localCreditDueDate}
+                    onChange={(e) => {
+                      setLocalCreditDueDate(e.target.value);
+                      if (localErrors.creditDueDate) setLocalErrors({});
+                    }}
+                    error={localErrors.creditDueDate}
+                  />
+                </FormField>
+              )}
+
+              {localErrors.general && (
+                <p role="alert" className="text-sm font-medium text-red-600">
+                  {localErrors.general}
+                </p>
+              )}
             </div>
 
             {/* Barra de progreso de pago */}

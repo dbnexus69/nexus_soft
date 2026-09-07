@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Plus, 
   Pencil, 
@@ -20,8 +20,7 @@ import {
   Compass,
   Eye,
   ShieldCheck,
-  Info
-} from 'lucide-react';
+  Info, X } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -39,18 +38,17 @@ import LoadingScreen from '../components/ui/LoadingScreen';
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
 
-const SECTIONS = [
-  { id: 'cards', label: 'Tarjetas', desc: 'Bancos y tarjetas de crédito/débito', icon: <CreditCard size={18} /> },
-  { id: 'paymentMethods', label: 'Formas de Pago', desc: 'Métodos de cobro del sistema', icon: <Coins size={18} /> },
-  { id: 'documentTypes', label: 'Tipos de Documento', desc: 'Documentos de identidad base', icon: <IdCard size={18} /> },
-  { id: 'airlines', label: 'Aerolíneas', desc: 'Líneas aéreas autorizadas', icon: <PlaneTakeoff size={18} /> },
-  { id: 'suppliers', label: 'Proveedores', desc: 'Hoteles, operadores y aerolíneas', icon: <Building2 size={18} /> },
-  { id: 'airports', label: 'Aeropuertos', desc: 'Aeropuertos y ubicaciones base', icon: <Compass size={18} /> },
-  { id: 'baggage', label: 'Equipaje', desc: 'Políticas y pesos de equipaje', icon: <Luggage size={18} /> },
-  { id: 'packages', label: 'Paquetes', desc: 'Catálogo de paquetes turísticos', icon: <Boxes size={18} /> }
-] as const;
+import SortIcon from '../components/ui/SortIcon';
+import { CATALOGOS, CATALOGO_POR_ID, N_COLUMNAS } from '../components/config/catalogos';
 
-type SectionId = typeof SECTIONS[number]['id'];
+/**
+ * Los catálogos, su rótulo, su singular y sus columnas viven en
+ * `components/config/catalogos.tsx`. Antes estaban repartidos en cuatro listas
+ * paralelas aquí mismo —`SECTIONS`, `getHeaders`, `getRow`, `getSingularLabel`—
+ * y el desajuste entre dos de ellas es lo que hacía que ninguna de las ocho
+ * tablas cuadrara: la cabecera no declaraba la columna de acciones.
+ */
+type SectionId = string;
 
 const isOptimisticId = (item: any): boolean => {
   if (item === undefined || item === null) return false;
@@ -69,142 +67,65 @@ export default function Config() {
   const [viewingPackage, setViewingPackage] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [avisoBorrado, setAvisoBorrado] = useState<string | null>(null);
   const [paginatedData, setPaginatedData] = useState<any[]>([]);
   const [paginationMeta, setPaginationMeta] = useState<any>(null);
   const [isSectionLoading, setIsSectionLoading] = useState(false);
 
-  const paginatedSections = ['cards', 'paymentMethods', 'documentTypes', 'airlines', 'suppliers', 'airports', 'baggage', 'packages'];
-  const isPaginatedSection = paginatedSections.includes(currentSection);
+  const def = CATALOGO_POR_ID[currentSection];
 
-  // Lazy Load Fetch
-  useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+  // Orden: sin elegir manda el del servidor, que cada catálogo declara.
+  const [orden, setOrden] = useState<{ por: string | null; sentido: 'asc' | 'desc' }>(
+    { por: null, sentido: 'asc' },
+  );
+  const [page, setPage] = useState(1);
+  const peticion = useRef(0);
 
-  const fetchPaginatedData = async (page: number = 1, search: string = '') => {
-    if (!paginatedSections.includes(currentSection)) return;
+  useEffect(() => { setPage(1); }, [currentSection, searchTerm, orden]);
+
+  // Antes había además `currentData` y `filteredData`: un orden por id y una
+  // CUARTA copia de las reglas de búsqueda, esta en el navegador, sobre el
+  // catálogo completo que trae `/config/all`. Eran código muerto —
+  // `isPaginatedSection` era siempre verdadero porque su lista contenía las
+  // ocho secciones— y ahora buscar, ordenar y paginar lo hace el servidor.
+  const cargarSeccion = useCallback(async () => {
+    const mia = ++peticion.current;
     setIsSectionLoading(true);
     try {
-      const res = await getConfigSection(currentSection, { page, perPage: 10, search });
-      if (res && res.data) {
-        setPaginatedData(res.data);
-        if (res.meta) setPaginationMeta(res.meta);
-      } else {
-        setPaginatedData(res);
-        setPaginationMeta(null);
-      }
+      const res = await getConfigSection(currentSection, {
+        page, perPage: 12,
+        search: searchTerm.trim() || undefined,
+        sortBy: orden.por || undefined,
+        sortOrder: orden.por ? orden.sentido : undefined,
+      });
+      if (mia !== peticion.current) return;
+      setPaginatedData(res?.data || []);
+      setPaginationMeta(res?.meta || null);
     } catch (err) {
-      console.error(err);
+      if (mia === peticion.current) { console.error(err); setPaginatedData([]); }
     } finally {
-      setIsSectionLoading(false);
+      if (mia === peticion.current) setIsSectionLoading(false);
     }
-  };
+  }, [currentSection, page, searchTerm, orden]);
 
   useEffect(() => {
-    if (isPaginatedSection) {
-      setIsSectionLoading(true);
-      const handler = setTimeout(() => {
-        fetchPaginatedData(1, searchTerm);
-      }, 300);
-      return () => clearTimeout(handler);
-    }
-  }, [currentSection, searchTerm]);
+    const t = setTimeout(cargarSeccion, searchTerm ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [cargarSeccion, searchTerm]);
 
-  const currentData = ((config[currentSection as keyof ConfigData] || []) as any[])
-    .slice()
-    .sort((a, b) => {
-      const idA = a.id ?? a._id ?? 0;
-      const idB = b.id ?? b._id ?? 0;
-      const numA = Number(idA);
-      const numB = Number(idB);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numB - numA;
-      }
-      return String(idB).localeCompare(String(idA));
+  // Primer clic: ascendente. Segundo: descendente. Tercero: vuelta al orden
+  // por defecto del catálogo, para poder deshacer sin recargar.
+  const ordenarPor = useCallback((clave: string) => {
+    setOrden(actual => {
+      if (actual.por !== clave) return { por: clave, sentido: 'asc' };
+      if (actual.sentido === 'asc') return { por: clave, sentido: 'desc' };
+      return { por: null, sentido: 'asc' };
     });
-
-  // Dynamic filter based on search input
-  const filteredData = currentData.filter(item => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    switch (currentSection) {
-      case 'cards':
-        return (item.name || '').toLowerCase().includes(term) || 
-               (item.paymentMethod || '').toLowerCase().includes(term) || 
-               (item.lastFourDigits || '').includes(term) ||
-               (item.description || '').toLowerCase().includes(term);
-      case 'paymentMethods':
-      case 'documentTypes':
-        return (item.name || '').toLowerCase().includes(term);
-      case 'airlines':
-        return (item.name || '').toLowerCase().includes(term) || (item.code || '').toLowerCase().includes(term);
-      case 'suppliers':
-        return (item.name || '').toLowerCase().includes(term) || 
-               (item.type || '').toLowerCase().includes(term) || 
-               (item.email || '').toLowerCase().includes(term) ||
-               (item.phone || '').toLowerCase().includes(term);
-      case 'airports':
-        return (item.name || '').toLowerCase().includes(term) || (item.abbreviation || '').toLowerCase().includes(term) || (item.location || '').toLowerCase().includes(term);
-      case 'baggage':
-        return (item.airlineName || '').toLowerCase().includes(term);
-      case 'packages':
-        return (item.name || '').toLowerCase().includes(term) || (item.destination || '').toLowerCase().includes(term);
-      default:
-        return true;
-    }
-  });
-
-  const getHeaders = (section: SectionId): string[] => {
-    switch (section) {
-      case 'cards': return ['#', 'Nombre', 'Método de Pago', 'Últimos 4 Dígitos', 'Estado', 'Descripción'];
-      case 'paymentMethods': return ['#', 'Nombre'];
-      case 'documentTypes': return ['#', 'Nombre'];
-      case 'airlines': return ['#', 'Nombre', 'Código IATA', 'Cobertura', 'Sitio Web'];
-      case 'suppliers': return ['#', 'Nombre', 'Tipo', 'Email', 'Teléfono', 'Sitio Web'];
-      case 'airports': return ['#', 'Nombre', 'Abreviación', 'Ubicación', 'Cobertura', 'Estado'];
-      case 'baggage': return ['#', 'Aerolínea', 'Tarifa', 'Art. Personal', 'Equip. Mano', 'Equip. Bodega'];
-      case 'packages': return ['#', 'Nombre', 'Destino', 'Noches', 'Hotel', 'Tarifa Adulto'];
-      default: return ['#', 'Nombre'];
-    }
-  };
-
-  const getSingularLabel = (section: SectionId): string => {
-    switch (section) {
-      case 'cards': return 'Tarjeta';
-      case 'paymentMethods': return 'Forma de Pago';
-      case 'documentTypes': return 'Tipo de Documento';
-      case 'airlines': return 'Aerolínea';
-      case 'suppliers': return 'Proveedor';
-      case 'airports': return 'Aeropuerto';
-      case 'baggage': return 'Equipaje';
-      case 'packages': return 'Paquete';
-      default: return 'Elemento';
-    }
-  };
-
-  const getRow = (item: any, section: SectionId): string[] => {
-    const itemName = item.name || item.nombre || item.bank || item.nombre_plan || item.hotel_nombre || 'Sin Nombre';
-    switch (section) {
-      case 'cards': return [
-        itemName, 
-        item.paymentMethod || item.type || 'No especificado', 
-        `•••• ${item.lastFourDigits || (item.id != null ? item.id.toString().padStart(4, '0') : '0000')}`, 
-        item.status || 'Activo', 
-        item.description || 'Sin descripción'
-      ];
-      case 'paymentMethods': return [itemName];
-      case 'documentTypes': return [itemName];
-      case 'airlines': return [itemName, item.code || item.codigoIata || item.codigo_iata || '-', item.type || 'Internacional', item.website || 'No especificado'];
-      case 'suppliers': return [itemName, item.type || '-', item.email || '-', item.phone || '-', item.website || 'No especificado'];
-      case 'airports': return [itemName, item.abbreviation || item.codigoIata || item.codigo_iata || '-', item.location || item.ciudad || '-', item.type || 'Ambos', item.status || 'Activo'];
-      case 'baggage': return [item.airlineName || item.aerolinea || '-', item.fareType || item.tipoTarifa || '-', item.personalItem || 'No incluido', item.carryOn || 'No incluido', item.checkedBag || 'No incluido'];
-      case 'packages': return [itemName, item.destination || item.destino || '-', item.nights?.toString() || '-', item.accommodation?.hotel || item.hotel || '-', formatCurrency(item.rates?.adult || item.tarifaAdulto || 0)];
-      default: return [itemName];
-    }
-  };
+  }, []);
 
   const handleOpenModal = (item?: any) => {
     setErrors({});
+    setAvisoGuardado(null);
     if (item) {
       setEditingItem(item);
       setFormData({ ...item });
@@ -215,98 +136,58 @@ export default function Config() {
     setIsModalOpen(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    if (currentSection === 'cards') {
-      if (!formData.name || String(formData.name).trim().length < 3) {
-        newErrors.name = 'El nombre debe tener al menos 3 caracteres.';
-      }
-      if (!formData.paymentMethod) {
-        newErrors.paymentMethod = 'Debe seleccionar un método de pago.';
-      }
-      const lastFourStr = String(formData.lastFourDigits || '');
-      if (lastFourStr.length !== 4 || !/^\d{4}$/.test(lastFourStr)) {
-        newErrors.lastFourDigits = 'Debe ingresar exactamente los últimos 4 dígitos numéricos.';
-      }
-      if (!formData.status) {
-        newErrors.status = 'Debe seleccionar un estado.';
-      }
-    } else {
-      switch (currentSection) {
-        case 'paymentMethods':
-        case 'documentTypes':
-          if (!formData.name || formData.name.trim().length === 0) newErrors.name = 'El nombre es obligatorio.';
-          break;
-        case 'airlines':
-          if (!formData.name || formData.name.trim().length === 0) newErrors.name = 'El nombre es obligatorio.';
-          if (!formData.code || formData.code.trim().length === 0) newErrors.code = 'El código IATA es obligatorio.';
-          if (!formData.type) newErrors.type = 'Debe seleccionar un tipo de cobertura.';
-          if (!formData.website || !formData.website.startsWith('http')) newErrors.website = 'Debe ingresar un enlace válido (que inicie con http:// o https://).';
-          break;
-        case 'suppliers':
-          if (!formData.name || formData.name.trim().length === 0) newErrors.name = 'El nombre es obligatorio.';
-          if (!formData.type) newErrors.type = 'Debe seleccionar un tipo de proveedor.';
-          if (formData.email && formData.email.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Debe ingresar un correo electrónico válido.';
-          if (formData.phone && formData.phone.trim().length > 0 && formData.phone.trim().length < 7) newErrors.phone = 'Debe ingresar un teléfono válido.';
-          if (!formData.website || !formData.website.startsWith('http')) newErrors.website = 'Debe ingresar un enlace de sitio web válido (que inicie con http:// o https://).';
-          break;
-        case 'airports':
-          if (!formData.name || formData.name.trim().length === 0) newErrors.name = 'El nombre del aeropuerto es obligatorio.';
-          if (!formData.abbreviation || formData.abbreviation.trim().length === 0) newErrors.abbreviation = 'La abreviación IATA es obligatoria.';
-          if (!formData.city || formData.city.trim().length === 0) newErrors.city = 'La ciudad es obligatoria.';
-          if (!formData.country || formData.country.trim().length === 0) newErrors.country = 'El país es obligatorio.';
-          if (!formData.type) newErrors.type = 'Debe seleccionar un tipo de cobertura.';
-          if (!formData.status) newErrors.status = 'Debe seleccionar un estado.';
-          break;
-        case 'baggage':
-          if (!formData.airlineName) newErrors.airlineName = 'Debe seleccionar una aerolínea.';
-          if (!formData.fareType || formData.fareType.trim().length === 0) newErrors.fareType = 'La tarifa o cabina es obligatoria.';
-          if (!formData.personalItem || formData.personalItem.trim().length === 0) newErrors.personalItem = 'La especificación de artículo personal es obligatoria.';
-          if (!formData.carryOn || formData.carryOn.trim().length === 0) newErrors.carryOn = 'La especificación de equipaje de mano es obligatoria.';
-          if (!formData.checkedBag || formData.checkedBag.trim().length === 0) newErrors.checkedBag = 'La especificación de equipaje de bodega es obligatoria.';
-          break;
-        case 'packages':
-          if (!formData.name || formData.name.trim().length === 0) newErrors.name = 'El nombre del paquete es obligatorio.';
-          if (!formData.destination || formData.destination.trim().length === 0) newErrors.destination = 'El destino es obligatorio.';
-          if (!formData.nights || formData.nights <= 0) newErrors.nights = 'Debe ingresar un número válido de noches.';
-          break;
-      }
+  /**
+   * Los errores del servidor, puestos en su campo.
+   *
+   * Antes había aquí un `validate()` de 65 líneas con un switch por sección:
+   * una quinta copia de las reglas, y con condiciones MÁS estrictas que la
+   * base —exigía web en las aerolíneas y los tres pesos del equipaje, todos
+   * nullable— así que el formulario prohibía lo que la base permite. Ahora las
+   * reglas viven en `schemas/config.schema.js`, una sola vez, y el 422 trae
+   * `details: [{field, message}]` para pintarlas junto a su input.
+   *
+   * Antes tampoco llegaban: se leía `err.response.data.message` cuando la API
+   * devuelve `error.message`, así que el aviso siempre decía "Error
+   * desconocido" y el motivo real no se veía nunca.
+   */
+  const mostrarErrorDelServidor = (err: any, porDefecto: string): string => {
+    const payload = err?.response?.data?.error;
+    if (Array.isArray(payload?.details) && payload.details.length > 0) {
+      setErrors(Object.fromEntries(payload.details.map((d: any) => [d.field, d.message])));
+      return payload.details.map((d: any) => d.message).join('. ');
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return payload?.message || err?.message || porDefecto;
   };
 
+  const [avisoGuardado, setAvisoGuardado] = useState<string | null>(null);
+
   const handleSubmit = async () => {
-    if (!validate()) {
-      alert("Por favor corrige los errores del formulario antes de guardar.");
-      return;
-    }
-    
     setIsSaving(true);
+    setErrors({});
+    setAvisoGuardado(null);
     try {
       if (editingItem) {
         const updated = await updateConfigItem(currentSection as ConfigSection, editingItem.id, formData);
-        if (isPaginatedSection) {
-          setPaginatedData(prev => prev.map(item => item.id === editingItem.id ? updated : item));
-        }
+        setPaginatedData(prev => prev.map(item => item.id === editingItem.id ? updated : item));
       } else {
         await addConfigItem(currentSection as ConfigSection, formData);
       }
       
-      if (isPaginatedSection && !editingItem) {
-        fetchPaginatedData(1, searchTerm);
-      }
+      // Al crear se vuelve a la primera página, que es donde el orden por
+      // defecto del catálogo pone lo nuevo.
+      if (!editingItem) { setPage(1); cargarSeccion(); }
       fetchConfig();
       setIsModalOpen(false);
     } catch (err: any) {
       console.error(err);
-      alert("Error al guardar: " + (err?.response?.data?.message || err.message || "Error desconocido"));
+      setAvisoGuardado(mostrarErrorDelServidor(err, "No se pudo guardar."));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDelete = (id: number) => {
+    setAvisoBorrado(null);
     setDeleteItemId(id);
   };
 
@@ -315,14 +196,12 @@ export default function Config() {
       setIsDeleting(true);
       try {
         await deleteConfigItem(currentSection as ConfigSection, deleteItemId);
-        if (isPaginatedSection) {
-          fetchPaginatedData(paginationMeta?.page || 1, searchTerm);
-        }
+        cargarSeccion();
         fetchConfig();
         setDeleteItemId(null);
       } catch (err: any) {
         console.error(err);
-        alert("Error al eliminar: " + (err?.response?.data?.message || err.message || "Error desconocido"));
+        setAvisoBorrado(mostrarErrorDelServidor(err, "No se pudo eliminar."));
       } finally {
         setIsDeleting(false);
       }
@@ -333,153 +212,214 @@ export default function Config() {
 
 
 
-  const stats = [
-    { label: 'Proveedores Activos', count: config.suppliers?.length || 0, icon: <Building2 className="text-primary" size={18} /> },
-    { label: 'Aeropuertos Base', count: config.airports?.length || 0, icon: <Compass className="text-accent" size={18} /> },
-    { label: 'Aerolíneas de Viaje', count: config.airlines?.length || 0, icon: <PlaneTakeoff className="text-success" size={18} /> },
-    { label: 'Formas de Pago', count: config.paymentMethods?.length || 0, icon: <Coins className="text-warning" size={18} /> },
-  ];
-
   if (loading && (!config.suppliers || config.suppliers.length === 0)) {
     return <LoadingScreen fullScreen={false} />;
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative">
-      {/* Header */}
-      <div className="flex flex-col items-center justify-center gap-4 mb-6 text-center">
-        <div className="flex flex-col items-center justify-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary flex items-center justify-center gap-3">
-            <Database className="text-accent w-8 h-8" /> Gestión Interna
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Administración central de tablas maestras, catálogos base y parámetros para la facturación.
-          </p>
-        </div>
+    <div className="animate-fade-in space-y-5">
+      {/* La cabecera estaba centrada, con un icono de 32px y un subtítulo de
+          dos líneas. Un título de página centrado gasta alto vertical y no
+          orienta; alineado a la izquierda, con el catálogo activo al lado, sí. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="font-heading text-2xl font-semibold text-primary dark:text-white">
+          Gestión interna
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{def.desc}</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-border w-fit mx-auto mb-6 max-w-full overflow-x-auto flex-nowrap scrollbar-none">
-        {SECTIONS.map(section => {
-          const isActive = currentSection === section.id;
-          const count = (config[section.id as keyof ConfigData] as any[])?.length || 0;
+      {/* Los ocho catálogos. Se retira el contador de cada pestaña: salía de
+          `config[seccion].length`, que es el catálogo cacheado de /config/all,
+          y como `packages` no viaja en esa carga su contador era siempre 0.
+          El número real de registros lo dice el paginador, una sola vez. */}
+      <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" aria-label="Catálogos">
+        {CATALOGOS.map(c => {
+          const activo = currentSection === c.id;
           return (
             <button
-              key={section.id}
-              onClick={() => {
-                setCurrentSection(section.id);
-                setSearchTerm('');
-              }}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+              key={c.id}
+              onClick={() => { setCurrentSection(c.id); setSearchTerm(''); }}
+              aria-current={activo ? 'page' : undefined}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                activo
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
-              {section.icon}
-              <span className="hidden sm:inline">{section.label}</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+              {c.etiqueta}
             </button>
           );
         })}
+      </nav>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} aria-hidden />
+            <input
+              placeholder={`Buscar en ${def.etiqueta.toLowerCase()}`}
+              className="w-full rounded-lg border border-slate-300 bg-white py-1.5 pl-9 pr-8 text-sm text-slate-700 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-600"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          {/* Decía "Nuevo Aerolíneas": el rótulo era el plural. Cada catálogo
+              declara su singular. */}
+          <Button size="sm" onClick={() => handleOpenModal()}>
+            <Plus size={15} aria-hidden />
+            Nuevo {def.singular.toLowerCase()}
+          </Button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {def.columnas.map(col => {
+                  const activa = orden.por === col.orden;
+                  return (
+                    <th
+                      key={col.clave}
+                      scope="col"
+                      aria-sort={activa ? (orden.sentido === 'asc' ? 'ascending' : 'descending') : undefined}
+                      className={`px-3 py-2 ${col.derecha ? 'text-right' : 'text-left'}`}
+                    >
+                      {col.orden ? (
+                        <button
+                          type="button"
+                          onClick={() => ordenarPor(col.orden!)}
+                          className={`inline-flex items-center gap-1 rounded font-medium hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 dark:hover:text-slate-200 ${
+                            col.derecha ? 'flex-row-reverse' : ''
+                          } ${activa ? 'text-slate-800 dark:text-slate-200' : ''}`}
+                        >
+                          {col.rotulo}
+                          <SortIcon field={col.orden} currentSort={orden.por || ''} sortOrder={orden.sentido} />
+                        </button>
+                      ) : (
+                        col.rotulo
+                      )}
+                    </th>
+                  );
+                })}
+                {/* La columna que faltaba en las ocho cabeceras. */}
+                <th scope="col" className="px-3 py-2 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isSectionLoading && paginatedData.length === 0 ? (
+                // Filas fantasma en vez de sustituir la tabla por una pantalla
+                // de carga: así la cabecera no desaparece y el alto no salta.
+                Array.from({ length: 5 }, (_, i) => (
+                  <tr key={i} className="border-t border-slate-200 dark:border-slate-800">
+                    <td colSpan={N_COLUMNAS(def)} className="px-3 py-3">
+                      <div className="h-6 animate-pulse rounded bg-slate-100 motion-reduce:animate-none dark:bg-slate-800" />
+                    </td>
+                  </tr>
+                ))
+              ) : paginatedData.length === 0 ? (
+                <tr className="border-t border-slate-200 dark:border-slate-800">
+                  <td colSpan={N_COLUMNAS(def)} className="px-4 py-14 text-center">
+                    {/* Buscar sin resultados y un catálogo vacío no son lo
+                        mismo, y antes los dos decían "Catálogo Vacío". */}
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">
+                      {searchTerm.trim()
+                        ? `Nada coincide con "${searchTerm.trim()}"`
+                        : `Aún no hay ${def.etiqueta.toLowerCase()}`}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      {searchTerm.trim()
+                        ? 'Prueba con otro término.'
+                        : `Crea el primer registro con "Nuevo ${def.singular.toLowerCase()}".`}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedData.map((item: any) => (
+                  <tr
+                    key={item.id}
+                    className={`border-t border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40 ${
+                      isOptimisticId(item) ? 'opacity-50' : ''
+                    }`}
+                  >
+                    {def.columnas.map(col => (
+                      <td
+                        key={col.clave}
+                        className={`px-3 py-2.5 ${col.derecha ? 'text-right' : ''} ${
+                          col.clave === 'name' || col.clave === 'airlineName' ? '' : 'text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {col.render(item)}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1">
+                        {def.conDetalle && (
+                          <button
+                            type="button"
+                            onClick={() => setViewingPackage(item)}
+                            title="Ver detalle"
+                            aria-label={`Ver el detalle de ${item.name}`}
+                            disabled={isOptimisticId(item)}
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-white"
+                          >
+                            <Eye size={14} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenModal(item)}
+                          title="Editar"
+                          aria-label={`Editar ${item.name || item.airlineName}`}
+                          disabled={isOptimisticId(item)}
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-white"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          title="Eliminar"
+                          aria-label={`Eliminar ${item.name || item.airlineName}`}
+                          disabled={isOptimisticId(item)}
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Con `total` y `perPage`: sin ellos el paginador no podía decir
+            cuántos registros hay, y se ocultaba del todo con una sola página. */}
+        <Pagination
+          currentPage={paginationMeta?.page || 1}
+          totalPages={paginationMeta?.totalPages || 0}
+          total={paginationMeta?.total || 0}
+          perPage={12}
+          loading={isSectionLoading}
+          onPageChange={setPage}
+          className="border-t border-slate-200 px-4 py-3 dark:border-slate-800"
+        />
       </div>
 
-      <Card className="animate-fade-in">
-        <CardHeader actions={
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <Input 
-                placeholder={`Buscar en ${SECTIONS.find(s => s.id === currentSection)?.label}...`}
-                className="pl-10 pr-9 w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto justify-center">
-              <Plus size={18} />
-              Nuevo {SECTIONS.find(s => s.id === currentSection)?.label}
-            </Button>
-          </div>
-        }>
-          Catálogo de {SECTIONS.find(s => s.id === currentSection)?.label}
-        </CardHeader>
-        
-        <CardBody>
-          {isSectionLoading ? (
-            <LoadingScreen fullScreen={false} />
-          ) : ((isPaginatedSection ? paginatedData : filteredData).length === 0) ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center bg-gray-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 m-6">
-              <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center justify-center mb-4">
-                <Search className="text-gray-400" size={24} />
-              </div>
-              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">Catálogo Vacío</h3>
-              <p className="text-gray-400 text-sm">No se encontraron registros en este catálogo.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto w-full">
-              <Table headers={getHeaders(currentSection)}>
-                {(isPaginatedSection ? paginatedData : filteredData).map((item: any) => {
-                  const isOptimistic = isOptimisticId(item);
-                  return (
-                    <TableRow key={item.id}>
-                            <TableCell className="font-semibold text-gray-700">
-                              {item.id}
-                            </TableCell>
-                            {getRow(item, currentSection).map((val, i) => (
-                              <TableCell key={i}>{val}</TableCell>
-                            ))}
-                            <TableCell>
-                              <div className="flex gap-2">
-                                {currentSection === 'packages' && (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => setViewingPackage(item)} 
-                                    title="Ver Detalle"
-                                    disabled={isOptimistic}
-                                  >
-                                    <Eye size={13} />
-                                  </Button>
-                                )}
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleOpenModal(item)}
-                                  disabled={isOptimistic}
-                                >
-                                  <Pencil size={13} />
-                                </Button>
-                                <Button 
-                                  variant="danger" 
-                                  size="sm" 
-                                  onClick={() => handleDelete(item.id)}
-                                  disabled={isOptimistic}
-                                >
-                                  <Trash2 size={13} />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </Table>
-            </div>
-          )}
-          
-          {isPaginatedSection && paginationMeta && paginationMeta.totalPages > 1 && (
-            <div className="mt-4 border-t border-gray-100 dark:border-slate-800 pt-4">
-              <Pagination
-                currentPage={paginationMeta.page}
-                totalPages={paginationMeta.totalPages}
-                onPageChange={(page) => fetchPaginatedData(page, searchTerm)}
-              />
-            </div>
-          )}
-        </CardBody>
-          </Card>
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingItem ? `Editar ${getSingularLabel(currentSection)}` : `Nuevo ${getSingularLabel(currentSection)}`}
+        title={editingItem ? `Editar ${def.singular.toLowerCase()}` : `Nuevo ${def.singular.toLowerCase()}`}
         size={currentSection === 'packages' ? 'xl' : 'lg'}
         footer={
           <>
@@ -491,6 +431,11 @@ export default function Config() {
         }
       >
         <div className="space-y-4">
+          {avisoGuardado && (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+              {avisoGuardado}
+            </p>
+          )}
           <ConfigForms 
             section={currentSection} 
             formData={formData} 
@@ -526,8 +471,13 @@ export default function Config() {
             ¿Estás absolutamente seguro?
           </h3>
           <p className="text-sm text-gray-500 mb-4 max-w-sm mx-auto">
-            Esta acción es irreversible. Se eliminará de forma permanente el elemento con ID <strong className="text-gray-700 font-mono">#{deleteItemId}</strong> del catálogo de <strong className="text-primary">{SECTIONS.find(s => s.id === currentSection)?.label}</strong>.
+            Esta acción es irreversible. Se eliminará de forma permanente el elemento con ID <strong className="text-gray-700 font-mono">#{deleteItemId}</strong> del catálogo de <strong className="text-primary">{def.etiqueta.toLowerCase()}</strong>.
           </p>
+          {avisoBorrado && (
+            <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+              {avisoBorrado}
+            </p>
+          )}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left flex items-start gap-3">
             <span className="text-amber-600 text-lg">⚠️</span>
             <p className="text-xs text-amber-700 leading-relaxed font-semibold">

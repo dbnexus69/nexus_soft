@@ -1,15 +1,15 @@
 import api from './client';
 
-const SECTION_MAP: Record<string, string> = {
-  cards: 'cards',
-  paymentMethods: 'payment-methods',
-  documentTypes: 'document-types',
-  airlines: 'airlines',
-  suppliers: 'suppliers',
-  airports: 'airports',
-  baggage: 'baggage',
-  packages: 'packages',
-};
+import { CATALOGOS } from '../components/config/catalogos';
+
+/**
+ * Traducción de la clave del frontend (camelCase) a la sección de la API
+ * (kebab-case). Se deriva de la definición de los catálogos: era un mapa
+ * literal aquí, una quinta lista de las mismas ocho secciones que había que
+ * mantener a mano.
+ */
+const SECTION_MAP: Record<string, string> =
+  Object.fromEntries(CATALOGOS.map(c => [c.id, c.seccion]));
 
 export async function getAllConfig() {
   const res = await api.get('/config/all');

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { ShieldCheck, Plus, Search, X, Users as UsersIcon } from "lucide-react";
+import { ShieldCheck, Plus, Search, X } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { useUsersContext } from "../context/UsersContext";
 import { usePermissions } from "../context/PermissionsContext";
@@ -227,79 +227,79 @@ export default function Users() {
           </div>
         </Card>
       ) : (
-        <div className="flex flex-col md:flex-row gap-6 animate-fade-in">
-          {/* Panel Izquierdo: Lista de Roles */}
-          <div className="w-full md:w-1/3 lg:w-1/4">
-            <Card className="h-full">
-              <CardHeader className="pb-4">
-                Roles de Sistema
-              </CardHeader>
-              <div className="p-4 space-y-3">
-                {/* `admin` y `superadmin` no se listan: sus permisos están fijados
-                    en el código y el backend rechaza editarlos. La pantalla los
-                    ofrecía y guardar no hacía nada. */}
-                {[
-                  { id: "asesor", name: "Asesores", icon: <UsersIcon size={20} /> },
-                  { id: "freelancer", name: "Freelancers", icon: <ShieldCheck size={20} /> }
-                ].map(role => (
-                  <button
-                    key={role.id}
-                    onClick={() => {
-                      setEditingRole(role.id);
-                      setEditingUserPermissions(data.config.rolePermissions[role.id]);
-                    }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 ${
-                      editingRole === role.id 
-                        ? 'bg-primary text-white shadow-xl shadow-primary/30 scale-[1.02]' 
-                        : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 border border-gray-100 dark:border-slate-700'
-                    }`}
-                  >
-                    <div className={`p-2.5 rounded-xl transition-colors ${editingRole === role.id ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary dark:bg-slate-700 dark:text-blue-400'}`}>
-                      {role.icon}
-                    </div>
-                    <span className="font-bold text-lg">{role.name}</span>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* Panel Derecho: Permisos */}
-          <div className="w-full md:w-2/3 lg:w-3/4">
-            <Card className="h-full flex flex-col shadow-sm border border-gray-100 dark:border-slate-700/50">
-              <div className="p-6 md:p-8 border-b border-gray-100 dark:border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white dark:bg-slate-800 rounded-t-2xl">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                    Políticas de Acceso: <span className="text-primary capitalize bg-primary/10 px-3 py-1 rounded-lg">{editingRole}</span>
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">
-                    Configura los privilegios predeterminados que tendrán todos los usuarios bajo este rol.
-                  </p>
-                </div>
-                {/* Solo superadmin: el backend responde 403 a los demás, así que
-                    mostrar el botón sería prometer algo que no va a pasar. */}
-                <Button
-                  onClick={handleSaveRolePermissions}
-                  disabled={!puedeEditarPermisos}
-                  title={puedeEditarPermisos ? undefined : "Solo el superadministrador puede cambiar los permisos de un rol"}
-                  className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-white font-bold px-8 h-12 rounded-xl hover:scale-105 active:scale-95 transition-all w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        <div className="animate-fade-in space-y-5">
+          {/* Los roles pasan a pestañas, no a un panel de un tercio de pantalla.
+              Eran cuatro botones de una palabra ocupando una columna entera,
+              con icono, `font-bold text-lg`, `shadow-xl` y `scale-[1.02]`,
+              mientras la matriz —que tiene cinco columnas— se apretaba en los
+              dos tercios restantes. Es el mismo patrón de pestañas subrayadas
+              de Gestión Interna: selección de sección, no filtro. */}
+          <nav
+            className="-mx-1 flex gap-1 overflow-x-auto border-b border-gray-border px-1"
+            aria-label="Roles"
+          >
+            {[
+              { id: 'asesor', name: 'Asesores' },
+              { id: 'freelancer', name: 'Freelancers' },
+            ].map(role => {
+              const activo = editingRole === role.id;
+              return (
+                <button
+                  key={role.id}
+                  onClick={() => {
+                    setEditingRole(role.id);
+                    setEditingUserPermissions(data.config.rolePermissions[role.id]);
+                  }}
+                  aria-current={activo ? 'page' : undefined}
+                  className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight/40 ${
+                    activo
+                      ? 'border-highlight text-highlight'
+                      : 'border-transparent text-accent hover:border-gray-border hover:text-primary dark:hover:text-white'
+                  }`}
                 >
-                  Guardar Políticas
+                  {role.name}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Una sola superficie. Antes eran tres anidadas: la tarjeta, un panel
+              gris dentro y la tabla con su propio borde y radio encima. */}
+          <div className="rounded-2xl border border-gray-border bg-white p-5 sm:p-6">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="font-heading text-lg font-semibold text-primary dark:text-white">
+                  Qué puede hacer un <span className="capitalize">{editingRole}</span>
+                </h3>
+                <p className="mt-0.5 text-sm text-accent">
+                  Se aplica a todos los usuarios con este rol. Se guarda en la base de datos.
+                </p>
+              </div>
+              {/* Solo superadmin: el backend responde 403 a los demás, así que
+                  mostrar un botón activo sería prometer algo que no va a pasar. */}
+              {puedeEditarPermisos ? (
+                <Button size="sm" onClick={handleSaveRolePermissions}>
+                  Guardar cambios
                 </Button>
-              </div>
-              <div className="p-6 md:p-8 bg-gray-50/50 dark:bg-slate-800/30 flex-1 rounded-b-2xl">
-                {editingUserPermissions && (
-                  <PermissionsGrid
-                    permissions={editingUserPermissions}
-                    onChange={setEditingUserPermissions}
-                    readOnly={!puedeEditarPermisos}
-                  />
-                )}
-              </div>
-            </Card>
+              ) : (
+                <p className="max-w-xs text-xs text-accent">
+                  Solo el superadministrador puede cambiar los permisos de un rol.
+                  Aquí se ven, pero no se editan.
+                </p>
+              )}
+            </div>
+
+            {editingUserPermissions && (
+              <PermissionsGrid
+                permissions={editingUserPermissions}
+                onChange={setEditingUserPermissions}
+                readOnly={!puedeEditarPermisos}
+              />
+            )}
           </div>
         </div>
       )}
+
 
       <UserModal
         isOpen={isModalOpen}

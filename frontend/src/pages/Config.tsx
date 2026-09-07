@@ -647,7 +647,7 @@ export default function Config() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Main Info */}
               <div className="md:col-span-2 space-y-6">
-                <div className="bg-gray-light dark:bg-slate-800/60 p-5 rounded-2xl border border-gray-border">
+                <div className="bg-slate-100/70 dark:bg-white/[0.04] p-5 rounded-2xl border border-gray-border">
                   <h4 className="text-sm font-bold text-primary mb-4 flex items-center gap-2">
                     <Info size={16} className="text-accent" /> Información General
                   </h4>
@@ -703,7 +703,7 @@ export default function Config() {
                   </div>
                 </div>
 
-                <div className="bg-gray-light dark:bg-slate-800/60 p-5 rounded-2xl border border-gray-border space-y-4">
+                <div className="bg-slate-100/70 dark:bg-white/[0.04] p-5 rounded-2xl border border-gray-border space-y-4">
                   <div>
                     <h4 className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Servicios Incluidos</h4>
                     <p className="text-xs text-gray-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{viewingPackage.includedServices || 'No especificado'}</p>

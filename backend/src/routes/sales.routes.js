@@ -18,6 +18,9 @@ router.use(auth);
 router.get('/', authorize('sales', 'view'), validateQuery(dateRangeSchema), paginate, salesController.list);
 // Va antes de /:id para que 'credit' no se interprete como un id de venta.
 router.get('/credit', authorize('sales', 'view'), paginate, salesController.creditPortfolio);
+// Colección e ítem del mismo recurso. Va antes de '/:id': Express resuelve en
+// orden de declaración y '/:id' capturaría 'credit' como si fuera un id.
+router.get('/credit/:clientId', authorize('sales', 'view'), paginate, salesController.creditByClient);
 router.get('/:id', authorize('sales', 'view'), salesController.getById);
 router.post('/', authorize('sales', 'create'), validate(createSaleSchema), salesController.create);
 router.put('/:id', authorize('sales', 'edit'), validate(updateSaleSchema), salesController.update);

@@ -51,6 +51,22 @@ exports.creditPortfolio = async (req, res, next) => {
       pagination: req.pagination,
       search: req.search,
       status: req.query.status,
+      // Tramo del informe de antigüedad: 'overdue' agrupa los cuatro de mora.
+      bucket: req.query.bucket,
+      permissionScope: req.permissionScope,
+      user: req.user,
+    });
+    success(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// El ítem de la colección /sales/credit: los créditos de un cliente.
+exports.creditByClient = async (req, res, next) => {
+  try {
+    const result = await salesService.getClientCredits(req.params.clientId, {
+      pagination: req.pagination,
       permissionScope: req.permissionScope,
       user: req.user,
     });

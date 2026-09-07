@@ -24,6 +24,153 @@ function normalizarTamanoMascota(valor) {
   return TAMANOS_MASCOTA[String(valor).trim().toLowerCase()] || null;
 }
 
+/**
+ * Tramos del informe de antigüedad de cartera, el estándar en cobranza:
+ * corriente (aún no vence) y mora repartida en 1-30, 31-60, 61-90 y +90 días.
+ *
+ * `undated` no es un tramo de verdad: recoge los créditos sin fecha de
+ * vencimiento, que desde 863c468 ya no se pueden crear y solo quedan como
+ * datos heredados. Existe para que los tramos sumen el pendiente en vez de
+ * perder dinero por el camino.
+ */
+const TRAMOS_MORA = ['days1_30', 'days31_60', 'days61_90', 'days90plus'];
+const TRAMOS_ANTIGUEDAD = ['current', ...TRAMOS_MORA, 'undated'];
+
+/**
+ * Los CTE que clasifican cada crédito. UNA sola definición, compartida por el
+ * listado de la cartera y por el detalle de un cliente.
+ *
+ * Cobro y vencimiento son dos ejes independientes. El CASE original los
+ * colapsaba en uno y evaluaba 'partial' antes que 'overdue', así que un abono
+ * parcial tapaba el vencimiento: 4.600.000 de mora se reportaban como cero.
+ * Aquí `liquidada` responde "¿queda algo por cobrar?" y `dias_mora` responde
+ * "¿cuánto se pasó de fecha?". Se cruzan, no compiten.
+ */
+function ctesDeCredito(extraSql) {
+  return `
+      WITH creditos AS (
+        SELECT
+          v.id AS venta_id,
+          v.cliente_id,
+          v.creado_at,
+          v.status::text AS venta_status,
+          v.monto_total,
+          COALESCE(v.monto_pagado_credito, 0) AS pagado,
+          GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0) AS pendiente,
+          v.fecha_vence_credito,
+          (COALESCE(v.monto_pagado_credito, 0) >= v.monto_total) AS liquidada,
+          -- El ::date es obligatorio: fecha_vence_credito es timestamp, y
+          -- restarlo de CURRENT_DATE devuelve un interval que no castea a int.
+          CASE
+            WHEN v.fecha_vence_credito IS NOT NULL
+             AND v.fecha_vence_credito::date < CURRENT_DATE
+            THEN (CURRENT_DATE - v.fecha_vence_credito::date)
+          END AS dias_mora
+        FROM ventas v
+        JOIN clientes c ON v.cliente_id = c.id
+        JOIN personas cp ON c.persona_id = cp.id
+        WHERE v.deleted_at IS NULL
+          AND v.status <> 'anulado'
+          AND (v.es_credito = true OR v.status IN ('credito', 'abonado'))
+          ${extraSql}
+      ),
+      -- Tramo de cada crédito. Los liquidados no tienen tramo: ya no se cobran.
+      por_credito AS (
+        SELECT
+          cr.*,
+          CASE
+            WHEN cr.liquidada                       THEN NULL
+            WHEN cr.fecha_vence_credito IS NULL     THEN 'undated'
+            WHEN cr.dias_mora IS NULL               THEN 'current'
+            WHEN cr.dias_mora <= 30                 THEN 'days1_30'
+            WHEN cr.dias_mora <= 60                 THEN 'days31_60'
+            WHEN cr.dias_mora <= 90                 THEN 'days61_90'
+            ELSE 'days90plus'
+          END AS tramo
+        FROM creditos cr
+      )`;
+}
+
+/** Agregado por cliente. Se apoya en `por_credito`. */
+const CTE_POR_CLIENTE = `
+      por_cliente AS (
+        SELECT
+          cliente_id,
+          SUM(monto_total)::float                                             AS "totalCredit",
+          SUM(pagado)::float                                                  AS "paidAmount",
+          SUM(CASE WHEN NOT liquidada    THEN pendiente ELSE 0 END)::float    AS "pendingAmount",
+          SUM(CASE WHEN tramo = 'current'    THEN pendiente ELSE 0 END)::float AS "agingCurrent",
+          SUM(CASE WHEN tramo = 'days1_30'   THEN pendiente ELSE 0 END)::float AS "aging1_30",
+          SUM(CASE WHEN tramo = 'days31_60'  THEN pendiente ELSE 0 END)::float AS "aging31_60",
+          SUM(CASE WHEN tramo = 'days61_90'  THEN pendiente ELSE 0 END)::float AS "aging61_90",
+          SUM(CASE WHEN tramo = 'days90plus' THEN pendiente ELSE 0 END)::float AS "aging90plus",
+          SUM(CASE WHEN tramo = 'undated'    THEN pendiente ELSE 0 END)::float AS "agingUndated",
+          -- "Activos" son los que quedan por cobrar: contar los liquidados hacía
+          -- que un cliente al día siguiera sumando créditos.
+          COUNT(*) FILTER (WHERE NOT liquidada)::int                          AS "activeCredits",
+          -- El próximo vencimiento sale solo de lo pendiente. Con MIN sobre
+          -- todo, la fecha de un crédito ya pagado podía ser la más antigua y la
+          -- pantalla mostraba un vencimiento que no se debe.
+          MIN(CASE WHEN NOT liquidada THEN fecha_vence_credito END)           AS "nextDueDate",
+          COALESCE(MAX(dias_mora) FILTER (WHERE NOT liquidada), 0)::int       AS "daysOverdue"
+        FROM por_credito
+        GROUP BY cliente_id
+        -- Un cliente sin nada por cobrar no pertenece a una lista de cobros.
+        HAVING COUNT(*) FILTER (WHERE NOT liquidada) > 0
+      ),
+      clasificados AS (
+        SELECT
+          pc.*,
+          ("aging1_30" + "aging31_60" + "aging61_90" + "aging90plus")::float  AS "overdueAmount",
+          -- Tramo del CLIENTE: el peor en el que tenga dinero. Undated va por
+          -- delante de current porque un crédito que no vence nunca es un
+          -- problema que atender, no una cuenta tranquila.
+          CASE
+            WHEN pc."aging90plus"  > 0 THEN 'days90plus'
+            WHEN pc."aging61_90"   > 0 THEN 'days61_90'
+            WHEN pc."aging31_60"   > 0 THEN 'days31_60'
+            WHEN pc."aging1_30"    > 0 THEN 'days1_30'
+            WHEN pc."agingUndated" > 0 THEN 'undated'
+            ELSE 'current'
+          END AS tramo,
+          -- Clasificación anterior, por urgencia del próximo vencimiento. Se
+          -- mantiene mientras la pantalla la siga usando; el informe de
+          -- antigüedad es la columna tramo.
+          CASE
+            WHEN ("aging1_30" + "aging31_60" + "aging61_90" + "aging90plus") > 0 THEN 'overdue'
+            WHEN pc."nextDueDate" IS NOT NULL
+             AND pc."nextDueDate" <= CURRENT_DATE + INTERVAL '3 days' THEN 'urgent'
+            WHEN pc."nextDueDate" IS NOT NULL
+             AND pc."nextDueDate" <= CURRENT_DATE + INTERVAL '7 days' THEN 'pending'
+            ELSE 'ok'
+          END AS estado
+        FROM por_cliente pc
+      )`;
+
+/** Fila de resumen por cliente, en la forma que consume la pantalla. */
+function mapearResumenCliente(f) {
+  return {
+    totalCredit: f.totalCredit,
+    paidAmount: f.paidAmount,
+    pendingAmount: f.pendingAmount,
+    overdueAmount: f.overdueAmount,
+    daysOverdue: f.daysOverdue,
+    activeCredits: f.activeCredits,
+    nextDueDate: f.nextDueDate,
+    // Los seis tramos suman `pendingAmount`.
+    aging: {
+      current: f.agingCurrent,
+      days1_30: f.aging1_30,
+      days31_60: f.aging31_60,
+      days61_90: f.aging61_90,
+      days90plus: f.aging90plus,
+      undated: f.agingUndated,
+    },
+    agingBucket: f.tramo,
+    status: f.estado,
+  };
+}
+
 class SalesService {
   // Resuelve de una vez todos los catálogos que la venta va a necesitar
   // (proveedores, aerolíneas, aeropuertos y personas por documento).
@@ -876,13 +1023,27 @@ class SalesService {
   //   parcial -> pagado > 0          (tiene prioridad sobre vencida)
   //   vencida -> vence < hoy
   //   pendiente en cualquier otro caso
-  async getCreditPortfolio({ pagination, search, status, permissionScope, user }) {
+  /**
+   * Cartera por cliente, con informe de antigüedad.
+   *
+   * `?bucket=` filtra por tramo ('overdue' agrupa los cuatro de mora) y
+   * `?status=` por la clasificación anterior de urgencia. Los dos se aplican en
+   * SQL y el count comparte su predicado con las filas: antes se filtraba el
+   * array del LIMIT, así que `?status=overdue` devolvía 0 filas informando de
+   * `meta.total: 2` y todas las páginas salían vacías.
+   */
+  async getCreditPortfolio({ pagination, search, status, bucket, permissionScope, user }) {
     const { page, perPage, skip } = pagination;
-
     const ESTADOS = ['overdue', 'urgent', 'pending', 'ok'];
+
     if (status && status !== 'all' && !ESTADOS.includes(status)) {
       throw new BadRequestError(
         `Estado de cartera inválido: ${status}. Válidos: all, ${ESTADOS.join(', ')}`
+      );
+    }
+    if (bucket && bucket !== 'all' && bucket !== 'overdue' && !TRAMOS_ANTIGUEDAD.includes(bucket)) {
+      throw new BadRequestError(
+        `Tramo de antigüedad inválido: ${bucket}. Válidos: all, overdue, ${TRAMOS_ANTIGUEDAD.join(', ')}`
       );
     }
 
@@ -898,83 +1059,18 @@ class SalesService {
       push(`((cp.nombres || ' ' || cp.apellidos) ILIKE ? OR cp.documento ILIKE ? OR CAST(v.id AS TEXT) ILIKE ?)`, q, q, q);
     }
     const extraSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
+    const baseSql = `${ctesDeCredito(extraSql)},${CTE_POR_CLIENTE}`;
 
-    // Cobro y vencimiento son DOS EJES INDEPENDIENTES, no un enum.
-    //
-    // El CASE anterior los colapsaba en uno y evaluaba `partial` antes que
-    // `overdue`, así que un abono parcial tapaba el vencimiento: una venta
-    // vencida hace 38 días con un abono salía como 'partial' y nunca como
-    // vencida. Medido contra la base: 4.600.000 de deuda vencida que la cartera
-    // reportaba como 0, y el cliente pintado en naranja ("Pronto") en vez de
-    // rojo. Justo las cuentas que hay que perseguir eran las que desaparecían.
-    //
-    // `liquidada` responde "¿queda algo por cobrar?" y `vencida` responde
-    // "¿se pasó la fecha de algo que queda por cobrar?". Se cruzan, no compiten.
-    const baseSql = `
-      WITH creditos AS (
-        SELECT
-          v.cliente_id,
-          v.monto_total,
-          COALESCE(v.monto_pagado_credito, 0) AS pagado,
-          GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0) AS pendiente,
-          v.fecha_vence_credito,
-          (COALESCE(v.monto_pagado_credito, 0) >= v.monto_total) AS liquidada,
-          (v.fecha_vence_credito IS NOT NULL
-             AND v.fecha_vence_credito < CURRENT_DATE
-             AND COALESCE(v.monto_pagado_credito, 0) < v.monto_total) AS vencida
-        FROM ventas v
-        JOIN clientes c ON v.cliente_id = c.id
-        JOIN personas cp ON c.persona_id = cp.id
-        WHERE v.deleted_at IS NULL
-          AND v.status <> 'anulado'
-          AND (v.es_credito = true OR v.status IN ('credito', 'abonado'))
-          ${extraSql}
-      ),
-      por_cliente AS (
-        SELECT
-          cliente_id,
-          SUM(monto_total)::float                                            AS "totalCredit",
-          SUM(pagado)::float                                                 AS "paidAmount",
-          SUM(CASE WHEN NOT liquidada THEN pendiente ELSE 0 END)::float      AS "pendingAmount",
-          SUM(CASE WHEN vencida     THEN pendiente ELSE 0 END)::float        AS "overdueAmount",
-          -- "Activos" son los que quedan por cobrar. Antes contaba también los
-          -- liquidados, así que un cliente al día seguía sumando créditos.
-          COUNT(*) FILTER (WHERE NOT liquidada)::int                         AS "activeCredits",
-          -- Y el próximo vencimiento sale solo de lo pendiente: con MIN sobre
-          -- todo, la fecha de un crédito ya pagado podía ser la más antigua y
-          -- la pantalla mostraba un vencimiento que no se debe.
-          MIN(CASE WHEN NOT liquidada THEN fecha_vence_credito END)          AS "nextDueDate",
-          BOOL_OR(vencida)                                                   AS "tieneVencida"
-        FROM creditos
-        GROUP BY cliente_id
-        -- Un cliente sin nada por cobrar no pertenece a una lista de cobros.
-        HAVING COUNT(*) FILTER (WHERE NOT liquidada) > 0
-      ),
-      clasificados AS (
-        SELECT
-          pc.*,
-          -- La ÚNICA definición del estado del cliente. Antes se calculaba dos
-          -- veces: aquí en SQL para los contadores y otra vez en JavaScript
-          -- para las filas, con aritmética de fechas en la zona del proceso.
-          -- Dos implementaciones de la misma regla que podían discrepar.
-          CASE
-            WHEN pc."tieneVencida" THEN 'overdue'
-            WHEN pc."nextDueDate" IS NOT NULL
-             AND pc."nextDueDate" <= CURRENT_DATE + INTERVAL '3 days'  THEN 'urgent'
-            WHEN pc."nextDueDate" IS NOT NULL
-             AND pc."nextDueDate" <= CURRENT_DATE + INTERVAL '7 days'  THEN 'pending'
-            ELSE 'ok'
-          END AS estado
-        FROM por_cliente pc
-      )`;
-
-    // El filtro por estado se aplica en SQL, no sobre la página ya traída.
-    // Antes se filtraba el array del `LIMIT`, así que `?status=overdue`
-    // devolvía 0 filas con `meta.total: 2`, y paginando de una en una TODAS las
-    // páginas salían vacías: se pedía una fila y se descartaba después.
-    const idxEstado = params.length + 1;
-    const filtroEstado = `WHERE ($${idxEstado}::text IS NULL OR c2.estado = $${idxEstado}::text)`;
-    const estadoParam = status && status !== 'all' ? status : null;
+    const iEstado = params.length + 1;
+    const iTramo = params.length + 2;
+    const filtroSql = `
+      WHERE ($${iEstado}::text IS NULL OR c2.estado = $${iEstado}::text)
+        AND ($${iTramo}::text IS NULL OR
+             CASE WHEN $${iTramo}::text = 'overdue'
+                  THEN c2.tramo IN ('days1_30','days31_60','days61_90','days90plus')
+                  ELSE c2.tramo = $${iTramo}::text END)`;
+    const pEstado = status && status !== 'all' ? status : null;
+    const pTramo = bucket && bucket !== 'all' ? bucket : null;
 
     const [filas, conteo, totales] = await Promise.all([
       prisma.$queryRawUnsafe(`
@@ -988,35 +1084,45 @@ class SalesService {
         FROM clasificados c2
         JOIN clientes c ON c2.cliente_id = c.id
         JOIN personas cp ON c.persona_id = cp.id
-        ${filtroEstado}
+        ${filtroSql}
         ORDER BY c2."overdueAmount" DESC, c2."nextDueDate" ASC NULLS LAST, c2.cliente_id ASC
-        LIMIT $${idxEstado + 1} OFFSET $${idxEstado + 2}
-      `, ...params, estadoParam, perPage, skip),
+        LIMIT $${iTramo + 1} OFFSET $${iTramo + 2}
+      `, ...params, pEstado, pTramo, perPage, skip),
 
-      // El count comparte el filtro con las filas. Si divergen, una página
-      // vacía sigue informando de que hay N registros.
       prisma.$queryRawUnsafe(`
         ${baseSql}
-        SELECT COUNT(*)::int AS total FROM clasificados c2 ${filtroEstado}
-      `, ...params, estadoParam),
+        SELECT COUNT(*)::int AS total FROM clasificados c2 ${filtroSql}
+      `, ...params, pEstado, pTramo),
 
-      // Los contadores de los chips van SIN el filtro de estado, para que al
-      // pulsar uno los demás sigan mostrando su cifra. Los cuatro estados son
-      // excluyentes y exhaustivos, así que suman el total de la cartera: es un
-      // invariante comprobable, y antes no se cumplía porque los clientes con
-      // vencimiento a más de 7 días no entraban en ningún contador.
+      // Los contadores van SIN los filtros, para que al pulsar un tramo los
+      // demás sigan mostrando su cifra. Tramos y estados son excluyentes y
+      // exhaustivos, así que cada familia suma el total de la cartera: es un
+      // invariante comprobable.
       prisma.$queryRawUnsafe(`
         ${baseSql}
         SELECT
-          COUNT(*)::int                                                   AS "clientsCount",
-          COALESCE(SUM("pendingAmount"), 0)::float                        AS "totalPending",
-          COALESCE(SUM("overdueAmount"), 0)::float                        AS "totalOverdue",
+          COUNT(*)::int                                              AS "clientsCount",
+          COALESCE(SUM("pendingAmount"), 0)::float                   AS "totalPending",
+          COALESCE(SUM("overdueAmount"), 0)::float                   AS "totalOverdue",
+          COALESCE(SUM("agingCurrent"), 0)::float                    AS "totalCurrent",
+          COALESCE(SUM("aging1_30"), 0)::float                       AS "total1_30",
+          COALESCE(SUM("aging31_60"), 0)::float                      AS "total31_60",
+          COALESCE(SUM("aging61_90"), 0)::float                      AS "total61_90",
+          COALESCE(SUM("aging90plus"), 0)::float                     AS "total90plus",
+          COALESCE(SUM("agingUndated"), 0)::float                    AS "totalUndated",
+          COALESCE(MAX("daysOverdue"), 0)::int                       AS "maxDaysOverdue",
           COALESCE(SUM(CASE WHEN estado = 'urgent'
-                       THEN "pendingAmount" ELSE 0 END), 0)::float        AS "totalUrgent",
-          COUNT(*) FILTER (WHERE estado = 'overdue')::int                 AS "countOverdue",
-          COUNT(*) FILTER (WHERE estado = 'urgent')::int                  AS "countUrgent",
-          COUNT(*) FILTER (WHERE estado = 'pending')::int                 AS "countPending",
-          COUNT(*) FILTER (WHERE estado = 'ok')::int                      AS "countOk"
+                       THEN "pendingAmount" ELSE 0 END), 0)::float   AS "totalUrgent",
+          COUNT(*) FILTER (WHERE tramo = 'current')::int             AS "countCurrent",
+          COUNT(*) FILTER (WHERE tramo = 'days1_30')::int            AS "count1_30",
+          COUNT(*) FILTER (WHERE tramo = 'days31_60')::int           AS "count31_60",
+          COUNT(*) FILTER (WHERE tramo = 'days61_90')::int           AS "count61_90",
+          COUNT(*) FILTER (WHERE tramo = 'days90plus')::int          AS "count90plus",
+          COUNT(*) FILTER (WHERE tramo = 'undated')::int             AS "countUndated",
+          COUNT(*) FILTER (WHERE estado = 'overdue')::int            AS "countOverdue",
+          COUNT(*) FILTER (WHERE estado = 'urgent')::int             AS "countUrgent",
+          COUNT(*) FILTER (WHERE estado = 'pending')::int            AS "countPending",
+          COUNT(*) FILTER (WHERE estado = 'ok')::int                 AS "countOk"
         FROM clasificados
       `, ...params),
     ]);
@@ -1031,13 +1137,7 @@ class SalesService {
         email: f.clientEmail,
         avatar: f.clientAvatar,
       },
-      totalCredit: f.totalCredit,
-      paidAmount: f.paidAmount,
-      pendingAmount: f.pendingAmount,
-      overdueAmount: f.overdueAmount,
-      activeCredits: f.activeCredits,
-      nextDueDate: f.nextDueDate,
-      status: f.estado,
+      ...mapearResumenCliente(f),
     }));
 
     return {
@@ -1049,11 +1149,120 @@ class SalesService {
           totalPending: t.totalPending || 0,
           totalOverdue: t.totalOverdue || 0,
           totalUrgent: t.totalUrgent || 0,
+          maxDaysOverdue: t.maxDaysOverdue || 0,
+          aging: {
+            current: t.totalCurrent || 0,
+            days1_30: t.total1_30 || 0,
+            days31_60: t.total31_60 || 0,
+            days61_90: t.total61_90 || 0,
+            days90plus: t.total90plus || 0,
+            undated: t.totalUndated || 0,
+          },
+          bucketCounts: {
+            current: t.countCurrent || 0,
+            days1_30: t.count1_30 || 0,
+            days31_60: t.count31_60 || 0,
+            days61_90: t.count61_90 || 0,
+            days90plus: t.count90plus || 0,
+            undated: t.countUndated || 0,
+          },
           countOverdue: t.countOverdue || 0,
           countUrgent: t.countUrgent || 0,
           countPending: t.countPending || 0,
           countOk: t.countOk || 0,
         },
+      },
+    };
+  }
+
+  /**
+   * Los créditos de UN cliente: el ítem de la colección `/sales/credit`.
+   *
+   * La pantalla los sacaba de `listSales({ clientId, perPage: 50 })` y los
+   * filtraba y clasificaba en el navegador: se traía la venta entera con todos
+   * sus productos para leer cuatro campos, se cortaba en 50 sin mirar
+   * `meta.totalPages`, y el estado se calculaba con una tercera copia de la
+   * regla. Aquí van ya clasificados por el MISMO SQL que el listado.
+   */
+  async getClientCredits(clientId, { pagination, permissionScope, user } = {}) {
+    const id = Number(clientId);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new BadRequestError('El identificador del cliente debe ser un número entero');
+    }
+    const { page = 1, perPage = 20, skip = 0 } = pagination || {};
+
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+
+    push('v.cliente_id = ?', id);
+    // Mismo ámbito que el listado: con alcance 'own' un asesor no ve la cartera
+    // de un cliente atendido por otro, ni por su URL directa.
+    if (permissionScope === 'own' && user) push('v.usuario_id = ?', user.id);
+    const extraSql = 'AND ' + filtros.join(' AND ');
+    const baseSql = ctesDeCredito(extraSql);
+
+    const [resumen, creditos, conteo] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        ${baseSql},${CTE_POR_CLIENTE}
+        SELECT
+          c2.*,
+          cp.nombres || ' ' || cp.apellidos AS "clientName",
+          cp.documento  AS "clientDocNumber",
+          cp.email      AS "clientEmail",
+          cp.avatar_url AS "clientAvatar"
+        FROM clasificados c2
+        JOIN clientes c ON c2.cliente_id = c.id
+        JOIN personas cp ON c.persona_id = cp.id
+      `, ...params),
+
+      prisma.$queryRawUnsafe(`
+        ${baseSql}
+        SELECT
+          venta_id, creado_at, venta_status, fecha_vence_credito,
+          monto_total::float AS total, pagado::float AS paid, pendiente::float AS pending,
+          COALESCE(dias_mora, 0)::int AS "daysOverdue", liquidada, tramo
+        FROM por_credito
+        WHERE NOT liquidada
+        -- Lo más atrasado primero, que es el orden en que se cobra. Los sin
+        -- fecha van al final: no tienen vencimiento con el que ordenarlos.
+        ORDER BY dias_mora DESC NULLS LAST, fecha_vence_credito ASC NULLS LAST, venta_id ASC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, ...params, perPage, skip),
+
+      prisma.$queryRawUnsafe(`
+        ${baseSql}
+        SELECT COUNT(*)::int AS total FROM por_credito WHERE NOT liquidada
+      `, ...params),
+    ]);
+
+    const r = resumen[0];
+    if (!r) throw new NotFoundError('El cliente no tiene créditos pendientes');
+
+    return {
+      data: creditos.map(c => ({
+        saleId: c.venta_id,
+        date: c.creado_at,
+        saleStatus: c.venta_status,
+        dueDate: c.fecha_vence_credito,
+        total: c.total,
+        paidAmount: c.paid,
+        pendingAmount: c.pending,
+        daysOverdue: c.daysOverdue,
+        agingBucket: c.tramo,
+      })),
+      meta: {
+        ...buildMeta(conteo[0]?.total || 0, page, perPage),
+        client: {
+          id: r.cliente_id,
+          name: r.clientName,
+          docNumber: r.clientDocNumber,
+          email: r.clientEmail,
+          avatar: r.clientAvatar,
+        },
+        summary: mapearResumenCliente(r),
       },
     };
   }

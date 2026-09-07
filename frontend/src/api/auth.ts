@@ -1,4 +1,5 @@
 import api from './client';
+import type { UserRole } from '../types';
 
 export interface LoginResponse {
   user: {
@@ -8,7 +9,7 @@ export interface LoginResponse {
     firstName?: string;
     lastName?: string;
     email: string;
-    role: 'admin' | 'asesor' | 'freelancer';
+    role: UserRole;
     avatar: string | null;
     phone: string;
     status: 'active' | 'inactive';

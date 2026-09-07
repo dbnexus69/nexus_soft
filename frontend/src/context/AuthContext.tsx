@@ -67,7 +67,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       login,
       logout,
-      isAdmin: user?.role === 'admin',
+      // Rol administrativo, no el rol llamado 'admin'. `superadmin` se creó
+      // como un admin con MÁS permisos, pero esta comparación exacta lo dejaba
+      // fuera: al pasar el usuario 1 a superadmin desapareció del menú la
+      // sección de Usuarios, Responsables y Gestión Interna, se perdió el
+      // acceso a las rutas protegidas por `isAdmin` en App.tsx y el listado de
+      // ventas se redujo a "Mis Ventas".
+      //
+      // Lo exclusivo de superadmin no se decide aquí: es `canEdit('permissions')`
+      // de PermissionsContext, que ya distingue los dos roles.
+      isAdmin: user?.role === 'admin' || user?.role === 'superadmin',
       isLoading,
     }}>
       {children}

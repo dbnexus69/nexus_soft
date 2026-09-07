@@ -1,5 +1,15 @@
 import { LuBookCheck } from "react-icons/lu";
 
+/**
+ * Los roles del sistema, en un solo sitio.
+ *
+ * Había dos listas: esta y la de `LoginResponse` en `api/auth.ts`. Al crear
+ * `superadmin` solo se actualizó una, así que el usuario que entraba con ese
+ * rol llegaba tipado como si no existiera y `isAdmin` lo dejaba fuera del menú
+ * de administración.
+ */
+export type UserRole = "superadmin" | "admin" | "asesor" | "freelancer";
+
 export interface User {
   id: number;
   personaId?: number;
@@ -12,7 +22,7 @@ export interface User {
   birthDate?: string;
   email: string;
   password?: string;
-  role: "superadmin" | "admin" | "asesor" | "freelancer";
+  role: UserRole;
   status: "active" | "inactive";
   createdAt?: string;
   lastLogin?: string;

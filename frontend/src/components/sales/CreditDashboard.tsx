@@ -249,10 +249,10 @@ export default function CreditDashboard() {
                             <span className="text-gray-500">Total: <span className="font-semibold text-gray-700 dark:text-slate-200">{formatCurrency(saleInfo.sale.total)}</span></span>
                             <span className="text-gray-500">Pendiente: <span className="font-semibold text-orange-600 dark:text-orange-400">{formatCurrency(saleInfo.pendingAmount)}</span></span>
                           </div>
-                          {saleInfo.daysUntilDue <= 3 && saleInfo.daysUntilDue >= 0 && (
+                          {saleInfo.daysUntilDue !== null && saleInfo.daysUntilDue <= 3 && saleInfo.daysUntilDue >= 0 && (
                             <div className="mt-2 flex items-center gap-1 text-[10px] text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-500/10 p-1 rounded"><Clock size={10} /> Vence en {saleInfo.daysUntilDue} día(s)</div>
                           )}
-                          {saleInfo.daysUntilDue < 0 && (
+                          {saleInfo.daysUntilDue !== null && saleInfo.daysUntilDue < 0 && (
                             <div className="mt-2 flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-500/10 p-1 rounded"><AlertCircle size={10} /> Vencido hace {Math.abs(saleInfo.daysUntilDue)} día(s)</div>
                           )}
                         </div>

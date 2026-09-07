@@ -879,6 +879,13 @@ class SalesService {
   async getCreditPortfolio({ pagination, search, status, permissionScope, user }) {
     const { page, perPage, skip } = pagination;
 
+    const ESTADOS = ['overdue', 'urgent', 'pending', 'ok'];
+    if (status && status !== 'all' && !ESTADOS.includes(status)) {
+      throw new BadRequestError(
+        `Estado de cartera inválido: ${status}. Válidos: all, ${ESTADOS.join(', ')}`
+      );
+    }
+
     const filtros = [];
     const params = [];
     const push = (sql, ...valores) => {
@@ -892,21 +899,29 @@ class SalesService {
     }
     const extraSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    // Estado de cada venta, resuelto una sola vez y reutilizado por los agregados.
+    // Cobro y vencimiento son DOS EJES INDEPENDIENTES, no un enum.
+    //
+    // El CASE anterior los colapsaba en uno y evaluaba `partial` antes que
+    // `overdue`, así que un abono parcial tapaba el vencimiento: una venta
+    // vencida hace 38 días con un abono salía como 'partial' y nunca como
+    // vencida. Medido contra la base: 4.600.000 de deuda vencida que la cartera
+    // reportaba como 0, y el cliente pintado en naranja ("Pronto") en vez de
+    // rojo. Justo las cuentas que hay que perseguir eran las que desaparecían.
+    //
+    // `liquidada` responde "¿queda algo por cobrar?" y `vencida` responde
+    // "¿se pasó la fecha de algo que queda por cobrar?". Se cruzan, no compiten.
     const baseSql = `
       WITH creditos AS (
         SELECT
           v.cliente_id,
           v.monto_total,
           COALESCE(v.monto_pagado_credito, 0) AS pagado,
-          v.monto_total - COALESCE(v.monto_pagado_credito, 0) AS pendiente,
+          GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0) AS pendiente,
           v.fecha_vence_credito,
-          CASE
-            WHEN COALESCE(v.monto_pagado_credito, 0) >= v.monto_total THEN 'paid'
-            WHEN COALESCE(v.monto_pagado_credito, 0) > 0 THEN 'partial'
-            WHEN v.fecha_vence_credito IS NOT NULL AND v.fecha_vence_credito < CURRENT_DATE THEN 'overdue'
-            ELSE 'pending'
-          END AS estado
+          (COALESCE(v.monto_pagado_credito, 0) >= v.monto_total) AS liquidada,
+          (v.fecha_vence_credito IS NOT NULL
+             AND v.fecha_vence_credito < CURRENT_DATE
+             AND COALESCE(v.monto_pagado_credito, 0) < v.monto_total) AS vencida
         FROM ventas v
         JOIN clientes c ON v.cliente_id = c.id
         JOIN personas cp ON c.persona_id = cp.id
@@ -918,147 +933,131 @@ class SalesService {
       por_cliente AS (
         SELECT
           cliente_id,
-          SUM(monto_total)::float                                                   AS "totalCredit",
-          SUM(pagado)::float                                                        AS "paidAmount",
-          SUM(CASE WHEN estado <> 'paid' THEN pendiente ELSE 0 END)::float          AS "pendingAmount",
-          SUM(CASE WHEN estado = 'overdue' THEN pendiente ELSE 0 END)::float        AS "overdueAmount",
-          COUNT(*)::int                                                             AS "activeCredits",
-          MIN(fecha_vence_credito)                                                  AS "nextDueDate",
-          BOOL_OR(estado = 'overdue')                                               AS "tieneVencida"
+          SUM(monto_total)::float                                            AS "totalCredit",
+          SUM(pagado)::float                                                 AS "paidAmount",
+          SUM(CASE WHEN NOT liquidada THEN pendiente ELSE 0 END)::float      AS "pendingAmount",
+          SUM(CASE WHEN vencida     THEN pendiente ELSE 0 END)::float        AS "overdueAmount",
+          -- "Activos" son los que quedan por cobrar. Antes contaba también los
+          -- liquidados, así que un cliente al día seguía sumando créditos.
+          COUNT(*) FILTER (WHERE NOT liquidada)::int                         AS "activeCredits",
+          -- Y el próximo vencimiento sale solo de lo pendiente: con MIN sobre
+          -- todo, la fecha de un crédito ya pagado podía ser la más antigua y
+          -- la pantalla mostraba un vencimiento que no se debe.
+          MIN(CASE WHEN NOT liquidada THEN fecha_vence_credito END)          AS "nextDueDate",
+          BOOL_OR(vencida)                                                   AS "tieneVencida"
         FROM creditos
         GROUP BY cliente_id
+        -- Un cliente sin nada por cobrar no pertenece a una lista de cobros.
+        HAVING COUNT(*) FILTER (WHERE NOT liquidada) > 0
+      ),
+      clasificados AS (
+        SELECT
+          pc.*,
+          -- La ÚNICA definición del estado del cliente. Antes se calculaba dos
+          -- veces: aquí en SQL para los contadores y otra vez en JavaScript
+          -- para las filas, con aritmética de fechas en la zona del proceso.
+          -- Dos implementaciones de la misma regla que podían discrepar.
+          CASE
+            WHEN pc."tieneVencida" THEN 'overdue'
+            WHEN pc."nextDueDate" IS NOT NULL
+             AND pc."nextDueDate" <= CURRENT_DATE + INTERVAL '3 days'  THEN 'urgent'
+            WHEN pc."nextDueDate" IS NOT NULL
+             AND pc."nextDueDate" <= CURRENT_DATE + INTERVAL '7 days'  THEN 'pending'
+            ELSE 'ok'
+          END AS estado
+        FROM por_cliente pc
       )`;
 
-    const [filas, totales] = await Promise.all([
+    // El filtro por estado se aplica en SQL, no sobre la página ya traída.
+    // Antes se filtraba el array del `LIMIT`, así que `?status=overdue`
+    // devolvía 0 filas con `meta.total: 2`, y paginando de una en una TODAS las
+    // páginas salían vacías: se pedía una fila y se descartaba después.
+    const idxEstado = params.length + 1;
+    const filtroEstado = `WHERE ($${idxEstado}::text IS NULL OR c2.estado = $${idxEstado}::text)`;
+    const estadoParam = status && status !== 'all' ? status : null;
+
+    const [filas, conteo, totales] = await Promise.all([
       prisma.$queryRawUnsafe(`
         ${baseSql}
         SELECT
-          pc.*,
+          c2.*,
           cp.nombres || ' ' || cp.apellidos AS "clientName",
           cp.documento  AS "clientDocNumber",
           cp.email      AS "clientEmail",
           cp.avatar_url AS "clientAvatar"
-        FROM por_cliente pc
-        JOIN clientes c ON pc.cliente_id = c.id
+        FROM clasificados c2
+        JOIN clientes c ON c2.cliente_id = c.id
         JOIN personas cp ON c.persona_id = cp.id
-        ORDER BY pc."overdueAmount" DESC, pc."nextDueDate" ASC NULLS LAST
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip),
+        ${filtroEstado}
+        ORDER BY c2."overdueAmount" DESC, c2."nextDueDate" ASC NULLS LAST, c2.cliente_id ASC
+        LIMIT $${idxEstado + 1} OFFSET $${idxEstado + 2}
+      `, ...params, estadoParam, perPage, skip),
 
-      // Totales de TODA la cartera, no de la página.
+      // El count comparte el filtro con las filas. Si divergen, una página
+      // vacía sigue informando de que hay N registros.
+      prisma.$queryRawUnsafe(`
+        ${baseSql}
+        SELECT COUNT(*)::int AS total FROM clasificados c2 ${filtroEstado}
+      `, ...params, estadoParam),
+
+      // Los contadores de los chips van SIN el filtro de estado, para que al
+      // pulsar uno los demás sigan mostrando su cifra. Los cuatro estados son
+      // excluyentes y exhaustivos, así que suman el total de la cartera: es un
+      // invariante comprobable, y antes no se cumplía porque los clientes con
+      // vencimiento a más de 7 días no entraban en ningún contador.
       prisma.$queryRawUnsafe(`
         ${baseSql}
         SELECT
-          COUNT(*)::int                                                     AS "clientsCount",
-          COALESCE(SUM("pendingAmount"), 0)::float                          AS "totalPending",
-          COALESCE(SUM("overdueAmount"), 0)::float                          AS "totalOverdue",
-          COALESCE(SUM(CASE WHEN NOT "tieneVencida"
-                             AND "nextDueDate" IS NOT NULL
-                             AND "nextDueDate" <= CURRENT_DATE + INTERVAL '3 days'
-                        THEN "pendingAmount" ELSE 0 END), 0)::float         AS "totalUrgent",
-          -- Desglose por estado, para los contadores de los filtros.
-          COUNT(*) FILTER (WHERE "tieneVencida")::int                       AS "countOverdue",
-          COUNT(*) FILTER (WHERE NOT "tieneVencida"
-                             AND "nextDueDate" IS NOT NULL
-                             AND "nextDueDate" <= CURRENT_DATE + INTERVAL '3 days')::int AS "countUrgent",
-          COUNT(*) FILTER (WHERE NOT "tieneVencida"
-                             AND "nextDueDate" IS NOT NULL
-                             AND "nextDueDate" >  CURRENT_DATE + INTERVAL '3 days'
-                             AND "nextDueDate" <= CURRENT_DATE + INTERVAL '7 days')::int AS "countPending"
-        FROM por_cliente
+          COUNT(*)::int                                                   AS "clientsCount",
+          COALESCE(SUM("pendingAmount"), 0)::float                        AS "totalPending",
+          COALESCE(SUM("overdueAmount"), 0)::float                        AS "totalOverdue",
+          COALESCE(SUM(CASE WHEN estado = 'urgent'
+                       THEN "pendingAmount" ELSE 0 END), 0)::float        AS "totalUrgent",
+          COUNT(*) FILTER (WHERE estado = 'overdue')::int                 AS "countOverdue",
+          COUNT(*) FILTER (WHERE estado = 'urgent')::int                  AS "countUrgent",
+          COUNT(*) FILTER (WHERE estado = 'pending')::int                 AS "countPending",
+          COUNT(*) FILTER (WHERE estado = 'ok')::int                      AS "countOk"
+        FROM clasificados
       `, ...params),
     ]);
 
-    const total = totales[0]?.clientsCount || 0;
+    const t = totales[0] || {};
 
-    const data = filas.map(f => {
-      const dias = f.nextDueDate
-        ? Math.ceil((new Date(f.nextDueDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
-        : null;
-      let estadoCliente = 'ok';
-      if (f.tieneVencida) estadoCliente = 'overdue';
-      else if (dias !== null && dias <= 3) estadoCliente = 'urgent';
-      else if (dias !== null && dias <= 7) estadoCliente = 'pending';
-
-      return {
-        client: {
-          id: f.cliente_id,
-          name: f.clientName,
-          docNumber: f.clientDocNumber,
-          email: f.clientEmail,
-          avatar: f.clientAvatar,
-        },
-        totalCredit: f.totalCredit,
-        paidAmount: f.paidAmount,
-        pendingAmount: f.pendingAmount,
-        overdueAmount: f.overdueAmount,
-        activeCredits: f.activeCredits,
-        nextDueDate: f.nextDueDate,
-        status: estadoCliente,
-      };
-    });
-
-    const filtrada = status && status !== 'all' ? data.filter(d => d.status === status) : data;
+    const data = filas.map(f => ({
+      client: {
+        id: f.cliente_id,
+        name: f.clientName,
+        docNumber: f.clientDocNumber,
+        email: f.clientEmail,
+        avatar: f.clientAvatar,
+      },
+      totalCredit: f.totalCredit,
+      paidAmount: f.paidAmount,
+      pendingAmount: f.pendingAmount,
+      overdueAmount: f.overdueAmount,
+      activeCredits: f.activeCredits,
+      nextDueDate: f.nextDueDate,
+      status: f.estado,
+    }));
 
     return {
-      data: filtrada,
+      data,
       meta: {
-        ...buildMeta(total, page, perPage),
+        ...buildMeta(conteo[0]?.total || 0, page, perPage),
         totals: {
-          clientsCount: total,
-          totalPending: totales[0]?.totalPending || 0,
-          totalOverdue: totales[0]?.totalOverdue || 0,
-          totalUrgent: totales[0]?.totalUrgent || 0,
-          countOverdue: totales[0]?.countOverdue || 0,
-          countUrgent: totales[0]?.countUrgent || 0,
-          countPending: totales[0]?.countPending || 0,
+          clientsCount: t.clientsCount || 0,
+          totalPending: t.totalPending || 0,
+          totalOverdue: t.totalOverdue || 0,
+          totalUrgent: t.totalUrgent || 0,
+          countOverdue: t.countOverdue || 0,
+          countUrgent: t.countUrgent || 0,
+          countPending: t.countPending || 0,
+          countOk: t.countOk || 0,
         },
       },
     };
   }
 
-  // Campos de cabecera de una venta, sin productos.
-  _saleHeader(venta) {
-    return {
-      id: venta.id,
-      clientId: venta.cliente_id,
-      clientName: `${venta.clientes.personas.nombres} ${venta.clientes.personas.apellidos}`,
-      clientDocType: venta.clientes.personas.tipo_documento || null,
-      clientDocNumber: venta.clientes.personas.documento || null,
-      clientEmail: venta.clientes.personas.email || null,
-      clientPhone: venta.clientes.personas.telefono || null,
-      asesorId: venta.usuario_id,
-      asesorName: `${venta.usuarios.personas.nombres} ${venta.usuarios.personas.apellidos}`,
-      responsableId: venta.responsable_id || null,
-      responsableName: venta.responsables ? `${venta.responsables.personas.nombres} ${venta.responsables.personas.apellidos}` : null,
-      date: venta.creado_at,
-      total: venta.monto_total,
-      paymentMethod: venta.metodos_pago?.nombre || null,
-      status: venta.status,
-      observations: venta.observaciones,
-      isCredit: venta.es_credito,
-      creditDueDate: venta.fecha_vence_credito,
-      creditPaidAmount: venta.monto_pagado_credito,
-      isReviewed: venta.is_reviewed,
-      commissionAgentId: venta.comisionista_id,
-      commissionAgentName: venta.comisionistas ? `${venta.comisionistas.personas.nombres} ${venta.comisionistas.personas.apellidos}` : null,
-      commissionAgentAmount: venta.monto_comision_bruto,
-      commissionAgentRetentionPercentage: venta.porcentaje_retencion_comision || 0,
-      commissionAgentNetPayment: venta.monto_comision_neto,
-      supplierCost: venta.costo_proveedor_total,
-      ta: venta.ta_total,
-      isSettled: venta.comision_liquidada,
-      payments: venta.pagos_venta.map(p => ({
-        id: p.id,
-        date: p.fecha_pago,
-        amount: p.monto,
-        method: p.metodos_pago?.nombre || null
-      }))
-    };
-  }
-
-  // Carga los detalles de venta indicados y los pasa por el transform de su categoría.
-  // Devuelve { [slug]: [productos...] }.
   async _loadProducts(where) {
     const base = await prisma.detalle_venta.findMany({
       where,

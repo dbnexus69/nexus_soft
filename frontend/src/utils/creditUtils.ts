@@ -17,7 +17,8 @@ export interface ClientCreditSummary {
 export interface CreditSaleInfo {
   sale: Sale;
   status: 'pending' | 'partial' | 'paid' | 'overdue';
-  daysUntilDue: number;
+  /** null cuando la venta no tiene fecha de vencimiento. */
+  daysUntilDue: number | null;
   pendingAmount: number;
 }
 
@@ -31,18 +32,28 @@ export function getDaysUntilDue(dueDate: string): number {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * Estado de cobro de una venta a crédito.
+ *
+ * El vencimiento manda sobre el progreso de cobro. Antes se devolvía 'partial'
+ * en cuanto había un abono, ANTES de mirar la fecha, así que una venta vencida
+ * hace un mes con un abono se mostraba como "Parcial" y nunca como "Vencido".
+ * Es el mismo fallo que tenía el CASE de `GET /sales/credit`, y desaparecía de
+ * la vista justo la deuda que hay que perseguir.
+ *
+ * Sin fecha de vencimiento no se puede estar vencido: se cae a 'partial' o
+ * 'pending' según haya abonos.
+ */
 export function getCreditSaleStatus(sale: Sale): 'pending' | 'partial' | 'paid' | 'overdue' {
   if (!sale.isCredit && sale.status !== 'credito' && sale.status !== 'abonado') return 'paid';
-  
+
   const paidAmount = sale.creditPaidAmount || 0;
-  
   if (paidAmount >= sale.total) return 'paid';
-  if (paidAmount > 0) return 'partial';
-  
-  const daysUntilDue = getDaysUntilDue(sale.creditDueDate || '');
-  if (daysUntilDue < 0) return 'overdue';
-  
-  return 'pending';
+
+  const dias = sale.creditDueDate ? getDaysUntilDue(sale.creditDueDate) : null;
+  if (dias !== null && dias < 0) return 'overdue';
+
+  return paidAmount > 0 ? 'partial' : 'pending';
 }
 
 
@@ -50,7 +61,9 @@ export function getClientCreditSales(clientId: number, sales: Sale[]): CreditSal
   const creditSales = sales
     .filter(s => s.clientId === clientId && (s.isCredit === true || s.status === 'credito' || s.status === 'abonado'))
     .map(sale => {
-      const daysUntilDue = sale.creditDueDate ? getDaysUntilDue(sale.creditDueDate) : 0;
+      // null, no 0: con 0 la pantalla mostraba "Vence en 0 día(s)" a las ventas
+      // que no tienen fecha de vencimiento, como si vencieran hoy.
+      const daysUntilDue = sale.creditDueDate ? getDaysUntilDue(sale.creditDueDate) : null;
       const paidAmount = sale.creditPaidAmount || 0;
       
       return {

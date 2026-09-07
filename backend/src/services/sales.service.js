@@ -549,6 +549,22 @@ class SalesService {
             nro_tiquete: p.ticketNumber || null,
             fecha_viaje_inicio: p.startDate ? new Date(p.startDate) : null,
             fecha_viaje_fin: p.endDate ? new Date(p.endDate) : null,
+            // Las cuatro fechas de vuelo se perdían aquí. El asistente las
+            // exige —no deja continuar sin la de ida y la de vuelta— y esta
+            // función no las guardaba, así que un plan vendido nacía sin
+            // vuelos: ni en el itinerario, ni en los check-ins, ni en el
+            // detalle. En hora de Colombia, igual que los tramos: con
+            // `new Date('2026-11-01')` el vuelo se muestra el día anterior en
+            // cuanto el servidor no está en Bogotá.
+            fecha_salida_vuelo: enHoraColombia(p.flightDepartureDate),
+            fecha_llegada_vuelo: enHoraColombia(p.flightDepartureArrivalDate),
+            fecha_regreso_vuelo: enHoraColombia(p.flightReturnDate),
+            fecha_llegada_regreso_vuelo: enHoraColombia(p.flightReturnArrivalDate),
+            paquete_tarifa_id: p.packageRateId ? Number(p.packageRateId) : null,
+            paqueteId: p.packageId ? Number(p.packageId) : null,
+            numero_confirmacion: p.confirmationNumber || null,
+            tipo_paquete: p.packageType || 'own',
+            tipo_transporte: p.transportType || 'Aereo',
             adultos_count: Number(p.adultsCount || 1),
             menores_count: Number(p.childrenCount || 0),
             observaciones: p.observations || null,

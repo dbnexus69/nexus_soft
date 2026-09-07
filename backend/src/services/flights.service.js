@@ -181,7 +181,15 @@ function mapearTramo(t, tipo) {
   const estado = t.checkin_status || 'pendiente';
 
   return {
+    // Claves internas para ordenar y filtrar en la mezcla con los vuelos de
+    // plan. `paginarMezcla` las quita antes de responder.
+    _salida: t.salida,
+    _estado: estado,
+
     id: t.id,
+    // Un tramo de tiquetería admite todo: check-in con documentos, momento y
+    // cancelación con motivo. Un vuelo de plan, de momento, no.
+    source: 'ticket',
     saleId: venta?.id || null,
     pnr: t.prod_tiqueteria?.nro_reserva || '',
     reservationNumber: t.prod_tiqueteria?.nro_reserva || '',
@@ -259,6 +267,287 @@ function buscarTramos(where, skip, take) {
   });
 }
 
+// ───────────────────────────── vuelos de un plan ─────────────────────────────
+//
+// Un vuelo vendido dentro de un plan no aparecía en ninguna pantalla de
+// vuelos. `flights.service` solo leía `tramos_vuelo`, que cuelga de
+// `prod_tiqueteria`, y las dos columnas que el plan tiene para esto
+// —`checkin_status_ida` y `checkin_status_regreso`— no las leía ni las escribía
+// nadie. El asistente de venta EXIGE la fecha de ida y la de vuelta de un plan,
+// así que cada plan vendido son dos vuelos que nadie podía ver ni gestionar.
+//
+// **Por qué no se convierten en tramos de verdad.** Sería lo correcto —una sola
+// fuente de vuelos— pero `tramos_vuelo` exige `prod_tiqueteria_id`,
+// `aeropuerto_origen_id` y `aeropuerto_destino_id`, y un plan no tiene ninguno
+// de los tres: el formulario no pide aeropuertos, solo fechas, aerolínea y
+// número de vuelo. Hacerlo posible es cambiar tres columnas a nullable y añadir
+// una relación, y en este entorno no se puede: `prisma db push` necesita el
+// DIRECT_URL de Supabase, que no es alcanzable, así que el cliente generado no
+// admitiría columnas nuevas.
+//
+// Así que el plan se expande al LEER: una fila con fecha de ida y fecha de
+// regreso son dos vuelos, con el mismo id compuesto en los dos sentidos
+// (`plan:<id>:ida`), que es lo que permite escribir el check-in en la columna
+// que toca. El estado sigue viviendo en su columna, no en dos sitios.
+
+const PLAN_ID_SEP = ':';
+const DIRECCIONES = {
+  ida: { estado: 'checkin_status_ida', salida: 'fecha_salida_vuelo', llegada: 'fecha_llegada_vuelo' },
+  regreso: { estado: 'checkin_status_regreso', salida: 'fecha_regreso_vuelo', llegada: 'fecha_llegada_regreso_vuelo' },
+};
+
+const idVueloDePlan = (planId, direccion) => `plan${PLAN_ID_SEP}${planId}${PLAN_ID_SEP}${direccion}`;
+
+/** `plan:<uuid>:ida` -> {planId, direccion}. Cualquier otra cosa, null. */
+function descomponerIdPlan(id) {
+  const partes = String(id).split(PLAN_ID_SEP);
+  if (partes.length !== 3 || partes[0] !== 'plan') return null;
+  const [, planId, direccion] = partes;
+  if (!DIRECCIONES[direccion]) return null;
+  return { planId, direccion };
+}
+
+/**
+ * Filtro sobre `prod_planes`, equivalente al de tramos: venta vigente, ámbito
+ * de permisos y búsqueda. Las FECHAS no se filtran aquí: una fila lleva dos
+ * vuelos con fechas distintas, así que el rango se aplica a cada vuelo ya
+ * expandido —si no, pedir un mes traería el regreso de otro mes o descartaría
+ * la ida que sí entra—.
+ */
+function construirWherePlanes({ search, permissionScope, user }) {
+  const ventas = { ...VENTA_VIGENTE };
+  if (permissionScope === 'own' && user) ventas.usuario_id = user.id;
+
+  const where = {
+    detalle_venta: { ventas },
+    // Sin fecha de vuelo no hay vuelo que mostrar: es un plan sin transporte.
+    OR: [{ fecha_salida_vuelo: { not: null } }, { fecha_regreso_vuelo: { not: null } }],
+  };
+
+  if (search) {
+    const como = { contains: search, mode: 'insensitive' };
+    // El OR de la búsqueda no puede pisar el OR de "tiene alguna fecha": se
+    // combinan con AND, el mismo motivo que en `combinar`.
+    return {
+      AND: [
+        where,
+        {
+          OR: [
+            { nro_vuelo: como },
+            { nro_reserva: como },
+            { nro_tiquete: como },
+            { nombre_plan: como },
+            { detalle_venta: { pasajeros_detalle: { some: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } } } },
+            { detalle_venta: { ventas: { clientes: { personas: { OR: [{ nombres: como }, { apellidos: como }] } } } } },
+          ],
+        },
+      ],
+    };
+  }
+
+  return where;
+}
+
+/**
+ * Los planes con vuelo, con lo necesario para pintar la fila.
+ *
+ * `relationLoadStrategy: 'join'` por lo mismo que en tramos: un include de
+ * cuatro niveles cuesta un viaje al pooler por nivel.
+ */
+function buscarPlanes(where, take) {
+  return prisma.prod_planes.findMany({
+    where,
+    take,
+    relationLoadStrategy: 'join',
+    include: {
+      aerolineas: true,
+      paquetes: true,
+      detalle_venta: {
+        include: {
+          ventas: { include: { clientes: { include: { personas: { include: { tipos_documento: true } } } } } },
+          pasajeros_detalle: { include: { personas: true } },
+        },
+      },
+    },
+    orderBy: [{ fecha_salida_vuelo: 'asc' }, { id: 'asc' }],
+  });
+}
+
+/**
+ * Una fila de plan -> hasta dos vuelos, con la misma forma que `mapearTramo`.
+ *
+ * La ruta sale del destino del paquete o del `detalle_venta`, que es lo único
+ * que hay: el plan no guarda aeropuertos. En el regreso se invierte, que es lo
+ * que de verdad ocurre en el viaje de vuelta.
+ */
+function expandirPlan(plan) {
+  const dv = plan.detalle_venta;
+  const venta = dv?.ventas;
+  const persona = venta?.clientes?.personas;
+
+  const pasajeros = (dv?.pasajeros_detalle || [])
+    .map(pd => (pd.personas ? `${pd.personas.nombres} ${pd.personas.apellidos}` : null))
+    .filter(Boolean);
+  const nombrePax = pasajeros.length > 0
+    ? pasajeros.join(', ')
+    : (persona ? `${persona.nombres} ${persona.apellidos}` : '');
+
+  const origen = dv?.origen || '';
+  const destino = dv?.destino || plan.paquetes?.destino || '';
+
+  return Object.entries(DIRECCIONES).flatMap(([direccion, col]) => {
+    const salida = plan[col.salida];
+    if (!salida) return [];
+
+    const esIda = direccion === 'ida';
+    const desde = esIda ? origen : destino;
+    const hasta = esIda ? destino : origen;
+    const estado = plan[col.estado] || 'pendiente';
+
+    return [{
+      // `salida` cruda, para ordenar y para los predicados de estado. No sale
+      // en la respuesta: se formatea igual que en los tramos.
+      _salida: salida,
+      _estado: estado,
+
+      id: idVueloDePlan(plan.id, direccion),
+      // Con qué se puede operar sobre esta fila. La pantalla lo necesita para
+      // no ofrecer lo que este origen no soporta.
+      source: 'plan',
+      planId: plan.id,
+      saleId: venta?.id || null,
+      pnr: plan.nro_reserva || '',
+      reservationNumber: plan.nro_reserva || '',
+      planName: plan.nombre_plan || plan.paquetes?.nombre || '',
+      airline: plan.aerolineas?.nombre || '',
+      airlineCode: plan.aerolineas?.codigo_iata || '',
+      flightNumber: plan.nro_vuelo || '',
+      origin: desde,
+      originCity: desde,
+      destination: hasta,
+      destinationCity: hasta,
+      route: desde && hasta ? `${desde} - ${hasta}` : (desde || hasta || ''),
+      flightDate: formatLocalDate(salida),
+      date: formatLocalDate(salida) || '',
+      flightTime: formatLocalTime(salida),
+      time: formatLocalTime(salida) || '',
+      arrivalDate: formatLocalDate(plan[col.llegada]),
+      arrivalTime: formatLocalTime(plan[col.llegada]),
+      checkinStatus: estado,
+      checkin: estado,
+      // El plan no tiene dónde guardar ni el momento del check-in, ni los
+      // documentos, ni el motivo de una cancelación: son columnas que hay que
+      // añadir. Se devuelven en null en vez de omitirlas, para que la fila
+      // tenga la misma forma que la de un tramo y la pantalla no tenga que
+      // distinguir.
+      checkinAt: null,
+      checkinDocs: null,
+      canceledAt: null,
+      reasonCanceled: null,
+      passengerName: nombrePax,
+      passenger: nombrePax,
+      clientId: venta?.cliente_id || null,
+      clientName: persona ? `${persona.nombres} ${persona.apellidos}` : null,
+      clientAvatar: persona?.avatar_url || null,
+      clientEmail: persona?.email || null,
+      clientDocType: persona?.tipos_documento?.abreviatura || null,
+      clientDocNumber: persona?.documento || null,
+      ticketNumber: plan.nro_tiquete || '',
+      seat: null,
+      orden: esIda ? 1 : 2,
+      type: direccion,
+    }];
+  });
+}
+
+/** ¿Cae este vuelo de plan en el rango pedido? */
+function enRango(vuelo, dateFrom, dateTo) {
+  if (dateFrom && vuelo._salida < new Date(dateFrom)) return false;
+  if (dateTo && vuelo._salida > new Date(dateTo)) return false;
+  return true;
+}
+
+/**
+ * El mismo criterio de estado que los tramos, sobre los vuelos ya expandidos.
+ * Se decide en memoria porque `critico` depende de la hora y de la fecha de
+ * CADA sentido, no de la fila.
+ */
+function cumpleEstado(vuelo, status, ahora) {
+  if (!status) return true;
+  const pendiente = vuelo._estado === 'pendiente';
+  if (status === 'pendiente') return pendiente;
+  if (status === 'realizado') return vuelo._estado === 'realizado';
+  if (status === 'cancelado') return vuelo._estado === 'cancelado';
+  if (status === 'critico') {
+    return pendiente
+      && vuelo._salida >= ahora
+      && vuelo._salida <= new Date(ahora.getTime() + MS_CRITICOS);
+  }
+  return true;
+}
+
+/** Cubo de contadores al que pertenece, con el mismo pliegue que los tramos. */
+const cuboDe = (vuelo) => (vuelo._estado === 'realizado' ? 'realizado'
+  : vuelo._estado === 'cancelado' ? 'cancelado' : 'pendiente');
+
+/**
+ * Los vuelos de plan que entran en el listado, ya filtrados y ordenados.
+ *
+ * Se traen todos los que pasan el filtro, no una página: hay que ordenarlos
+ * junto con los tramos, y no se puede paginar en SQL una fila que se convierte
+ * en dos según sus fechas. `TOPE_PLANES` acota el coste; son planes con vuelo,
+ * no ventas, así que el orden de magnitud es de decenas.
+ */
+const TOPE_PLANES = 500;
+
+async function vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, user }, ahora) {
+  const planes = await buscarPlanes(construirWherePlanes({ search, permissionScope, user }), TOPE_PLANES);
+
+  const todos = planes
+    .flatMap(expandirPlan)
+    .filter(v => enRango(v, dateFrom, dateTo));
+
+  // Los contadores se calculan ANTES del filtro de estado, igual que los de
+  // tramos se calculan sobre `whereBase`: al filtrar por un estado, los demás
+  // tienen que seguir mostrando su total.
+  const counts = { pendiente: 0, realizado: 0, cancelado: 0, critico: 0, total: 0 };
+  for (const v of todos) {
+    counts[cuboDe(v)] += 1;
+    counts.total += 1;
+    if (cumpleEstado(v, 'critico', ahora)) counts.critico += 1;
+  }
+
+  const filas = todos
+    .filter(v => cumpleEstado(v, status, ahora))
+    .sort(ordenarPorSalida);
+
+  return { filas, counts };
+}
+
+/** Mismo orden que la consulta de tramos: salida ascendente, id de desempate. */
+function ordenarPorSalida(a, b) {
+  const da = a._salida instanceof Date ? a._salida.getTime() : new Date(a._salida).getTime();
+  const db = b._salida instanceof Date ? b._salida.getTime() : new Date(b._salida).getTime();
+  if (da !== db) return da - db;
+  return String(a.id).localeCompare(String(b.id));
+}
+
+/**
+ * Mezcla las dos fuentes y devuelve la página pedida.
+ *
+ * Las dos listas llegan ordenadas por el mismo criterio, así que la mezcla
+ * ordenada de las dos también lo está: se concatena, se ordena y se corta. De
+ * los tramos se piden `skip + perPage` filas —no `perPage`— porque cualquiera
+ * de ellas puede quedar desplazada a otra página por un vuelo de plan que se
+ * cuele delante.
+ */
+function paginarMezcla(deTramos, dePlanes, skip, perPage) {
+  return [...deTramos, ...dePlanes]
+    .sort(ordenarPorSalida)
+    .slice(skip, skip + perPage)
+    .map(({ _salida, _estado, ...fila }) => fila);
+}
+
 /**
  * Recalcula `prod_tiqueteria.checkin_status`, que es el agregado que lee el
  * detalle de venta (`catalog/products.js`).
@@ -299,30 +588,45 @@ class FlightsService {
    * URL directa.
    */
   async getFlightById(id, { permissionScope, user } = {}) {
+    const dePlan = descomponerIdPlan(id);
+    if (dePlan) {
+      const { filas } = await vuelosDePlan({ permissionScope, user }, new Date());
+      const vuelo = filas.find(v => v.id === String(id));
+      if (!vuelo) throw new NotFoundError('Vuelo no encontrado');
+      const { _salida, _estado, ...fila } = vuelo;
+      return fila;
+    }
+
     const whereBase = construirWhereBase({ permissionScope, user });
     const [tramo] = await buscarTramos({ AND: [whereBase, { id: String(id) }] }, 0, 1);
     if (!tramo) throw new NotFoundError('Vuelo no encontrado');
 
     const tipos = await resolverTipos([tramo]);
-    return mapearTramo(tramo, tipos[tramo.id]);
+    const { _salida, _estado, ...fila } = mapearTramo(tramo, tipos[tramo.id]);
+    return fila;
   }
 
   async listFlights({ pagination, dateFrom, dateTo, checkinStatus, search, permissionScope, user }) {
     const { page, perPage, skip } = pagination;
+    const ahora = new Date();
     const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, user });
-    const where = combinar(whereBase, predicadoEstado(checkinStatus, new Date()));
+    const where = combinar(whereBase, predicadoEstado(checkinStatus, ahora));
 
     // El count y las filas comparten el mismo `where`: si divergen, una
     // búsqueda sin resultados sigue informando de que hay N registros.
-    const [total, tramos] = await Promise.all([
+    //
+    // De los tramos se piden `skip + perPage`, no `perPage`: un vuelo de plan
+    // puede colarse por delante y desplazar filas a la página siguiente.
+    const [total, tramos, planes] = await Promise.all([
       prisma.tramos_vuelo.count({ where }),
-      buscarTramos(where, skip, perPage),
+      buscarTramos(where, 0, skip + perPage),
+      vuelosDePlan({ status: checkinStatus, dateFrom, dateTo, search, permissionScope, user }, ahora),
     ]);
 
     const tipos = await resolverTipos(tramos);
-    const data = tramos.map(t => mapearTramo(t, tipos[t.id]));
+    const data = paginarMezcla(tramos.map(t => mapearTramo(t, tipos[t.id])), planes.filas, skip, perPage);
 
-    return { data, meta: buildMeta(total, page, perPage) };
+    return { data, meta: buildMeta(total + planes.filas.length, page, perPage) };
   }
 
   /**
@@ -343,8 +647,8 @@ class FlightsService {
     // garantiza que el total y los contadores no puedan discrepar nunca: salen
     // del mismo sitio. La regla del repo es que el count y las filas se
     // construyan con el mismo filtro; aquí ya es imposible incumplirla.
-    const [tramos, grupos, criticos] = await Promise.all([
-      buscarTramos(where, skip, perPage),
+    const [tramos, grupos, criticos, planes] = await Promise.all([
+      buscarTramos(where, 0, skip + perPage),
       // Los contadores se calculan sobre whereBase, SIN la condición de estado:
       // al filtrar por uno, los demás siguen mostrando su total.
       prisma.tramos_vuelo.groupBy({
@@ -355,6 +659,9 @@ class FlightsService {
       // `critico` no puede salir del groupBy: no es un valor almacenado, así
       // que agrupar por la columna daría siempre 0.
       prisma.tramos_vuelo.count({ where: { AND: [whereBase, predCritico(ahora)] } }),
+      // Los vuelos vendidos dentro de un plan, que no son tramos y hasta ahora
+      // no salían en ninguna de las dos pantallas.
+      vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, user }, ahora),
     ]);
 
     const counts = { pendiente: 0, realizado: 0, cancelado: 0, critico: criticos, total: 0 };
@@ -368,13 +675,16 @@ class FlightsService {
       counts[clave] += n;
       counts.total += n;
     }
+    // Los de plan suman en los mismos cubos: para quien mira la pantalla son
+    // check-ins pendientes igual que los demás.
+    for (const clave of Object.keys(counts)) counts[clave] += planes.counts[clave];
 
     // El total del listado es el contador del estado pedido; sin filtro, el de
     // todos. `critico` incluido: su contador se cuenta con su mismo predicado.
     const total = status ? counts[status] : counts.total;
 
     const tipos = await resolverTipos(tramos);
-    const data = tramos.map(t => mapearTramo(t, tipos[t.id]));
+    const data = paginarMezcla(tramos.map(t => mapearTramo(t, tipos[t.id])), planes.filas, skip, perPage);
 
     return { data, meta: { ...buildMeta(total, page, perPage), counts } };
   }
@@ -394,6 +704,9 @@ class FlightsService {
         `Estado de check-in no escribible: ${pedido}. Válidos: pendiente, realizado`
       );
     }
+
+    const dePlan = descomponerIdPlan(tramoId);
+    if (dePlan) return this._checkinDePlan(dePlan, pedido, files, { permissionScope, user });
 
     // El id es el de tramos_vuelo, un uuid en texto. No hacer parseInt.
     const tramo = await prisma.tramos_vuelo.findUnique({
@@ -483,7 +796,72 @@ class FlightsService {
    * Se admite cancelar desde cualquier estado, incluido `realizado`: una
    * aerolínea puede cancelar el vuelo después de que el check-in esté hecho.
    */
+  /**
+   * Check-in de un vuelo vendido dentro de un plan.
+   *
+   * Escribe en la columna del sentido —`checkin_status_ida` o
+   * `checkin_status_regreso`—, que existía desde el principio y no la usaba
+   * nadie. No hay rollup que recalcular: en un plan cada sentido es un vuelo y
+   * su columna es el estado, sin tramos por debajo que agregar.
+   *
+   * Lo que no puede hacer, y por qué: guardar CUÁNDO se hizo, los documentos
+   * adjuntos y el motivo de una cancelación. `prod_planes` no tiene esas
+   * columnas y añadirlas necesita un `db push` contra el DIRECT_URL de
+   * Supabase, que desde aquí no es alcanzable. Los adjuntos que lleguen se
+   * rechazan en vez de aceptarse y perderse en silencio.
+   */
+  async _checkinDePlan({ planId, direccion }, pedido, files, { permissionScope, user }) {
+    if (files && files.length) {
+      throw new BadRequestError(
+        'Un vuelo de plan todavía no puede guardar documentos de check-in: falta la columna donde ponerlos'
+      );
+    }
+
+    const plan = await prisma.prod_planes.findUnique({
+      where: { id: planId },
+      include: { detalle_venta: { include: { ventas: true } } },
+    });
+    if (!plan) throw new NotFoundError('Vuelo no encontrado');
+
+    const venta = plan.detalle_venta?.ventas;
+    if (!venta || venta.deleted_at || venta.status === 'anulado') {
+      throw new BadRequestError('La venta de este vuelo no está vigente');
+    }
+    if (permissionScope === 'own' && user && venta.usuario_id !== user.id) {
+      throw new ForbiddenError('No puede registrar el check-in de una venta de otro asesor');
+    }
+
+    const col = DIRECCIONES[direccion];
+    if (!plan[col.salida]) throw new NotFoundError('Este plan no tiene vuelo de ' + direccion);
+
+    await prisma.prod_planes.update({
+      where: { id: planId },
+      data: { [col.estado]: pedido },
+    });
+
+    return {
+      id: idVueloDePlan(planId, direccion),
+      source: 'plan',
+      checkinStatus: pedido,
+      checkin: pedido,
+      checkinAt: null,
+      attachments: [],
+      emailSent: false,
+      emailStatus: 'no_aplica',
+      productCheckinStatus: pedido,
+    };
+  }
+
   async cancelCheckin(tramoId, { reasonCanceled }, { permissionScope, user } = {}) {
+    // Cancelar exige guardar el motivo, y `prod_planes` no tiene dónde. Se
+    // dice, en vez de guardar el estado y perder el motivo: una cancelación
+    // sin motivo es justo lo que este endpoint existe para evitar.
+    if (descomponerIdPlan(tramoId)) {
+      throw new BadRequestError(
+        'Un vuelo de plan todavía no se puede cancelar: falta la columna del motivo. Márcalo como pendiente si el check-in no se hizo.'
+      );
+    }
+
     const tramo = await prisma.tramos_vuelo.findUnique({
       where: { id: String(tramoId) },
       include: {

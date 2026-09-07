@@ -952,7 +952,12 @@ export default function Itineraries() {
                                     <UserCheck size={16} /> Realizar Check-in
                                   </Button>
                                 ) : null}
-                                {canEditItinerary('itineraries') ? (
+                                {/* Un vuelo vendido dentro de un plan no se
+                                    puede cancelar: `prod_planes` no tiene
+                                    dónde guardar el motivo, y el servidor lo
+                                    rechaza. Se oculta el botón en vez de
+                                    ofrecer algo que va a fallar. */}
+                                {canEditItinerary('itineraries') && flight.source !== 'plan' ? (
                                   <button
                                     onClick={() => handleOpenCancel(flight)}
                                     title="Cancelar el check-in de este vuelo"
@@ -1152,6 +1157,13 @@ export default function Itineraries() {
             </div>
           </div>
 
+          {selectedFlightForCheckin?.source === 'plan' ? (
+            <p className="text-xs text-gray-500 dark:text-slate-400 rounded-xl border border-dashed border-gray-300 dark:border-slate-700 p-4">
+              Este vuelo se vendió dentro de un plan. El check-in se registra
+              igual, pero todavía no se le pueden adjuntar documentos ni guardar
+              la hora: al plan le faltan esas columnas.
+            </p>
+          ) : (
           <FormField label="Adjuntar Documentos de Check-in (Opcional)">
             <div className="relative group mb-3">
               <input
@@ -1195,6 +1207,7 @@ export default function Itineraries() {
               </div>
             )}
           </FormField>
+          )}
 
           <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-700">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />

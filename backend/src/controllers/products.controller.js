@@ -469,10 +469,23 @@ const handlerPlan = H('plan', 'prod_planes', (d, detalleId) => ({
   aerolineaId: d.airline ? parseInt(d.airline) : null,
   nro_reserva: d.reservationNumber || null,
   nro_tiquete: d.ticketNumber || null,
+  // El número de vuelo no se guardaba: el transform lo omitía y `createSale`
+  // sí lo escribe, así que el mismo plan salía con número o sin él según se
+  // vendiera de una vez o se añadiera después.
+  nro_vuelo: d.flightNumber || null,
   fecha_viaje_inicio: d.startDate ? new Date(d.startDate) : null,
   fecha_viaje_fin: d.endDate ? new Date(d.endDate) : null,
-  fecha_salida_vuelo: d.flightDepartureDate ? new Date(d.flightDepartureDate) : null,
-  fecha_regreso_vuelo: d.flightReturnDate ? new Date(d.flightReturnDate) : null,
+  // En hora de Colombia y con las dos llegadas, que no se guardaban. Con
+  // `new Date('2026-11-01')` el vuelo aparece el día anterior en cuanto el
+  // servidor no está en Bogotá, que es el caso normal al desplegar.
+  fecha_salida_vuelo: enHoraColombia(d.flightDepartureDate),
+  fecha_llegada_vuelo: enHoraColombia(d.flightDepartureArrivalDate),
+  fecha_regreso_vuelo: enHoraColombia(d.flightReturnDate),
+  fecha_llegada_regreso_vuelo: enHoraColombia(d.flightReturnArrivalDate),
+  nombre_hotel: d.hotelName || null,
+  paquete_tarifa_id: d.packageRateId ? parseInt(d.packageRateId) : null,
+  tipo_paquete: d.packageType || 'own',
+  tipo_transporte: d.transportType || 'Aereo',
   adultos_count: d.adultsCount || 0,
   menores_count: d.childrenCount || 0,
   numero_confirmacion: d.confirmationNumber || null,

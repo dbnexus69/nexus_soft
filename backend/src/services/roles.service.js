@@ -14,13 +14,17 @@ const { AUTH_CACHE } = require('../middleware/auth');
  */
 const MODULE_ACTIONS = {
   dashboard: ['view'],
-  sales: ['view', 'create', 'edit'],
+  // `delete` faltaba y `authorize('sales', 'delete')` sí lo exige: la acción se
+  // aplicaba en la ruta pero no se podía ni consultar ni delegar. Esta lista es
+  // ahora exactamente el conjunto de pares (módulo, acción) que aparecen en
+  // `authorize(...)` en src/routes.
+  sales: ['view', 'create', 'edit', 'delete'],
   clients: ['view', 'create', 'edit'],
   responsables: ['view', 'create', 'edit', 'delete'],
   itineraries: ['view', 'edit'],
   commissions: ['view', 'create', 'edit', 'delete'],
-  users: ['view'],
-  config: ['view'],
+  users: ['view', 'create', 'edit', 'delete'],
+  config: ['view', 'edit'],
   // Reescribir los permisos de un rol es su propia llave, no `config.edit`:
   // esa la comparten las aerolíneas y los proveedores del catálogo.
   permissions: ['view', 'edit'],
@@ -42,18 +46,29 @@ const MODULE_ACTIONS = {
 const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
 /**
- * Roles que NO se pueden editar.
+ * Los roles administrativos: los que gobiernan la agencia entera y no un
+ * conjunto propio de ventas.
+ *
+ * Existía como la comparación `role !== 'admin'` dentro de `parseValor`, que
+ * degradaba el dashboard de `superadmin` a alcance 'own' — el rol creado para
+ * poder MÁS que un admin veía menos que él.
+ */
+const ROLES_ADMINISTRATIVOS = ['admin', 'superadmin'];
+
+/**
+ * Roles que NO se pueden editar. Es el mismo conjunto que el de arriba, y por
+ * el mismo motivo: su autorización no sale de la base.
  *
  * `superadmin` porque si alguien pudiera quitarle permisos nadie podría
  * devolvérselos, y `admin` porque `authorize.js` le da todo sin mirar la base:
  * la pantalla dejaba editarlo y no pasaba nada, que es peor que no dejarlo.
  */
-const ROLES_FIJOS = ['admin', 'superadmin'];
+const ROLES_FIJOS = ROLES_ADMINISTRATIVOS;
 
 const DEFAULT_ROLE_VALUES = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: 'true', edit: 'true' },
+    sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
     clients: { view: 'own', create: 'true', edit: 'true' },
     responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     itineraries: { view: 'own', edit: 'false' },
@@ -61,41 +76,41 @@ const DEFAULT_ROLE_VALUES = {
     // Se mantienen en true: el asistente de ventas necesita los catálogos
     // (aerolíneas, métodos de pago) y la lista de asesores para asignar la
     // venta. Ahora son revocables, aunque revocarlos rompa crear ventas.
-    users: { view: 'true' },
-    config: { view: 'true' },
+    users: { view: 'true', create: 'false', edit: 'false', delete: 'false' },
+    config: { view: 'true', edit: 'false' },
     permissions: { view: 'false', edit: 'false' },
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: 'true', edit: 'true' },
+    sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
     clients: { view: 'own', create: 'true', edit: 'true' },
     responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     itineraries: { view: 'own', edit: 'false' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    users: { view: 'true' },
-    config: { view: 'true' },
+    users: { view: 'true', create: 'false', edit: 'false', delete: 'false' },
+    config: { view: 'true', edit: 'false' },
     permissions: { view: 'false', edit: 'false' },
   },
   admin: {
     dashboard: { view: 'all' },
-    sales: { view: 'all', create: 'true', edit: 'true' },
+    sales: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
     clients: { view: 'all', create: 'true', edit: 'true' },
     responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     itineraries: { view: 'all', edit: 'true' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
-    users: { view: 'true' },
-    config: { view: 'true' },
+    users: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    config: { view: 'true', edit: 'true' },
     permissions: { view: 'true', edit: 'false' },
   },
   superadmin: {
     dashboard: { view: 'all' },
-    sales: { view: 'all', create: 'true', edit: 'true' },
+    sales: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
     clients: { view: 'all', create: 'true', edit: 'true' },
     responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     itineraries: { view: 'all', edit: 'true' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
-    users: { view: 'true' },
-    config: { view: 'true' },
+    users: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    config: { view: 'true', edit: 'true' },
     permissions: { view: 'true', edit: 'true' },
   },
 };
@@ -103,14 +118,14 @@ const DEFAULT_ROLE_VALUES = {
 function parseValor(accion, modulo, valor, role) {
   if (accion === 'view' && SCOPED_VIEW_MODULES.includes(modulo)) {
     if (valor === 'all') {
-      if (modulo === 'dashboard' && role !== 'admin') return 'own';
+      if (modulo === 'dashboard' && !ROLES_ADMINISTRATIVOS.includes(role)) return 'own';
       return 'all';
     }
     if (valor === 'own') return 'own';
     if (valor === 'true') {
       // Un 'true' guardado equivale a alcance total, salvo en el dashboard,
-      // donde solo el admin puede ver el de toda la agencia.
-      if (modulo === 'dashboard') return role === 'admin' ? 'all' : 'own';
+      // donde solo un rol administrativo ve el de toda la agencia.
+      if (modulo === 'dashboard') return ROLES_ADMINISTRATIVOS.includes(role) ? 'all' : 'own';
       return 'all';
     }
     return 'none';
@@ -211,5 +226,12 @@ class RolesService {
   }
 }
 
-module.exports.ROLES_FIJOS = ROLES_FIJOS;
-module.exports = new RolesService();
+// El orden importa: asignar `module.exports` entero DESPUÉS de colgarle una
+// propiedad la descartaba, así que `ROLES_FIJOS` se exportaba como undefined.
+// Nadie lo importaba todavía, y por eso no se notaba.
+const servicio = new RolesService();
+servicio.ROLES_FIJOS = ROLES_FIJOS;
+servicio.ROLES_ADMINISTRATIVOS = ROLES_ADMINISTRATIVOS;
+servicio.MODULE_ACTIONS = MODULE_ACTIONS;
+servicio.DEFAULT_ROLE_VALUES = DEFAULT_ROLE_VALUES;
+module.exports = servicio;

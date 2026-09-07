@@ -40,7 +40,7 @@ const SUPERADMIN_PERMISSIONS = {
 const ROLE_DEFAULT_PERMISSIONS = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: true, edit: true },
+    sales: { view: 'own', create: true, edit: true, delete: false },
     clients: { view: 'own', create: true, edit: true },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
@@ -49,12 +49,16 @@ const ROLE_DEFAULT_PERMISSIONS = {
     permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: false },
     commissions: { view: false, create: false, edit: false, delete: false },
-    users: { view: true },
-    config: { view: true },
+    // Las acciones tienen que APARECER aquí aunque sean false: la superposición
+    // de la base solo aplica un valor `if (pr.accion in mod)`, así que sin la
+    // llave el permiso se guarda y se ignora en silencio. Faltaban justo las
+    // que las rutas exigen: users.create/edit/delete y config.edit.
+    users: { view: true, create: false, edit: false, delete: false },
+    config: { view: true, edit: false },
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: true, edit: true },
+    sales: { view: 'own', create: true, edit: true, delete: false },
     clients: { view: 'own', create: true, edit: true },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
@@ -63,8 +67,12 @@ const ROLE_DEFAULT_PERMISSIONS = {
     permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: false },
     commissions: { view: false, create: false, edit: false, delete: false },
-    users: { view: true },
-    config: { view: true },
+    // Las acciones tienen que APARECER aquí aunque sean false: la superposición
+    // de la base solo aplica un valor `if (pr.accion in mod)`, así que sin la
+    // llave el permiso se guarda y se ignora en silencio. Faltaban justo las
+    // que las rutas exigen: users.create/edit/delete y config.edit.
+    users: { view: true, create: false, edit: false, delete: false },
+    config: { view: true, edit: false },
   },
 };
 

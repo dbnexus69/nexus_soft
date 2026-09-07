@@ -1,13 +1,18 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
+const { buildMeta } = require('../utils/paginationHelper');
 
 const SECTION_MAP = {
   'cards': {
     model: 'tarjetas_agencia', idField: 'id', include: { metodos_pago: true },
+    buscarEn: ['nombre', 'ultimos_cuatro'],
+    orden: { defecto: 'name', campos: { name: 'nombre', status: 'status', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, paymentMethod: r.metodos_pago?.nombre || null, lastFourDigits: r.ultimos_cuatro, description: r.descripcion, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
     reverseTransform: async (d) => {
-      let methodId = null;
-      if (d.paymentMethod) {
+      // Por id si viene, y si no por nombre. Resolver una clave ajena por
+      // texto libre se rompe en cuanto alguien renombra el método de pago.
+      let methodId = Number(d.paymentMethodId) || null;
+      if (!methodId && d.paymentMethod) {
         const m = await prisma.metodos_pago.findFirst({ where: { nombre: d.paymentMethod } });
         if (m) methodId = m.id;
       }
@@ -22,11 +27,15 @@ const SECTION_MAP = {
   },
   'payment-methods': {
     model: 'metodos_pago', idField: 'id',
+    buscarEn: ['nombre'],
+    orden: { defecto: 'name', campos: { name: 'nombre', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre }),
     reverseTransform: async (d) => ({ nombre: d.name || 'Sin nombre' })
   },
   'document-types': {
     model: 'tipos_documento', idField: 'id',
+    buscarEn: ['nombre', 'abreviatura'],
+    orden: { defecto: 'name', campos: { name: 'nombre', abbreviation: 'abreviatura', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, abbreviation: r.abreviatura }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
@@ -35,6 +44,8 @@ const SECTION_MAP = {
   },
   'airlines': {
     model: 'aerolineas', idField: 'id',
+    buscarEn: ['nombre', 'codigo_iata'],
+    orden: { defecto: 'name', campos: { name: 'nombre', code: 'codigo_iata', type: 'tipo', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, code: r.codigo_iata, type: r.tipo, website: r.web }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
@@ -45,6 +56,8 @@ const SECTION_MAP = {
   },
   'suppliers': {
     model: 'proveedores', idField: 'id',
+    buscarEn: ['nombre', 'email_contacto', 'telefono'],
+    orden: { defecto: 'name', campos: { name: 'nombre', type: 'tipo', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, type: r.tipo, email: r.email_contacto, phone: r.telefono, website: r.web, observations: r.observaciones || '' }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
@@ -57,6 +70,8 @@ const SECTION_MAP = {
   },
   'airports': {
     model: 'aeropuertos', idField: 'id',
+    buscarEn: ['nombre', 'ciudad', 'pais', 'codigo_iata'],
+    orden: { defecto: 'name', campos: { name: 'nombre', abbreviation: 'codigo_iata', city: 'ciudad', type: 'tipo', status: 'status', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, abbreviation: r.codigo_iata, city: r.ciudad, country: r.pais, location: [r.ciudad, r.pais].filter(Boolean).join(', '), type: r.tipo, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
@@ -69,12 +84,21 @@ const SECTION_MAP = {
   },
   'baggage': {
     model: 'politicas_equipaje', idField: 'id', include: { aerolineas: true },
+    // La ruta con punto busca en la relación: `aerolineas.nombre`.
+    buscarEn: ['tipo_tarifa', 'aerolineas.nombre'],
+    orden: { defecto: 'airlineName', campos: { airlineName: 'aerolineas.nombre', fareType: 'tipo_tarifa', id: 'id' } },
     transform: (r) => ({ id: r.id, airlineName: r.aerolineas?.nombre || null, fareType: r.tipo_tarifa, personalItem: r.articulo_personal, carryOn: r.equipaje_mano, checkedBag: r.equipaje_bodega, notes: r.notas }),
     reverseTransform: async (d) => {
-      let airlineId = 1;
-      if (d.airlineName) {
+      // NUNCA caer en la aerolínea 1. Era `let airlineId = 1`, así que un
+      // nombre que no casaba atribuía la política de equipaje a la primera
+      // aerolínea del catálogo, en silencio y para siempre.
+      let airlineId = Number(d.airlineId) || null;
+      if (!airlineId && d.airlineName) {
         const a = await prisma.aerolineas.findFirst({ where: { nombre: d.airlineName } });
         if (a) airlineId = a.id;
+      }
+      if (!airlineId) {
+        throw new BadRequestError(`No existe la aerolínea "${d.airlineName}" en el catálogo`);
       }
       return {
         aerolinea_id: airlineId,
@@ -88,6 +112,10 @@ const SECTION_MAP = {
   },
   'packages': {
     model: 'paquetes', idField: 'id',
+    // `paquetes` es el único catálogo con borrado lógico.
+    soloVigentes: { deleted_at: null },
+    buscarEn: ['nombre', 'destino'],
+    orden: { defecto: 'name', campos: { name: 'nombre', destination: 'destino', id: 'id' } },
     include: { paquete_hotel: true, paquete_tarifas: true, paquete_asistencia_medica: true, paquete_vuelo: { include: { aerolineas: true } }, paquete_proveedor: { include: { proveedores: true } } },
     // El listado solo necesita lo que se ve en la tabla y en el selector.
     // El include completo son 5 relaciones = 6 viajes a la base por consulta;
@@ -186,88 +214,70 @@ const SECTION_MAP = {
 };
 
 class ConfigService {
-  async getSection(section, pagination = null, search = '') {
+  /**
+   * Un catálogo, paginado, buscado y ordenado.
+   *
+   * Reescrito por tres motivos:
+   *
+   * 1. **No había ORDER BY.** Se paginaba con skip/take sobre un orden que
+   *    Postgres no garantiza, así que una fila podía salir en dos páginas o en
+   *    ninguna. Ahora todas las consultas ordenan, y siempre desempatan por id.
+   * 2. **La búsqueda era una cadena de if/else por nombre de sección**, con un
+   *    `else` final que asumía que toda tabla tiene `nombre`. Ahora cada
+   *    sección declara sus campos en `buscarEn`, al lado de su transform.
+   * 3. **Devolvía dos formas distintas**: `{data, meta}` con paginación y un
+   *    array pelado sin ella. Ahora siempre `{data, meta}`, con `buildMeta`,
+   *    que es lo que usa el resto del repo.
+   */
+  async getSection(section, pagination = null, { search = '', sortBy, sortOrder } = {}) {
     const config = SECTION_MAP[section];
     if (!config) throw new NotFoundError('Sección no encontrada');
 
-    const queryOptions = {};
-    if (config.include) queryOptions.include = config.include;
+    const where = { ...(config.soloVigentes || {}) };
 
-    const paginatedSections = ['cards', 'payment-methods', 'document-types', 'airlines', 'suppliers', 'airports', 'baggage', 'packages'];
-
-    if (search && paginatedSections.includes(section)) {
-      if (section === 'baggage') {
-        queryOptions.where = {
-          OR: [
-            { tipo_tarifa: { contains: search, mode: 'insensitive' } },
-            { aerolineas: { nombre: { contains: search, mode: 'insensitive' } } }
-          ]
-        };
-      } else if (section === 'packages') {
-        queryOptions.where = {
-          OR: [
-            { nombre: { contains: search, mode: 'insensitive' } },
-            { destino: { contains: search, mode: 'insensitive' } }
-          ]
-        };
-      } else if (section === 'suppliers') {
-        queryOptions.where = {
-          OR: [
-            { nombre: { contains: search, mode: 'insensitive' } },
-            { email_contacto: { contains: search, mode: 'insensitive' } },
-            { telefono: { contains: search, mode: 'insensitive' } }
-          ]
-        };
-      } else if (section === 'airports') {
-        queryOptions.where = {
-          OR: [
-            { nombre: { contains: search, mode: 'insensitive' } },
-            { ciudad: { contains: search, mode: 'insensitive' } },
-            { codigo_iata: { contains: search, mode: 'insensitive' } }
-          ]
-        };
-      } else if (section === 'airlines') {
-        queryOptions.where = {
-          OR: [
-            { nombre: { contains: search, mode: 'insensitive' } },
-            { codigo_iata: { contains: search, mode: 'insensitive' } }
-          ]
-        };
-      } else {
-        queryOptions.where = { nombre: { contains: search, mode: 'insensitive' } };
-      }
+    if (search) {
+      const como = { contains: search, mode: 'insensitive' };
+      // Una ruta con punto ('aerolineas.nombre') busca dentro de la relación.
+      where.OR = (config.buscarEn || []).map(campo => {
+        const [rel, sub] = campo.split('.');
+        return sub ? { [rel]: { [sub]: como } } : { [campo]: como };
+      });
+      if (where.OR.length === 0) delete where.OR;
     }
 
-    // Al listar se traen solo los campos que la tabla y los selectores muestran.
+    const columnas = config.orden?.campos || { id: 'id' };
+    if (sortBy && !columnas[sortBy]) {
+      throw new BadRequestError(
+        `Orden inválido para ${section}: ${sortBy}. Válidos: ${Object.keys(columnas).join(', ')}`
+      );
+    }
+    const sentido = sortOrder ? String(sortOrder).toLowerCase() : 'asc';
+    if (sentido !== 'asc' && sentido !== 'desc') {
+      throw new BadRequestError(`Sentido de orden inválido: ${sortOrder}. Válidos: asc, desc`);
+    }
+
+    // El desempate por id va siempre al final: sin él, dos filas con el mismo
+    // valor en la columna de orden pueden cambiar de sitio entre páginas.
+    const columna = columnas[sortBy || config.orden?.defecto] || 'id';
+    const [rel, sub] = columna.split('.');
+    const orderBy = [
+      sub ? { [rel]: { [sub]: sentido } } : { [columna]: sentido },
+      { id: 'asc' },
+    ];
+
     // select e include son excluyentes en Prisma: si hay listSelect, manda.
-    const listar = { ...queryOptions };
-    if (config.listSelect) {
-      delete listar.include;
-      listar.select = config.listSelect;
-    }
+    const proyeccion = config.listSelect
+      ? { select: config.listSelect }
+      : (config.include ? { include: config.include } : {});
     const transformar = config.listSelect ? config.listTransform : config.transform;
 
-    if (pagination && Object.keys(pagination).length > 0 && paginatedSections.includes(section)) {
-      const { skip, perPage, page } = pagination;
-      const [total, rows] = await Promise.all([
-        prisma[config.model].count({ where: queryOptions.where }),
-        prisma[config.model].findMany({ ...listar, skip, take: perPage })
-      ]);
-      return {
-        data: rows.map(transformar),
-        meta: {
-          total,
-          page,
-          perPage,
-          totalPages: Math.ceil(total / perPage),
-          hasNext: page < Math.ceil(total / perPage),
-          hasPrev: page > 1
-        }
-      };
-    }
+    const { page = 1, perPage = 20, skip = 0 } = pagination || {};
+    const [total, rows] = await Promise.all([
+      prisma[config.model].count({ where }),
+      prisma[config.model].findMany({ where, ...proyeccion, orderBy, skip, take: perPage }),
+    ]);
 
-    const rows = await prisma[config.model].findMany(listar);
-    return rows.map(transformar);
+    return { data: rows.map(transformar), meta: buildMeta(total, page, perPage) };
   }
 
   // Un elemento con su detalle completo. Es lo que se pide al seleccionar algo
@@ -276,8 +286,10 @@ class ConfigService {
     const config = SECTION_MAP[section];
     if (!config) throw new NotFoundError('Sección no encontrada');
 
-    const row = await prisma[config.model].findUnique({
-      where: { [config.idField]: Number(id) },
+    // `findFirst`, no `findUnique`: hace falta poder añadir el filtro de
+    // vigencia de los paquetes, que tienen borrado lógico.
+    const row = await prisma[config.model].findFirst({
+      where: { [config.idField]: Number(id), ...(config.soloVigentes || {}) },
       include: config.include
     });
     if (!row) throw new NotFoundError('Elemento no encontrado');
@@ -299,8 +311,15 @@ class ConfigService {
       : ConfigService.SECCIONES_ARRANQUE;
 
     // Las secciones son independientes: se piden en paralelo.
-    const rows = await Promise.all(pedidas.map(s => this.getSection(s)));
-    return Object.fromEntries(pedidas.map((s, i) => [s, rows[i]]));
+    //
+    // Los selectores necesitan el catálogo COMPLETO, no una página: se pide con
+    // un perPage alto explícito en vez de apoyarse en que `getSection` devuelva
+    // todo cuando no se le pasa paginación, que era la ambigüedad que hacía que
+    // el mismo método devolviera dos formas distintas.
+    const rows = await Promise.all(
+      pedidas.map(s => this.getSection(s, { page: 1, perPage: 500, skip: 0 }))
+    );
+    return Object.fromEntries(pedidas.map((s, i) => [s, rows[i].data]));
   }
 
   async createItem(section, data) {

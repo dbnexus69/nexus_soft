@@ -9,6 +9,8 @@ const configController = require('../controllers/config.controller');
 const auth = require('../middleware/auth');
 const paginate = require('../middleware/paginate');
 const { authorize } = require('../middleware/authorize');
+const { validateBySection } = require('../middleware/validate');
+const { ESQUEMAS } = require('../schemas/config.schema');
 
 router.use(auth, authorize('config', 'view'));
 
@@ -16,8 +18,10 @@ router.get('/all', configController.getAll);
 router.get('/:section', paginate, configController.getSection);
 // Detalle de un elemento: el listado es ligero, el detalle se pide al elegirlo.
 router.get('/:section/:id', configController.getItem);
-router.post('/:section', authorize('config', 'edit'), configController.createItem);
-router.put('/:section/:id', authorize('config', 'edit'), configController.updateItem);
+// Las escrituras se validan con el esquema de su catálogo. Antes no se
+// validaba nada: un cuerpo vacío creaba un registro llamado "Sin nombre".
+router.post('/:section', authorize('config', 'edit'), validateBySection(ESQUEMAS), configController.createItem);
+router.put('/:section/:id', authorize('config', 'edit'), validateBySection(ESQUEMAS), configController.updateItem);
 router.delete('/:section/:id', authorize('config', 'edit'), configController.removeItem);
 
 module.exports = router;

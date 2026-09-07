@@ -44,4 +44,36 @@ function validateQuery(schema) {
   };
 }
 
-module.exports = { validate, validateQuery };
+/**
+ * Como `validate`, pero el esquema se elige por el `:section` de la ruta.
+ *
+ * `/config/:section` es un endpoint por catálogo detrás de una sola ruta, así
+ * que la validación no puede ser un esquema fijo: cada catálogo tiene sus
+ * campos. Antes no había ninguna, y un cuerpo vacío creaba un registro llamado
+ * "Sin nombre".
+ *
+ * Una sección sin esquema es un fallo de programación, no del cliente: se
+ * responde 500 en vez de dejar pasar el cuerpo sin comprobar, que es como se
+ * cuela la basura al catálogo.
+ */
+function validateBySection(esquemas) {
+  return (req, res, next) => {
+    const schema = esquemas[req.params.section];
+    if (!schema) {
+      return error(res, `La sección ${req.params.section} no admite escritura`, 404, 'NOT_FOUND');
+    }
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      const details = result.error.issues.map(i => ({
+        field: i.path.join('.') || '(raíz)',
+        message: i.message,
+      }));
+      const resumen = details.map(d => `${d.field}: ${d.message}`).join('; ');
+      return error(res, `Datos inválidos: ${resumen}`, 422, 'VALIDATION_ERROR', details);
+    }
+    req.validatedBody = result.data;
+    next();
+  };
+}
+
+module.exports = { validate, validateQuery, validateBySection };

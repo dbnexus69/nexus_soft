@@ -3,12 +3,16 @@ const { success, noContent } = require('../utils/apiResponse');
 
 exports.getSection = async (req, res, next) => {
   try {
-    const data = await configService.getSection(req.params.section, req.pagination, req.search);
-    if (data && data.meta) {
-      success(res, data.data, data.meta);
-    } else {
-      success(res, data);
-    }
+    // `getSection` devuelve siempre `{data, meta}`, así que ya no hay que
+    // adivinar la forma de la respuesta antes de contestar.
+    const { data, meta } = await configService.getSection(req.params.section, req.pagination, {
+      search: req.search,
+      // Del query, no de `req.sortBy`/`req.sortOrder`: `paginate` los rellena
+      // con 'creadoAt' y 'desc', que en estos catálogos no significan nada.
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    });
+    success(res, data, meta);
   } catch (err) {
     next(err);
   }

@@ -46,6 +46,9 @@ export async function verifyCode(email: string, code: string) {
 }
 
 export async function resetPassword(email: string, code: string, newPassword: string) {
-  const res = await api.post('/auth/reset-password', { email, code, newPassword });
+  // El campo se llama `password` en la API, como en el alta de usuario. Se
+  // enviaba `newPassword`, que el backend nunca leyó: cuando los tres
+  // endpoints eran esqueletos que devolvían 200 a cualquier cosa no se notaba.
+  const res = await api.post('/auth/reset-password', { email, code, password: newPassword });
   return res.data;
 }

@@ -580,6 +580,25 @@ model roles {
   usuarios     usuarios[]
 }
 
+/// Códigos de un solo uso para recuperar la contraseña.
+///
+/// No se guarda el código, sino su hash: la tabla no sirve para entrar en
+/// ninguna cuenta ni para quien tenga acceso de lectura a la base. `intentos`
+/// existe para que un código de seis cifras no se pueda adivinar a fuerza de
+/// peticiones, e `usado_at` para que valga una sola vez.
+model codigos_recuperacion {
+  id          String    @id
+  usuario_id  Int
+  codigo_hash String
+  expires_at  DateTime
+  usado_at    DateTime?
+  intentos    Int       @default(0)
+  creado_at   DateTime  @default(now())
+  usuarios    usuarios  @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+}
+
 model sesiones {
   id         String   @id
   usuario_id Int
@@ -652,6 +671,7 @@ model usuarios {
   ultimo_login     DateTime?
   creado_at        DateTime           @default(now())
   clientes         clientes[]
+  codigos_recuperacion codigos_recuperacion[]
   logs_usuarios    logs_usuarios[]
   paquetes         paquetes[]
   sesiones         sesiones[]

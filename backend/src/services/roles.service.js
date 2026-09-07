@@ -1,6 +1,6 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
-const { AUTH_CACHE } = require('../middleware/auth');
+const { olvidarTodo } = require('../middleware/authCache');
 
 /**
  * Lo que se puede configurar por rol. Es la ÚNICA lista: `getPermissions`
@@ -321,7 +321,7 @@ class RolesService {
       prisma.permisos_rol.createMany({ data: aEscribir }),
     ]);
 
-    AUTH_CACHE.clear();
+    olvidarTodo();
     return { message: 'Permisos de rol actualizados', count: aEscribir.length };
   }
 }

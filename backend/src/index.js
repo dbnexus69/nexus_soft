@@ -62,10 +62,21 @@ app.use('/api/', limiter);
 
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 5,
-  message: { success: false, error: { message: 'Demasiados intentos de login' } }
+  // Cinco por minuto y por IP. Configurable porque una oficina entera sale por
+  // la misma IP y cinco intentos entre todos es poco, y porque las pruebas de
+  // estos endpoints necesitan más de cinco peticiones seguidas.
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 5,
+  message: { success: false, error: { message: 'Demasiados intentos, espera un minuto' } }
 });
+// El límite estrecho es para todo lo que prueba credenciales, no solo el login:
+// `verify-code` y `reset-password` comprueban un código de seis cifras, y con
+// el límite general de 1000 por minuto se recorren en pocos minutos. Y
+// `forgot-password` manda un correo por petición, así que sin límite es un
+// generador de correo para cualquiera.
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/verify-code', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 
 // Parsing
 app.use(express.json({ limit: '50mb' }));

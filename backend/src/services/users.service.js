@@ -3,7 +3,7 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const emailService = require('../utils/emailService');
-const { AUTH_CACHE } = require('../middleware/auth');
+const { olvidarUsuario } = require('../middleware/authCache');
 const { formatName } = require('../utils/stringUtils');
 
 class UsersService {
@@ -357,6 +357,14 @@ class UsersService {
     }
     if (data.status) updateData.status = data.status;
 
+    // Cambiar la contraseña o inhabilitar a alguien tiene que cortarle las
+    // sesiones abiertas. Antes no: el token seguía valiendo su plazo entero,
+    // así que ni una cosa ni la otra surtían efecto hasta que caducara.
+    if (updateData.password_hash || updateData.status === 'inactive') {
+      await prisma.sesiones.deleteMany({ where: { usuario_id: id } });
+      olvidarUsuario(id);
+    }
+
     const updated = await prisma.usuarios.update({
       where: { id },
       data: updateData,
@@ -448,11 +456,15 @@ class UsersService {
     if (conHistorial) {
       await prisma.$transaction([
         prisma.usuarios.update({ where: { id }, data: { status: 'inactive' } }),
+        // Inhabilitar sin cerrar la sesión abierta no inhabilita nada: el token
+        // ya emitido seguía valiendo hasta caducar.
+        prisma.sesiones.deleteMany({ where: { usuario_id: id } }),
         ...(personaCompartida ? [] : [prisma.personas.update({
           where: { id: usuario.persona_id },
           data: { deleted_at: new Date(), status: 'inactive' },
         })]),
       ]);
+      olvidarUsuario(id);
       return {
         message: 'Usuario inhabilitado',
         deleted: false,
@@ -467,6 +479,7 @@ class UsersService {
       prisma.usuarios.delete({ where: { id } }),
       ...(personaCompartida ? [] : [prisma.personas.delete({ where: { id: usuario.persona_id } })]),
     ]);
+    olvidarUsuario(id);
 
     return { message: 'Usuario eliminado', deleted: true };
   }

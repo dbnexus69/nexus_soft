@@ -1,10 +1,10 @@
+const crypto = require('crypto');
 const { verifyToken } = require('../utils/tokenUtils');
 const prisma = require('../config/db');
 const { error } = require('../utils/apiResponse');
-
-// Caché en memoria para evitar golpear la Base de Datos en cada clic (TTL: 5 minutos)
-const AUTH_CACHE = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000;
+// La caché vive en su propio archivo: quien cierra sesión o cambia una
+// contraseña necesita invalidarla sin importar este middleware.
+const { AUTH_CACHE, leer, recordar } = require('./authCache');
 
 async function auth(req, res, next) {
   try {
@@ -15,17 +15,33 @@ async function auth(req, res, next) {
 
     const token = header.split(' ')[1];
     const decoded = verifyToken(token);
+    // El mismo hash que guarda `login`. La sesión se identifica por él, así que
+    // la caché se indexa igual y una sesión cerrada se puede olvidar sola.
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    // 1. Revisar si el usuario está en RAM Cache
-    const now = Date.now();
-    const cached = AUTH_CACHE.get(decoded.userId);
-    
-    if (cached && cached.expiresAt > now) {
-      req.user = cached.user;
+    // 1. Revisar si esta sesión está en RAM Cache
+    const cached = leer(tokenHash);
+    if (cached) {
+      req.user = cached;
       return next();
     }
 
-    // 2. Si no está en caché, consultar a Supabase (viaje pesado)
+    // 2. La sesión tiene que existir en la base y estar en plazo.
+    //
+    // Sin esta comprobación el JWT era irrevocable: `logout` no borraba nada,
+    // y aunque lo hubiera borrado el token seguía valiendo hasta caducar
+    // —treinta minutos, o siete días con "recordarme"—. Una contraseña
+    // cambiada o un usuario dado de baja tampoco cortaban las sesiones
+    // abiertas. Ahora la fila de `sesiones` es lo que manda.
+    const sesion = await prisma.sesiones.findFirst({
+      where: { usuario_id: decoded.userId, token_hash: tokenHash, expires_at: { gt: new Date() } },
+      select: { id: true },
+    });
+    if (!sesion) {
+      return error(res, 'La sesión ya no es válida, vuelve a iniciar sesión', 401, 'SESSION_REVOKED');
+    }
+
+    // 3. Si no está en caché, consultar a Supabase (viaje pesado)
     const usuario = await prisma.usuarios.findUnique({
       where: { id: decoded.userId },
       include: {
@@ -57,11 +73,8 @@ async function auth(req, res, next) {
 
     };
 
-    // 3. Guardar en RAM Cache para la próxima vez
-    AUTH_CACHE.set(decoded.userId, {
-      user: userData,
-      expiresAt: now + CACHE_TTL_MS
-    });
+    // 4. Guardar en RAM Cache para la próxima vez
+    recordar(tokenHash, userData);
 
     req.user = userData;
     next();

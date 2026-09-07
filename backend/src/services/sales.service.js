@@ -1338,6 +1338,46 @@ class SalesService {
 
   // Cabecera de la venta, sin los datos de los productos.
   // Los productos se piden aparte con getSaleProducts / getSaleProductsByCategory.
+
+  _saleHeader(venta) {
+    return {
+      id: venta.id,
+      clientId: venta.cliente_id,
+      clientName: `${venta.clientes.personas.nombres} ${venta.clientes.personas.apellidos}`,
+      clientDocType: venta.clientes.personas.tipo_documento || null,
+      clientDocNumber: venta.clientes.personas.documento || null,
+      clientEmail: venta.clientes.personas.email || null,
+      clientPhone: venta.clientes.personas.telefono || null,
+      asesorId: venta.usuario_id,
+      asesorName: `${venta.usuarios.personas.nombres} ${venta.usuarios.personas.apellidos}`,
+      responsableId: venta.responsable_id || null,
+      responsableName: venta.responsables ? `${venta.responsables.personas.nombres} ${venta.responsables.personas.apellidos}` : null,
+      date: venta.creado_at,
+      total: venta.monto_total,
+      paymentMethod: venta.metodos_pago?.nombre || null,
+      status: venta.status,
+      observations: venta.observaciones,
+      isCredit: venta.es_credito,
+      creditDueDate: venta.fecha_vence_credito,
+      creditPaidAmount: venta.monto_pagado_credito,
+      isReviewed: venta.is_reviewed,
+      commissionAgentId: venta.comisionista_id,
+      commissionAgentName: venta.comisionistas ? `${venta.comisionistas.personas.nombres} ${venta.comisionistas.personas.apellidos}` : null,
+      commissionAgentAmount: venta.monto_comision_bruto,
+      commissionAgentRetentionPercentage: venta.porcentaje_retencion_comision || 0,
+      commissionAgentNetPayment: venta.monto_comision_neto,
+      supplierCost: venta.costo_proveedor_total,
+      ta: venta.ta_total,
+      isSettled: venta.comision_liquidada,
+      payments: venta.pagos_venta.map(p => ({
+        id: p.id,
+        date: p.fecha_pago,
+        amount: p.monto,
+        method: p.metodos_pago?.nombre || null
+      }))
+    };
+  }
+
   async getSaleById(id) {
     const [venta, inventario] = await Promise.all([
       prisma.ventas.findUnique({

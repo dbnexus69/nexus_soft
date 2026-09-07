@@ -1,5 +1,8 @@
 const { z } = require('zod');
 const { SLUGS, CATALOG } = require('../catalog/products');
+// La misma regla de precio que usa la venta al guardar: si aquí se calculara
+// aparte, la validación podría discrepar de lo que acaba en la base.
+const { precioProducto } = require('../services/saleTotals');
 
 // Los ids llegan del frontend como string o número según el formulario.
 const id = z.union([z.string(), z.number()]).nullable().optional();
@@ -52,9 +55,44 @@ const baseSale = {
 
 // passthrough: el schema valida y normaliza lo que conoce, pero no descarta el
 // resto del payload. Sin esto, Zod recortaría campos que el servicio sí usa.
+const CLAVES_PRODUCTO = Object.keys(productArrays);
+
+/**
+ * ¿Es una venta a crédito? Lo dice el dinero, no una casilla.
+ *
+ * La regla anterior era `!s.isCredit || !!s.creditDueDate`: la fecha se exigía
+ * solo si el cliente enviaba `isCredit: true`. Como el asistente pone ese
+ * indicador a false en cuanto se elige el estado "pagado" a mano, bastaba con
+ * declarar una venta pagada sin pagarla para colar un crédito sin fecha. Y un
+ * crédito sin fecha de vencimiento es incobrable por construcción: no vence
+ * nunca, no entra en ningún tramo de antigüedad y no aparece en ninguna alerta.
+ * Hay una así en la base, con 1.250.000 pendientes.
+ *
+ * Ahora se compara lo que se paga contra lo que suman los productos. El
+ * indicador y el estado declarado siguen contando —si el cliente dice que es
+ * un crédito, lo es— pero ya no pueden decir que NO lo es.
+ */
+function esVentaACredito(s) {
+  if (s.isCredit === true) return true;
+  if (s.status === 'credito' || s.status === 'abonado') return true;
+
+  const productos = CLAVES_PRODUCTO.reduce((total, clave) => {
+    const lista = Array.isArray(s[clave]) ? s[clave] : [];
+    return total + lista.reduce((suma, item) => suma + precioProducto(item), 0);
+  }, 0);
+  const pagado = (s.payments || []).reduce((suma, p) => suma + (Number(p.amount) || 0), 0);
+
+  // Media unidad de céntimo de tolerancia: los importes son coma flotante y una
+  // venta pagada al completo no debe caer del lado del crédito por un redondeo.
+  return productos > 0 && pagado < productos - 0.005;
+}
+
 const createSaleSchema = z.object(baseSale).passthrough().refine(
-  s => !s.isCredit || !!s.creditDueDate,
-  { message: 'Una venta a crédito necesita fecha de vencimiento', path: ['creditDueDate'] }
+  s => !esVentaACredito(s) || !!s.creditDueDate,
+  {
+    message: 'Una venta a crédito necesita fecha de vencimiento: sin ella la deuda no vence nunca y no se puede reclamar',
+    path: ['creditDueDate'],
+  }
 );
 
 // En una actualización todo es opcional salvo lo que venga.
@@ -69,8 +107,9 @@ const registerPaymentSchema = z.object({
   isTotal: z.boolean().optional(),
   method: z.string().nullable().optional(),
   reference: z.string().nullable().optional(),
-  currentPaidAmount: z.coerce.number().min(0).optional(),
-  saleTotal: z.coerce.number().min(0).optional(),
+  // `currentPaidAmount` y `saleTotal` estaban declarados aquí y el servicio los
+  // usaba para calcular el estado de cobro. Se retiraron de la lógica por ser
+  // cifras de dinero decididas por el cliente; el contrato deja de anunciarlas.
 });
 
 const voidSaleSchema = z.object({

@@ -330,7 +330,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         today.setHours(0, 0, 0, 0);
         selectedDate.setHours(0, 0, 0, 0);
         if (selectedDate < today) {
-          setErrors((prev) => ({ ...prev, creditDueDate: "La fecha de vencimiento no puede ser anterior al díƒÂ­a de hoy" }));
+          setErrors((prev) => ({ ...prev, creditDueDate: "La fecha de vencimiento no puede ser anterior a hoy" }));
         } else {
           setErrors((prev) => {
             const next = { ...prev };
@@ -1107,8 +1107,15 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         errs.status = "El estado de la venta es obligatorio";
       }
       
-      const isCreditState = form.status === "credito" || form.status === "abonado";
-      if (isCreditState) {
+      // Mismo criterio que el backend: es un crédito si lo pagado no cubre el
+      // total, sea cual sea el estado elegido a mano. Comprobarlo aquí evita que
+      // el asistente deje avanzar para recibir después un 422.
+      const totalPagado = (form.payments || []).reduce((suma, p) => suma + (Number(p.amount) || 0), 0);
+      const esCredito = form.status === "credito"
+        || form.status === "abonado"
+        || form.isCredit === true
+        || (Number(form.total) > 0 && totalPagado < Number(form.total) - 0.005);
+      if (esCredito) {
         if (!form.creditDueDate) {
           errs.creditDueDate = "La fecha de vencimiento es obligatoria";
         } else {
@@ -1117,7 +1124,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
           today.setHours(0, 0, 0, 0);
           selectedDate.setHours(0, 0, 0, 0);
           if (selectedDate < today) {
-            errs.creditDueDate = "La fecha de vencimiento no puede ser anterior al díƒÂ­a de hoy";
+            errs.creditDueDate = "La fecha de vencimiento no puede ser anterior a hoy";
           }
         }
       }
@@ -1212,7 +1219,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       passportData: form.passports.length > 0 ? form.passports : undefined,
       petServiceData: form.petServices.length > 0 ? form.petServices : undefined,
       isCredit: form.isCredit,
-      creditDueDate: form.isCredit ? form.creditDueDate : undefined,
+      // Se envía siempre que esté puesta. Antes iba condicionada a `isCredit`,
+      // y ese indicador se apaga al elegir "pagado" a mano, así que la fecha se
+      // descartaba justo en el caso en el que el backend la exige.
+      creditDueDate: form.creditDueDate || undefined,
       commissionAgentId: Number(form.commissionAgentId) || undefined,
       commissionAgentName: form.commissionAgentName || undefined,
       commissionAgentAmount: Number(form.commissionAgentAmount) || undefined,

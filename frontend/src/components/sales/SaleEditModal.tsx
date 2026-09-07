@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Receipt, ShoppingBag, Wallet, Trash2,
   Plane, Hotel, Shield, Package, CheckSquare, Globe,
@@ -9,6 +9,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Input, Select, Combobox, FormField, CurrencyInput } from "../ui/Form";
+import * as api from "../../api";
 import { formatCurrency, formatDate } from "../../utils/formatters";
 import { Sale, Client, User, PaymentRecord } from "../../types";
 
@@ -127,6 +128,27 @@ export default function SaleEditModal({
       setLocalErrors({});
     }
   }, [editingSale]);
+
+  // Los abonos se releen del servidor al abrir.
+  //
+  // `editingSale` es la fila del listado tal como estaba cuando se pulsó, y ese
+  // listado puede llevar minutos en memoria. Un cobro registrado desde la
+  // pantalla de cartera —o por otra persona— quedaba guardado en la base pero
+  // no aparecía aquí, así que la gestión de abonos mostraba menos de lo que el
+  // cliente había pagado. `GET /sales/:id/payments` existía y no lo usaba nadie.
+  //
+  // La guarda por número de petición evita que la respuesta de una venta pise
+  // la de otra si se abren dos seguidas.
+  const peticionPagos = useRef(0);
+  useEffect(() => {
+    if (!isOpen || !saleId) return;
+    const mia = ++peticionPagos.current;
+    api.getSalePayments(saleId)
+      .then((frescos: PaymentRecord[]) => {
+        if (mia === peticionPagos.current && Array.isArray(frescos)) setPayments(frescos);
+      })
+      .catch(() => { /* se conserva lo que trajera el listado */ });
+  }, [isOpen, saleId]);
 
   const totalSaleAmount = editingSale?.total || 0;
   const totalPaidAmount = payments.reduce((acc, p) => acc + p.amount, 0);

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import * as api from '../../api';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useSalesContext } from '../../context/SalesContext';
+import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils/formatters';
 import { Pagination } from '../ui/Pagination';
 import { AgingBar } from './credit/AgingBar';
@@ -54,6 +56,12 @@ export default function CreditDashboard() {
   // Cobrar es editar la venta: mismo permiso, decidido así a propósito.
   const puedeCobrar = canEdit('sales');
 
+  // Un cobro no solo mueve la cartera: cambia la venta en el listado y las
+  // cifras de crédito del panel. Sin avisarles, la pantalla de cartera se
+  // actualizaba y el resto de la aplicación seguía mostrando el importe viejo.
+  const { fetchSales } = useSalesContext();
+  const { invalidateDashboard } = useData();
+
   const [filtro, setFiltro] = useState('all');
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(1);
@@ -95,7 +103,11 @@ export default function CreditDashboard() {
     setAbierta(actual => (actual === clientId ? null : clientId));
   }, []);
 
-  const alCobrar = useCallback(() => setTokenRefresco(n => n + 1), []);
+  const alCobrar = useCallback(() => {
+    setTokenRefresco(n => n + 1);
+    fetchSales();
+    invalidateDashboard();
+  }, [fetchSales, invalidateDashboard]);
 
   // Los tramos con dinero, para no pintar columnas en cero en el resumen.
   const tramosConDinero = useMemo(

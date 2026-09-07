@@ -31,6 +31,18 @@ export async function updateRolePermissions(role: string, permissions: Record<st
   return res.data.data;
 }
 
+/**
+ * El esquema de permisos: qué módulos y acciones existen.
+ *
+ * La rejilla llevaba su propia lista de módulos y declaraba cuatro de los
+ * nueve. Ahora la pide, así que añadir un módulo en el backend no obliga a
+ * tocar el frontend y no hay dos listas que puedan discrepar.
+ */
+export async function getRolesSchema() {
+  const res = await api.get('/roles/schema');
+  return res.data.data;
+}
+
 export async function getRolePermissions(role: string) {
   const res = await api.get(`/roles/${role}/permissions`);
   return res.data.data;

@@ -40,13 +40,15 @@ export interface User {
  */
 export interface RolePermissions {
   dashboard: { view: "all" | "own" | "none" };
-  sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
+  // `delete` faltaba y `authorize('sales','delete')` sí la exige: sin ella en el
+  // tipo, la pantalla de permisos no la conocía y la descartaba al guardar.
+  sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean; delete: boolean };
   clients: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
   responsables: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   itineraries: { view: "all" | "own" | "none"; edit: boolean };
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
-  users: { view: boolean };
-  config: { view: boolean };
+  users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  config: { view: boolean; edit: boolean };
   /**
    * Reescribir los permisos de un rol. Solo `superadmin` la tiene.
    *
@@ -59,38 +61,38 @@ export interface RolePermissions {
 
 export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
-  sales: { view: "own", create: true, edit: true },
+  sales: { view: "own", create: true, edit: true, delete: false },
   clients: { view: "own", create: true, edit: true },
   // El backend los niega por defecto; aquí concedían view/create/edit.
   responsables: { view: false, create: false, edit: false, delete: false },
   itineraries: { view: "own", edit: false },
   commissions: { view: false, create: false, edit: false, delete: false },
-  users: { view: true },
-  config: { view: true },
+  users: { view: true, create: false, edit: false, delete: false },
+  config: { view: true, edit: false },
   permissions: { view: false, edit: false },
 };
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
-  sales: { view: "own", create: true, edit: true },
+  sales: { view: "own", create: true, edit: true, delete: false },
   clients: { view: "own", create: true, edit: true },
   // El backend los niega por defecto; aquí concedían view/create/edit.
   responsables: { view: false, create: false, edit: false, delete: false },
   itineraries: { view: "own", edit: false },
   commissions: { view: false, create: false, edit: false, delete: false },
-  users: { view: true },
-  config: { view: true },
+  users: { view: true, create: false, edit: false, delete: false },
+  config: { view: true, edit: false },
   permissions: { view: false, edit: false },
 };
 
 export const ADMIN_PERMISSIONS: RolePermissions = {
   dashboard: { view: "all" },
-  sales: { view: "all", create: true, edit: true },
+  sales: { view: "all", create: true, edit: true, delete: true },
   clients: { view: "all", create: true, edit: true },
   responsables: { view: true, create: true, edit: true, delete: true },
   itineraries: { view: "all", edit: true },
   commissions: { view: true, create: true, edit: true, delete: true },
-  users: { view: true },
-  config: { view: true },
+  users: { view: true, create: true, edit: true, delete: true },
+  config: { view: true, edit: true },
   // El admin ve la pantalla pero no la guarda: eso es de superadmin.
   permissions: { view: true, edit: false },
 };
@@ -113,11 +115,23 @@ export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTe
   const normalized = JSON.parse(JSON.stringify(baseTemplate)) as RolePermissions;
   if (!perms) return normalized;
 
-  for (const mod of Object.keys(normalized) as (keyof RolePermissions)[]) {
+  // Se recorre la UNIÓN de lo que trae el servidor y lo que tiene la plantilla.
+  //
+  // Antes se recorrían solo las claves de la plantilla local, así que todo
+  // permiso que el backend declarara y esta constante no conociera se caía por
+  // el camino. Eran cinco —config.edit, sales.delete y las tres de users— y el
+  // objeto recortado es el que se enviaba de vuelta en el PUT, que reemplaza
+  // TODAS las filas del rol: abrir la pantalla de permisos y guardar borraba de
+  // la base permisos que nadie había tocado.
+  //
+  // La plantilla se queda solo como valor por omisión cuando el servidor no
+  // responde; ya no decide qué existe.
+  const modulos = new Set([...Object.keys(normalized), ...Object.keys(perms)]);
+  for (const mod of modulos as Set<keyof RolePermissions>) {
     if (perms[mod]) {
       const src = perms[mod] as any;
-      const dst = normalized[mod] as any;
-      for (const key of Object.keys(dst)) {
+      const dst = ((normalized as any)[mod] ??= {}) as any;
+      for (const key of new Set([...Object.keys(dst), ...Object.keys(src)])) {
         if (src[key] !== undefined) {
           const val = src[key];
           if (key === 'view' && SCOPED_VIEW_MODULES.includes(mod)) {

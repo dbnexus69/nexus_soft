@@ -2,7 +2,7 @@ export { login, logout, getMe } from './auth';
 export type { LoginResponse } from './auth';
 export {
   listUsers, getUser, createUser, updateUser, deleteUser,
-  updateRolePermissions, getRolePermissions,
+  updateRolePermissions, getRolePermissions, getRolesSchema,
 } from './users';
 export {
   listClients, getClient, createClient, updateClient, toggleClientStatus,

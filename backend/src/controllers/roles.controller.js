@@ -1,6 +1,16 @@
 const rolesService = require('../services/roles.service');
 const { success } = require('../utils/apiResponse');
 
+// El esquema de permisos, para que la pantalla no lleve su propia lista de
+// módulos. Va antes de '/:role/permissions' en el router.
+exports.getSchema = async (req, res, next) => {
+  try {
+    success(res, rolesService.getSchema());
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getPermissions = async (req, res, next) => {
   try {
     const data = await rolesService.getPermissions(req.params.role);

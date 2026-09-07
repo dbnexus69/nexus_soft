@@ -46,6 +46,43 @@ const MODULE_ACTIONS = {
 const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 
 /**
+ * Rótulos de los módulos y de las acciones, para que la API pueda DESCRIBIR el
+ * esquema de permisos en vez de que la pantalla lo adivine.
+ *
+ * La rejilla del frontend llevaba su propia lista de módulos escrita a mano, y
+ * declaraba cuatro de los nueve. Peor: su plantilla conocía 21 de los 26
+ * permisos, y como la normalización recorría las claves de ESA plantilla,
+ * guardar desde la pantalla descartaba los otros cinco —config.edit,
+ * sales.delete y las tres de users— y `updatePermissions` reemplaza todas las
+ * filas del rol. Es decir, abrir la pantalla y guardar borraba permisos que
+ * nadie había tocado.
+ *
+ * Con el esquema servido desde aquí, añadir un módulo no obliga a tocar el
+ * frontend y no hay dos listas que puedan discrepar.
+ */
+const ETIQUETAS_MODULO = {
+  dashboard: 'Panel',
+  sales: 'Ventas',
+  clients: 'Clientes',
+  responsables: 'Responsables',
+  itineraries: 'Vuelos',
+  commissions: 'Comisionistas',
+  users: 'Usuarios',
+  config: 'Gestión interna',
+  permissions: 'Permisos de rol',
+};
+
+const ETIQUETAS_ACCION = {
+  view: 'Ver',
+  create: 'Crear',
+  edit: 'Editar',
+  delete: 'Eliminar',
+};
+
+/** Todas las acciones que puede tener un módulo, en el orden de la matriz. */
+const ORDEN_ACCIONES = ['view', 'create', 'edit', 'delete'];
+
+/**
  * Los roles administrativos: los que gobiernan la agencia entera y no un
  * conjunto propio de ventas.
  *
@@ -141,6 +178,49 @@ function encodeValor(value) {
 }
 
 class RolesService {
+  /**
+   * El esquema de permisos: qué módulos hay, qué acciones tiene cada uno y de
+   * qué tipo es cada acción.
+   *
+   * Se sirve para que la pantalla no lleve su propia lista. `ORDEN_ACCIONES`
+   * fija las columnas de la matriz, y cada módulo dice cuáles de ellas tiene:
+   * el panel no tiene "crear", y esa ausencia es información —dice que la
+   * acción no existe—, no un hueco que rellenar.
+   *
+   * `tipo: 'scope'` es la vista de los módulos con alcance: no es un sí/no sino
+   * todas / solo las propias / ninguna.
+   */
+  getSchema() {
+    const modules = Object.entries(MODULE_ACTIONS).map(([clave, acciones]) => ({
+      key: clave,
+      label: ETIQUETAS_MODULO[clave] || clave,
+      actions: ORDEN_ACCIONES.filter(a => acciones.includes(a)).map(a => ({
+        key: a,
+        label: ETIQUETAS_ACCION[a] || a,
+        type: a === 'view' && SCOPED_VIEW_MODULES.includes(clave) ? 'scope' : 'boolean',
+      })),
+    }));
+
+    return {
+      // Las columnas de la matriz, en orden.
+      actions: ORDEN_ACCIONES.map(a => ({ key: a, label: ETIQUETAS_ACCION[a] })),
+      modules,
+      // Valores del selector de alcance, para no escribirlos en la pantalla.
+      scopes: [
+        { value: 'all', label: 'Todas' },
+        { value: 'own', label: 'Solo las propias' },
+        { value: 'none', label: 'Ninguna' },
+      ],
+      // Qué roles se pueden editar. `admin` y `superadmin` no: su autorización
+      // la resuelve `authorize.js` sin mirar la base, así que la pantalla debe
+      // mostrarlos en lectura y no ofrecer un guardado que no haría nada.
+      roles: Object.keys(DEFAULT_ROLE_VALUES).map(nombre => ({
+        name: nombre,
+        editable: !ROLES_FIJOS.includes(nombre),
+      })),
+    };
+  }
+
   async getPermissions(role) {
     // Los roles válidos son los que existen en la base, no una lista fija:
     // 'admin' quedaba fuera y por eso el frontend usaba permisos inventados.
@@ -194,6 +274,26 @@ class RolesService {
     if (ROLES_FIJOS.includes(role)) {
       throw new BadRequestError(
         `El rol ${role} no es editable: sus permisos están fijados en el código.`
+      );
+    }
+
+    // El PUT reemplaza TODAS las filas del rol, así que un envío incompleto
+    // borra los permisos que no menciona. Es exactamente lo que hacía la
+    // pantalla: su plantilla conocía 21 de los 26 y guardaba sin los otros
+    // cinco, que desaparecían de la base sin que nadie los hubiera tocado.
+    //
+    // Ahora se rechaza. Un PUT es un reemplazo completo por definición, así que
+    // si falta algo es un error del cliente, no una instrucción de borrarlo.
+    const declarados = [];
+    for (const [modulo, acciones] of Object.entries(MODULE_ACTIONS)) {
+      for (const accion of acciones) {
+        if (permissions[modulo]?.[accion] === undefined) declarados.push(`${modulo}.${accion}`);
+      }
+    }
+    if (declarados.length) {
+      throw new BadRequestError(
+        `Faltan ${declarados.length} permisos en el envío: ${declarados.join(', ')}. ` +
+        'Un PUT reemplaza todos los permisos del rol, así que tienen que venir completos.'
       );
     }
 

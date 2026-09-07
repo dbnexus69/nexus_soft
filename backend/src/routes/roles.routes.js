@@ -10,6 +10,9 @@ router.use(auth);
 // proveedores) no debe servir además para reescribir los permisos de todos los
 // roles. Solo `superadmin` tiene `permissions.edit`.
 
+// Literal antes de la paramétrica: '/:role' capturaría 'schema' como un rol.
+router.get('/schema', authorize('permissions', 'view'), rolesController.getSchema);
+
 router.get('/:role/permissions', authorize('permissions', 'view'), rolesController.getPermissions);
 router.put('/:role/permissions', authorize('permissions', 'edit'), rolesController.updatePermissions);
 

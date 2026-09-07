@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SKELETON } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Modal } from '../ui/Modal';
@@ -127,7 +128,7 @@ export function CreditBreakdownModal({
         {cargando && !desglose ? (
           <div className="space-y-3">
             {[0, 1, 2, 3].map(i => (
-              <div key={i} className="h-10 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              <div key={i} className={`${SKELETON} h-10`} />
             ))}
           </div>
         ) : !desglose ? (

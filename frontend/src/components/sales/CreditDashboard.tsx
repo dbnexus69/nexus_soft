@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SKELETON } from '../ui/Skeleton';
 import { Search, X } from 'lucide-react';
 import * as api from '../../api';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -293,7 +294,7 @@ export default function CreditDashboard() {
                 Array.from({ length: 4 }, (_, i) => (
                   <tr key={i} className="border-t border-slate-200 dark:border-slate-800">
                     <td colSpan={N_COLUMNAS} className="px-3 py-3">
-                      <div className="h-6 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                      <div className={`${SKELETON} h-6`} />
                     </td>
                   </tr>
                 ))

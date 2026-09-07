@@ -157,12 +157,12 @@ const FilaEsqueleto = memo(function FilaEsqueleto() {
         <div className="min-w-0 flex-1 space-y-2 pt-1">
           <div className="flex items-center gap-2">
             <div className="h-3.5 w-40 max-w-[45%] rounded bg-gray-200 dark:bg-slate-700/60" />
-            <div className="h-3 w-16 rounded bg-gray-100 dark:bg-slate-800" />
+            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-slate-700/70" />
           </div>
           <div className="flex items-center gap-3">
-            <div className="h-3 w-24 rounded bg-gray-100 dark:bg-slate-800" />
-            <div className="h-3 w-28 rounded bg-gray-100 dark:bg-slate-800" />
-            <div className="h-3 w-20 rounded bg-gray-100 dark:bg-slate-800" />
+            <div className="h-3 w-24 rounded bg-gray-200 dark:bg-slate-700/70" />
+            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-slate-700/70" />
+            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-slate-700/70" />
           </div>
         </div>
       </div>
@@ -188,7 +188,7 @@ const EsqueletoVacio = memo(function EsqueletoVacio() {
     <div className="flex flex-col items-center justify-center p-12 animate-pulse">
       <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-slate-700/60 mb-4" />
       <div className="h-4 w-44 rounded bg-gray-200 dark:bg-slate-700/60 mb-2" />
-      <div className="h-3 w-64 max-w-full rounded bg-gray-100 dark:bg-slate-800" />
+      <div className="h-3 w-64 max-w-full rounded bg-gray-200 dark:bg-slate-700/70" />
     </div>
   );
 });

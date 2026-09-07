@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { SKELETON } from '../components/ui/Skeleton';
 import { useSearchParams } from "react-router-dom";
 import * as api from "../api";
 import {
@@ -495,7 +496,7 @@ export default function Sales() {
             </CardHeader>
 
             {salesLoading && filteredSales.length === 0 ? (
-              <div className="p-4 space-y-3 animate-pulse">
+              <div className={`${SKELETON} p-4 space-y-3`}>
                 {[...Array(7)].map((_, i) => (
                   <div key={i} className="flex items-center gap-4">
                     <div className="h-8 w-8 rounded-full bg-gray-200" />

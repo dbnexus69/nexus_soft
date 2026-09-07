@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { SKELETON } from '../ui/Skeleton';
 import { AlertCircle, ChevronDown, Receipt } from "lucide-react";
 import * as api from "../../api";
 import { Modal } from "../ui/Modal";
@@ -187,7 +188,7 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
           {loading ? (
             <ul className="divide-y divide-gray-border dark:divide-slate-800">
               {[0, 1, 2].map(i => (
-                <li key={i} className="px-4 sm:px-5 py-3.5 flex items-center gap-3 animate-pulse motion-reduce:animate-none">
+                <li key={i} className={`${SKELETON} px-4 sm:px-5 py-3.5 flex items-center gap-3`}>
                   <div className="w-[18px] h-[18px] rounded bg-gray-200 dark:bg-slate-700/60 shrink-0" />
                   <div className="flex-1 space-y-2">
                     <div className="h-3.5 w-48 max-w-[50%] rounded bg-gray-200 dark:bg-slate-700/60" />

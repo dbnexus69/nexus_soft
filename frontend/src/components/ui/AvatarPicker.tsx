@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { SKELETON } from './Skeleton';
 import { RefreshCw } from 'lucide-react';
 
 export const generateAvatarUrl = (seed: string) => `https://api.dicebear.com/7.x/notionists/svg?seed=${seed}&backgroundColor=transparent`;
@@ -43,7 +44,7 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
   return (
     <div className="flex flex-col items-center w-full">
       <div className="relative mb-6">
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-full blur-xl animate-pulse"></div>
+        <div className={`${SKELETON} absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-full blur-xl`}></div>
         <div className="relative bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-4 border-white dark:border-slate-700 shadow-xl rounded-full p-2 transition-transform duration-300 hover:scale-105">
           <img 
             src={safeValue} 

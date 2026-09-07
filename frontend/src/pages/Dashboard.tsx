@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { SKELETON } from '../components/ui/Skeleton';
 import {
   AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -52,7 +53,7 @@ const Titular = memo(function Titular({
     <div className="min-w-0">
       <p className="text-sm text-accent dark:text-slate-400">{etiqueta}</p>
       {cargando ? (
-        <div className="h-9 w-48 max-w-full rounded bg-gray-200 dark:bg-slate-700/60 animate-pulse motion-reduce:animate-none mt-1.5" />
+        <div className={`${SKELETON} h-9 w-48 max-w-full mt-1.5`} />
       ) : (
         <Cifra
           {...(onDetalle
@@ -96,7 +97,7 @@ const Contador = memo(function Contador({
       <Icono size={16} className="shrink-0 text-accent dark:text-slate-500" />
       <span className="text-sm text-accent dark:text-slate-400 truncate">{etiqueta}</span>
       {cargando ? (
-        <span className="h-4 w-8 rounded bg-gray-200 dark:bg-slate-700/60 animate-pulse motion-reduce:animate-none" />
+        <span className={`${SKELETON} h-4 w-8`} />
       ) : (
         <span className="font-semibold text-primary dark:text-white tabular-nums ml-auto">{valor}</span>
       )}
@@ -267,7 +268,7 @@ export default function Dashboard() {
         <Panel titulo={`Ingresos ${anioActual} frente a ${anioActual - 1}`} className="lg:col-span-2">
           <div className="h-72 w-full">
             {cargando ? (
-              <div className="w-full h-full rounded-xl bg-gray-100 dark:bg-slate-800 animate-pulse motion-reduce:animate-none" />
+              <div className={`${SKELETON} w-full h-full rounded-xl`} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={tendencia} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
@@ -307,7 +308,7 @@ export default function Dashboard() {
         <Panel titulo="Estado de cartera">
           <div className="h-44 w-full">
             {cargando ? (
-              <div className="w-full h-full rounded-xl bg-gray-100 dark:bg-slate-800 animate-pulse motion-reduce:animate-none" />
+              <div className={`${SKELETON} w-full h-full rounded-xl`} />
             ) : (
               <ResponsiveContainer width="99%" height="100%">
                 <PieChart>

@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
+import { SKELETON } from '../../ui/Skeleton';
 import { ChevronRight } from 'lucide-react';
 import * as api from '../../../api';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
@@ -143,7 +144,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
             {cargando && !creditos ? (
               <div className="space-y-2 py-2">
                 {[0, 1].map(i => (
-                  <div key={i} className="h-9 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800" />
+                  <div key={i} className={`${SKELETON} h-9`} />
                 ))}
               </div>
             ) : creditos && creditos.length > 0 ? (

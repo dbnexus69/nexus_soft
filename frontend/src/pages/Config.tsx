@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { SKELETON } from '../components/ui/Skeleton';
 import { 
   Plus, 
   Pencil, 
@@ -299,6 +300,34 @@ export default function Config() {
               </button>
             )}
           </div>
+          {/* La vista de fichas no tiene cabeceras que pulsar, así que el orden
+              va en un control propio. Sin él no se podría ordenar por id, que
+              es como se ven los últimos registros creados. */}
+          {def.vista === 'fichas' && (
+            <div className="flex gap-1 text-xs">
+              {([
+                { por: 'name', etiqueta: 'A–Z', sentido: 'asc' as const },
+                { por: 'id', etiqueta: 'Recientes', sentido: 'desc' as const },
+              ]).map(o => {
+                const activo = orden.por === o.por;
+                return (
+                  <button
+                    key={o.por}
+                    onClick={() => setOrden({ por: o.por, sentido: o.sentido })}
+                    aria-pressed={activo}
+                    className={`rounded-lg px-2.5 py-1 font-semibold transition-colors ${
+                      activo
+                        ? 'bg-highlight text-white'
+                        : 'text-accent hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {o.etiqueta}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Decía "Nuevo Aerolíneas": el rótulo era el plural. Cada catálogo
               declara su singular. */}
           <Button size="sm" onClick={() => handleOpenModal()}>
@@ -314,7 +343,7 @@ export default function Config() {
                 {Array.from({ length: 6 }, (_, i) => (
                   <div
                     key={i}
-                    className="h-16 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none dark:bg-white/5"
+                    className={`${SKELETON} h-16 rounded-xl`}
                   />
                 ))}
               </div>
@@ -344,8 +373,11 @@ export default function Config() {
                       <div className="truncate font-semibold text-slate-900 dark:text-white">
                         {item.name}
                       </div>
-                      <div className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
-                        #{item.id}
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
+                          #{item.id}
+                        </span>
+                        {def.fichaApoyo?.(item)}
                       </div>
                     </div>
                     {/* Las acciones aparecen al pasar por encima o al enfocar
@@ -430,7 +462,7 @@ export default function Config() {
                 Array.from({ length: 5 }, (_, i) => (
                   <tr key={i} className="border-t border-slate-200 dark:border-slate-800">
                     <td colSpan={N_COLUMNAS(def)} className="px-3 py-3">
-                      <div className="h-6 animate-pulse rounded bg-slate-100 motion-reduce:animate-none dark:bg-slate-800" />
+                      <div className={`${SKELETON} h-6`} />
                     </td>
                   </tr>
                 ))

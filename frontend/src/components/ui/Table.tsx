@@ -1,3 +1,4 @@
+import { SKELETON } from './Skeleton';
 
 // La paginación vive en un único sitio: components/ui/Pagination.tsx
 
@@ -32,7 +33,7 @@ export function SkeletonRows({ columnas, filas }: { columnas: number; filas: num
       {Array.from({ length: filas }, (_, i) => (
         <tr key={i}>
           <td colSpan={columnas} className="px-4 py-3">
-            <div className="h-6 animate-pulse rounded bg-slate-100 motion-reduce:animate-none dark:bg-white/5" />
+            <div className={`${SKELETON} h-6`} />
           </td>
         </tr>
       ))}

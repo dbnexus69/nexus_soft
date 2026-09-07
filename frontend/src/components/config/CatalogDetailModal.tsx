@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SKELETON } from '../ui/Skeleton';
 import { Modal } from '../ui/Modal';
 import { getConfigItem } from '../../api/config';
 import type { DefinicionCatalogo } from './catalogos';
@@ -114,7 +115,7 @@ export function CatalogDetailModal({ def, item, onClose, onEditar }: CatalogDeta
             Dónde se usa
           </h3>
           {cargando && usos === null ? (
-            <div className="mt-2 h-5 w-40 animate-pulse rounded bg-slate-100 motion-reduce:animate-none dark:bg-slate-800" />
+            <div className={`${SKELETON} mt-2 h-5 w-40`} />
           ) : usos === null ? (
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               No se pudo comprobar. Vuelve a abrirlo en un momento.

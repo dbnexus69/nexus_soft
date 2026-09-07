@@ -57,6 +57,11 @@ export interface DefinicionCatalogo {
    * correcta es el nombre.
    */
   vista?: 'tabla' | 'fichas';
+  /**
+   * Segunda línea de la ficha, para el dato corto que acompaña al nombre.
+   * Sin ella la vista de fichas ocultaría un campo que la tabla sí mostraba.
+   */
+  fichaApoyo?: (item: any) => ReactNode;
   /** Los paquetes tienen una vista de detalle propia. */
   conDetalle?: boolean;
 }
@@ -189,6 +194,9 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'documentTypes', seccion: 'document-types',
     etiqueta: 'Tipos de documento', singular: 'Tipo de documento',
     desc: 'Documentos de identidad admitidos',
+    // Nombre y abreviatura: dos datos cortos, no una tabla.
+    vista: 'fichas',
+    fichaApoyo: i => <Codigo valor={i.abbreviation} />,
     detalle: [
       { rotulo: 'Nombre', render: i => texto(i.name) },
       { rotulo: 'Abreviatura', render: i => <Codigo valor={i.abbreviation} /> },

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { SKELETON } from '../ui/Skeleton';
 import { Link } from "react-router-dom";
 import { AlertTriangle, PlaneTakeoff, FileSearch, Check, ArrowRight } from "lucide-react";
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
@@ -74,7 +75,7 @@ const Esqueleto = memo(function Esqueleto() {
   return (
     <ul className="divide-y divide-gray-border dark:divide-slate-800">
       {[0, 1, 2].map(i => (
-        <li key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse motion-reduce:animate-none">
+        <li key={i} className={`${SKELETON} flex items-center gap-4 px-5 py-4`}>
           <div className="w-[18px] h-[18px] rounded bg-gray-200 dark:bg-slate-700/60 shrink-0" />
           <div className="flex-1 space-y-2">
             <div className="h-3.5 w-44 max-w-[45%] rounded bg-gray-200 dark:bg-slate-700/60" />

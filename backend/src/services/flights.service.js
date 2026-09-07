@@ -17,6 +17,18 @@ const FMT_HORA = new Intl.DateTimeFormat('en-US', {
 const formatLocalDate = (dt) => (dt ? FMT_FECHA.format(dt) : null);
 const formatLocalTime = (dt) => (dt ? FMT_HORA.format(dt) : null);
 
+/**
+ * ¿Solo las ventas propias?
+ *
+ * Es el alcance de VER, no el de la acción pedida. Las acciones de escritura
+ * son booleanas —`edit: true` no tiene alcance—, así que las comprobaciones de
+ * propiedad del check-in miraban un valor que nunca era 'own' y no se cumplían
+ * nunca: los listados ocultaban el vuelo de otro asesor y el PUT del check-in
+ * sobre ese mismo vuelo pasaba.
+ */
+const soloLasSuyas = ({ viewScope, permissionScope, user } = {}) =>
+  (viewScope || permissionScope) === 'own' && Boolean(user);
+
 /** Una venta anulada o borrada no aparece en itinerarios ni acepta check-in. */
 const VENTA_VIGENTE = { deleted_at: null, status: { not: 'anulado' } };
 
@@ -68,11 +80,11 @@ function predicadoEstado(status, ahora) {
  * búsqueda. Deliberadamente SIN la condición de estado, porque los contadores
  * por estado se calculan sobre este mismo filtro.
  */
-function construirWhereBase({ dateFrom, dateTo, search, permissionScope, user }) {
+function construirWhereBase({ dateFrom, dateTo, search, permissionScope, viewScope, user }) {
   const ventas = { ...VENTA_VIGENTE };
 
   // Con ámbito 'own' un asesor solo ve los vuelos de sus propias ventas.
-  if (permissionScope === 'own' && user) ventas.usuario_id = user.id;
+  if (soloLasSuyas({ permissionScope, viewScope, user })) ventas.usuario_id = user.id;
 
   const where = { prod_tiqueteria: { detalle_venta: { ventas } } };
 
@@ -314,9 +326,9 @@ function descomponerIdPlan(id) {
  * expandido —si no, pedir un mes traería el regreso de otro mes o descartaría
  * la ida que sí entra—.
  */
-function construirWherePlanes({ search, permissionScope, user }) {
+function construirWherePlanes({ search, permissionScope, viewScope, user }) {
   const ventas = { ...VENTA_VIGENTE };
-  if (permissionScope === 'own' && user) ventas.usuario_id = user.id;
+  if (soloLasSuyas({ permissionScope, viewScope, user })) ventas.usuario_id = user.id;
 
   const where = {
     detalle_venta: { ventas },
@@ -500,7 +512,7 @@ const cuboDe = (vuelo) => (vuelo._estado === 'realizado' ? 'realizado'
  */
 const TOPE_PLANES = 500;
 
-async function vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, user }, ahora) {
+async function vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, viewScope, user }, ahora) {
   const planes = await buscarPlanes(construirWherePlanes({ search, permissionScope, user }), TOPE_PLANES);
 
   const todos = planes
@@ -587,17 +599,17 @@ class FlightsService {
    * otro: si un recurso no es visible en la lista, tampoco debe serlo por su
    * URL directa.
    */
-  async getFlightById(id, { permissionScope, user } = {}) {
+  async getFlightById(id, { permissionScope, viewScope, user } = {}) {
     const dePlan = descomponerIdPlan(id);
     if (dePlan) {
-      const { filas } = await vuelosDePlan({ permissionScope, user }, new Date());
+      const { filas } = await vuelosDePlan({ permissionScope, viewScope, user }, new Date());
       const vuelo = filas.find(v => v.id === String(id));
       if (!vuelo) throw new NotFoundError('Vuelo no encontrado');
       const { _salida, _estado, ...fila } = vuelo;
       return fila;
     }
 
-    const whereBase = construirWhereBase({ permissionScope, user });
+    const whereBase = construirWhereBase({ permissionScope, viewScope, user });
     const [tramo] = await buscarTramos({ AND: [whereBase, { id: String(id) }] }, 0, 1);
     if (!tramo) throw new NotFoundError('Vuelo no encontrado');
 
@@ -606,10 +618,10 @@ class FlightsService {
     return fila;
   }
 
-  async listFlights({ pagination, dateFrom, dateTo, checkinStatus, search, permissionScope, user }) {
+  async listFlights({ pagination, dateFrom, dateTo, checkinStatus, search, permissionScope, viewScope, user }) {
     const { page, perPage, skip } = pagination;
     const ahora = new Date();
-    const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, user });
+    const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, viewScope, user });
     const where = combinar(whereBase, predicadoEstado(checkinStatus, ahora));
 
     // El count y las filas comparten el mismo `where`: si divergen, una
@@ -634,11 +646,11 @@ class FlightsService {
    * pantalla hacía contra `listFlights` con filtros distintos: los contadores
    * por estado viajan en `meta.counts`, calculados en SQL.
    */
-  async listCheckins({ pagination, status, dateFrom, dateTo, search, permissionScope, user }) {
+  async listCheckins({ pagination, status, dateFrom, dateTo, search, permissionScope, viewScope, user }) {
     const { page, perPage, skip } = pagination;
     const ahora = new Date();
 
-    const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, user });
+    const whereBase = construirWhereBase({ dateFrom, dateTo, search, permissionScope, viewScope, user });
     const where = combinar(whereBase, predicadoEstado(status, ahora));
 
     // Tres consultas, no cuatro: el `count` para `meta.total` sobraba, porque
@@ -661,7 +673,7 @@ class FlightsService {
       prisma.tramos_vuelo.count({ where: { AND: [whereBase, predCritico(ahora)] } }),
       // Los vuelos vendidos dentro de un plan, que no son tramos y hasta ahora
       // no salían en ninguna de las dos pantallas.
-      vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, user }, ahora),
+      vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, viewScope, user }, ahora),
     ]);
 
     const counts = { pendiente: 0, realizado: 0, cancelado: 0, critico: criticos, total: 0 };
@@ -693,7 +705,7 @@ class FlightsService {
    * Registra el check-in de UN tramo y envía al cliente los documentos
    * adjuntos, que es lo que la pantalla promete al confirmar.
    */
-  async updateCheckin(tramoId, body = {}, files = [], { permissionScope, user } = {}) {
+  async updateCheckin(tramoId, body = {}, files = [], { permissionScope, viewScope, user } = {}) {
     // Con multipart todo llega como string, así que la comparación es directa.
     const pedido = body.checkin || body.checkinStatus || 'realizado';
 
@@ -706,7 +718,7 @@ class FlightsService {
     }
 
     const dePlan = descomponerIdPlan(tramoId);
-    if (dePlan) return this._checkinDePlan(dePlan, pedido, files, { permissionScope, user });
+    if (dePlan) return this._checkinDePlan(dePlan, pedido, files, { permissionScope, viewScope, user });
 
     // El id es el de tramos_vuelo, un uuid en texto. No hacer parseInt.
     const tramo = await prisma.tramos_vuelo.findUnique({
@@ -728,7 +740,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (permissionScope === 'own' && user && venta.usuario_id !== user.id) {
+    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede registrar el check-in de una venta de otro asesor');
     }
 
@@ -810,7 +822,7 @@ class FlightsService {
    * Supabase, que desde aquí no es alcanzable. Los adjuntos que lleguen se
    * rechazan en vez de aceptarse y perderse en silencio.
    */
-  async _checkinDePlan({ planId, direccion }, pedido, files, { permissionScope, user }) {
+  async _checkinDePlan({ planId, direccion }, pedido, files, { permissionScope, viewScope, user }) {
     if (files && files.length) {
       throw new BadRequestError(
         'Un vuelo de plan todavía no puede guardar documentos de check-in: falta la columna donde ponerlos'
@@ -827,7 +839,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (permissionScope === 'own' && user && venta.usuario_id !== user.id) {
+    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede registrar el check-in de una venta de otro asesor');
     }
 
@@ -852,7 +864,7 @@ class FlightsService {
     };
   }
 
-  async cancelCheckin(tramoId, { reasonCanceled }, { permissionScope, user } = {}) {
+  async cancelCheckin(tramoId, { reasonCanceled }, { permissionScope, viewScope, user } = {}) {
     // Cancelar exige guardar el motivo, y `prod_planes` no tiene dónde. Se
     // dice, en vez de guardar el estado y perder el motivo: una cancelación
     // sin motivo es justo lo que este endpoint existe para evitar.
@@ -877,7 +889,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (permissionScope === 'own' && user && venta.usuario_id !== user.id) {
+    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede cancelar el check-in de una venta de otro asesor');
     }
     if (tramo.checkin_status === 'cancelado') {

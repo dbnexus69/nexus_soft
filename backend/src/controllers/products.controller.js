@@ -3,6 +3,7 @@ const { success, noContent, error } = require('../utils/apiResponse');
 const { randomUUID } = require('crypto');
 // Fuente de verdad de las categorías: un slug, el mismo en URL y en base de datos.
 const { CATALOG } = require('../catalog/products');
+const { ForbiddenError } = require('../errors/AppError');
 // El dinero de la venta lo deriva el servidor: misma regla que usa `createSale`.
 const { recalcularVenta, precioProducto } = require('../services/saleTotals');
 const { enHoraColombia } = require('../utils/fechas');
@@ -46,11 +47,26 @@ async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaI
   return newPersona.id;
 }
 
-async function getSale(saleId) {
+/**
+ * La venta a la que se le van a tocar los productos.
+ *
+ * `deleted_at: null`: sin este filtro se podían añadir, editar y borrar
+ * productos de una venta eliminada, que no aparece en ningún listado.
+ *
+ * Y con el alcance de quien pide: si su permiso de ver ventas es 'own', no
+ * puede añadir ni quitar productos de la venta de otro. El alcance solo se
+ * aplicaba en los listados.
+ */
+async function getSale(saleId, req) {
   const id = parseInt(saleId);
-  // `deleted_at: null`: sin este filtro se podían añadir, editar y borrar
-  // productos de una venta eliminada, que no aparece en ningún listado.
-  return prisma.ventas.findFirst({ where: { id, deleted_at: null } });
+  const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null } });
+  if (!venta) return null;
+  // El alcance de VER, no el de la acción: `create` y `edit` son booleanas y no
+  // llevan alcance, así que con el de la acción esto no se cumplía nunca.
+  if (req?.viewScope === 'own' && req.user && venta.usuario_id !== req.user.id) {
+    throw new ForbiddenError('No puede modificar una venta de otro asesor');
+  }
+  return venta;
 }
 
 async function createDetalleProducto(tx, venta_id, categoria, data) {
@@ -90,7 +106,7 @@ const productHandler = (category, tableName, transformData) => ({
       const revisado = esquemaDeCategoria(category).safeParse(req.body);
       if (!revisado.success) return responderInvalido(res, revisado.error);
 
-      const venta = await getSale(req.params.saleId);
+      const venta = await getSale(req.params.saleId, req);
       if (!venta) return error(res, 'Venta no encontrada', 404);
 
       const data = req.body;
@@ -249,7 +265,7 @@ const productHandler = (category, tableName, transformData) => ({
       const venta_id = parseInt(req.params.saleId);
       const id = req.params.productId;
 
-      const venta = await getSale(venta_id);
+      const venta = await getSale(venta_id, req);
       if (!venta) return error(res, 'Venta no encontrada', 404);
 
       const data = req.body;
@@ -375,6 +391,19 @@ const productHandler = (category, tableName, transformData) => ({
       const id = req.params.productId;
       const product = await prisma[tableName].findUnique({ where: { id } });
       if (!product) return error(res, 'Producto no encontrado', 404);
+
+      // El borrado no comprobaba la venta: ni que estuviera vigente ni de quién
+      // era. Se llega a ella por el `:saleId` de la ruta, que es donde el
+      // cliente dice a qué venta pertenece, y se comprueba que el producto sea
+      // de esa venta: sin eso, el id de una venta propia serviría de llave para
+      // borrar el producto de cualquier otra.
+      const venta = await getSale(req.params.saleId, req);
+      if (!venta) return error(res, 'Venta no encontrada', 404);
+      const linea = await prisma.detalle_venta.findUnique({
+        where: { id: product.detalle_venta_id },
+        select: { venta_id: true },
+      });
+      if (linea?.venta_id !== venta.id) return error(res, 'Producto no encontrado', 404);
 
       await prisma.$transaction(async (tx) => {
         const detalle = await tx.detalle_venta.findUnique({

@@ -137,6 +137,18 @@ function authorize(modulo, accion) {
     // Usar directamente el scope de la acción (ya corregido en getEffectivePermissions)
     req.permissionScope = actionScope;
 
+    // El alcance de VER ese módulo, que es el que dice sobre qué registros
+    // puede actuar este usuario.
+    //
+    // `permissionScope` es el de la acción pedida, y las de escribir son
+    // booleanas: `edit: true` no tiene alcance, así que al comprobar una
+    // mutación siempre valía 'true' y la comprobación de propiedad no se
+    // cumplía nunca. Con un asesor de alcance 'own' se veía: los GET daban 404
+    // y el PUT, el cobro y el alta de producto sobre la MISMA venta daban 200.
+    // Quien no puede ver un registro tampoco puede escribirlo.
+    const alcanceDeVer = permissions?.[modulo]?.view;
+    req.viewScope = typeof alcanceDeVer === 'string' ? alcanceDeVer : null;
+
     next();
   };
 }

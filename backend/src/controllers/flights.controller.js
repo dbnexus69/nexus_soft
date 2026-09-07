@@ -10,6 +10,7 @@ exports.list = async (req, res, next) => {
       checkinStatus: req.query.checkinStatus,
       search: req.search,
       permissionScope: req.permissionScope,
+      viewScope: req.viewScope,
       user: req.user
     });
     success(res, result.data, result.meta);
@@ -29,6 +30,7 @@ exports.listCheckins = async (req, res, next) => {
       // Sin reenviar el ámbito, un asesor con view:'own' vería los check-ins
       // de todas las ventas, no solo de las suyas.
       permissionScope: req.permissionScope,
+      viewScope: req.viewScope,
       user: req.user
     });
     success(res, result.data, result.meta);
@@ -44,7 +46,7 @@ exports.cancelCheckin = async (req, res, next) => {
     const result = await flightsService.cancelCheckin(
       req.params.id,
       req.validatedBody,
-      { permissionScope: req.permissionScope, user: req.user }
+      { permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user }
     );
     success(res, result);
   } catch (err) {
@@ -58,6 +60,7 @@ exports.getById = async (req, res, next) => {
     // sugería el esqueleto comentado habría dado NaN contra una columna String.
     const data = await flightsService.getFlightById(req.params.id, {
       permissionScope: req.permissionScope,
+      viewScope: req.viewScope,
       user: req.user,
     });
     success(res, data);
@@ -72,7 +75,7 @@ exports.updateCheckin = async (req, res, next) => {
       req.params.id,
       req.body,
       req.files,
-      { permissionScope: req.permissionScope, user: req.user }
+      { permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user }
     );
     success(res, result);
   } catch (err) {

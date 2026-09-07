@@ -1,5 +1,5 @@
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError } = require('../errors/AppError');
+const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { enHoraColombia } = require('../utils/fechas');
 const { recalcularVenta, aCentimos, precioProducto } = require('./saleTotals');
@@ -180,6 +180,50 @@ function leerCampo(clave, def, valor) {
  */
 const TRAMOS_MORA = ['days1_30', 'days31_60', 'days61_90', 'days90plus'];
 const TRAMOS_ANTIGUEDAD = ['current', ...TRAMOS_MORA, 'undated'];
+
+/**
+ * La venta, comprobada contra el alcance de quien pide.
+ *
+ * El alcance solo se aplicaba al LEER. `listSales` y la cartera filtran por
+ * `usuario_id` cuando el permiso de ver es 'own', pero ninguna mutación miraba
+ * nada: con la venta de otro en la URL se podía cobrar, anular, editar y
+ * borrar. Leer una venta por su id tampoco se comprobaba, así que la lista
+ * ocultaba lo que la URL directa enseñaba.
+ *
+ * Hoy no cambia nada en la práctica —ningún rol tiene el alcance en 'own' en
+ * la base—, y ese es justamente el momento de cerrarlo: el día que alguien lo
+ * ponga desde la pantalla de permisos, tiene que valer para todo y no solo
+ * para los listados.
+ *
+ * `leer` responde 404 y `escribir` 403, igual que en vuelos: al leer no se
+ * confirma que exista la venta de otro; al escribir, quien lo intenta ya sabe
+ * que existe porque tiene su id.
+ */
+/**
+ * Sobre qué ventas puede actuar. Es el alcance de VER, no el de la acción
+ * pedida: las acciones de escritura son booleanas y no tienen alcance, así que
+ * mirar el de la acción dejaba pasar todas las mutaciones.
+ */
+const soloLasSuyas = (alcance = {}) =>
+  (alcance.viewScope || alcance.permissionScope) === 'own' && Boolean(alcance.user);
+
+function esDeOtro(venta, alcance = {}) {
+  return soloLasSuyas(alcance) && venta.usuario_id !== alcance.user.id;
+}
+
+async function ventaVisible(id, alcance = {}, { paraEscribir = false } = {}) {
+  const where = { id: Number(id), deleted_at: null };
+  if (!paraEscribir && soloLasSuyas(alcance)) {
+    where.usuario_id = alcance.user.id;
+  }
+  const venta = await prisma.ventas.findFirst({ where });
+  if (!venta) throw new NotFoundError('Venta no encontrada');
+  if (paraEscribir && esDeOtro(venta, alcance)) {
+    throw new ForbiddenError('No puede modificar una venta de otro asesor');
+  }
+  return venta;
+}
+
 
 /**
  * Los CTE que clasifican cada crédito. UNA sola definición, compartida por el
@@ -1002,7 +1046,7 @@ class SalesService {
     };
   }
 
-  async listSales({ pagination, search, status, asesorId, clientId, responsableId, commissionAgentId, dateFrom, dateTo, permissionScope, user, sortBy, sortOrder }) {
+  async listSales({ pagination, search, status, asesorId, clientId, responsableId, commissionAgentId, dateFrom, dateTo, permissionScope, viewScope, user, sortBy, sortOrder }) {
     const { page, perPage, skip } = pagination;
 
     // Un solo constructor de filtros para las dos consultas: el count de Prisma
@@ -1059,7 +1103,7 @@ class SalesService {
       push('v.creado_at <= ?', new Date(dateTo));
     }
     // El alcance 'own' manda sobre el filtro de asesor que venga por query.
-    const asesorEfectivo = permissionScope === 'own' ? user.id : (asesorId ? parseInt(asesorId) : null);
+    const asesorEfectivo = soloLasSuyas({ permissionScope, viewScope, user }) ? user.id : (asesorId ? parseInt(asesorId) : null);
     if (asesorEfectivo !== null) {
       push('v.usuario_id = ?', asesorEfectivo);
     }
@@ -1213,7 +1257,7 @@ class SalesService {
    * array del LIMIT, así que `?status=overdue` devolvía 0 filas informando de
    * `meta.total: 2` y todas las páginas salían vacías.
    */
-  async getCreditPortfolio({ pagination, search, status, bucket, sortBy, sortOrder, permissionScope, user }) {
+  async getCreditPortfolio({ pagination, search, status, bucket, sortBy, sortOrder, permissionScope, viewScope, user }) {
     const { page, perPage, skip } = pagination;
     const ESTADOS = ['overdue', 'urgent', 'pending', 'ok'];
 
@@ -1253,7 +1297,7 @@ class SalesService {
       filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
     };
 
-    if (permissionScope === 'own' && user) push('v.usuario_id = ?', user.id);
+    if (soloLasSuyas({ permissionScope, viewScope, user })) push('v.usuario_id = ?', user.id);
     if (search) {
       const q = `%${search}%`;
       push(`((cp.nombres || ' ' || cp.apellidos) ILIKE ? OR cp.documento ILIKE ? OR CAST(v.id AS TEXT) ILIKE ?)`, q, q, q);
@@ -1384,7 +1428,7 @@ class SalesService {
    * `meta.totalPages`, y el estado se calculaba con una tercera copia de la
    * regla. Aquí van ya clasificados por el MISMO SQL que el listado.
    */
-  async getClientCredits(clientId, { pagination, permissionScope, user } = {}) {
+  async getClientCredits(clientId, { pagination, permissionScope, viewScope, user } = {}) {
     const id = Number(clientId);
     if (!Number.isInteger(id) || id <= 0) {
       throw new BadRequestError('El identificador del cliente debe ser un número entero');
@@ -1400,7 +1444,7 @@ class SalesService {
     push('v.cliente_id = ?', id);
     // Mismo ámbito que el listado: con alcance 'own' un asesor no ve la cartera
     // de un cliente atendido por otro, ni por su URL directa.
-    if (permissionScope === 'own' && user) push('v.usuario_id = ?', user.id);
+    if (soloLasSuyas({ permissionScope, viewScope, user })) push('v.usuario_id = ?', user.id);
     const extraSql = 'AND ' + filtros.join(' AND ');
     const baseSql = ctesDeCredito(extraSql);
 
@@ -1539,7 +1583,8 @@ class SalesService {
     };
   }
 
-  async getSaleById(id) {
+  async getSaleById(id, alcance = {}) {
+    await ventaVisible(id, alcance);
     const [venta, inventario] = await Promise.all([
       // `findFirst` con `deleted_at: null`, no `findUnique`: una venta eliminada
       // seguía devolviendo 200 por su id aunque no apareciera en ningún listado.
@@ -1574,7 +1619,8 @@ class SalesService {
   }
 
   // Todos los productos de la venta. Lo usa el voucher, que necesita la venta entera.
-  async getSaleProducts(id) {
+  async getSaleProducts(id, alcance = {}) {
+    await ventaVisible(id, alcance);
     const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null }, select: { id: true } });
     if (!venta) throw new NotFoundError('Venta no encontrada');
 
@@ -1589,7 +1635,8 @@ class SalesService {
 
   // Una sola categoría. Un producto hijo de un plan no sale aquí:
   // solo aparece dentro del GET de su plan.
-  async getSaleProductsByCategory(id, category) {
+  async getSaleProductsByCategory(id, category, alcance = {}) {
+    await ventaVisible(id, alcance);
     const entry = CATALOG[category];
     if (!entry) throw new NotFoundError(`Categoría de producto desconocida: ${category}`);
 
@@ -1627,10 +1674,9 @@ class SalesService {
   }
 
 
-  async voidSale(id, reason) {
+  async voidSale(id, reason, alcance = {}) {
     if (!reason) throw new BadRequestError('Debe proporcionar un motivo para anular la venta');
-    const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null } });
-    if (!venta) throw new NotFoundError('Venta no encontrada');
+    const venta = await ventaVisible(id, alcance, { paraEscribir: true });
 
     const newObservaciones = venta.observaciones ? `${venta.observaciones}\n[ANULADA] Motivo: ${reason}` : `[ANULADA] Motivo: ${reason}`;
     await prisma.ventas.update({
@@ -1641,12 +1687,14 @@ class SalesService {
     return { message: 'Venta anulada correctamente' };
   }
 
-  async removeSale(id) {
+  async removeSale(id, alcance = {}) {
+    await ventaVisible(id, alcance, { paraEscribir: true });
     await prisma.ventas.update({ where: { id }, data: { deleted_at: new Date() } });
     return { message: 'Venta eliminada' };
   }
 
-  async registerPayment(id, { amount, isTotal, method, reference }) {
+  async registerPayment(id, { amount, isTotal, method, reference }, alcance = {}) {
+    await ventaVisible(id, alcance, { paraEscribir: true });
     const { randomUUID } = require('crypto');
     // `method` llega como NOMBRE ("Efectivo"): así lo envía el modal de venta y
     // así se buscaba. Se acepta también el id, porque `createSale` sí usa el id
@@ -1707,7 +1755,8 @@ class SalesService {
     };
   }
 
-  async deletePayment(saleId, paymentId) {
+  async deletePayment(saleId, paymentId, alcance = {}) {
+    await ventaVisible(saleId, alcance, { paraEscribir: true });
     // Misma corrección que en `registerPayment`: la rama que aceptaba
     // `currentPayments` y `saleTotal` del cuerpo dejaba que el cliente
     // decidiera el estado de cobro resultante.
@@ -1753,7 +1802,7 @@ class SalesService {
    *   que reevaluarlo porque una edición puede dejar a crédito una venta sin
    *   fecha, y sin fecha no hay mora que reclamar.
    */
-  async updateSale(id, body = {}) {
+  async updateSale(id, body = {}, alcance = {}) {
     const ventaId = Number(id);
 
     const invalidos = Object.keys(body)
@@ -1767,8 +1816,7 @@ class SalesService {
     }
     if (!Object.keys(body).length) throw new BadRequestError('No se envió ningún campo que editar');
 
-    const venta = await prisma.ventas.findFirst({ where: { id: ventaId, deleted_at: null } });
-    if (!venta) throw new NotFoundError('Venta no encontrada');
+    const venta = await ventaVisible(ventaId, alcance, { paraEscribir: true });
     // Una venta anulada ya salió del circuito de cobro, y `voidSale` deja el
     // motivo en las observaciones: reescribirlas borraría la traza.
     if (venta.status === 'anulado') throw new BadRequestError('Una venta anulada no se puede editar');
@@ -1819,7 +1867,8 @@ class SalesService {
     return this.getSaleById(ventaId);
   }
 
-  async updateReviewStatus(saleId, isReviewed) {
+  async updateReviewStatus(saleId, isReviewed, alcance = {}) {
+    await ventaVisible(saleId, alcance, { paraEscribir: true });
     const sale = await prisma.ventas.findFirst({ where: { id: saleId, deleted_at: null } });
     if (!sale) throw new NotFoundError('Venta no encontrada');
     if (sale.status !== 'pagado') throw new BadRequestError('La venta debe estar pagada para ser revisada');
@@ -1833,7 +1882,8 @@ class SalesService {
     return updatedSale;
   }
 
-  async listPayments(saleId) {
+  async listPayments(saleId, alcance = {}) {
+    await ventaVisible(saleId, alcance);
     // Los pagos de una venta eliminada tampoco se leen: era el último hueco
     // por el que una venta borrada seguía asomando.
     const payments = await prisma.pagos_venta.findMany({
@@ -1850,7 +1900,8 @@ class SalesService {
     }));
   }
 
-  async sendVoucher(saleId, pdfBase64) {
+  async sendVoucher(saleId, pdfBase64, alcance = {}) {
+    await ventaVisible(saleId, alcance);
     if (!pdfBase64) throw new BadRequestError('El PDF es requerido (base64)');
     const venta = await prisma.ventas.findFirst({
       where: { id: saleId, deleted_at: null },

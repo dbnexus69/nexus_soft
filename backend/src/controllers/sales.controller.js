@@ -1,6 +1,16 @@
 const salesService = require('../services/sales.service');
 const { success, noContent } = require('../utils/apiResponse');
 
+/**
+ * El alcance del permiso, tal como lo deja `authorize`.
+ *
+ * Se pasa a TODAS las operaciones sobre una venta, no solo a los listados: el
+ * servicio comprueba con él si quien pide puede ver o modificar esa venta.
+ * Antes solo lo recibían `list`, la cartera y los créditos por cliente, así
+ * que la lista ocultaba lo que la URL directa enseñaba.
+ */
+const alcanceDe = (req) => ({ permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user });
+
 exports.list = async (req, res, next) => {
   try {
     const result = await salesService.listSales({
@@ -14,6 +24,7 @@ exports.list = async (req, res, next) => {
       dateFrom: req.query.dateFrom,
       dateTo: req.query.dateTo,
       permissionScope: req.permissionScope,
+      viewScope: req.viewScope,
       user: req.user,
       sortBy: req.sortBy,
       sortOrder: req.sortOrder
@@ -26,7 +37,7 @@ exports.list = async (req, res, next) => {
 
 exports.getProducts = async (req, res, next) => {
   try {
-    const data = await salesService.getSaleProducts(parseInt(req.params.id));
+    const data = await salesService.getSaleProducts(parseInt(req.params.id), alcanceDe(req));
     success(res, data);
   } catch (err) {
     next(err);
@@ -36,7 +47,8 @@ exports.getProducts = async (req, res, next) => {
 exports.getProductsByCategory = async (req, res, next) => {
   try {
     const data = await salesService.getSaleProductsByCategory(
-      parseInt(req.params.id), req.params.category
+      parseInt(req.params.id), req.params.category,
+      alcanceDe(req),
     );
     success(res, data);
   } catch (err) {
@@ -60,6 +72,7 @@ exports.creditPortfolio = async (req, res, next) => {
       sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
       permissionScope: req.permissionScope,
+      viewScope: req.viewScope,
       user: req.user,
     });
     success(res, result.data, result.meta);
@@ -74,6 +87,7 @@ exports.creditByClient = async (req, res, next) => {
     const result = await salesService.getClientCredits(req.params.clientId, {
       pagination: req.pagination,
       permissionScope: req.permissionScope,
+      viewScope: req.viewScope,
       user: req.user,
     });
     success(res, result.data, result.meta);
@@ -85,7 +99,7 @@ exports.creditByClient = async (req, res, next) => {
 exports.getById = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const data = await salesService.getSaleById(id);
+    const data = await salesService.getSaleById(id, alcanceDe(req));
     success(res, data);
   } catch (err) {
     next(err);
@@ -95,7 +109,7 @@ exports.getById = async (req, res, next) => {
 exports.voidSale = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await salesService.voidSale(id, req.body.reason);
+    const result = await salesService.voidSale(id, req.body.reason, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);
@@ -105,7 +119,7 @@ exports.voidSale = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    await salesService.removeSale(id);
+    await salesService.removeSale(id, alcanceDe(req));
     noContent(res);
   } catch (err) {
     next(err);
@@ -115,7 +129,7 @@ exports.remove = async (req, res, next) => {
 exports.registerPayment = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await salesService.registerPayment(id, req.body);
+    const result = await salesService.registerPayment(id, req.body, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);
@@ -129,7 +143,7 @@ exports.deletePayment = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.saleId);
     const paymentId = req.params.paymentId;
-    const result = await salesService.deletePayment(saleId, paymentId);
+    const result = await salesService.deletePayment(saleId, paymentId, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);
@@ -139,7 +153,7 @@ exports.deletePayment = async (req, res, next) => {
 exports.updateReviewStatus = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.id);
-    const result = await salesService.updateReviewStatus(saleId, req.body.isReviewed);
+    const result = await salesService.updateReviewStatus(saleId, req.body.isReviewed, alcanceDe(req));
     success(res, result, 'Estado de revisión actualizado');
   } catch (err) {
     next(err);
@@ -149,7 +163,7 @@ exports.updateReviewStatus = async (req, res, next) => {
 exports.listPayments = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.id);
-    const data = await salesService.listPayments(saleId);
+    const data = await salesService.listPayments(saleId, alcanceDe(req));
     success(res, data);
   } catch (err) {
     next(err);
@@ -159,7 +173,7 @@ exports.listPayments = async (req, res, next) => {
 exports.sendVoucher = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.id);
-    const result = await salesService.sendVoucher(saleId, req.body.pdfBase64);
+    const result = await salesService.sendVoucher(saleId, req.body.pdfBase64, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);
@@ -178,7 +192,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     // `paramsNumericos` ya garantiza que :id es un entero dentro de int4.
-    const data = await salesService.updateSale(Number(req.params.id), req.validatedBody || req.body);
+    const data = await salesService.updateSale(Number(req.params.id), req.validatedBody || req.body, alcanceDe(req));
     success(res, data);
   } catch (err) {
     next(err);

@@ -48,6 +48,15 @@ export interface DefinicionCatalogo {
    * rica, con vuelo, alojamiento y tarifas.
    */
   detalle?: CampoDetalle[];
+  /**
+   * Cómo se presenta el catálogo.
+   *
+   * `fichas` para los que son poco más que una etiqueta: una tabla de dos
+   * columnas —id y nombre— gasta cabeceras, líneas y ancho para no decir nada
+   * más que la lista de nombres. Cuando el registro ES su nombre, la forma
+   * correcta es el nombre.
+   */
+  vista?: 'tabla' | 'fichas';
   /** Los paquetes tienen una vista de detalle propia. */
   conDetalle?: boolean;
 }
@@ -170,6 +179,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'paymentMethods', seccion: 'payment-methods',
     etiqueta: 'Formas de pago', singular: 'Forma de pago',
     desc: 'Cómo se cobra y se paga en el sistema',
+    vista: 'fichas',
     detalle: [
       { rotulo: 'Nombre', render: i => texto(i.name) },
     ],

@@ -31,7 +31,7 @@ import { useCommissionsContext } from "../context/CommissionsContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, capitalizeName, todayStr } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
-import LoadingScreen from "../components/ui/LoadingScreen";
+import { SkeletonRows } from "../components/ui/Table";
 import { AgentDetailsModal } from "../components/commissions/AgentDetailsModal";
 
 export default function CommissionAgents() {
@@ -230,10 +230,7 @@ export default function CommissionAgents() {
     { id: "history", label: "Historial", icon: History },
   ] as const;
 
-  if (isLoading && commissionAgents.length === 0) {
-    return <LoadingScreen fullScreen={false} />;
-  }
-
+  // Sin retorno temprano: la tabla trae su esqueleto y el alto no salta.
   return (
     <div className="space-y-6 relative pb-10">
       {/* Toast Notification */}
@@ -547,6 +544,7 @@ export default function CommissionAgents() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
+                      {isLoading && commissionAgents.length === 0 && <SkeletonRows columnas={6} filas={5} />}
                       {(data.commissionSettlements || []).length > 0 ? (
                         [...(data.commissionSettlements || [])].reverse().map((s: any) => (
                           <tr key={s.id} className="hover:bg-accent/5 transition-all group">

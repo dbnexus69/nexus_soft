@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, TableRow, TableCell } from '../ui/Table';
+import { Table, TableRow, TableCell, SkeletonRows } from '../ui/Table';
 import { Badge } from '../ui/Badge';
 import Avatar from '../ui/Avatar';
 import SortIcon from '../ui/SortIcon';
@@ -15,9 +15,12 @@ interface ClientTableProps {
   onViewDetail: (client: Client) => void;
   onEdit: (client: Client) => void;
   onToggleStatus: (client: Client) => void;
+  /** Filas fantasma mientras llegan los datos. */
+  loading?: boolean;
 }
 
 export const ClientTable: React.FC<ClientTableProps> = ({
+  loading = false,
   clients,
   sortBy,
   sortOrder,
@@ -52,6 +55,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+          {loading && <SkeletonRows columnas={8} filas={5} />}
           {clients.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-slate-500">

@@ -37,7 +37,6 @@ import StatCard from "../components/ui/StatCard";
 import CreditDashboard from "../components/sales/CreditDashboard";
 import { VoucherPDF } from "../components/sales/VoucherPDF";
 import { useRef } from "react";
-import LoadingScreen from "../components/ui/LoadingScreen";
 
 export default function Sales() {
   const { data } = useData(); // para airports, config, etc.
@@ -337,9 +336,7 @@ export default function Sales() {
     }
   };
 
-  if (salesLoading && sales.length === 0) {
-    return <LoadingScreen fullScreen={false} />;
-  }
+  // Sin retorno temprano: la tabla trae su esqueleto y el alto no salta.
 
   return (
     <div className="space-y-6 relative">
@@ -526,6 +523,7 @@ export default function Sales() {
               </div>
             ) : (
               <SalesTable
+                loading={salesLoading && sales.length === 0}
                 sales={filteredSales}
                 onViewDetail={handleViewDetail}
                 onDownloadVoucher={handleDownloadVoucher}

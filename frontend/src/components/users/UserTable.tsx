@@ -1,5 +1,5 @@
 import React from "react";
-import { Table, TableRow, TableCell } from "../ui/Table";
+import { Table, TableRow, TableCell, SkeletonRows } from "../ui/Table";
 import { Badge } from "../ui/Badge";
 import Avatar from "../ui/Avatar";
 import SortIcon from "../ui/SortIcon";
@@ -20,9 +20,12 @@ interface UserTableProps {
   onViewDetail: (user: User) => void;
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
+  /** Filas fantasma mientras llegan los datos. */
+  loading?: boolean;
 }
 
 export const UserTable: React.FC<UserTableProps> = ({
+  loading = false,
   users,
   sortBy,
   sortOrder,
@@ -62,6 +65,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+          {loading && <SkeletonRows columnas={9} filas={5} />}
           {users.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="text-center py-8 text-slate-500">

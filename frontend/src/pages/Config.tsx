@@ -34,7 +34,6 @@ import ConfigForms from '../components/config/ConfigForms';
 import { getConfigSection, updateConfigItem, createConfigItem as addConfigItem, deleteConfigItem } from '../api/config';
 import { formatCurrency, formatMealPlan } from '../utils/formatters';
 import { Pagination } from "../components/ui/Pagination";
-import LoadingScreen from '../components/ui/LoadingScreen';
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
 
@@ -214,9 +213,7 @@ export default function Config() {
 
 
 
-  if (loading && (!config.suppliers || config.suppliers.length === 0)) {
-    return <LoadingScreen fullScreen={false} />;
-  }
+  // Sin retorno temprano: la tabla y la vista de fichas traen su esqueleto.
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -295,6 +292,88 @@ export default function Config() {
           </Button>
         </div>
 
+        {def.vista === 'fichas' ? (
+          <div className="p-4">
+            {isSectionLoading && paginatedData.length === 0 ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="h-16 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none dark:bg-white/5"
+                  />
+                ))}
+              </div>
+            ) : paginatedData.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="font-semibold text-slate-700 dark:text-slate-200">
+                  {searchTerm.trim()
+                    ? `Nada coincide con "${searchTerm.trim()}"`
+                    : `Aún no hay ${def.etiqueta.toLowerCase()}`}
+                </p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {searchTerm.trim()
+                    ? 'Prueba con otro término.'
+                    : `Crea la primera con "Nuevo ${def.singular.toLowerCase()}".`}
+                </p>
+              </div>
+            ) : (
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {paginatedData.map((item: any) => (
+                  <li
+                    key={item.id}
+                    className={`group flex items-start justify-between gap-2 rounded-xl border border-gray-border px-3 py-2.5 transition-colors hover:border-highlight/60 ${
+                      isOptimisticId(item) ? 'opacity-50' : ''
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-slate-900 dark:text-white">
+                        {item.name}
+                      </div>
+                      <div className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
+                        #{item.id}
+                      </div>
+                    </div>
+                    {/* Las acciones aparecen al pasar por encima o al enfocar
+                        con el teclado: con seis fichas, dieciocho botones
+                        siempre visibles pesan más que las propias fichas. */}
+                    <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => setViendoItem(item)}
+                        title="Ver detalle"
+                        aria-label={`Ver el detalle de ${item.name}`}
+                        disabled={isOptimisticId(item)}
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-white"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenModal(item)}
+                        title="Editar"
+                        aria-label={`Editar ${item.name}`}
+                        disabled={isOptimisticId(item)}
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-white"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id)}
+                        title="Eliminar"
+                        aria-label={`Eliminar ${item.name}`}
+                        disabled={isOptimisticId(item)}
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -417,6 +496,7 @@ export default function Config() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Con `total` y `perPage`: sin ellos el paginador no podía decir
             cuántos registros hay, y se ocultaba del todo con una sola página. */}

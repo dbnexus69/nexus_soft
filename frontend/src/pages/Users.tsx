@@ -14,7 +14,6 @@ import UserDetailModal from "../components/users/UserDetailModal";
 import { UserTable } from "../components/users/UserTable";
 import { UserModal } from "../components/users/UserModal";
 import { User } from "../types";
-import LoadingScreen from "../components/ui/LoadingScreen";
 
 export default function Users() {
   const { data, fetchConfig } = useData(); // Dejamos data para referencias a config que no hemos migrado aun si las hubiera
@@ -128,10 +127,8 @@ export default function Users() {
     }
   };
 
-  if (usersLoading && users.length === 0) {
-    return <LoadingScreen fullScreen={false} />;
-  }
-
+  // Sin retorno temprano: la página se pinta y la tabla trae su esqueleto,
+  // así el alto no salta ni desaparecen los filtros en cada carga.
   const handleSort = (field: string) => {
     setSortConfig(prev => ({
       key: field as keyof User,
@@ -218,6 +215,7 @@ export default function Users() {
           </CardHeader>
           <div className="overflow-x-auto">
             <UserTable
+          loading={usersLoading && users.length === 0}
               users={filteredUsers}
               sortBy={sortConfig.key}
               sortOrder={sortConfig.direction}

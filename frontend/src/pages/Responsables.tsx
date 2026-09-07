@@ -17,7 +17,6 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { formatDate, capitalizeName, formatId, todayStr } from '../utils/formatters';
 import { Responsable } from '../types';
-import LoadingScreen from '../components/ui/LoadingScreen';
 
 import AvatarPicker, { AVATARS } from '../components/ui/AvatarPicker';
 import { DatePicker } from '../components/sales/forms/TicketForm';
@@ -396,10 +395,8 @@ export default function Responsables() {
     return () => { vivo = false; };
   }, [selectedResponsable]);
 
-  if (isLoading && data.responsables.length === 0) {
-    return <LoadingScreen fullScreen={false} />;
-  }
-
+  // Sin retorno temprano: la página se pinta y la tabla trae su esqueleto,
+  // así el alto no salta ni desaparecen los filtros en cada carga.
   return (
     <div className="space-y-6 relative">
       {showConfetti && (
@@ -535,6 +532,7 @@ export default function Responsables() {
           Lista de Responsables
         </CardHeader>
         <Table 
+          loading={isLoading && data.responsables.length === 0}
           headers={[
             { key: 'id', label: '#' },
             { key: 'name', label: 'Responsable' },

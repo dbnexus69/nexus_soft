@@ -16,9 +16,12 @@ interface SalesTableProps {
   canEditThis: (sale: Sale) => boolean;
   isAdmin: boolean;
   onReviewStatusChange?: (saleId: number, isReviewed: boolean) => void;
+  /** Filas fantasma mientras llegan los datos. */
+  loading?: boolean;
 }
 
 export default function SalesTable({
+  loading = false,
   sales,
   onViewDetail,
   onDownloadVoucher,
@@ -37,6 +40,7 @@ export default function SalesTable({
   return (
     <div className="flex flex-col gap-4">
     <Table
+      loading={loading}
       headers={[
         "#",
         "Cliente",

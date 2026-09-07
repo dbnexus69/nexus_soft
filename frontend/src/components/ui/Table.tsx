@@ -5,9 +5,42 @@ interface TableProps {
   headers?: React.ReactNode[];
   children: React.ReactNode;
   className?: string;
+  /**
+   * Filas fantasma mientras carga, en vez de las filas de verdad.
+   *
+   * Cinco páginas sustituían TODA su pantalla por `LoadingScreen`: la tabla, su
+   * cabecera y los filtros desaparecían y volvían, y el alto de la página
+   * saltaba en cada carga. Con el esqueleto la cabecera se queda quieta y se ve
+   * dónde van a aparecer los datos.
+   *
+   * Quien llama decide cuándo: lo normal es `loading && filas.length === 0`, de
+   * forma que una recarga con datos ya en pantalla no los haga parpadear.
+   */
+  loading?: boolean;
+  skeletonRows?: number;
 }
 
-export function Table({ headers, children, className = '' }: TableProps) {
+/**
+ * Filas fantasma. Se exporta porque las tablas que construyen su propia
+ * cabecera —clientes, usuarios, comisionistas— no pasan por la rama de
+ * `headers` de `Table` y las ponen dentro de su `tbody`. Una sola definición
+ * del efecto para todas.
+ */
+export function SkeletonRows({ columnas, filas }: { columnas: number; filas: number }) {
+  return (
+    <>
+      {Array.from({ length: filas }, (_, i) => (
+        <tr key={i}>
+          <td colSpan={columnas} className="px-4 py-3">
+            <div className="h-6 animate-pulse rounded bg-slate-100 motion-reduce:animate-none dark:bg-white/5" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+export function Table({ headers, children, className = '', loading = false, skeletonRows = 5 }: TableProps) {
   if (!headers) {
     return (
       <div className={`overflow-x-auto ${className}`}>
@@ -30,7 +63,11 @@ export function Table({ headers, children, className = '' }: TableProps) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-white/5">{children}</tbody>
+        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+          {loading
+            ? <SkeletonRows columnas={headers.length || 1} filas={skeletonRows} />
+            : children}
+        </tbody>
       </table>
     </div>
   );

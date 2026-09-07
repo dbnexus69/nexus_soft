@@ -17,6 +17,7 @@ export default function Clients() {
   const { data } = useData();
   const { 
     clients, 
+    loading: clientsLoading, 
     handleCreateClient: addClient, 
     handleUpdateClient: updateClient, 
     handleToggleStatus: toggleClientStatus 
@@ -178,7 +179,8 @@ export default function Clients() {
         </CardHeader>
         
         <div className="overflow-x-auto">
-          <ClientTable 
+          <ClientTable
+            loading={clientsLoading && clients.length === 0} 
             clients={filteredClients}
             sortBy={sortConfig.key}
             sortOrder={sortConfig.direction}

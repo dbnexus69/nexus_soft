@@ -1406,9 +1406,17 @@ class SalesService {
 
   async registerPayment(id, { amount, isTotal, method, reference }) {
     const { randomUUID } = require('crypto');
+    // `method` llega como NOMBRE ("Efectivo"): así lo envía el modal de venta y
+    // así se buscaba. Se acepta también el id, porque `createSale` sí usa el id
+    // para el mismo campo y enviarlo aquí guardaba el pago sin método, en
+    // silencio. Con las dos formas, ninguna de las dos convenciones pierde el
+    // dato mientras se unifican.
     let metodo_pago_id = null;
-    if (method) {
-      const m = await prisma.metodos_pago.findFirst({ where: { nombre: method } });
+    if (method !== undefined && method !== null && method !== '') {
+      const comoId = Number(method);
+      const m = Number.isInteger(comoId) && comoId > 0
+        ? await prisma.metodos_pago.findUnique({ where: { id: comoId } })
+        : await prisma.metodos_pago.findFirst({ where: { nombre: String(method) } });
       if (m) metodo_pago_id = m.id;
     }
 

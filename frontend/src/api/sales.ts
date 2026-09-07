@@ -17,6 +17,18 @@ export async function getCreditPortfolio(params: Record<string, unknown>) {
   return res.data;
 }
 
+/**
+ * Los créditos de UN cliente, ya clasificados por tramo de antigüedad.
+ *
+ * Antes esto se hacía con `listSales({ clientId, perPage: 50 })` y se filtraba
+ * en el navegador: se traía la venta entera con todos sus productos para leer
+ * cuatro campos, y se cortaba en 50 sin mirar `meta.totalPages`.
+ */
+export async function getClientCredits(clientId: number, params: Record<string, unknown> = {}) {
+  const res = await api.get(`/sales/credit/${clientId}`, { params });
+  return res.data;
+}
+
 // Todos los productos de la venta. Lo usa el voucher, que necesita la venta entera.
 export async function getSaleProducts(id: number) {
   const res = await api.get(`/sales/${id}/products`);

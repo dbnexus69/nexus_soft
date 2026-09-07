@@ -11,7 +11,7 @@ export {
   listResponsables, getResponsable, createResponsable, updateResponsable, deleteResponsable,
 } from './responsables';
 export {
-  listSales, getSale, getCreditPortfolio, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, deleteSale, voidSale,
+  listSales, getSale, getCreditPortfolio, getClientCredits, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, deleteSale, voidSale,
   registerPayment, deletePayment, getSalePayments, createProduct, updateProduct, deleteProduct,
   sendVoucher, updateReviewStatus,
 } from './sales';

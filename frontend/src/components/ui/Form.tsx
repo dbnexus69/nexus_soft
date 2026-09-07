@@ -70,7 +70,16 @@ export function Input({ className = '', error, onBlur, value, ...props }: InputP
   );
 }
 
-export function CurrencyInput({ className = '', error, value, onChange, placeholder, ...props }: InputProps & { value?: string | number, onChange?: (val: string) => void }) {
+// `Omit<..., 'onChange'>`, no una intersección: `InputProps & { onChange?: (val: string) => void }`
+// exigía que el manejador fuese a la vez el de React y el de string, que es
+// imposible de satisfacer. Compilaba solo si el parámetro se dejaba sin anotar,
+// y fallaba en cuanto alguien escribía `(val: string)`.
+type CurrencyInputProps = Omit<InputProps, 'onChange' | 'value'> & {
+  value?: string | number;
+  onChange?: (val: string) => void;
+};
+
+export function CurrencyInput({ className = '', error, value, onChange, placeholder, ...props }: CurrencyInputProps) {
   const [displayValue, setDisplayValue] = useState('');
 
   useEffect(() => {
@@ -252,4 +261,4 @@ export function Textarea({ className = '', value, ...props }: TextareaProps) {
       {...props}
     />
   );
-}
+}

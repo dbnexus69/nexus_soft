@@ -234,13 +234,28 @@ cobro sin salir de la pantalla y las cifras se mueven.
 
 **Fase 5 — ordenación y el aviso de las ventas sin fecha.**
 
-## Decisiones que hacen falta antes de la fase 3
+## Decisiones tomadas
 
-1. **Los tramos.** Propongo vencido / 7 días / más adelante, que es lo que ya
-   usan los filtros. La cobranza suele trabajar con 30/60/90 días de mora. ¿Con
-   cuáles trabajas?
-2. **Las ventas sin fecha de vencimiento.** ¿Se corrigen poniéndole fecha a la
-   venta 39, o el aviso permanente en la pantalla es suficiente? Si un crédito
-   puede nacer sin fecha, conviene decidir si eso debería impedirse al vender.
-3. **Quién cobra.** `POST /sales/:id/payments` pide `sales.edit`. ¿Debe poder
-   cobrar quien no puede editar una venta? Hoy son el mismo permiso.
+1. **Tramos: el informe de antigüedad estándar.** Corriente y mora en 1–30 /
+   31–60 / 61–90 / +90 días. La distinción que aporta sobre el "vencido / por
+   vencer" anterior es la que decide el orden de las llamadas: una deuda de una
+   semana y una de seis meses no se persiguen igual.
+2. **Las ventas sin fecha no se corrigen** —son datos de prueba—, pero **la
+   fecha de vencimiento pasa a ser obligatoria en toda venta a crédito**, y la
+   regla la decide el dinero, no la casilla `isCredit`. Commit `863c468`.
+3. **Cobrar exige `sales.edit`**, el mismo permiso que editar la venta.
+
+## Estado de las fases
+
+| Fase | Estado |
+|---|---|
+| 0 — fecha de vencimiento obligatoria | hecho, `863c468` |
+| 1 — tramos de antigüedad en la API | hecho, `0bed680` |
+| 2 — `GET /sales/credit/:clientId` | hecho, `0bed680` |
+| 3 — la tabla | hecho |
+| 4 — desplegable y cobro | hecho |
+| 5 — ordenación por columna | pendiente |
+
+Fuera todavía: la ordenación por columna (`?sortBy=`), y el `parseInt` de
+`req.params` que devuelve 500 con un id no numérico en 24 sitios de 6
+controladores.

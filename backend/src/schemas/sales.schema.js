@@ -105,7 +105,8 @@ const updateSaleSchema = z.object({
 const registerPaymentSchema = z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor que cero'),
   isTotal: z.boolean().optional(),
-  method: z.string().nullable().optional(),
+  // Nombre o id del método de pago: el servicio acepta las dos formas.
+  method: z.union([z.string(), z.number()]).nullable().optional(),
   reference: z.string().nullable().optional(),
   // `currentPaidAmount` y `saleTotal` estaban declarados aquí y el servicio los
   // usaba para calcular el estado de cobro. Se retiraron de la lógica por ser

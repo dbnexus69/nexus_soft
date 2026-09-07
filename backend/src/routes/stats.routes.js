@@ -19,6 +19,10 @@ router.get('/attention', authorize('dashboard', 'view'), statsController.attenti
 
 router.get('/asesor-performance', authorize('dashboard', 'view'), statsController.asesorPerformance);
 router.get('/top-clients', authorize('dashboard', 'view'), statsController.topClients);
+
+// Acepta el mismo rango de fechas que /dashboard para que la modal muestre el
+// mismo periodo que la pantalla desde la que se abre.
+router.get('/credit-breakdown', authorize('dashboard', 'view'), validateQuery(dateRangeSchema), statsController.creditBreakdown);
 router.get('/category-distribution', authorize('dashboard', 'view'), statsController.categoryDistribution);
 
 // Se retiró GET /sales-history: el controlador era un placeholder que devolvía

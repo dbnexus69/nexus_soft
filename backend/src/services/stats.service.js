@@ -149,6 +149,154 @@ class StatsService {
    * `$queryRaw` con plantilla etiquetada parametriza sola, así que interpolar
    * `${...}` aquí es seguro: Prisma lo convierte en un placeholder.
    */
+  /**
+   * De lo que deben los clientes, cuánto es de la agencia.
+   *
+   * La pregunta que responde: la cartera son 17 millones, pero la mayor parte
+   * no es dinero de la oficina —es el coste de servicios ya comprados que hay
+   * que pagar a los proveedores—. Ver el pendiente sin ese reparto da una idea
+   * equivocada de la caja disponible.
+   *
+   * El reparto es PROPORCIONAL a lo que queda por cobrar: si de una venta se ha
+   * cobrado la mitad, se considera pendiente la mitad de su coste de proveedor y
+   * la mitad de su margen. Es el criterio neutro; imputar los cobros primero al
+   * proveedor o primero al margen serían decisiones contables distintas y
+   * ninguna está acordada.
+   *
+   * Las tres partes SIEMPRE suman el pendiente. `unclassified` no es un relleno:
+   * hay ventas cuyo `ta_total + costo_proveedor_total` no llega al total —datos
+   * antiguos donde el precio se guardó sin desglose—, y su dinero tiene que
+   * aparecer en algún sitio. Medido en esta base: 2 ventas y 4.585.000 sin
+   * desglosar. Esconderlo dejaría un cuadro que no cuadra.
+   */
+  async getCreditBreakdown({ dateFrom, dateTo, permissionScope, user, limit = 6 } = {}) {
+    const tope = Math.min(Math.max(Number(limit) || 6, 1), 20);
+    const scopeUserId = permissionScope === 'own' ? user.id : null;
+
+    const filtros = [];
+    const params = [];
+    const push = (sql, ...valores) => {
+      filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
+    };
+    if (dateFrom) push('v.creado_at >= ?', new Date(dateFrom));
+    if (dateTo) push('v.creado_at <= ?', new Date(dateTo));
+    if (scopeUserId !== null) push('v.usuario_id = ?', scopeUserId);
+    const extraSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
+
+    // EXACTAMENTE el mismo predicado que `pendingBalance` del dashboard.
+    //
+    // Esta modal es el detalle de esa cifra, así que las dos tienen que salir
+    // del mismo filtro. Estaba escrito de otra forma —añadía `es_credito` y
+    // `pagado < total`— y daba el mismo resultado, pero por cómo están los
+    // datos, no por construcción: dos definiciones que coinciden hoy y pueden
+    // dejar de coincidir mañana son justo lo que hace que una pantalla
+    // contradiga a otra.
+    //
+    // Desde 8006dfa el estado se deriva del dinero —`pagado >= total` es
+    // 'pagado'—, así que `status IN ('credito','abonado')` ya significa "queda
+    // algo por cobrar", y las condiciones que se quitan eran redundantes.
+    const vigencia = `
+      v.deleted_at IS NULL
+      AND v.status IN ('credito', 'abonado')
+      ${extraSql}`;
+
+    const sqlPendienteProveedor = `
+      d.costo_proveedor
+      * (GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0)
+         / NULLIF(v.monto_total, 0))`;
+
+    const [composicion, proveedores, totalProveedores] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        WITH pesos AS (
+          SELECT
+            GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0) AS pendiente,
+            COALESCE(v.ta_total, 0)              AS ta,
+            COALESCE(v.costo_proveedor_total, 0) AS cp,
+            GREATEST(v.monto_total - COALESCE(v.ta_total, 0) - COALESCE(v.costo_proveedor_total, 0), 0) AS resto
+          FROM ventas v
+          WHERE ${vigencia}
+        )
+        SELECT
+          COALESCE(SUM(pendiente), 0)::float                                              AS "pending",
+          -- Se normaliza por la suma de los tres pesos, no por el total: así las
+          -- tres partes cierran exactamente contra el pendiente incluso cuando
+          -- ta + coste no coincide con el total de la venta.
+          COALESCE(SUM(pendiente * cp    / NULLIF(ta + cp + resto, 0)), 0)::float          AS "supplier",
+          COALESCE(SUM(pendiente * ta    / NULLIF(ta + cp + resto, 0)), 0)::float          AS "agency",
+          COALESCE(SUM(pendiente * resto / NULLIF(ta + cp + resto, 0)), 0)::float          AS "unclassified",
+          COUNT(*)::int                                                                    AS "salesCount",
+          COUNT(*) FILTER (WHERE resto > 0)::int                                           AS "salesWithoutBreakdown"
+        FROM pesos
+      `, ...params),
+
+      prisma.$queryRawUnsafe(`
+        SELECT
+          d.proveedor_id AS id,
+          pr.nombre      AS name,
+          COALESCE(SUM(${sqlPendienteProveedor}), 0)::float   AS pending,
+          COUNT(DISTINCT v.id)::int AS "salesCount"
+        FROM detalle_venta d
+        JOIN ventas v ON v.id = d.venta_id
+        LEFT JOIN proveedores pr ON pr.id = d.proveedor_id
+        WHERE ${vigencia}
+        GROUP BY d.proveedor_id, pr.nombre
+        HAVING COALESCE(SUM(${sqlPendienteProveedor}), 0) > 0
+        ORDER BY pending DESC, "salesCount" DESC
+        LIMIT $${params.length + 1}
+      `, ...params, tope),
+
+      // Cuántos hay en total: el listado va topado y la pantalla no debe
+      // presentarlo como si fuera la lista completa.
+      prisma.$queryRawUnsafe(`
+        SELECT COUNT(*)::int AS total FROM (
+          SELECT d.proveedor_id
+          FROM detalle_venta d
+          JOIN ventas v ON v.id = d.venta_id
+          WHERE ${vigencia}
+          GROUP BY d.proveedor_id
+          HAVING COALESCE(SUM(${sqlPendienteProveedor}), 0) > 0
+        ) x
+      `, ...params),
+    ]);
+
+    const c = composicion[0] || {};
+
+    // El reparto se redondea al peso ANTES de salir, y el redondeo se cierra
+    // contra el pendiente: redondear cada parte por su cuenta puede dejar un
+    // peso de diferencia, y una pantalla donde tres cifras no suman su total es
+    // exactamente lo que no debe ocurrir en una vista de dinero. La diferencia
+    // se le añade a la parte mayor, donde un peso no cambia nada, en vez de
+    // dejar que aparezca como un negativo absurdo en una parte que era cero.
+    const pending = Math.round(c.pending || 0);
+    const partes = {
+      supplier: Math.round(c.supplier || 0),
+      agency: Math.round(c.agency || 0),
+      unclassified: Math.round(c.unclassified || 0),
+    };
+    const desvio = pending - (partes.supplier + partes.agency + partes.unclassified);
+    if (desvio !== 0) {
+      const mayor = Object.keys(partes).reduce((a, b) => (partes[a] >= partes[b] ? a : b));
+      partes[mayor] += desvio;
+    }
+
+    return {
+      pending,
+      composition: partes,
+      salesCount: c.salesCount || 0,
+      salesWithoutBreakdown: c.salesWithoutBreakdown || 0,
+      suppliersCount: totalProveedores[0]?.total || 0,
+      // `id: null` es real: hay líneas de venta sin proveedor asignado, y su
+      // coste forma parte de la deuda igual. Se devuelve tal cual para que la
+      // pantalla pueda nombrarlo en vez de sumarlo a otro proveedor.
+      suppliers: proveedores.map(p => ({
+        id: p.id,
+        name: p.name,
+        pending: Math.round(p.pending),
+        salesCount: p.salesCount,
+      })),
+    };
+  }
+
   async getTopClients({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
     return prisma.$queryRaw`

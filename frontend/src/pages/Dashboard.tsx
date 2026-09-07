@@ -9,6 +9,7 @@ import { formatCurrency, getCurrentMonth } from "../utils/formatters";
 import { useData } from "../context/DataContext";
 import { useDashboardStats } from "../hooks/useDashboardStats";
 import { AttentionPanel } from "../components/dashboard/AttentionPanel";
+import { CreditBreakdownModal } from "../components/dashboard/CreditBreakdownModal";
 import * as api from "../api";
 import { AttentionSummary } from "../types";
 
@@ -37,19 +38,48 @@ const CARTERA_COLORS = ["#16a34a", "var(--color-accent)", "var(--color-highlight
  * grande. `tabular-nums` para poder comparar entre periodos.
  */
 const Titular = memo(function Titular({
-  etiqueta, valor, apoyo, acento, cargando,
-}: { etiqueta: string; valor: number; apoyo: string; acento?: boolean; cargando: boolean }) {
+  etiqueta, valor, apoyo, acento, cargando, onDetalle, detalleTexto,
+}: {
+  etiqueta: string; valor: number; apoyo: string; acento?: boolean; cargando: boolean;
+  /** Si se pasa, la cifra abre su detalle. */
+  onDetalle?: () => void; detalleTexto?: string;
+}) {
+  // La cifra es el disparador, y es un botón de verdad: se llega con el teclado
+  // y se anuncia como lo que hace. Un `onClick` en el div no hace ni una cosa
+  // ni la otra.
+  const Cifra = onDetalle ? "button" : "p";
   return (
     <div className="min-w-0">
       <p className="text-sm text-accent dark:text-slate-400">{etiqueta}</p>
       {cargando ? (
         <div className="h-9 w-48 max-w-full rounded bg-gray-200 dark:bg-slate-700/60 animate-pulse motion-reduce:animate-none mt-1.5" />
       ) : (
-        <p className={`font-heading text-[2.125rem] leading-none font-bold tabular-nums mt-1.5 ${acento ? "text-highlight" : "text-primary dark:text-white"}`}>
+        <Cifra
+          {...(onDetalle
+            ? { type: "button" as const, onClick: onDetalle, "aria-label": `${etiqueta}: ${formatCurrency(valor)}. ${detalleTexto || "Ver detalle"}` }
+            : {})}
+          className={`block font-heading text-[2.125rem] leading-none font-bold tabular-nums mt-1.5 text-left ${
+            acento ? "text-highlight" : "text-primary dark:text-white"
+          } ${onDetalle ? "rounded underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight/50" : ""}`}
+        >
           {formatCurrency(valor)}
-        </p>
+        </Cifra>
       )}
-      <p className="text-xs text-accent dark:text-slate-400 mt-2">{apoyo}</p>
+      <p className="text-xs text-accent dark:text-slate-400 mt-2">
+        {apoyo}
+        {onDetalle && detalleTexto && !cargando && (
+          <>
+            {" · "}
+            <button
+              type="button"
+              onClick={onDetalle}
+              className="font-semibold text-highlight-ink underline-offset-2 hover:underline dark:text-highlight"
+            >
+              {detalleTexto}
+            </button>
+          </>
+        )}
+      </p>
     </div>
   );
 });
@@ -101,6 +131,7 @@ export default function Dashboard() {
     return { startDate: start, endDate: end };
   });
 
+  const [desgloseAbierto, setDesgloseAbierto] = useState(false);
   const [atencion, setAtencion] = useState<AttentionSummary | null>(null);
   const [atencionCargando, setAtencionCargando] = useState(true);
   const primeraCarga = useRef(true);
@@ -183,6 +214,8 @@ export default function Dashboard() {
               apoyo={`${stats.PendienteCount} ${stats.PendienteCount === 1 ? "venta a crédito" : "ventas a crédito"}`}
               acento
               cargando={cargando}
+              onDetalle={() => setDesgloseAbierto(true)}
+              detalleTexto="ver de quién es"
             />
           </div>
 
@@ -303,6 +336,15 @@ export default function Dashboard() {
 
       {/* ── Lo que requiere acción ────────────────────────────────────── */}
       <AttentionPanel resumen={atencion} cargando={atencionCargando} />
+
+      {/* El detalle de "Por cobrar": el mismo rango de fechas, para que las
+          cifras de la modal y las del panel no se contradigan. */}
+      <CreditBreakdownModal
+        isOpen={desgloseAbierto}
+        onClose={() => setDesgloseAbierto(false)}
+        dateFrom={paramsDeFecha().dateFrom as string | undefined}
+        dateTo={paramsDeFecha().dateTo as string | undefined}
+      />
     </div>
   );
 }

@@ -51,6 +51,23 @@ exports.topClients = async (req, res, next) => {
   }
 };
 
+// Composición de la cartera: de lo que deben los clientes, cuánto va a los
+// proveedores y cuánto es margen de la agencia.
+exports.creditBreakdown = async (req, res, next) => {
+  try {
+    const data = await statsService.getCreditBreakdown({
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      limit: req.query.limit,
+      permissionScope: req.permissionScope,
+      user: req.user,
+    });
+    success(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.categoryDistribution = async (req, res, next) => {
   try {
     const data = await statsService.getCategoryDistribution({ ...ambito(req), limit: req.query.limit });

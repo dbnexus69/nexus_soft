@@ -16,6 +16,16 @@ export async function getTopClients(params: Record<string, unknown> = {}) {
   return res.data.data;
 }
 
+/**
+ * De lo que deben los clientes, cuánto va a los proveedores y cuánto es margen
+ * de la agencia. Se pide al abrir la modal, no con el dashboard: es el detalle
+ * de una cifra, no parte de la portada.
+ */
+export async function getCreditBreakdown(params: Record<string, unknown> = {}) {
+  const res = await api.get('/stats/credit-breakdown', { params });
+  return res.data.data;
+}
+
 export async function getCategoryDistribution(params: Record<string, unknown> = {}) {
   const res = await api.get('/stats/category-distribution', { params });
   return res.data.data;

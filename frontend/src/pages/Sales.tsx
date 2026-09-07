@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as api from "../api";
 import {
   Plus,
@@ -74,7 +75,16 @@ export default function Sales() {
   const [salesDetails, setSalesDetails] = useState<Record<number, Sale>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<'list' | 'credit'>('list');
+  // La pestaña viaja en la URL: así se puede enlazar directamente a la cartera
+  // —lo hace el desglose del panel— y el botón de atrás del navegador funciona.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab: 'list' | 'credit' = searchParams.get('tab') === 'credit' ? 'credit' : 'list';
+  const setActiveTab = (tab: 'list' | 'credit') => {
+    const siguiente = new URLSearchParams(searchParams);
+    if (tab === 'credit') siguiente.set('tab', 'credit');
+    else siguiente.delete('tab');
+    setSearchParams(siguiente, { replace: true });
+  };
   const [voidConfirm, setVoidConfirm] = useState<Sale | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);

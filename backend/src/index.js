@@ -73,10 +73,11 @@ const authLimiter = rateLimit({
 // el límite general de 1000 por minuto se recorren en pocos minutos. Y
 // `forgot-password` manda un correo por petición, así que sin límite es un
 // generador de correo para cualquiera.
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/forgot-password', authLimiter);
-app.use('/api/auth/verify-code', authLimiter);
-app.use('/api/auth/reset-password', authLimiter);
+// Los dos prefijos, /api y /api/v1: montar el limitador solo en uno dejaría el
+// otro como puerta abierta para probar contraseñas y códigos sin freno.
+for (const ruta of ['login', 'forgot-password', 'verify-code', 'reset-password']) {
+  app.use([`/api/auth/${ruta}`, `/api/v1/auth/${ruta}`], authLimiter);
+}
 
 // Parsing
 app.use(express.json({ limit: '50mb' }));
@@ -92,6 +93,14 @@ if (env.nodeEnv === 'development') {
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rutas
+// La API se sirve en /api/v1 y en /api.
+//
+// No estaba versionada: cualquier cambio incompatible —el que hizo falta en
+// PUT /sales/:id, por ejemplo, que ya no acepta el total ni el estado— rompe a
+// la vez a todos los clientes, sin forma de fijar una versión. /api/v1 es el
+// camino nuevo; /api se mantiene como alias del actual para no romper nada de
+// lo que ya hay desplegado, y el frontend apunta ya a /api/v1.
+app.use('/api/v1', routes);
 app.use('/api', routes);
 
 // Health check

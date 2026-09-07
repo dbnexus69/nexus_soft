@@ -729,3 +729,33 @@ exports.uploadVoucher = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Categoría -> su manejador de actualización.
+ *
+ * Existe para la ruta PATCH genérica: el `update` de estos endpoints escribe
+ * solo lo que llega —descarta lo que el transform rellena por su cuenta—, así
+ * que su semántica es la de PATCH, no la de PUT. Los quince PUT se mantienen,
+ * que son los que usa el frontend.
+ *
+ * Se construye a partir de los propios exports, no a mano: una categoría nueva
+ * entra en el mapa por definir su handler, sin acordarse de este bloque.
+ */
+exports.ACTUALIZADORES = Object.fromEntries(
+  Object.entries({
+    ticket: exports.updateTicket, hotel: exports.updateHotel, insurance: exports.updateInsurance,
+    plan: exports.updatePlan, checkin: exports.updateCheckin, migration: exports.updateMigration,
+    simcard: exports.updateSimcard, car: exports.updateCarRental, finca: exports.updateFinca,
+    tour: exports.updateTour, convention: exports.updateConvention, restaurant: exports.updateRestaurant,
+    visa: exports.updateVisa, passport: exports.updatePassport, pet: exports.updatePetService,
+  })
+);
+
+/** Despacha PATCH /:saleId/products/:categoria/:productId a su categoría. */
+exports.patchProducto = (req, res, next) => {
+  const manejador = exports.ACTUALIZADORES[req.params.categoria];
+  if (!manejador) {
+    return error(res, `Categoría de producto desconocida: ${req.params.categoria}`, 404, 'NOT_FOUND');
+  }
+  return manejador(req, res, next);
+};

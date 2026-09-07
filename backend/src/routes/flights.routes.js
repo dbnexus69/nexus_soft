@@ -8,10 +8,16 @@ const paginate = require('../middleware/paginate');
 // 5MB. El `multer()` que había aquí era en memoria, sin filtro y sin límite.
 const upload = require('../middleware/upload');
 const { validate, validateQuery } = require('../middleware/validate');
+const { paramsUuid } = require('../middleware/numericParams');
 const { cancelCheckinSchema } = require('../schemas/flights.schema');
 const { dateRangeSchema } = require('../schemas/common.schema');
 
 router.use(auth);
+
+// El id de un vuelo es el uuid de su tramo, o el compuesto de un vuelo de plan
+// (`plan:<uuid>:ida`). Cualquier otra cosa es un 400, no un 404: un 404 diría
+// que no existe, cuando lo que pasa es que no tiene forma de identificador.
+paramsUuid(router, 'id');
 
 // Las rutas literales van ANTES de las paramétricas: Express resuelve en orden
 // de declaración, así que un `/:id` por encima capturaría `checkins` como id.

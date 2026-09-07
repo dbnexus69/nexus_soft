@@ -1,10 +1,13 @@
 const { Router } = require('express');
-const { paramsNumericos } = require('../middleware/numericParams');
+const { paramsNumericos, paramsUuid } = require('../middleware/numericParams');
 const router = Router();
 
 // Un id no numérico es un 400, no el 500 que salía de `parseInt` -> NaN -> Prisma.
 // `paymentId` y `productId` quedan fuera a propósito: son uuid.
 paramsNumericos(router, 'id', 'saleId', 'clientId');
+// Los productos y los pagos tienen id uuid. Con nombres distintos de `id`, que
+// es lo que hace que las dos comprobaciones puedan convivir en un router.
+paramsUuid(router, 'productId', 'paymentId');
 const salesController = require('../controllers/sales.controller');
 const productsController = require('../controllers/products.controller');
 const auth = require('../middleware/auth');
@@ -108,6 +111,11 @@ router.delete('/:saleId/products/passport/:productId', authorize('sales', 'delet
 router.post('/:saleId/products/pet', authorize('sales', 'create'), productsController.createPetService);
 router.put('/:saleId/products/pet/:productId', authorize('sales', 'edit'), productsController.updatePetService);
 router.delete('/:saleId/products/pet/:productId', authorize('sales', 'delete'), productsController.deletePetService);
+
+// PATCH de producto, uno para las quince categorías. Mismo manejador que el
+// PUT de arriba: escribe solo los campos que llegan, que es lo que significa
+// PATCH. Va DESPUÉS de los PUT literales y no interfiere: es otro verbo.
+router.patch('/:saleId/products/:categoria/:productId', authorize('sales', 'edit'), productsController.patchProducto);
 
 // Voucher upload
 router.post('/:saleId/products/:category/:productId/voucher', authorize('sales', 'edit'), upload.single('file'), productsController.uploadVoucher);

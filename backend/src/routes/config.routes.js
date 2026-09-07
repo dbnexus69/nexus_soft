@@ -21,7 +21,12 @@ router.get('/:section/:id', configController.getItem);
 // Las escrituras se validan con el esquema de su catálogo. Antes no se
 // validaba nada: un cuerpo vacío creaba un registro llamado "Sin nombre".
 router.post('/:section', authorize('config', 'edit'), validateBySection(ESQUEMAS), configController.createItem);
+// PATCH y PUT, el mismo manejador: `updateItem` escribe solo los campos que
+// llegan (`updateData = { ...data }`), o sea que su semántica siempre fue la de
+// PATCH. Se añade el verbo que la describe y se mantiene PUT, que es el que
+// usan el frontend y cualquier cliente ya escrito.
 router.put('/:section/:id', authorize('config', 'edit'), validateBySection(ESQUEMAS), configController.updateItem);
+router.patch('/:section/:id', authorize('config', 'edit'), validateBySection(ESQUEMAS), configController.updateItem);
 router.delete('/:section/:id', authorize('config', 'edit'), configController.removeItem);
 
 module.exports = router;

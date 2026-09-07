@@ -19,7 +19,13 @@ const MAX_INT4 = 2147483647;
  * `parseInt`, y esos `parseInt` dejan de poder producir `NaN`.
  *
  * NO se aplica a los identificadores que son uuid —los tramos de vuelo, los
- * pagos, los productos—: ahí un valor no numérico es lo normal.
+ * pagos, los productos—: ésos van con `paramsUuid`.
+ *
+ * **Ojo con el nombre del parámetro.** `router.param` se aplica a TODO el
+ * router, no a la ruta donde se declara. Las rutas de producto usaban `:id`
+ * para el uuid del producto y este middleware las rompió enteras —400 en cada
+ * PUT y cada DELETE— hasta que pasaron a llamarse `:productId`. Si un router
+ * mezcla ids enteros y uuid, tienen que tener nombres distintos.
  */
 function paramsNumericos(router, ...nombres) {
   for (const nombre of nombres) {
@@ -47,4 +53,35 @@ function paramsNumericos(router, ...nombres) {
   }
 }
 
-module.exports = { paramsNumericos, MAX_INT4 };
+/**
+ * Igual, para los identificadores que son uuid.
+ *
+ * Sin esto, `/sales/18/payments/no-es-un-uuid` acababa en la base buscando esa
+ * cadena para devolver 404: un 404 dice "no existe", cuando lo que pasa es que
+ * el identificador no tiene forma de identificador. Y en las tablas donde el
+ * id es `text` sin índice utilizable para el valor, el 404 se pagaba con un
+ * recorrido de tabla por cada petición mal formada.
+ *
+ * Se acepta el uuid con o sin guiones, que es como lo emiten distintos
+ * clientes, y el id compuesto de los vuelos de plan (`plan:<uuid>:ida`), que
+ * es un identificador válido de este API.
+ */
+const UUID = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+const ID_VUELO_PLAN = /^plan:[0-9a-f-]{32,36}:(ida|regreso)$/i;
+
+function paramsUuid(router, ...nombres) {
+  for (const nombre of nombres) {
+    router.param(nombre, (req, res, next, valor) => {
+      const texto = String(valor);
+      if (!UUID.test(texto) && !ID_VUELO_PLAN.test(texto)) {
+        return next(new BadRequestError(
+          `El parámetro ${nombre} no es un identificador válido: "${texto}"`,
+          'INVALID_PARAM',
+        ));
+      }
+      next();
+    });
+  }
+}
+
+module.exports = { paramsNumericos, paramsUuid, MAX_INT4, UUID };

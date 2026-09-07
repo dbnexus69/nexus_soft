@@ -39,6 +39,7 @@ import LoadingScreen from '../components/ui/LoadingScreen';
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
 
 import SortIcon from '../components/ui/SortIcon';
+import { CatalogDetailModal } from '../components/config/CatalogDetailModal';
 import { CATALOGOS, CATALOGO_POR_ID, N_COLUMNAS } from '../components/config/catalogos';
 
 /**
@@ -65,6 +66,7 @@ export default function Config() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [viewingPackage, setViewingPackage] = useState<any>(null);
+  const [viendoItem, setViendoItem] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [avisoBorrado, setAvisoBorrado] = useState<string | null>(null);
@@ -232,7 +234,20 @@ export default function Config() {
           `config[seccion].length`, que es el catálogo cacheado de /config/all,
           y como `packages` no viaja en esa carga su contador era siempre 0.
           El número real de registros lo dice el paginador, una sola vez. */}
-      <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" aria-label="Catálogos">
+      {/* Pestañas subrayadas, no pastillas.
+          La pastilla activa era `bg-slate-900` en claro y `bg-white` en oscuro:
+          un bloque blanco puro sobre un fondo casi negro (#111216), que no
+          pertenece a esta paleta y deslumbra. Y las inactivas dependían de
+          `slate-800`, casi el mismo tono que la tarjeta, así que en oscuro
+          apenas se distinguían del fondo.
+          El subrayado usa `--color-highlight`, que el tema ya define en las dos
+          variantes (#0F7B8A claro, #3FB8C7 oscuro), así que se lee igual de bien
+          en ambos sin un caso especial. Además distingue navegación de filtro:
+          las pastillas se usan para filtrar, en la cartera. */}
+      <nav
+        className="-mx-1 flex gap-1 overflow-x-auto border-b border-gray-border px-1"
+        aria-label="Catálogos"
+      >
         {CATALOGOS.map(c => {
           const activo = currentSection === c.id;
           return (
@@ -240,10 +255,10 @@ export default function Config() {
               key={c.id}
               onClick={() => { setCurrentSection(c.id); setSearchTerm(''); }}
               aria-current={activo ? 'page' : undefined}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight/40 ${
                 activo
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  ? 'border-highlight text-highlight'
+                  : 'border-transparent text-accent hover:border-gray-border hover:text-primary dark:hover:text-white'
               }`}
             >
               {c.etiqueta}
@@ -362,10 +377,10 @@ export default function Config() {
                     ))}
                     <td className="px-3 py-2.5">
                       <div className="flex justify-end gap-1">
-                        {def.conDetalle && (
+                        {(def.detalle || def.conDetalle) && (
                           <button
                             type="button"
-                            onClick={() => setViewingPackage(item)}
+                            onClick={() => (def.conDetalle ? setViewingPackage(item) : setViendoItem(item))}
                             title="Ver detalle"
                             aria-label={`Ver el detalle de ${item.name}`}
                             disabled={isOptimisticId(item)}
@@ -415,6 +430,13 @@ export default function Config() {
           className="border-t border-slate-200 px-4 py-3 dark:border-slate-800"
         />
       </div>
+
+      <CatalogDetailModal
+        def={def}
+        item={viendoItem}
+        onClose={() => setViendoItem(null)}
+        onEditar={handleOpenModal}
+      />
 
       <Modal
         isOpen={isModalOpen}

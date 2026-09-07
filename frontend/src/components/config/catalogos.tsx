@@ -25,6 +25,13 @@ export interface ColumnaCatalogo {
   render: (item: any) => ReactNode;
 }
 
+export interface CampoDetalle {
+  rotulo: string;
+  render: (item: any) => ReactNode;
+  /** Ocupa el ancho completo: descripciones, notas, observaciones. */
+  ancho?: boolean;
+}
+
 export interface DefinicionCatalogo {
   /** Clave del frontend, la que usa `data.config`. */
   id: string;
@@ -34,6 +41,13 @@ export interface DefinicionCatalogo {
   singular: string;
   desc: string;
   columnas: ColumnaCatalogo[];
+  /**
+   * Campos del detalle. Muestran MÁS que la fila —lo que no cabe en la tabla:
+   * observaciones, notas, el país de un aeropuerto—, que es lo que justifica
+   * abrir una ventana. Los paquetes no la llevan: tienen su propia vista, más
+   * rica, con vuelo, alojamiento y tarifas.
+   */
+  detalle?: CampoDetalle[];
   /** Los paquetes tienen una vista de detalle propia. */
   conDetalle?: boolean;
 }
@@ -98,25 +112,26 @@ const Enlace = ({ url }: { url?: string | null }) => {
 };
 
 /**
- * Nombre del registro con su id debajo, en pequeño.
+ * El id, en su propia columna y ordenable.
  *
- * El diseño anterior daba a un id autoincremental la primera columna de la
- * tabla, que es el sitio más visible. El id no dice nada del registro: se
- * mantiene porque sirve para hablar de una fila, pero de apoyo, como el
- * documento del cliente en la cartera.
+ * Estaba de apoyo bajo el nombre y no se podía ordenar por él, que es lo que
+ * hace falta para ver los últimos registros creados. Va primero y estrecho:
+ * ocupa poco y no compite con el nombre.
  */
-const Nombre = ({ item }: { item: any }) => (
-  <div className="min-w-0">
-    <div className="truncate font-semibold text-slate-900 dark:text-white">
-      {item.name || <Vacio />}
-    </div>
-    <div className="text-xs tabular-nums text-slate-400 dark:text-slate-500">#{item.id}</div>
-  </div>
-);
+const COL_ID: ColumnaCatalogo = {
+  clave: 'id', rotulo: '#', orden: 'id', derecha: true,
+  render: item => (
+    <span className="tabular-nums text-xs text-slate-400 dark:text-slate-500">{item.id}</span>
+  ),
+};
 
 const COL_NOMBRE: ColumnaCatalogo = {
   clave: 'name', rotulo: 'Nombre', orden: 'name',
-  render: item => <Nombre item={item} />,
+  render: item => (
+    <span className="block truncate font-semibold text-slate-900 dark:text-white">
+      {item.name || <Vacio />}
+    </span>
+  ),
 };
 
 // ── Los ocho catálogos ──────────────────────────────────────────────────────
@@ -126,7 +141,14 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'cards', seccion: 'cards',
     etiqueta: 'Tarjetas', singular: 'Tarjeta',
     desc: 'Tarjetas de crédito y débito de la agencia',
+    detalle: [
+      { rotulo: 'Forma de pago', render: i => texto(i.paymentMethod) },
+      { rotulo: 'Terminación', render: i => (i.lastFourDigits ? <span className="font-mono tabular-nums">•••• {i.lastFourDigits}</span> : <Vacio />) },
+      { rotulo: 'Estado', render: i => <Estado valor={i.status} /> },
+      { rotulo: 'Descripción', ancho: true, render: i => texto(i.description) },
+    ],
     columnas: [
+      COL_ID,
       COL_NOMBRE,
       { clave: 'paymentMethod', rotulo: 'Forma de pago', render: i => texto(i.paymentMethod) },
       {
@@ -148,13 +170,21 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'paymentMethods', seccion: 'payment-methods',
     etiqueta: 'Formas de pago', singular: 'Forma de pago',
     desc: 'Cómo se cobra y se paga en el sistema',
-    columnas: [COL_NOMBRE],
+    detalle: [
+      { rotulo: 'Nombre', render: i => texto(i.name) },
+    ],
+    columnas: [COL_ID, COL_NOMBRE],
   },
   {
     id: 'documentTypes', seccion: 'document-types',
     etiqueta: 'Tipos de documento', singular: 'Tipo de documento',
     desc: 'Documentos de identidad admitidos',
+    detalle: [
+      { rotulo: 'Nombre', render: i => texto(i.name) },
+      { rotulo: 'Abreviatura', render: i => <Codigo valor={i.abbreviation} /> },
+    ],
     columnas: [
+      COL_ID,
       COL_NOMBRE,
       // La abreviatura NO se mostraba: la cabecera solo tenía '#' y 'Nombre'
       // aunque es un campo obligatorio y único, y es lo que se elige en los
@@ -166,7 +196,13 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'airlines', seccion: 'airlines',
     etiqueta: 'Aerolíneas', singular: 'Aerolínea',
     desc: 'Líneas aéreas del catálogo de vuelos',
+    detalle: [
+      { rotulo: 'Código IATA', render: i => <Codigo valor={i.code} /> },
+      { rotulo: 'Cobertura', render: i => texto(i.type) },
+      { rotulo: 'Sitio web', ancho: true, render: i => <Enlace url={i.website} /> },
+    ],
     columnas: [
+      COL_ID,
       COL_NOMBRE,
       { clave: 'code', rotulo: 'IATA', orden: 'code', render: i => <Codigo valor={i.code} /> },
       { clave: 'type', rotulo: 'Cobertura', orden: 'type', render: i => texto(i.type) },
@@ -177,7 +213,16 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'suppliers', seccion: 'suppliers',
     etiqueta: 'Proveedores', singular: 'Proveedor',
     desc: 'Hoteles, operadores y mayoristas',
+    detalle: [
+      { rotulo: 'Tipo', render: i => texto(i.type) },
+      { rotulo: 'Correo', render: i => texto(i.email) },
+      { rotulo: 'Teléfono', render: i => (i.phone ? <span className="tabular-nums">{i.phone}</span> : <Vacio />) },
+      { rotulo: 'Sitio web', render: i => <Enlace url={i.website} /> },
+      // No cabía en la tabla y es donde se anota con quién se habla.
+      { rotulo: 'Observaciones', ancho: true, render: i => texto(i.observations) },
+    ],
     columnas: [
+      COL_ID,
       COL_NOMBRE,
       { clave: 'type', rotulo: 'Tipo', orden: 'type', render: i => texto(i.type) },
       {
@@ -196,7 +241,16 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'airports', seccion: 'airports',
     etiqueta: 'Aeropuertos', singular: 'Aeropuerto',
     desc: 'Aeropuertos y sus ciudades',
+    detalle: [
+      { rotulo: 'Código IATA', render: i => <Codigo valor={i.abbreviation} /> },
+      { rotulo: 'Ciudad', render: i => texto(i.city) },
+      // El país estaba en la base y la tabla solo mostraba "ciudad, país" junto.
+      { rotulo: 'País', render: i => texto(i.country) },
+      { rotulo: 'Cobertura', render: i => texto(i.type) },
+      { rotulo: 'Estado', render: i => <Estado valor={i.status} /> },
+    ],
     columnas: [
+      COL_ID,
       COL_NOMBRE,
       { clave: 'abbreviation', rotulo: 'IATA', orden: 'abbreviation', render: i => <Codigo valor={i.abbreviation} /> },
       { clave: 'location', rotulo: 'Ubicación', orden: 'city', render: i => texto(i.location || i.city) },
@@ -208,16 +262,23 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     id: 'baggage', seccion: 'baggage',
     etiqueta: 'Equipaje', singular: 'Política de equipaje',
     desc: 'Qué se puede llevar con cada tarifa',
+    detalle: [
+      { rotulo: 'Aerolínea', render: i => texto(i.airlineName) },
+      { rotulo: 'Tarifa', render: i => texto(i.fareType) },
+      { rotulo: 'Artículo personal', render: i => texto(i.personalItem) },
+      { rotulo: 'Equipaje de mano', render: i => texto(i.carryOn) },
+      { rotulo: 'Equipaje en bodega', render: i => texto(i.checkedBag) },
+      // Las notas no caben en una celda y son la letra pequeña de la política.
+      { rotulo: 'Notas', ancho: true, render: i => texto(i.notes) },
+    ],
     columnas: [
+      COL_ID,
       {
         clave: 'airlineName', rotulo: 'Aerolínea', orden: 'airlineName',
         render: i => (
-          <div className="min-w-0">
-            <div className="truncate font-semibold text-slate-900 dark:text-white">
-              {i.airlineName || <Vacio />}
-            </div>
-            <div className="text-xs tabular-nums text-slate-400 dark:text-slate-500">#{i.id}</div>
-          </div>
+          <span className="block truncate font-semibold text-slate-900 dark:text-white">
+            {i.airlineName || <Vacio />}
+          </span>
         ),
       },
       { clave: 'fareType', rotulo: 'Tarifa', orden: 'fareType', render: i => texto(i.fareType) },
@@ -232,6 +293,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     desc: 'Paquetes turísticos armados',
     conDetalle: true,
     columnas: [
+      COL_ID,
       COL_NOMBRE,
       { clave: 'destination', rotulo: 'Destino', orden: 'destination', render: i => texto(i.destination) },
       {

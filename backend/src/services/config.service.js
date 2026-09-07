@@ -6,6 +6,7 @@ const SECTION_MAP = {
   'cards': {
     model: 'tarjetas_agencia', idField: 'id', include: { metodos_pago: true },
     buscarEn: ['nombre', 'ultimos_cuatro'],
+    usos: [],
     orden: { defecto: 'name', campos: { name: 'nombre', status: 'status', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, paymentMethod: r.metodos_pago?.nombre || null, lastFourDigits: r.ultimos_cuatro, description: r.descripcion, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
     reverseTransform: async (d) => {
@@ -29,12 +30,19 @@ const SECTION_MAP = {
     model: 'metodos_pago', idField: 'id',
     buscarEn: ['nombre'],
     orden: { defecto: 'name', campos: { name: 'nombre', id: 'id' } },
+    usos: [
+      { etiqueta: 'ventas', modelo: 'ventas', campo: 'metodo_pago_principal_id' },
+      { etiqueta: 'pagos registrados', modelo: 'pagos_venta', campo: 'metodo_pago_id' },
+      { etiqueta: 'servicios de venta', modelo: 'detalle_venta', campo: 'metodo_pago_proveedor_id' },
+      { etiqueta: 'tarjetas', modelo: 'tarjetas_agencia', campo: 'metodo_pago_id' },
+    ],
     transform: (r) => ({ id: r.id, name: r.nombre }),
     reverseTransform: async (d) => ({ nombre: d.name || 'Sin nombre' })
   },
   'document-types': {
     model: 'tipos_documento', idField: 'id',
     buscarEn: ['nombre', 'abreviatura'],
+    usos: [{ etiqueta: 'personas', modelo: 'personas', campo: 'tipo_documento_id' }],
     orden: { defecto: 'name', campos: { name: 'nombre', abbreviation: 'abreviatura', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, abbreviation: r.abreviatura }),
     reverseTransform: async (d) => ({
@@ -46,6 +54,12 @@ const SECTION_MAP = {
     model: 'aerolineas', idField: 'id',
     buscarEn: ['nombre', 'codigo_iata'],
     orden: { defecto: 'name', campos: { name: 'nombre', code: 'codigo_iata', type: 'tipo', id: 'id' } },
+    usos: [
+      { etiqueta: 'tiquetes', modelo: 'prod_tiqueteria', campo: 'aerolineaId' },
+      { etiqueta: 'tramos de vuelo', modelo: 'tramos_vuelo', campo: 'aerolinea_id' },
+      { etiqueta: 'políticas de equipaje', modelo: 'politicas_equipaje', campo: 'aerolinea_id' },
+      { etiqueta: 'planes vendidos', modelo: 'prod_planes', campo: 'aerolineaId' },
+    ],
     transform: (r) => ({ id: r.id, name: r.nombre, code: r.codigo_iata, type: r.tipo, website: r.web }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
@@ -57,6 +71,10 @@ const SECTION_MAP = {
   'suppliers': {
     model: 'proveedores', idField: 'id',
     buscarEn: ['nombre', 'email_contacto', 'telefono'],
+    usos: [
+      { etiqueta: 'servicios de venta', modelo: 'detalle_venta', campo: 'proveedor_id' },
+      { etiqueta: 'paquetes', modelo: 'paquete_proveedor', campo: 'proveedor_id' },
+    ],
     orden: { defecto: 'name', campos: { name: 'nombre', type: 'tipo', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, type: r.tipo, email: r.email_contacto, phone: r.telefono, website: r.web, observations: r.observaciones || '' }),
     reverseTransform: async (d) => ({
@@ -71,6 +89,10 @@ const SECTION_MAP = {
   'airports': {
     model: 'aeropuertos', idField: 'id',
     buscarEn: ['nombre', 'ciudad', 'pais', 'codigo_iata'],
+    usos: [
+      { etiqueta: 'tramos con este origen', modelo: 'tramos_vuelo', campo: 'aeropuerto_origen_id' },
+      { etiqueta: 'tramos con este destino', modelo: 'tramos_vuelo', campo: 'aeropuerto_destino_id' },
+    ],
     orden: { defecto: 'name', campos: { name: 'nombre', abbreviation: 'codigo_iata', city: 'ciudad', type: 'tipo', status: 'status', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, abbreviation: r.codigo_iata, city: r.ciudad, country: r.pais, location: [r.ciudad, r.pais].filter(Boolean).join(', '), type: r.tipo, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
     reverseTransform: async (d) => ({
@@ -86,6 +108,10 @@ const SECTION_MAP = {
     model: 'politicas_equipaje', idField: 'id', include: { aerolineas: true },
     // La ruta con punto busca en la relación: `aerolineas.nombre`.
     buscarEn: ['tipo_tarifa', 'aerolineas.nombre'],
+    usos: [
+      { etiqueta: 'tiquetes', modelo: 'prod_tiqueteria', campo: 'planEquipajeId' },
+      { etiqueta: 'tramos de vuelo', modelo: 'tramos_vuelo', campo: 'plan_equipaje_id' },
+    ],
     orden: { defecto: 'airlineName', campos: { airlineName: 'aerolineas.nombre', fareType: 'tipo_tarifa', id: 'id' } },
     transform: (r) => ({ id: r.id, airlineName: r.aerolineas?.nombre || null, fareType: r.tipo_tarifa, personalItem: r.articulo_personal, carryOn: r.equipaje_mano, checkedBag: r.equipaje_bodega, notes: r.notas }),
     reverseTransform: async (d) => {
@@ -115,6 +141,7 @@ const SECTION_MAP = {
     // `paquetes` es el único catálogo con borrado lógico.
     soloVigentes: { deleted_at: null },
     buscarEn: ['nombre', 'destino'],
+    usos: [{ etiqueta: 'planes vendidos', modelo: 'prod_planes', campo: 'paqueteId' }],
     orden: { defecto: 'name', campos: { name: 'nombre', destination: 'destino', id: 'id' } },
     include: { paquete_hotel: true, paquete_tarifas: true, paquete_asistencia_medica: true, paquete_vuelo: { include: { aerolineas: true } }, paquete_proveedor: { include: { proveedores: true } } },
     // El listado solo necesita lo que se ve en la tabla y en el selector.
@@ -293,7 +320,29 @@ class ConfigService {
       include: config.include
     });
     if (!row) throw new NotFoundError('Elemento no encontrado');
-    return config.transform(row);
+
+    // Dónde se usa este registro.
+    //
+    // Es la pregunta que hay que responder antes de tocar un catálogo, y la que
+    // el aviso de borrado dejaba en manos del operador: "asegúrate de que no
+    // esté siendo referenciado por tiquetes o ventas activas". Ahora se
+    // cuenta, en vez de pedirle que se acuerde.
+    //
+    // Va en el mismo endpoint y no en uno aparte: es un atributo del elemento,
+    // no otro recurso, y así la modal de detalle se pinta con un solo viaje.
+    const usos = await Promise.all(
+      (config.usos || []).map(async u => ({
+        etiqueta: u.etiqueta,
+        count: await prisma[u.modelo].count({ where: { [u.campo]: Number(id) } }),
+      }))
+    );
+
+    return {
+      ...config.transform(row),
+      usage: usos.filter(u => u.count > 0),
+      // `true` si no lo referencia nada: es lo que hace seguro borrarlo.
+      unused: usos.every(u => u.count === 0),
+    };
   }
 
   // Catálogos que los selectores necesitan desde el primer render.
@@ -389,5 +438,38 @@ class ConfigService {
     return true;
   }
 }
+
+/**
+ * Comprobación al arrancar de que los campos de `usos` existen.
+ *
+ * `scripts/check-prisma-fields.js` valida las claves parseando el literal que
+ * sigue a `prisma.<modelo>.<método>(`, y el recuento de usos se escribe como
+ * `prisma[u.modelo].count({ where: { [u.campo]: ... } })`: modelo y campo son
+ * dinámicos, así que el validador no ve ninguno de los dos. Así se colaron
+ * `prod_tiqueteria.aerolinea_id` y `plan_equipaje_id`, que en ese modelo se
+ * llaman `aerolineaId` y `planEquipajeId`, y el detalle de una aerolínea
+ * respondía 500.
+ *
+ * Se comprueba contra el DMMF al cargar el módulo: un nombre mal escrito
+ * revienta el arranque, no la pantalla de quien haga clic.
+ */
+function comprobarCamposDeUso() {
+  const { Prisma } = require('@prisma/client');
+  const modelos = new Map(
+    Prisma.dmmf.datamodel.models.map(m => [m.name, new Set(m.fields.map(f => f.name))])
+  );
+  const errores = [];
+  for (const [seccion, config] of Object.entries(SECTION_MAP)) {
+    for (const u of config.usos || []) {
+      const campos = modelos.get(u.modelo);
+      if (!campos) errores.push(`${seccion}: el modelo ${u.modelo} no existe`);
+      else if (!campos.has(u.campo)) errores.push(`${seccion}: ${u.modelo}.${u.campo} no existe`);
+    }
+  }
+  if (errores.length) {
+    throw new Error(`Campos de uso mal declarados en config.service:\n  ${errores.join('\n  ')}`);
+  }
+}
+comprobarCamposDeUso();
 
 module.exports = new ConfigService();

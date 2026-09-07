@@ -234,7 +234,11 @@ export default function CreditDashboard() {
                   aria-pressed={activo}
                   className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
                     activo
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      // `--color-highlight`, que el tema define en claro y en
+                      // oscuro. Era `dark:bg-white`: un bloque blanco puro
+                      // sobre un fondo casi negro, que deslumbra y no
+                      // pertenece a esta paleta.
+                      ? 'bg-highlight text-white'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                   }`}
                 >

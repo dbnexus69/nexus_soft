@@ -1,5 +1,10 @@
 const { Router } = require('express');
+const { paramsNumericos } = require('../middleware/numericParams');
 const router = Router();
+
+// Un id no numérico es un 400, no el 500 que salía de `parseInt` -> NaN -> Prisma.
+// `paymentId` y `productId` quedan fuera a propósito: son uuid.
+paramsNumericos(router, 'id', 'saleId', 'clientId');
 const salesController = require('../controllers/sales.controller');
 const productsController = require('../controllers/products.controller');
 const auth = require('../middleware/auth');

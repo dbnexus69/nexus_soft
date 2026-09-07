@@ -1,5 +1,10 @@
 const { Router } = require('express');
+const { paramsNumericos } = require('../middleware/numericParams');
 const router = Router();
+
+// Un id no numérico es un 400, no el 500 que salía de `parseInt` -> NaN -> Prisma.
+// El id del elemento del catálogo. `section` es texto y no se valida aquí.
+paramsNumericos(router, 'id');
 const configController = require('../controllers/config.controller');
 const auth = require('../middleware/auth');
 const paginate = require('../middleware/paginate');

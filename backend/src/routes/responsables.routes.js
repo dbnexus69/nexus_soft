@@ -1,5 +1,10 @@
 const { Router } = require('express');
+const { paramsNumericos } = require('../middleware/numericParams');
 const router = Router();
+
+// Un id no numérico es un 400, no el 500 que salía de `parseInt` -> NaN -> Prisma.
+// El id del responsable.
+paramsNumericos(router, 'id');
 const controller = require('../controllers/responsables.controller');
 const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');

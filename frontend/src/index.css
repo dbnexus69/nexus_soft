@@ -4,7 +4,8 @@
 
 @layer base {
   :root {
-    --color-bg-base: #F8F9FA;
+    --bg-base-rgb: 248 249 250;
+    --color-bg-base: rgb(var(--bg-base-rgb));
     --color-bg-card: #ffffff;
     --color-bg-hover: #eef1f6;
     --color-bg-subtle: #F8F9FA;
@@ -13,27 +14,37 @@
     --color-text-muted: #8D99AE;
     --color-text-light: #a5b1c2;
     
-    --color-border-main: #e2e8f0;
+    --border-main-rgb: 226 232 240;
+    --color-border-main: rgb(var(--border-main-rgb));
     
-    --color-primary: #2B2D42;
-    --color-primary-dark: #1e202f;
-    --color-primary-light: #3c3f5c;
+    --primary-rgb: 43 45 66;
+    --color-primary: rgb(var(--primary-rgb));
+    --primary-dark-rgb: 30 32 47;
+    --color-primary-dark: rgb(var(--primary-dark-rgb));
+    --primary-light-rgb: 60 63 92;
+    --color-primary-light: rgb(var(--primary-light-rgb));
     
-    --color-accent: #8D99AE;
-    --color-accent-dark: #748299;
+    --accent-rgb: 141 153 174;
+    --color-accent: rgb(var(--accent-rgb));
+    --accent-dark-rgb: 116 130 153;
+    --color-accent-dark: rgb(var(--accent-dark-rgb));
 
     /* Acento con fuerza, para el detalle de venta.
        #8D99AE es demasiado apagado para marcar énfasis: la vista se lee plana
        porque nada destaca. Este teal marino no choca con los tres colores
        semánticos que ya existen (verde éxito, ámbar aviso, rojo peligro) ni con
        el navy de la marca, y es el color del producto: Caribe. */
-    --color-highlight: #0F7B8A;
-    --color-highlight-soft: #E2F2F4;
-    --color-highlight-ink: #0A5A66;
+    --highlight-rgb: 15 123 138;
+    --color-highlight: rgb(var(--highlight-rgb));
+    --highlight-soft-rgb: 226 242 244;
+    --color-highlight-soft: rgb(var(--highlight-soft-rgb));
+    --highlight-ink-rgb: 10 90 102;
+    --color-highlight-ink: rgb(var(--highlight-ink-rgb));
   }
 
   .dark {
-    --color-bg-base: #111216;
+    --bg-base-rgb: 17 18 22;
+    --color-bg-base: rgb(var(--bg-base-rgb));
     --color-bg-card: #1a1b22;
     --color-bg-hover: #252732;
     --color-bg-subtle: #15161c;
@@ -42,19 +53,28 @@
     --color-text-muted: #8D99AE;
     --color-text-light: #5d6675;
     
-    --color-border-main: #252732;
+    --border-main-rgb: 37 39 50;
+    --color-border-main: rgb(var(--border-main-rgb));
     
-    --color-primary: #8D99AE;
-    --color-primary-dark: #748299;
-    --color-primary-light: #a6b1c3;
+    --primary-rgb: 141 153 174;
+    --color-primary: rgb(var(--primary-rgb));
+    --primary-dark-rgb: 116 130 153;
+    --color-primary-dark: rgb(var(--primary-dark-rgb));
+    --primary-light-rgb: 166 177 195;
+    --color-primary-light: rgb(var(--primary-light-rgb));
     
-    --color-accent: #7E8A9F;
-    --color-accent-dark: #687487;
+    --accent-rgb: 126 138 159;
+    --color-accent: rgb(var(--accent-rgb));
+    --accent-dark-rgb: 104 116 135;
+    --color-accent-dark: rgb(var(--accent-dark-rgb));
   
     /* Más luminoso sobre el fondo oscuro, para mantener el contraste. */
-    --color-highlight: #3FB8C7;
-    --color-highlight-soft: #10323A;
-    --color-highlight-ink: #8FDDE6;
+    --highlight-rgb: 63 184 199;
+    --color-highlight: rgb(var(--highlight-rgb));
+    --highlight-soft-rgb: 16 50 58;
+    --color-highlight-soft: rgb(var(--highlight-soft-rgb));
+    --highlight-ink-rgb: 143 221 230;
+    --color-highlight-ink: rgb(var(--highlight-ink-rgb));
 }
   
   body {

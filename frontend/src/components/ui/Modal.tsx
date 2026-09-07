@@ -38,9 +38,16 @@ export function Modal({
   if (size === "panel") {
     return createPortal(
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        {/* Backdrop */}
+        {/* Fondo oscurecido.
+            Era el color del tema con opacidad, una clase que no generaba
+            CSS: la ventana
+            salía sin oscurecer, solo con el desenfoque. Al arreglar la
+            opacidad del tema sí pintaría, pero mal: en modo oscuro
+            `--color-primary` es un gris azulado CLARO, así que el velo
+            ACLARARÍA el fondo en vez de oscurecerlo. Un velo es oscuro en los
+            dos temas, así que se fija aquí y no se toma del tema. */}
         <div
-          className="fixed inset-0 bg-primary/50 backdrop-blur-md transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-md transition-opacity duration-300 dark:bg-black/60"
           onClick={onClose}
         />
         {/* Panel */}
@@ -71,8 +78,9 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
+      {/* Mismo motivo que el velo del panel, arriba. */}
       <div
-        className="fixed inset-0 bg-primary/40 backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 dark:bg-black/60"
         onClick={onClose}
       />
       <div

@@ -67,7 +67,10 @@ function estadoSegunPago(pagado, total) {
 async function recalcularVenta(tx, ventaId) {
   const id = Number(ventaId);
 
-  const venta = await tx.ventas.findUnique({ where: { id }, select: { status: true } });
+  // Red de seguridad: una venta eliminada no se recalcula. La comprobación de
+  // verdad va en quien la muta, pero si se cuela hasta aquí es mejor un 404 que
+  // reescribir en silencio los importes de algo que ya no existe.
+  const venta = await tx.ventas.findFirst({ where: { id, deleted_at: null }, select: { status: true } });
   if (!venta) throw new NotFoundError('Venta no encontrada');
 
   const [productos, pagos] = await Promise.all([

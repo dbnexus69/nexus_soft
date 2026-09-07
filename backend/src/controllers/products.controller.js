@@ -46,7 +46,9 @@ async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaI
 
 async function getSale(saleId) {
   const id = parseInt(saleId);
-  return prisma.ventas.findUnique({ where: { id } });
+  // `deleted_at: null`: sin este filtro se podían añadir, editar y borrar
+  // productos de una venta eliminada, que no aparece en ningún listado.
+  return prisma.ventas.findFirst({ where: { id, deleted_at: null } });
 }
 
 async function createDetalleProducto(tx, venta_id, categoria, data) {

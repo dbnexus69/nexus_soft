@@ -1380,8 +1380,10 @@ class SalesService {
 
   async getSaleById(id) {
     const [venta, inventario] = await Promise.all([
-      prisma.ventas.findUnique({
-        where: { id },
+      // `findFirst` con `deleted_at: null`, no `findUnique`: una venta eliminada
+      // seguía devolviendo 200 por su id aunque no apareciera en ningún listado.
+      prisma.ventas.findFirst({
+        where: { id, deleted_at: null },
         include: {
           clientes: { include: { personas: true } },
           usuarios: { include: { personas: true } },
@@ -1412,7 +1414,7 @@ class SalesService {
 
   // Todos los productos de la venta. Lo usa el voucher, que necesita la venta entera.
   async getSaleProducts(id) {
-    const venta = await prisma.ventas.findUnique({ where: { id }, select: { id: true } });
+    const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null }, select: { id: true } });
     if (!venta) throw new NotFoundError('Venta no encontrada');
 
     const byCategory = await this._loadProducts({ venta_id: id, parentDetalleId: null });
@@ -1430,7 +1432,7 @@ class SalesService {
     const entry = CATALOG[category];
     if (!entry) throw new NotFoundError(`Categoría de producto desconocida: ${category}`);
 
-    const venta = await prisma.ventas.findUnique({ where: { id }, select: { id: true } });
+    const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null }, select: { id: true } });
     if (!venta) throw new NotFoundError('Venta no encontrada');
 
     const byCategory = await this._loadProducts({
@@ -1466,7 +1468,7 @@ class SalesService {
 
   async voidSale(id, reason) {
     if (!reason) throw new BadRequestError('Debe proporcionar un motivo para anular la venta');
-    const venta = await prisma.ventas.findUnique({ where: { id } });
+    const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null } });
     if (!venta) throw new NotFoundError('Venta no encontrada');
 
     const newObservaciones = venta.observaciones ? `${venta.observaciones}\n[ANULADA] Motivo: ${reason}` : `[ANULADA] Motivo: ${reason}`;
@@ -1505,8 +1507,8 @@ class SalesService {
     // `saleTotal: 1` dejaba una venta de 3.000.000 en `pagado`. Ningún cliente
     // los enviaba —eran superficie de ataque y nada más—, así que se van.
     const resultado = await prisma.$transaction(async (tx) => {
-      const venta = await tx.ventas.findUnique({
-        where: { id },
+      const venta = await tx.ventas.findFirst({
+        where: { id, deleted_at: null },
         select: { monto_total: true, monto_pagado_credito: true, status: true },
       });
       if (!venta) throw new NotFoundError('Venta no encontrada');
@@ -1568,7 +1570,7 @@ class SalesService {
   }
 
   async updateReviewStatus(saleId, isReviewed) {
-    const sale = await prisma.ventas.findUnique({ where: { id: saleId } });
+    const sale = await prisma.ventas.findFirst({ where: { id: saleId, deleted_at: null } });
     if (!sale) throw new NotFoundError('Venta no encontrada');
     if (sale.status !== 'pagado') throw new BadRequestError('La venta debe estar pagada para ser revisada');
     if (sale.isReviewed) throw new BadRequestError('Esta venta ya fue revisada y no se puede modificar su estado');
@@ -1582,8 +1584,10 @@ class SalesService {
   }
 
   async listPayments(saleId) {
+    // Los pagos de una venta eliminada tampoco se leen: era el último hueco
+    // por el que una venta borrada seguía asomando.
     const payments = await prisma.pagos_venta.findMany({
-      where: { venta_id: saleId },
+      where: { venta_id: saleId, ventas: { deleted_at: null } },
       select: { id: true, fecha_pago: true, monto: true, metodos_pago: { select: { nombre: true } } },
       orderBy: { fecha_pago: 'asc' }
     });
@@ -1598,8 +1602,8 @@ class SalesService {
 
   async sendVoucher(saleId, pdfBase64) {
     if (!pdfBase64) throw new BadRequestError('El PDF es requerido (base64)');
-    const venta = await prisma.ventas.findUnique({
-      where: { id: saleId },
+    const venta = await prisma.ventas.findFirst({
+      where: { id: saleId, deleted_at: null },
       include: { clientes: { include: { personas: true } }, usuarios: { include: { personas: true } } }
     });
 

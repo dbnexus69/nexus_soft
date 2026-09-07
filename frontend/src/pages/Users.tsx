@@ -10,6 +10,7 @@ import { Card, CardHeader } from "../components/ui/Card";
 import { Input } from "../components/ui/Form";
 import StatCard from "../components/ui/StatCard";
 import PermissionsGrid from "../components/users/PermissionsGrid";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import UserDetailModal from "../components/users/UserDetailModal";
 import { UserTable } from "../components/users/UserTable";
 import { UserModal } from "../components/users/UserModal";
@@ -104,12 +105,21 @@ export default function Users() {
     }
   };
 
-  const handleDeleteUser = async (user: User) => {
-    // El aviso no promete un borrado: puede que el usuario tenga historial y
-    // solo se inhabilite. Lo decide el backend y lo dice en su respuesta.
-    if (!window.confirm(`¿Dar de baja a ${user.name}?`)) return;
+  // La confirmación es un diálogo de la aplicación, no `window.confirm`: en el
+  // del navegador no cabe explicar qué va a pasar, y aquí hay dos desenlaces
+  // posibles según si el usuario tiene historial.
+  const [porDarDeBaja, setPorDarDeBaja] = useState<User | null>(null);
+  const [dandoDeBaja, setDandoDeBaja] = useState(false);
+
+  const handleDeleteUser = (user: User) => setPorDarDeBaja(user);
+
+  const confirmarBaja = async () => {
+    const user = porDarDeBaja;
+    if (!user) return;
+    setDandoDeBaja(true);
     try {
       const resultado = await deleteUser(user.id);
+      setPorDarDeBaja(null);
       // Se cuenta lo que ocurrió de verdad. Antes decía siempre "Usuario
       // inhabilitado", aunque se hubiera borrado, y aunque no se hubiera
       // podido tocar.
@@ -120,8 +130,11 @@ export default function Users() {
       }
     } catch (err: any) {
       // El motivo del backend, no un mensaje genérico: puede ser que sea el
-      // único superadministrador o que sea tu propia cuenta.
+      // único superadministrador o que sea tu propia cuenta. El diálogo se
+      // queda abierto para que el mensaje se lea junto a lo que se pedía.
       toastError(err?.response?.data?.error?.message || "No se pudo dar de baja al usuario");
+    } finally {
+      setDandoDeBaja(false);
     }
   };
 
@@ -310,6 +323,27 @@ export default function Users() {
         </div>
       )}
 
+
+      <ConfirmDialog
+        isOpen={porDarDeBaja !== null}
+        title={`Dar de baja a ${porDarDeBaja?.name ?? ''}`}
+        confirmLabel="Dar de baja"
+        busy={dandoDeBaja}
+        onCancel={() => setPorDarDeBaja(null)}
+        onConfirm={confirmarBaja}
+      >
+        <p>
+          Dejará de poder entrar y no aparecerá en el listado ni como asesor de
+          una venta nueva.
+        </p>
+        {/* Se explica la regla en vez de prometer un borrado: el desenlace lo
+            decide el historial, y el aviso posterior dice cuál fue. */}
+        <p className="mt-2">
+          Si tiene ventas, clientes o paquetes a su nombre se conserva
+          inhabilitado, para que esos registros no queden sin autor. Si no tiene
+          nada, se elimina del sistema.
+        </p>
+      </ConfirmDialog>
 
       <UserModal
         isOpen={isModalOpen}

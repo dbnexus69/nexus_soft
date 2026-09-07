@@ -1,18 +1,25 @@
 const { error } = require('../utils/apiResponse');
 
+/**
+ * La respuesta de un cuerpo que no pasa el esquema.
+ *
+ * Estaba copiada cuatro veces —tres aquí y otra en el handler de productos—.
+ * 422: la petición está bien formada pero no cumple las reglas del recurso.
+ * Los errores van por campo para que el cliente los pinte junto a su input.
+ */
+function responderInvalido(res, zodError, titulo = 'Datos inválidos') {
+  const details = zodError.issues.map(i => ({
+    field: i.path.join('.') || '(raíz)',
+    message: i.message,
+  }));
+  const resumen = details.map(d => `${d.field}: ${d.message}`).join('; ');
+  return error(res, `${titulo}: ${resumen}`, 422, 'VALIDATION_ERROR', details);
+}
+
 function validate(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
-    if (!result.success) {
-      // 422: la petición está bien formada pero no pasa las reglas del recurso.
-      // Los errores van por campo para que el cliente los pinte junto a su input.
-      const details = result.error.issues.map(i => ({
-        field: i.path.join('.') || '(raíz)',
-        message: i.message,
-      }));
-      const resumen = details.map(d => `${d.field}: ${d.message}`).join('; ');
-      return error(res, `Datos inválidos: ${resumen}`, 422, 'VALIDATION_ERROR', details);
-    }
+    if (!result.success) return responderInvalido(res, result.error);
     req.validatedBody = result.data;
     next();
   };
@@ -32,14 +39,7 @@ function validate(schema) {
 function validateQuery(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.query);
-    if (!result.success) {
-      const details = result.error.issues.map(i => ({
-        field: i.path.join('.') || '(raíz)',
-        message: i.message,
-      }));
-      const resumen = details.map(d => `${d.field}: ${d.message}`).join('; ');
-      return error(res, `Parámetros inválidos: ${resumen}`, 422, 'VALIDATION_ERROR', details);
-    }
+    if (!result.success) return responderInvalido(res, result.error, 'Parámetros inválidos');
     next();
   };
 }
@@ -63,17 +63,10 @@ function validateBySection(esquemas) {
       return error(res, `La sección ${req.params.section} no admite escritura`, 404, 'NOT_FOUND');
     }
     const result = schema.safeParse(req.body);
-    if (!result.success) {
-      const details = result.error.issues.map(i => ({
-        field: i.path.join('.') || '(raíz)',
-        message: i.message,
-      }));
-      const resumen = details.map(d => `${d.field}: ${d.message}`).join('; ');
-      return error(res, `Datos inválidos: ${resumen}`, 422, 'VALIDATION_ERROR', details);
-    }
+    if (!result.success) return responderInvalido(res, result.error);
     req.validatedBody = result.data;
     next();
   };
 }
 
-module.exports = { validate, validateQuery, validateBySection };
+module.exports = { validate, validateQuery, validateBySection, responderInvalido };

@@ -6,6 +6,8 @@ const { CATALOG } = require('../catalog/products');
 // El dinero de la venta lo deriva el servidor: misma regla que usa `createSale`.
 const { recalcularVenta, precioProducto } = require('../services/saleTotals');
 const { enHoraColombia } = require('../utils/fechas');
+const { esquemaDeCategoria, comprobarColumnas } = require('../schemas/products.schema');
+const { responderInvalido } = require('../middleware/validate');
 
 
 async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaId) {
@@ -73,9 +75,21 @@ async function createDetalleProducto(tx, venta_id, categoria, data) {
   });
 }
 
+/**
+ * Las 45 rutas de producto salen de aquí, así que aquí va la validación.
+ *
+ * Los 15 POST y los 15 PUT no tenían ninguna: el cuerpo entraba entero al
+ * transform y de ahí a Prisma. Ponerla en las treinta declaraciones de ruta
+ * habría sido treinta sitios donde olvidarla al añadir la categoría dieciséis;
+ * el esquema se resuelve por `category`, que es lo que distingue a un handler
+ * de otro. Las reglas y el por qué están en schemas/products.schema.js.
+ */
 const productHandler = (category, tableName, transformData) => ({
   create: async (req, res, next) => {
     try {
+      const revisado = esquemaDeCategoria(category).safeParse(req.body);
+      if (!revisado.success) return responderInvalido(res, revisado.error);
+
       const venta = await getSale(req.params.saleId);
       if (!venta) return error(res, 'Venta no encontrada', 404);
 
@@ -84,6 +98,7 @@ const productHandler = (category, tableName, transformData) => ({
         const detalle = await createDetalleProducto(tx, venta.id, category, data);
         const transformed = transformData ? transformData(data, detalle.id) : { detalle_venta_id: detalle.id, ...data };
         if (!transformed.id) transformed.id = randomUUID();
+        comprobarColumnas(tableName, transformed);
         const product = await tx[tableName].create({ data: transformed });
 
         const pasajerosDetalleData = [];
@@ -228,8 +243,11 @@ const productHandler = (category, tableName, transformData) => ({
   },
   update: async (req, res, next) => {
     try {
+      const revisado = esquemaDeCategoria(category).safeParse(req.body);
+      if (!revisado.success) return responderInvalido(res, revisado.error);
+
       const venta_id = parseInt(req.params.saleId);
-      const id = req.params.id;
+      const id = req.params.productId;
 
       const venta = await getSale(venta_id);
       if (!venta) return error(res, 'Venta no encontrada', 404);
@@ -248,6 +266,31 @@ const productHandler = (category, tableName, transformData) => ({
         // Ni se reinicia el progreso: el POST lo fija en 'pendiente', y aplicar
         // eso en un update borraría un check-in ya realizado.
         delete transformado.checkin_status;
+
+        // Lo que el cliente no manda, no se toca.
+        //
+        // El transform devuelve TODAS las columnas de la categoría, así que un
+        // PUT con `{hotelName}` escribía también `nro_reserva: null`,
+        // `fecha_entrada: null`… y borraba el resto de la ficha. El formulario
+        // reenvía el objeto entero y por eso no se notaba, pero cualquier
+        // petición parcial —la de un script, o un campo que el formulario deje
+        // de mandar— vaciaba datos sin avisar.
+        //
+        // Se distingue lo que el cliente mandó de lo que el transform rellena
+        // solo, pasándole un cuerpo vacío: lo que sale igual con cuerpo vacío
+        // no viene de la petición, y se descarta. Es genérico a las quince
+        // categorías, que es la única forma de que no se quede atrás cuando se
+        // añada una.
+        const relleno = transformData ? transformData({}, null) : {};
+        for (const [columna, valor] of Object.entries(transformado)) {
+          const porDefecto = relleno[columna];
+          const igual = valor instanceof Date && porDefecto instanceof Date
+            ? valor.getTime() === porDefecto.getTime()
+            : valor === porDefecto;
+          if (igual) delete transformado[columna];
+        }
+
+        comprobarColumnas(tableName, transformado);
 
         const prod = await tx[tableName].update({
           where: { id },
@@ -329,7 +372,7 @@ const productHandler = (category, tableName, transformData) => ({
   },
   delete: async (req, res, next) => {
     try {
-      const id = req.params.id;
+      const id = req.params.productId;
       const product = await prisma[tableName].findUnique({ where: { id } });
       if (!product) return error(res, 'Producto no encontrado', 404);
 

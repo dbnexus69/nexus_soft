@@ -152,7 +152,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc] dark:bg-[#090b11] overflow-x-hidden font-body text-slate-800 dark:text-slate-200">
-      
       {/* Toast de Éxito Flotante */}
       {showSuccess && (
         <div className="fixed top-6 right-6 z-[200] bg-emerald-50/95 dark:bg-emerald-950/95 backdrop-blur-md border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in-right">
@@ -503,10 +502,6 @@ export default function Login() {
         />
         {/* Overlay con degradado premium */}
         <div className="absolute inset-0 z-10 bg-gradient-to-tr from-[#090b11] via-[#090b11]/70 to-[#4f46e5]/40" />
-
-        {/* Círculos de luz decorativos sobre la imagen */}
-        <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-accent/20 rounded-full blur-[100px] z-10 animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-primary/20 rounded-full blur-[120px] z-10" />
 
         {/* Contenido Visual */}
         <div className="relative z-20 flex flex-col justify-between p-16 w-full text-white">

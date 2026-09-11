@@ -330,8 +330,12 @@ export function TicketForm({
               key={sIdx}
               className={`p-4 rounded-xl border relative group transition-all duration-200 ${
                 color === "primary"
-                  ? "bg-primary/5/10 border-primary/20 hover:border-primary/40 bg-white"
-                  : "bg-blue-50/30 border-blue-100 hover:border-blue-300 bg-white"
+                  // Aquí había un fondo de marca con la opacidad escrita dos
+                  // veces (dos barras), que Tailwind no genera. Daba igual
+                  // porque el `bg-white` que iba detrás era lo que se veía, así
+                  // que se deja solo ese: es lo que llevaba pintando siempre.
+                  ? "bg-white border-primary/20 hover:border-primary/40"
+                  : "bg-white border-blue-100 hover:border-blue-300"
               }`}
             >
               <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-150 shadow-sm flex items-center gap-1">

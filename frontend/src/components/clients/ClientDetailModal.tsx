@@ -72,9 +72,6 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
       <div className="flex flex-col md:flex-row min-h-[500px]">
         {/* Left Column - Profile Summary */}
         <div className="w-full md:w-1/3 bg-gray-50/50 dark:bg-slate-800/30 p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-700/50 flex flex-col items-center justify-start relative overflow-hidden rounded-l-2xl">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
-          
           <div className="relative z-10 w-full flex flex-col items-center mt-4">
             <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-slate-700 shadow-xl mb-6 overflow-hidden bg-accent/10 transition-transform duration-300 hover:scale-105">
               {client.avatar ? (

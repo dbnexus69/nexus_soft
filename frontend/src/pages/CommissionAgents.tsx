@@ -273,7 +273,6 @@ export default function CommissionAgents() {
       </div>
 
 
-
       <Card className="animate-fade-in">
         <CardHeader actions={
           <div className="flex gap-3 items-center flex-wrap">
@@ -607,9 +606,6 @@ export default function CommissionAgents() {
         <div className="flex flex-col md:flex-row min-h-[500px]">
           {/* Panel Izquierdo - Avatar */}
           <div className="w-full md:w-1/3 bg-gray-50/50 dark:bg-slate-800/30 p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-700/50 flex flex-col items-center justify-start relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
-            
             <div className="relative z-10 w-full">
               <AvatarPicker
                 value={formData.avatar || AVATARS[0]}

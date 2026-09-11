@@ -2,6 +2,7 @@ const { Router } = require('express');
 const router = Router();
 
 router.use('/companies', require('./companies.routes'));
+router.use('/branding', require('./branding.routes'));
 router.use('/auth', require('./auth.routes'));
 router.use('/users', require('./users.routes'));
 router.use('/roles', require('./roles.routes'));

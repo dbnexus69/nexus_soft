@@ -16,6 +16,7 @@ import Clients from './pages/Clients';
 import Responsables from './pages/Responsables';
 import Itineraries from './pages/Itineraries';
 import Users from './pages/Users';
+import Companies from './pages/Companies';
 import Config from './pages/Config';
 import CommissionAgents from './pages/CommissionAgents';
 
@@ -33,6 +34,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuth();
   if (!isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/**
+ * Solo el superadministrador del sistema.
+ *
+ * No es `isAdmin`: un administrador lo es DE su agencia, y administrar agencias
+ * es del sistema. La guarda de verdad está en el backend; esta solo evita
+ * enseñar una pantalla que iba a responder 403.
+ */
+function SuperadminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role !== 'superadmin') return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -54,6 +68,7 @@ function AppRoutes() {
             sin explicación. */}
         <Route path="itineraries" element={<Navigate to="/flights" replace />} />
         <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
+        <Route path="companies" element={<SuperadminRoute><Companies /></SuperadminRoute>} />
         <Route path="config" element={<AdminRoute><Config /></AdminRoute>} />
         <Route path="commissions" element={<CommissionAgents />} />
       </Route>

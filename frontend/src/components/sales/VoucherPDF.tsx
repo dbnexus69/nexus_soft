@@ -1,3 +1,4 @@
+import { useAuth } from '../../context/AuthContext';
 import React, { forwardRef } from 'react';
 import { Sale, TicketData } from '../../types';
 import { formatDate, formatDateTime, formatCurrency } from '../../utils/formatters';
@@ -138,6 +139,8 @@ function FlightBlock({ ticket, idx, airportMap }: { ticket: TicketData; idx: num
 }
 
 export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, airportMap }, ref) => {
+  const { marca } = useAuth();
+
   if (!sale) {
     return <div className="itea-voucher"><div ref={ref} /></div>;
   }
@@ -175,9 +178,13 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
         {/* ══ HERO HEADER ══ */}
         <div className="v-hero">
           <div className="v-hero-top">
-            <img className="v-logo-img" src="/db_nexus_logo.png" alt="DB Nexus" crossOrigin="anonymous" />
+            {/* El voucher es lo único de esta aplicación que ve el cliente
+                final, así que la marca que lleva es la de SU agencia. El
+                `crossOrigin` es necesario para que html2canvas pueda rasterizar
+                la imagen; por eso los logos se sirven sin autenticación. */}
+            <img className="v-logo-img" src={marca?.logoUrl || "/db_nexus_logo.png"} alt={marca?.nombre || "DB Nexus"} crossOrigin="anonymous" />
             <div className="v-hero-title">
-              <h1>DB NEXUS BOARDING</h1>
+              <h1>{(marca?.nombre || 'DB Nexus').toUpperCase()}</h1>
               <p>CONFIRMACIÓN DE SERVICIOS</p>
             </div>
           </div>
@@ -528,7 +535,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
             </div>
             <div className="v-payment-item">
               <label>Emisor</label>
-              <span>DB Nexus Platform</span>
+              <span>{marca?.nombre || 'DB Nexus Platform'}</span>
             </div>
           </div>
           <div className="v-payment-total">
@@ -548,16 +555,16 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
             <li><strong>Responsabilidad Limitada:</strong> Todo cambio, demora, cancelación o penalidad está sujeta única y exclusivamente a las políticas comerciales de la aerolínea o proveedor final.</li>
           </ul>
           <div className="v-company">
-            <strong>DB Nexus Platform</strong> | Soluciones Integrales<br />
-            soporte@dbnexus.com | dbnexus.com
+            <strong>{marca?.nombre || 'DB Nexus Platform'}</strong><br />
+            {marca?.slug ? `${marca.slug}` : 'dbnexus.com'}
           </div>
         </div>
 
         {/* ══ FOOTER ══ */}
         <div className="v-footer">
-          <div className="v-footer-brand">DB<span>NEXUS</span></div>
+          <div className="v-footer-brand">{marca?.nombre || <>DB<span>NEXUS</span></>}</div>
           <div className="v-footer-right">
-            © {new Date().getFullYear()} DB Nexus. Todos los derechos reservados.<br />
+            © {new Date().getFullYear()} {marca?.nombre || 'DB Nexus'}. Todos los derechos reservados.<br />
             Documento Generado Electrónicamente
           </div>
         </div>

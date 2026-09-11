@@ -16,6 +16,7 @@ import {
   Moon,
   RefreshCw,
   ChevronDown,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionsContext";
@@ -33,7 +34,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, marca } = useAuth();
   const { canView } = usePermissions();
   const [isHovered, setIsHovered] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -104,6 +105,9 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   ];
 
   const adminLinks = [
+    // Agencias es del SISTEMA, no de la agencia: solo el superadministrador la
+    // ve, y no depende de ningún permiso de módulo porque no es delegable.
+    { to: "/companies", icon: Building2, label: "Agencias", permission: 'superadmin' as const },
     { to: "/users", icon: Users, label: "Usuarios", permission: 'users' as const },
     { to: "/responsables", icon: UserCog, label: "Responsables", permission: 'responsables' as const },
     { to: "/config", icon: SlidersHorizontal, label: "Gestión Interna", permission: 'config' as const },
@@ -111,6 +115,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
   const filteredMainLinks = mainLinks.filter(link => canView(link.permission));
   const filteredAdminLinks = (adminLinks as any[]).filter(link => {
+    if (link.permission === 'superadmin') return user?.role === 'superadmin';
     if (link.permission === 'users' || link.permission === 'config' || link.permission === 'responsables') {
       return isAdmin;
     }
@@ -127,11 +132,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       >
         {/* Mobile Header / Logo */}
         <div className="p-5 border-b border-slate-800/80 flex justify-between items-center">
-          <img 
-            src="/db_nexus_logo.png" 
-            className="h-11 w-auto object-contain select-none invert" 
-            alt="DB NEXUS Logo" 
-          />
+          {/* El logo y el nombre son los de la agencia en la que estás. El
+              `invert` solo vale para el logo de la casa, que es monocromo sobre
+              fondo claro; el de un cliente se pinta tal cual lo subió. */}
+          {marca?.logoUrl ? (
+            <img src={marca.logoUrl} className="h-11 w-auto object-contain select-none" alt={marca.nombre} />
+          ) : (
+            <img src="/db_nexus_logo.png" className="h-11 w-auto object-contain select-none invert" alt="DB NEXUS" />
+          )}
           <button 
             onClick={onClose}
             className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10"
@@ -201,13 +209,13 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         
         {/* Left: Logo */}
         <div className="flex items-center gap-2.5 select-none cursor-pointer">
-          <img 
-            src="/db_nexus_icon.png" 
-            className="h-10 w-auto object-contain select-none invert hover:scale-105 transition-transform duration-200" 
-            alt="DB NEXUS" 
-          />
+          {marca?.logoUrl ? (
+            <img src={marca.logoUrl} className="h-10 w-auto object-contain select-none hover:scale-105 transition-transform duration-200" alt={marca.nombre} />
+          ) : (
+            <img src="/db_nexus_icon.png" className="h-10 w-auto object-contain select-none invert hover:scale-105 transition-transform duration-200" alt="DB NEXUS" />
+          )}
           <span className="text-base font-black tracking-tight text-white font-heading">
-            DB <span className="text-[#8D99AE] font-bold">NEXUS</span>
+            {marca?.nombre ?? <>DB <span className="text-[#8D99AE] font-bold">NEXUS</span></>}
           </span>
         </div>
 

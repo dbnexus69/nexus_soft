@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { login as apiLogin, logout as apiLogout, getMe } from '../api';
+import { login as apiLogin, logout as apiLogout, getMe, getBranding } from '../api';
+import { aplicarMarca, type Marca } from '../utils/marca';
 import type { LoginResponse } from '../api/auth';
 
 interface AuthContextType {
@@ -8,6 +9,8 @@ interface AuthContextType {
   logout: () => void;
   isAdmin: boolean;
   isLoading: boolean;
+  /** Nombre, logo y colores de la agencia en la que estás. */
+  marca: Marca | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,14 +18,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LoginResponse['user'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [marca, setMarca] = useState<Marca | null>(null);
+
+  /** La marca se guarda para pintarla y se aplica sobre el tema, a la vez. */
+  const ponerMarca = (m: Marca | null) => { setMarca(m); aplicarMarca(m); };
 
   useEffect(() => {
     const token = localStorage.getItem('itea_token');
 
     if (token) {
       getMe()
-        .then((userData) => {
+        .then(async (userData) => {
           setUser(userData);
+          // La marca se pide después de saber quién eres: depende de la empresa
+          // del token, no de la URL. La pantalla de entrada es común a todas.
+          await getBranding().then(ponerMarca).catch(() => {});
         })
         .catch(() => {
           localStorage.removeItem('itea_token');
@@ -42,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('itea_dashboard_cache');
 
       setUser(data.user);
+      getBranding().then(ponerMarca).catch(() => {});
 
       localStorage.setItem('itea_token', data.token);
       localStorage.setItem('itea_remember', String(remember));
@@ -56,6 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     apiLogout().catch(() => {});
     setUser(null);
+    // Fuera la marca: la pantalla de entrada es común, y dejarla puesta haría
+    // que quien sale de una agencia viera sus colores al ir a entrar en otra.
+    ponerMarca(null);
     localStorage.removeItem('itea_token');
     localStorage.removeItem('itea_user');
     localStorage.removeItem('itea_session_expiry');
@@ -67,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       login,
       logout,
+      marca,
       // Rol administrativo, no el rol llamado 'admin'. `superadmin` se creó
       // como un admin con MÁS permisos, pero esta comparación exacta lo dejaba
       // fuera: al pasar el usuario 1 a superadmin desapareció del menú la

@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
+const fs = require('fs/promises');
+const path = require('path');
+const { CARPETA_LOGOS } = require('../middleware/uploadLogo');
 const prisma = require('../config/db');
-const { conEmpresa } = require('../config/tenant');
+const { conEmpresa, empresaActual } = require('../config/tenant');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { ROLE_DEFAULT_PERMISSIONS, ADMIN_PERMISSIONS } = require('../middleware/authorize');
@@ -199,6 +202,55 @@ class CompaniesService {
       await conEmpresa(empresa.id, () => prisma.sesiones.deleteMany({}));
     }
     return this.getById(empresa.id);
+  }
+
+  /**
+   * Guarda el logo y devuelve la ficha.
+   *
+   * El fichero anterior se borra: si no, cada cambio de logo dejaría el viejo
+   * ocupando disco para siempre, y con el tiempo la carpeta sería un archivo de
+   * todos los logos que una agencia ha tenido.
+   */
+  async setLogo(id, fichero) {
+    if (!fichero) throw new BadRequestError('No llegó ningún archivo');
+    const empresa = await prisma.empresas.findFirst({ where: { id: Number(id), deleted_at: null } });
+    if (!empresa) throw new NotFoundError('Empresa no encontrada');
+
+    const anterior = empresa.logo_url;
+    await prisma.empresas.update({ where: { id: empresa.id }, data: { logo_url: `/uploads/logos/${fichero.filename}` } });
+
+    if (anterior && anterior.startsWith('/uploads/logos/')) {
+      // Que no se pueda borrar el anterior no es motivo para fallar: el logo
+      // nuevo ya está guardado y es lo que importa.
+      await fs.unlink(path.join(CARPETA_LOGOS, path.basename(anterior))).catch(() => {});
+    }
+    return this.getById(empresa.id);
+  }
+
+  /**
+   * La marca de la empresa activa. La pide cualquiera que haya entrado.
+   *
+   * Sin id en la ruta a propósito: la empresa sale del token. Un
+   * `/companies/:id/branding` invitaría a pedir la marca de otra, y aunque la
+   * política lo impediría, el endpoint estaría preguntando algo que nadie debe
+   * poder preguntar.
+   */
+  async brandingActual() {
+    // Por id del contexto, no `findFirst` a secas: para un usuario normal la
+    // política deja una sola fila y daría igual, pero el superadministrador las
+    // ve todas y se llevaría la primera que saliera.
+    const empresa = await prisma.empresas.findFirst({ where: { id: empresaActual(), deleted_at: null } });
+    if (!empresa) throw new NotFoundError('Empresa no encontrada');
+    return {
+      slug: empresa.slug,
+      nombre: empresa.nombre_comercial || empresa.nombre,
+      logoUrl: empresa.logo_url,
+      colores: {
+        primario: empresa.color_primario,
+        acento: empresa.color_acento,
+        realce: empresa.color_realce,
+      },
+    };
   }
 }
 

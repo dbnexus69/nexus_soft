@@ -32,3 +32,15 @@ exports.update = async (req, res, next) => {
     success(res, await companiesService.update(req.params.id, req.validatedBody));
   } catch (err) { next(err); }
 };
+
+exports.setLogo = async (req, res, next) => {
+  try {
+    success(res, await companiesService.setLogo(req.params.id, req.file));
+  } catch (err) { next(err); }
+};
+
+exports.branding = async (req, res, next) => {
+  try {
+    success(res, await companiesService.brandingActual());
+  } catch (err) { next(err); }
+};

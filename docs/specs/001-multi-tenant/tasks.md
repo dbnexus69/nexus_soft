@@ -248,12 +248,44 @@ Entrar, salir, token con caducidad, tabla de auditoría y pantalla del superadmi
 
 **Comprobación:** criterio **A7**.
 
-## T9 · La marca `[ ]`
+## T9 · La marca `[~]`
 
-`GET /branding`, colores aplicados en caliente sobre los canales CSS, logo y nombre desde
-la base en los seis sitios, remitente y asuntos de correo por empresa.
+Hecho el nombre, el logo y los colores. Los correos por empresa quedan pendientes.
 
-**Comprobación:** criterios **A10 y A11**.
+- **`GET /branding`**, sin id en la ruta: la empresa sale del token. Un
+  `/companies/:id/branding` invitaría a pedir la marca de otra.
+- **Los colores se aplican en caliente**, y esto salió casi gratis por una decisión
+  anterior: el tema declara los colores en canales (`--primary-rgb: 43 45 66`) y el
+  hexadecimal se deriva de ellos, así que vestir la aplicación con la paleta de una
+  agencia es escribir tres variables. Las 46 clases con opacidad siguen funcionando
+  porque dependen de esos mismos canales.
+- **La variante para modo oscuro se deriva**: una agencia elige un color, no dos. Se sube
+  la luminosidad a un mínimo legible y se baja la saturación, que es lo que hace el tema de
+  la casa a mano (su primario pasa de `#2B2D42` a `#8D99AE`). Comprobado con la misma
+  aritmética: `#2B2D42 → 164 166 183`, `#1D4ED8 → 139 157 208`, y un color que ya es claro
+  se deja quieto para que no se vaya a blanco.
+- **`PUT /companies/:id/logo`**, no POST: subir el logo reemplaza el que hubiera, así que
+  repetirlo deja el mismo resultado. El anterior se borra, para que la carpeta no acabe
+  siendo un archivo de todos los logos que una agencia ha tenido.
+- **Los logos se sirven sin sesión, a propósito.** Los carga una etiqueta `<img>` —incluida
+  la del voucher que html2canvas rasteriza con `crossOrigin`— y una etiqueta no manda
+  cabeceras. Un logo es la marca pública de la agencia; los vouchers y los documentos de
+  check-in sí pasarán a pedir sesión en T7, y por eso van en carpetas distintas.
+- **Dónde se ve**: barra lateral, cabecera y el voucher en PDF, que es lo único de esta
+  aplicación que llega al cliente final. La pantalla de entrada NO: es común a todas.
+
+**Pantalla del superadministrador (`/companies`)**, con una idea detrás: una lista de
+empresas es una lista de MARCAS, así que cada fila lleva la suya —su franja de color y su
+logo, o sus iniciales sobre su color si aún no lo ha subido—. El color ahí no decora,
+identifica: distingue una agencia de otra antes de leer un solo nombre.
+
+**Comprobado:** la marca de la empresa 1 sale con sus colores actuales; una agencia nueva
+con paleta propia sube su logo, se sirve sin sesión (200) y su administradora ve su propia
+marca por `/branding`. **Criterio A10 cumplido**; A11 (correos) pendiente.
+
+### Pendiente de T9
+Remitente y asuntos de correo por empresa: `emailService.js` tiene `iTea Travel` escrito en
+el código y hay una sola cuenta de Resend. Los campos ya están en la tabla.
 
 ---
 
@@ -262,6 +294,7 @@ la base en los seis sitios, remitente y asuntos de correo por empresa.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T9 | Nombre, logo y colores, de punta a punta. Los colores salieron casi gratis por los canales CSS de un trabajo anterior. Quedan los correos. |
 | 2026-09-11 | T5b | Cerrada. El superadmin ya crea agencias completas. Retirado el 403 por slug: no cerraba ningún hueco real. |
 | 2026-09-11 | T4 + T5a | Cerradas, y en este orden: la RLS no se puede encender antes de que el contexto llegue del token. A1 y A2 pasan con dos empresas reales. |
 | 2026-09-11 | T3 | Cerrada. El paso rompió 61 inserts y 11 findUnique; los dos se arreglan dentro del mismo paso. El valor por defecto sale de la variable de sesión, con un respaldo temporal que hay que quitar en T5. |

@@ -4,6 +4,7 @@ import { LayoutDashboard, BarChart3, Menu, RefreshCw, Moon, Sun } from 'lucide-r
 import { useData } from '../../context/DataContext';
 import { useSalesContext } from '../../context/SalesContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -32,6 +33,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const activeNav = location.pathname === '/stats' ? '/stats' : '/';
   
   const { isDarkMode, toggleDarkMode } = useTheme();
+  
+  const { marca } = useAuth();
   
   const { 
     refreshData,
@@ -84,7 +87,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <Menu size={20} />
             </button>
             <div className="flex items-center gap-2 text-sm font-body">
-              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline font-bold">NEXUS</span>
+              {/* La raíz de la ruta es la agencia, no el producto: quien trabaja
+                  aquí trabaja en su agencia. */}
+              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline font-bold">{marca?.nombre ?? 'NEXUS'}</span>
               <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">/</span>
               <span className="font-heading font-bold text-primary dark:text-amber-400">{title}</span>
             </div>

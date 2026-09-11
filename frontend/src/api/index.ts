@@ -29,3 +29,9 @@ export {
   getDashboard, getAttention, getAsesorPerformance, getCreditBreakdown,
   getTopClients, getCategoryDistribution,
 } from './stats';
+
+// Empresas: solo el superadministrador. `getBranding` la usa cualquiera.
+export {
+  listCompanies, getCompany, createCompany, updateCompany, uploadCompanyLogo, getBranding,
+} from './companies';
+export type { Empresa, NuevaEmpresa } from './companies';

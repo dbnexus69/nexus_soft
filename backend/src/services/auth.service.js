@@ -4,6 +4,7 @@ const { generateToken, getExpiryTime } = require('../utils/tokenUtils');
 const { UnauthorizedError, NotFoundError, BadRequestError } = require('../errors/AppError');
 const emailService = require('../utils/emailService');
 const { olvidarToken, olvidarUsuario } = require('../middleware/authCache');
+const { conEmpresa } = require('../config/tenant');
 const crypto = require('crypto');
 
 /**
@@ -36,16 +37,39 @@ function hashToken(token) {
 }
 
 class AuthService {
+  /**
+   * Resuelve a qué empresa pertenece un correo.
+   *
+   * Es el único punto del sistema que mira a través de las empresas, y por eso
+   * no lo hace con una consulta normal sino con `app_identidad_por_correo`, una
+   * función de la base que corre con los permisos de su dueño y devuelve
+   * exactamente dos números: el id del usuario y el de su empresa. Ni nombre,
+   * ni correo, ni contraseña.
+   *
+   * Hace falta porque quien entra solo dice su correo: hasta resolverlo no se
+   * sabe de qué agencia es, y sin empresa las políticas de la base no dejan ver
+   * ninguna fila. La alternativa —dejar `usuarios` sin proteger— convertiría la
+   * tabla de usuarios en la única sin aislamiento del sistema.
+   */
+  async _identidadPorCorreo(email) {
+    const [fila] = await prisma.$queryRaw`SELECT * FROM app_identidad_por_correo(${email.toLowerCase()})`;
+    return fila || null;
+  }
+
   async login({ email, password, remember, userAgent }) {
     if (!email || !password) throw new BadRequestError('Correo y contraseña requeridos');
 
-    const usuario = await prisma.usuarios.findUnique({
-      where: { email: email.toLowerCase() },
+    const identidad = await this._identidadPorCorreo(email);
+
+    // Todo lo demás ocurre ya dentro de la empresa de quien entra, incluida la
+    // lectura del propio usuario: a partir de aquí manda la política.
+    const usuario = identidad && await conEmpresa(identidad.empresa_id, () => prisma.usuarios.findFirst({
+      where: { id: identidad.usuario_id },
       include: {
         personas: { include: { tipos_documento: true } },
         roles: { include: { permisos_rol: { include: { permisos: true } } } },
       }
-    });
+    }));
 
     // Correo que no existe y contraseña que no es: el mismo error.
     //
@@ -59,16 +83,17 @@ class AuthService {
 
     if (usuario.status === 'inactive') throw new UnauthorizedError('Usuario inactivo. Contacte al administrador');
 
-    const token = generateToken({ userId: usuario.id, role: usuario.roles.nombre }, remember);
+    const token = generateToken({ userId: usuario.id, role: usuario.roles.nombre, empresaId: usuario.empresa_id }, remember);
     const expiresAt = new Date(getExpiryTime(remember));
 
-    await prisma.sesiones.create({
-      data: { id: crypto.randomUUID(), usuario_id: usuario.id, token_hash: hashToken(token), expires_at: expiresAt, user_agent: userAgent || null }
-    });
-
-    await prisma.usuarios.update({
-      where: { id: usuario.id },
-      data: { ultimo_login: new Date() }
+    await conEmpresa(usuario.empresa_id, async () => {
+      await prisma.sesiones.create({
+        data: { id: crypto.randomUUID(), usuario_id: usuario.id, token_hash: hashToken(token), expires_at: expiresAt, user_agent: userAgent || null }
+      });
+      await prisma.usuarios.update({
+        where: { id: usuario.id },
+        data: { ultimo_login: new Date() }
+      });
     });
 
     return {
@@ -125,24 +150,27 @@ class AuthService {
   async forgotPassword({ email }) {
     const generico = { message: 'Si el correo está registrado, recibirás un código para restablecer la contraseña' };
 
-    const usuario = await prisma.usuarios.findUnique({
-      where: { email: email.toLowerCase() },
+    // Igual que el login: el correo no dice de qué empresa es hasta resolverlo.
+    const identidad = await this._identidadPorCorreo(email);
+    if (!identidad) return generico;
+    const usuario = await conEmpresa(identidad.empresa_id, () => prisma.usuarios.findFirst({
+      where: { id: identidad.usuario_id },
       select: { id: true, status: true, personas: { select: { nombres: true } } },
-    });
+    }));
     if (!usuario || usuario.status === 'inactive') return generico;
 
     const codigo = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
     const expira = new Date(Date.now() + CODIGO_VIGENCIA_MIN * 60 * 1000);
 
     const codigoHash = await bcrypt.hash(codigo, 10);
-    await prisma.transaccion(async (tx) => {
+    await conEmpresa(identidad.empresa_id, () => prisma.transaccion(async (tx) => {
       // Un solo código vivo por usuario.
       await tx.$executeRaw`UPDATE codigos_recuperacion
                               SET usado_at = NOW()
                             WHERE usuario_id = ${usuario.id} AND usado_at IS NULL`;
       await tx.$executeRaw`INSERT INTO codigos_recuperacion (id, usuario_id, codigo_hash, expires_at)
                            VALUES (${crypto.randomUUID()}, ${usuario.id}, ${codigoHash}, ${expira})`;
-    });
+    }));
 
     const envio = await emailService.sendEmail({
       to: email,
@@ -170,33 +198,42 @@ class AuthService {
    * quinto fallo aunque siga en plazo.
    */
   async _codigoValido(email, code) {
-    const usuario = await prisma.usuarios.findUnique({
-      where: { email: email.toLowerCase() },
+    const identidad = await this._identidadPorCorreo(email);
+    if (!identidad) return null;
+    const usuario = await conEmpresa(identidad.empresa_id, () => prisma.usuarios.findFirst({
+      where: { id: identidad.usuario_id },
       select: { id: true, status: true },
-    });
+    }));
     if (!usuario || usuario.status === 'inactive') return null;
 
-    const [fila] = await prisma.$queryRaw`
-      SELECT id, codigo_hash, intentos
-        FROM codigos_recuperacion
-       WHERE usuario_id = ${usuario.id}
-         AND usado_at IS NULL
-         AND expires_at > NOW()
-       ORDER BY creado_at DESC
-       LIMIT 1`;
-    if (!fila) return null;
+    // El código vive en la empresa del usuario, así que leerlo y quemarlo va
+    // dentro de su contexto. Se devuelve la empresa para que `resetPassword`
+    // escriba dentro de la misma.
+    return conEmpresa(identidad.empresa_id, async () => {
+      const [fila] = await prisma.$queryRaw`
+        SELECT id, codigo_hash, intentos
+          FROM codigos_recuperacion
+         WHERE usuario_id = ${usuario.id}
+           AND usado_at IS NULL
+           AND expires_at > NOW()
+         ORDER BY creado_at DESC
+         LIMIT 1`;
+      if (!fila) return null;
 
-    if (await bcrypt.compare(code, fila.codigo_hash)) return { usuarioId: usuario.id, codigoId: fila.id };
+      if (await bcrypt.compare(code, fila.codigo_hash)) {
+        return { usuarioId: usuario.id, codigoId: fila.id, empresaId: identidad.empresa_id };
+      }
 
-    const intentos = Number(fila.intentos) + 1;
-    // Al llegar al tope el código se marca usado: quemarlo es más seguro que
-    // dejarlo en plazo con un contador alto.
-    await prisma.$executeRaw`
-      UPDATE codigos_recuperacion
-         SET intentos = ${intentos},
-             usado_at = CASE WHEN ${intentos} >= ${CODIGO_MAX_INTENTOS} THEN NOW() ELSE NULL END
-       WHERE id = ${fila.id}`;
-    return null;
+      const intentos = Number(fila.intentos) + 1;
+      // Al llegar al tope el código se marca usado: quemarlo es más seguro que
+      // dejarlo en plazo con un contador alto.
+      await prisma.$executeRaw`
+        UPDATE codigos_recuperacion
+           SET intentos = ${intentos},
+               usado_at = CASE WHEN ${intentos} >= ${CODIGO_MAX_INTENTOS} THEN NOW() ELSE NULL END
+         WHERE id = ${fila.id}`;
+      return null;
+    });
   }
 
   /**
@@ -227,11 +264,11 @@ class AuthService {
     if (!valido) throw new BadRequestError('El código no es válido o ha caducado');
 
     const password_hash = await bcrypt.hash(password, 10);
-    await prisma.transaccion(async (tx) => {
+    await conEmpresa(valido.empresaId, () => prisma.transaccion(async (tx) => {
       await tx.usuarios.update({ where: { id: valido.usuarioId }, data: { password_hash } });
       await tx.$executeRaw`UPDATE codigos_recuperacion SET usado_at = NOW() WHERE id = ${valido.codigoId}`;
       await tx.sesiones.deleteMany({ where: { usuario_id: valido.usuarioId } });
-    });
+    }));
     olvidarUsuario(valido.usuarioId);
 
     return { message: 'Contraseña actualizada. Ya puedes entrar con ella' };

@@ -119,19 +119,66 @@ empresa_id)` → `ventas(id, empresa_id)`). Impiden colgar una línea de la vent
 empresa, pero son una segunda capa: la barrera de verdad es la RLS de T4, y conviene tener
 esa antes que esto.
 
-## T4 · Encender la RLS `[ ]`
+## T5a · El contexto llega desde el token `[x]`
 
-`ENABLE` + `FORCE ROW LEVEL SECURITY` y política en las 42, más `empresas` y las métricas.
+**El orden del plan estaba mal y se corrigió al ejecutar.** La RLS no se puede encender
+antes que esto: el propio middleware de autenticación lee `usuarios` para saber quién
+eres, y con las políticas puestas y sin contexto no vería ni esa fila. Así que primero el
+contexto, después la barrera.
 
-**Comprobación:** criterios **A1 y A2** con dos empresas sembradas y datos en las dos.
-Automatizada, no manual: es la prueba que se queda en el repo.
+- El token lleva `empresaId`. Un token anterior al multi-tenant se rechaza con
+  `SESSION_SIN_EMPRESA` en vez de asumir una empresa por defecto.
+- El middleware abre el contexto en cuanto descifra el token y envuelve el resto de la
+  petición.
+- **El login es el único que mira a través de las empresas**, porque quien entra solo dice
+  su correo. En vez de dejar `usuarios` sin proteger, se abre una rendija del tamaño
+  exacto: `app_identidad_por_correo`, una función `SECURITY DEFINER` que devuelve dos
+  números —id de usuario e id de empresa— y nada más. Con eso ya se fija el contexto y el
+  resto se lee por el camino normal. Lo mismo para recuperar la contraseña.
 
-## T5 · Autenticación, URL y empresa suspendida `[ ]`
+## T4 · Encender la RLS `[x]`
 
-`empresa_id` en el token y en `sesiones`; middleware que rellena el contexto; slugs
-reservados; 403 si el slug de la URL no es el de tu empresa; login bloqueado para empresa
-suspendida; alta de empresa sembrando sus 4 roles y su matriz. Aquí se corrigen los 11
-`findUnique` por documento y por nombre de rol que T3 habrá roto.
+`ENABLE` + `FORCE ROW LEVEL SECURITY` y una política por tabla en las 42, más `empresas`,
+que cada agencia ve solo la suya. La política es `empresa_id = app_empresa_actual()`, una
+igualdad sobre columna indexada. Sin contexto la función devuelve NULL, y comparar con
+NULL da NULL: no se ve ninguna fila y no se puede insertar ninguna.
+
+De paso, el valor por defecto de `empresa_id` pierde el respaldo a la empresa 1 que T3
+había dejado: con la política puesta ese insert se rechazaba igualmente, así que el
+respaldo solo servía para que el error fuese más confuso. **Queda saldada la deuda que T3
+dejaba apuntada.**
+
+**Comprobado con dos empresas y datos en las dos** (montadas y desmontadas en la prueba):
+
+| | empresa 1 | empresa 2 |
+|---|---|---|
+| `prisma.ventas.count()` | 11 | 1 |
+| `SELECT count(*) FROM ventas` (sin WHERE) | 11 | 1 |
+
+- **A1 pasa**: ninguna ve las ventas de la otra sobre una tabla que tiene 12 filas.
+- **A2 pasa**: el SQL crudo sin `WHERE` tampoco las ve. La barrera no está en el código.
+- Sin contexto: 0 filas visibles y los inserts rechazados.
+- Insertar una venta con el `empresa_id` de la otra: rechazado por `WITH CHECK`.
+- 24 endpoints de lectura en 200 con la RLS puesta, entrando por el login real, y el ciclo
+  de escritura con transacción sigue funcionando.
+
+**El fallo que costó encontrar, y que vale por toda la prueba:** el login empezó a
+responder "correo o contraseña incorrectos" con la contraseña correcta. Las operaciones de
+Prisma son perezosas, así que `conEmpresa(id, () => prisma.usuarios.findFirst(...))`
+devolvía la promesa sin esperarla y el ámbito se cerraba **antes** de que la consulta
+arrancara: corría sin empresa y la política no dejaba ver ni al propio usuario. Arreglado
+en el helper —`async () => fn()`— y no en cada llamada, para que dé igual cómo lo escriba
+quien lo use.
+
+**Corrección a un comentario de la migración**, anotada en su carpeta: `FORCE` no protege
+de desplegar con el usuario `postgres`, porque `postgres` tiene `BYPASSRLS` y salta las
+políticas igual —comprobado—. Esa protección es de despliegue y merece una comprobación al
+arrancar, que queda pendiente.
+
+## T5b · URL, empresa suspendida y roles por empresa `[ ]`
+
+Slugs reservados; 403 si el slug de la URL no es el de tu empresa; login bloqueado para
+empresa suspendida; alta de empresa sembrando sus 4 roles y su matriz de permisos.
 
 **Comprobación:** criterios **A3, A6, A8**.
 
@@ -170,6 +217,7 @@ la base en los seis sitios, remitente y asuntos de correo por empresa.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T4 + T5a | Cerradas, y en este orden: la RLS no se puede encender antes de que el contexto llegue del token. A1 y A2 pasan con dos empresas reales. |
 | 2026-09-11 | T3 | Cerrada. El paso rompió 61 inserts y 11 findUnique; los dos se arreglan dentro del mismo paso. El valor por defecto sale de la variable de sesión, con un respaldo temporal que hay que quitar en T5. |
 | 2026-09-11 | T2 | Cerrada. De paso, el repo estrena migraciones: `db push` no podía con lo que viene en T3. Y confirmado que el pooler acepta un rol propio. |
 | 2026-09-11 | T1 | Cerrada. El mecanismo funciona y está inerte hasta T5. Encontrado de paso que la forma de lote de `$transaction` pierde la atomicidad con la extensión puesta: 7 sitios convertidos. |

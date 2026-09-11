@@ -131,7 +131,7 @@ export const AttentionPanel = memo(function AttentionPanel({
   }
 
   return (
-    <section className="bg-white/95 dark:bg-[#131524]/95 border border-gray-border dark:border-slate-800 rounded-2xl overflow-hidden">
+    <section className="bg-[#ffffff] dark:bg-[#131524] border border-gray-border dark:border-slate-800 rounded-2xl overflow-hidden">
       <h2 className="font-heading text-sm font-semibold text-primary dark:text-white px-5 py-4 border-b border-gray-border dark:border-slate-800">
         Requiere atención
       </h2>

@@ -5,10 +5,34 @@ interface CardProps {
   className?: string;
 }
 
+/**
+ * La superficie sobre la que va todo. 25 usos en la aplicación.
+ *
+ * **Opaca y sin desenfoque, a propósito.** Era `bg-white/95` con
+ * `backdrop-blur-md`: una tarjeta translúcida con filtro de fondo. Eso hacía dos
+ * cosas, las dos malas para algo que solo tiene que sostener contenido:
+ *
+ * - El 5 % de transparencia dejaba pasar el fondo de la página, así que el
+ *   blanco no era blanco y el contraste del texto bajaba un poco en cada
+ *   tarjeta.
+ * - `backdrop-filter` no solo difumina: crea un contexto de apilamiento y un
+ *   bloque contenedor. Todo lo que se despliega DENTRO de una tarjeta —los
+ *   desplegables, los menús— queda compuesto ahí dentro, y ahí es donde salía
+ *   el aspecto borroso.
+ *
+ * Una tarjeta es papel, no cristal. El desenfoque tiene sentido en lo que
+ * flota por encima del contenido —la cabecera fija, el velo de una ventana— y
+ * ahí se conserva.
+ *
+ * El blanco va como valor literal y no como `bg-white` por un motivo concreto:
+ * `index.css` reescribe `.dark .bg-white` con `!important`, así que usar la
+ * clase normal cambiaría también el color de las tarjetas en modo oscuro. El
+ * problema era el modo claro; el oscuro se queda exactamente como estaba.
+ */
 export function Card({ children, className = '' }: CardProps) {
   const hasBackground = /\bbg-/.test(className);
   return (
-    <div className={`card ${hasBackground ? '' : 'bg-white/95 dark:bg-[#131524]/95 backdrop-blur-md'} rounded-2xl border border-slate-200/60 dark:border-slate-800/85 shadow-sm transition-all duration-300 ${className}`}>
+    <div className={`card ${hasBackground ? '' : 'bg-[#ffffff] dark:bg-[#131524]'} rounded-2xl border border-slate-200/60 dark:border-slate-800/85 shadow-sm transition-all duration-300 ${className}`}>
       {children}
     </div>
   );

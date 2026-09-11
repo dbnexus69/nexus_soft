@@ -14,7 +14,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       secondary: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/80 focus:ring-4 focus:ring-slate-200/50',
       danger: 'bg-rose-500 hover:bg-rose-600 text-white shadow-md hover:shadow-lg shadow-rose-500/10 focus:ring-4 focus:ring-rose-500/15',
       success: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg shadow-emerald-500/10 focus:ring-4 focus:ring-emerald-500/15',
-      outline: 'border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-[#131524]/40 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:ring-4 focus:ring-slate-100/50'
+      // El botón de contorno iba con el fondo al 40 %, que sobre una tarjeta
+      // blanca es un blanco lechoso: ni transparente ni sólido. Un botón de
+      // contorno no tiene fondo propio —esa es su definición— y así se apoya
+      // limpio sobre cualquier superficie.
+      outline: 'border border-slate-200 dark:border-slate-800 bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:ring-4 focus:ring-slate-100/50'
     };
 
     const sizes = {

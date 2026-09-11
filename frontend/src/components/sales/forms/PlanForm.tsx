@@ -518,7 +518,7 @@ export function PlanForm({
             ))}
           </div>
         ) : (
-          <div className="bg-white/80 dark:bg-slate-900/60 p-3 rounded-xl border border-dashed border-purple-200 dark:border-purple-800 text-center">
+          <div className="bg-[#ffffff] dark:bg-slate-900 p-3 rounded-xl border border-dashed border-purple-200 dark:border-purple-800 text-center">
             <p className="text-xs text-slate-500">No hay otros servicios vinculados aún a este paquete.</p>
           </div>
         )}

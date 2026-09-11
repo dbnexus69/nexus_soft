@@ -141,7 +141,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
               value={formData.avatar || AVATARS[0]}
               onChange={(avatar) => setFormData((prev) => ({ ...prev, avatar }))}
             />
-            <div className="mt-6 text-center text-sm text-gray-500 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+            <div className="mt-6 text-center text-sm text-gray-500 bg-[#ffffff] dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
               <p>Selecciona un avatar moderno y premium que represente a tu cliente.</p>
             </div>
           </div>

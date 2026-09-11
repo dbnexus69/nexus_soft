@@ -101,7 +101,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
             </Badge>
 
             {numeroCompras > 0 ? (
-              <div className="w-full bg-white/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-gray-100 dark:border-slate-700/50 text-center shadow-sm backdrop-blur-sm">
+              <div className="w-full bg-[#ffffff] dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700/50 text-center shadow-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Total Compras</span>
                 <span className="text-2xl font-bold text-primary dark:text-teal-400">
                   {formatCurrency(totalCompras)}

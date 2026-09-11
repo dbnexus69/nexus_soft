@@ -353,7 +353,7 @@ export default function CommissionAgents() {
                     return (
                       <div
                         key={agent.id}
-                        className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 md:p-5 hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col md:flex-row items-center gap-6"
+                        className="group bg-[#ffffff] dark:bg-slate-800 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 md:p-5 hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col md:flex-row items-center gap-6"
                       >
                         {/* 1. Avatar & Info */}
                         <div className="flex items-center gap-4 min-w-[280px] w-full md:w-auto">
@@ -438,7 +438,7 @@ export default function CommissionAgents() {
           {/* === PESTAÑA LIQUIDACIONES === */}
           {activeTab === "settlements" && (
             <div className="space-y-6 animate-fade-in-up">
-              <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-md rounded-[2.5rem] border border-gray-100 dark:border-slate-700 p-8 shadow-xl">
+              <div className="bg-[#ffffff] dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 p-8 shadow-xl">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
                     <Wallet size={24} />
@@ -521,7 +521,7 @@ export default function CommissionAgents() {
 
           {/* === PESTAÑA HISTORIAL === */}
           {activeTab === "history" && (
-            <Card className="animate-fade-in border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-md">
+            <Card className="animate-fade-in border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-[#ffffff] dark:bg-slate-800">
               <CardHeader className="bg-gray-50/50 dark:bg-slate-900/50 p-8 border-b border-gray-100 dark:border-slate-700">
                 <div className="flex items-center gap-3">
                    <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center">
@@ -611,7 +611,7 @@ export default function CommissionAgents() {
                 value={formData.avatar || AVATARS[0]}
                 onChange={(avatar) => setFormData((prev: any) => ({ ...prev, avatar }))}
               />
-              <div className="mt-6 text-center text-sm text-gray-500 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+              <div className="mt-6 text-center text-sm text-gray-500 bg-[#ffffff] dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
                 <p>Selecciona un avatar premium para identificar a este comisionista en tu directorio y listados de pagos.</p>
               </div>
             </div>

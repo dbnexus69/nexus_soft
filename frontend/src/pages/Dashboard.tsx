@@ -106,7 +106,7 @@ const Contador = memo(function Contador({
 });
 
 const Panel = ({ titulo, children, className = "" }: { titulo: string; children: React.ReactNode; className?: string }) => (
-  <section className={`bg-white/95 dark:bg-[#131524]/95 border border-gray-border dark:border-slate-800 rounded-2xl ${className}`}>
+  <section className={`bg-[#ffffff] dark:bg-[#131524] border border-gray-border dark:border-slate-800 rounded-2xl ${className}`}>
     <h2 className="font-heading text-sm font-semibold text-primary dark:text-white px-5 py-4 border-b border-gray-border dark:border-slate-800">
       {titulo}
     </h2>
@@ -199,7 +199,7 @@ export default function Dashboard() {
     <div className="space-y-6 pb-8">
 
       {/* ── Titular: qué entró y qué falta por cobrar ─────────────────── */}
-      <section className="bg-white/95 dark:bg-[#131524]/95 border border-gray-border dark:border-slate-800 rounded-2xl px-5 sm:px-6 py-6">
+      <section className="bg-[#ffffff] dark:bg-[#131524] border border-gray-border dark:border-slate-800 rounded-2xl px-5 sm:px-6 py-6">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex flex-wrap gap-x-12 gap-y-6">
             <Titular
@@ -254,7 +254,7 @@ export default function Dashboard() {
       </section>
 
       {/* ── Tira operativa: apoyo, no titular ─────────────────────────── */}
-      <section className="bg-white/95 dark:bg-[#131524]/95 border border-gray-border dark:border-slate-800 rounded-2xl px-5 py-4">
+      <section className="bg-[#ffffff] dark:bg-[#131524] border border-gray-border dark:border-slate-800 rounded-2xl px-5 py-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-3">
           <Contador Icono={Plane} etiqueta="Tramos emitidos" valor={stats.totalFlights} cargando={cargando} />
           <Contador Icono={BedDouble} etiqueta="Reservas de hotel" valor={stats.hotelesCount} cargando={cargando} />

@@ -45,7 +45,7 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
     <div className="flex flex-col items-center w-full">
       <div className="relative mb-6">
         <div className={`${SKELETON} absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-full blur-xl`}></div>
-        <div className="relative bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-4 border-white dark:border-slate-700 shadow-xl rounded-full p-2 transition-transform duration-300 hover:scale-105">
+        <div className="relative bg-[#ffffff] dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl rounded-full p-2 transition-transform duration-300 hover:scale-105">
           <img 
             src={safeValue} 
             alt="Selected Avatar" 

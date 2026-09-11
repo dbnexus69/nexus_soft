@@ -23,7 +23,7 @@ function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-gray-100 dark:border-slate-700 rounded-2xl shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] p-5 min-w-[200px]">
+    <div className="bg-[#ffffff] dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] p-5 min-w-[200px]">
       {label && (
         <p className="text-sm font-black text-gray-800 dark:text-slate-100 mb-3 border-b border-gray-100 dark:border-slate-700 pb-2 tracking-tight">
           {label}

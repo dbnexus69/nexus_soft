@@ -753,7 +753,7 @@ class FlightsService {
     // El correo va DESPUÉS del commit: es una llamada de red, y dentro de la
     // transacción la mantendría abierta durante segundos y un fallo haría
     // rollback de un check-in que el operador ya da por hecho.
-    const { productStatus } = await prisma.$transaction(async (tx) => {
+    const { productStatus } = await prisma.transaccion(async (tx) => {
       await tx.tramos_vuelo.update({
         where: { id: tramo.id },
         data: {
@@ -896,7 +896,7 @@ class FlightsService {
       throw new BadRequestError('El check-in de este vuelo ya está cancelado');
     }
 
-    const { productStatus } = await prisma.$transaction(async (tx) => {
+    const { productStatus } = await prisma.transaccion(async (tx) => {
       await tx.tramos_vuelo.update({
         where: { id: tramo.id },
         data: {

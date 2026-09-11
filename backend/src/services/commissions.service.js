@@ -337,7 +337,7 @@ class CommissionsService {
   }
 
   async createSettlement(data) {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.transaccion(async (tx) => {
       const metodo_pago_id = data.paymentMethod ? parseInt(data.paymentMethod) : null;
 
       const settlement = await tx.liquidaciones_comision.create({

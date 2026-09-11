@@ -173,7 +173,7 @@ class ResponsablesService {
       docTypeId = tipoDoc ? tipoDoc.id : null;
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.transaccion(async (tx) => {
       let personas = docNumber ? await tx.personas.findFirst({
         where: { documento: docNumber }
       }) : null;
@@ -278,8 +278,8 @@ class ResponsablesService {
       }
     }
 
-    await prisma.$transaction([
-      prisma.personas.update({
+    await prisma.transaccion(async (tx) => {
+      await tx.personas.update({
         where: { id: responsable.persona_id },
         data: {
           nombres: firstName,
@@ -289,14 +289,14 @@ class ResponsablesService {
           telefono: phone,
           email: email
         }
-      }),
-      prisma.responsables.update({
+      });
+      await tx.responsables.update({
         where: { id },
         data: {
           status: status || responsable.status
         }
-      })
-    ]);
+      });
+    });
 
     // Return the updated responsable using getResponsableById to get consistent formatting
     const updatedResponsable = await this.getResponsableById(id);

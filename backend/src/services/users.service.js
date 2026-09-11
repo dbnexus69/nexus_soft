@@ -146,8 +146,8 @@ class UsersService {
       ? await prisma.roles.findUnique({ where: { nombre: data.role } })
       : null;
 
-    await prisma.$transaction([
-      prisma.personas.update({
+    await prisma.transaccion(async (tx) => {
+      await tx.personas.update({
         where: { id: existente.persona_id },
         data: {
           deleted_at: null,
@@ -158,16 +158,16 @@ class UsersService {
           ...(data.phone ? { telefono: data.phone } : {}),
           ...(tipo_documento_id ? { tipo_documento_id } : {}),
         },
-      }),
-      prisma.usuarios.update({
+      });
+      await tx.usuarios.update({
         where: { id },
         data: {
           status: data.status === 'inactive' ? 'inactive' : 'active',
           ...(rol ? { rol_id: rol.id } : {}),
           ...(password_hash ? { password_hash } : {}),
         },
-      }),
-    ]);
+      });
+    });
 
     return this.getUserById(id);
   }
@@ -454,16 +454,18 @@ class UsersService {
     );
 
     if (conHistorial) {
-      await prisma.$transaction([
-        prisma.usuarios.update({ where: { id }, data: { status: 'inactive' } }),
+      await prisma.transaccion(async (tx) => {
+        await tx.usuarios.update({ where: { id }, data: { status: 'inactive' } });
         // Inhabilitar sin cerrar la sesión abierta no inhabilita nada: el token
         // ya emitido seguía valiendo hasta caducar.
-        prisma.sesiones.deleteMany({ where: { usuario_id: id } }),
-        ...(personaCompartida ? [] : [prisma.personas.update({
-          where: { id: usuario.persona_id },
-          data: { deleted_at: new Date(), status: 'inactive' },
-        })]),
-      ]);
+        await tx.sesiones.deleteMany({ where: { usuario_id: id } });
+        if (!personaCompartida) {
+          await tx.personas.update({
+            where: { id: usuario.persona_id },
+            data: { deleted_at: new Date(), status: 'inactive' },
+          });
+        }
+      });
       olvidarUsuario(id);
       return {
         message: 'Usuario inhabilitado',
@@ -473,12 +475,12 @@ class UsersService {
       };
     }
 
-    await prisma.$transaction([
-      prisma.sesiones.deleteMany({ where: { usuario_id: id } }),
-      prisma.logs_usuarios.deleteMany({ where: { usuario_id: id } }),
-      prisma.usuarios.delete({ where: { id } }),
-      ...(personaCompartida ? [] : [prisma.personas.delete({ where: { id: usuario.persona_id } })]),
-    ]);
+    await prisma.transaccion(async (tx) => {
+      await tx.sesiones.deleteMany({ where: { usuario_id: id } });
+      await tx.logs_usuarios.deleteMany({ where: { usuario_id: id } });
+      await tx.usuarios.delete({ where: { id } });
+      if (!personaCompartida) await tx.personas.delete({ where: { id: usuario.persona_id } });
+    });
     olvidarUsuario(id);
 
     return { message: 'Usuario eliminado', deleted: true };

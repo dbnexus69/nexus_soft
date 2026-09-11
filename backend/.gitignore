@@ -11,12 +11,10 @@ node_modules
 .pnp.js
 
 # Environment files
-.env
-.env.local
-.env.production
-.env.development
-.env.test
-.env.example
+# Cualquier variante, no una lista. La lista enumerada dejaba fuera cualquier
+# nombre nuevo: un .env.bak creado al vuelo aparecía como fichero sin seguir,
+# con la contraseña de la base dentro y a un `git add .` de acabar en el repo.
+.env*
 
 # Build outputs
 dist

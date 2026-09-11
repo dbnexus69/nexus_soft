@@ -316,10 +316,10 @@ class RolesService {
     }
 
     // Borrado y alta van juntos: o se reemplazan todos, o no se toca ninguno.
-    await prisma.$transaction([
-      prisma.permisos_rol.deleteMany({ where: { rol_id: roles.id } }),
-      prisma.permisos_rol.createMany({ data: aEscribir }),
-    ]);
+    await prisma.transaccion(async (tx) => {
+      await tx.permisos_rol.deleteMany({ where: { rol_id: roles.id } });
+      await tx.permisos_rol.createMany({ data: aEscribir });
+    });
 
     olvidarTodo();
     return { message: 'Permisos de rol actualizados', count: aEscribir.length };

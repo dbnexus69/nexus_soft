@@ -134,14 +134,15 @@ class AuthService {
     const codigo = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
     const expira = new Date(Date.now() + CODIGO_VIGENCIA_MIN * 60 * 1000);
 
-    await prisma.$transaction([
+    const codigoHash = await bcrypt.hash(codigo, 10);
+    await prisma.transaccion(async (tx) => {
       // Un solo código vivo por usuario.
-      prisma.$executeRaw`UPDATE codigos_recuperacion
-                            SET usado_at = NOW()
-                          WHERE usuario_id = ${usuario.id} AND usado_at IS NULL`,
-      prisma.$executeRaw`INSERT INTO codigos_recuperacion (id, usuario_id, codigo_hash, expires_at)
-                         VALUES (${crypto.randomUUID()}, ${usuario.id}, ${await bcrypt.hash(codigo, 10)}, ${expira})`,
-    ]);
+      await tx.$executeRaw`UPDATE codigos_recuperacion
+                              SET usado_at = NOW()
+                            WHERE usuario_id = ${usuario.id} AND usado_at IS NULL`;
+      await tx.$executeRaw`INSERT INTO codigos_recuperacion (id, usuario_id, codigo_hash, expires_at)
+                           VALUES (${crypto.randomUUID()}, ${usuario.id}, ${codigoHash}, ${expira})`;
+    });
 
     const envio = await emailService.sendEmail({
       to: email,
@@ -226,11 +227,11 @@ class AuthService {
     if (!valido) throw new BadRequestError('El código no es válido o ha caducado');
 
     const password_hash = await bcrypt.hash(password, 10);
-    await prisma.$transaction([
-      prisma.usuarios.update({ where: { id: valido.usuarioId }, data: { password_hash } }),
-      prisma.$executeRaw`UPDATE codigos_recuperacion SET usado_at = NOW() WHERE id = ${valido.codigoId}`,
-      prisma.sesiones.deleteMany({ where: { usuario_id: valido.usuarioId } }),
-    ]);
+    await prisma.transaccion(async (tx) => {
+      await tx.usuarios.update({ where: { id: valido.usuarioId }, data: { password_hash } });
+      await tx.$executeRaw`UPDATE codigos_recuperacion SET usado_at = NOW() WHERE id = ${valido.codigoId}`;
+      await tx.sesiones.deleteMany({ where: { usuario_id: valido.usuarioId } });
+    });
     olvidarUsuario(valido.usuarioId);
 
     return { message: 'Contraseña actualizada. Ya puedes entrar con ella' };

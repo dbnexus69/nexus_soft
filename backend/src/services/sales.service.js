@@ -482,7 +482,7 @@ class SalesService {
     // Los catálogos se resuelven fuera: dentro de la transacción solo escrituras.
     const catalogos = await this._precargarCatalogos(body);
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await prisma.transaccion(async (tx) => {
       // 1. Create sale record
       const venta = await tx.ventas.create({
         data: {
@@ -1715,7 +1715,7 @@ class SalesService {
     // importe de la deuda en manos del cliente: un POST de un peso con
     // `saleTotal: 1` dejaba una venta de 3.000.000 en `pagado`. Ningún cliente
     // los enviaba —eran superficie de ataque y nada más—, así que se van.
-    const resultado = await prisma.$transaction(async (tx) => {
+    const resultado = await prisma.transaccion(async (tx) => {
       const venta = await tx.ventas.findFirst({
         where: { id, deleted_at: null },
         select: { monto_total: true, monto_pagado_credito: true, status: true },
@@ -1760,7 +1760,7 @@ class SalesService {
     // Misma corrección que en `registerPayment`: la rama que aceptaba
     // `currentPayments` y `saleTotal` del cuerpo dejaba que el cliente
     // decidiera el estado de cobro resultante.
-    const actualizada = await prisma.$transaction(async (tx) => {
+    const actualizada = await prisma.transaccion(async (tx) => {
       const pago = await tx.pagos_venta.findUnique({
         where: { id: paymentId },
         select: { id: true, venta_id: true },
@@ -1854,7 +1854,7 @@ class SalesService {
       throw new BadRequestError('Una venta a crédito necesita fecha de vencimiento (creditDueDate)');
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.transaccion(async (tx) => {
       await tx.ventas.update({ where: { id: ventaId }, data });
       // Ningún campo editable mueve dinero, así que el recálculo es un no-op
       // hoy. Va igual: si mañana entra un campo que sí lo mueva, el total y el

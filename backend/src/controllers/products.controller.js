@@ -110,7 +110,7 @@ const productHandler = (category, tableName, transformData) => ({
       if (!venta) return error(res, 'Venta no encontrada', 404);
 
       const data = req.body;
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.transaccion(async (tx) => {
         const detalle = await createDetalleProducto(tx, venta.id, category, data);
         const transformed = transformData ? transformData(data, detalle.id) : { detalle_venta_id: detalle.id, ...data };
         if (!transformed.id) transformed.id = randomUUID();
@@ -269,7 +269,7 @@ const productHandler = (category, tableName, transformData) => ({
       if (!venta) return error(res, 'Venta no encontrada', 404);
 
       const data = req.body;
-      const product = await prisma.$transaction(async (tx) => {
+      const product = await prisma.transaccion(async (tx) => {
         // El cuerpo de la petición NO va directo a Prisma. Antes sí: como en el
         // update no se pasaba `transformData`, `data` llegaba crudo, así que
         // cualquier campo que no fuese columna reventaba con un 500 —probado con
@@ -405,7 +405,7 @@ const productHandler = (category, tableName, transformData) => ({
       });
       if (linea?.venta_id !== venta.id) return error(res, 'Producto no encontrado', 404);
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.transaccion(async (tx) => {
         const detalle = await tx.detalle_venta.findUnique({
           where: { id: product.detalle_venta_id },
           select: { venta_id: true },

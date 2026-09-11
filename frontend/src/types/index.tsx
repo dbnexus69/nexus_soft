@@ -147,6 +147,15 @@ export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTe
 }
 
 export interface Client {
+  /**
+   * La agencia a la que pertenece.
+   *
+   * Llegan el id y el nombre juntos porque el id solo no se puede resolver:
+   * `/companies/:id` es del superadministrador, así que un asesor recibiría un
+   * número sin forma de traducirlo.
+   */
+  empresaId?: number;
+  empresaNombre?: string | null;
   id: number;
   firstName: string;
   lastName: string;

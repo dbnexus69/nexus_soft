@@ -91,7 +91,7 @@ class ClientsService {
     const [cliente, resumen] = await Promise.all([
       prisma.clientes.findUnique({
         where: { id },
-        include: { personas: { include: { tipos_documento: true } } }
+        include: { personas: { include: { tipos_documento: true } }, empresas: true }
       }),
       includeSales
         ? prisma.ventas.aggregate({
@@ -124,6 +124,15 @@ class ClientsService {
       avatar: cliente.personas.avatar_url,
       registrationDate: cliente.fecha_registro,
       createdBy: cliente.creado_por_id,
+      // La agencia a la que pertenece el cliente.
+      //
+      // Va el id Y el nombre, no solo el id. Un id suelto obligaría a quien
+      // consume esto a resolverlo por su cuenta, y no puede: `/companies/:id`
+      // es solo para el superadministrador, así que un asesor recibiría un
+      // número que no hay forma de traducir. Devolver las dos cosas ahorra una
+      // llamada que además no existiría.
+      empresaId: cliente.empresa_id,
+      empresaNombre: cliente.empresas?.nombre_comercial || cliente.empresas?.nombre || null,
       salesCount: resumen ? resumen._count._all : undefined,
       salesTotal: resumen ? (resumen._sum.monto_total || 0) : undefined
     };

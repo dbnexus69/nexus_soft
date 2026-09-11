@@ -366,3 +366,25 @@ el remitente se compone por empresa —`DB Nexus <onboarding@resend.dev>` frente
 | 2026-09-11 | T3 | Cerrada. El paso rompió 61 inserts y 11 findUnique; los dos se arreglan dentro del mismo paso. El valor por defecto sale de la variable de sesión, con un respaldo temporal que hay que quitar en T5. |
 | 2026-09-11 | T2 | Cerrada. De paso, el repo estrena migraciones: `db push` no podía con lo que viene en T3. Y confirmado que el pooler acepta un rol propio. |
 | 2026-09-11 | T1 | Cerrada. El mecanismo funciona y está inerte hasta T5. Encontrado de paso que la forma de lote de `$transaction` pierde la atomicidad con la extensión puesta: 7 sitios convertidos. |
+
+---
+
+## La prueba que se queda
+
+`pnpm test:aislamiento` (`backend/pruebas/aislamiento.js`).
+
+El criterio A1 pedía una prueba automática y durante la ejecución se verificó a mano, con
+scripts de usar y tirar. Esto lo cierra: monta una segunda agencia con datos, comprueba
+diez cosas y la desmonta, pase lo que pase.
+
+Lo primero que mira es si `DATABASE_URL` apunta a un rol con `BYPASSRLS`, porque es el
+fallo más probable de todos y el único que anula el trabajo entero sin dar un error.
+Comprobado que se pone en rojo: con el rol `postgres` sale `bypassrls=true`, la prueba
+para ahí y devuelve código 1.
+
+El resto: cada empresa ve solo lo suyo por Prisma y por SQL crudo sin `WHERE`; pedir por
+id la venta de otra no devuelve nada; insertar con el `empresa_id` de otra queda
+rechazado; y sin contexto no se ve ni se escribe nada.
+
+Debería correr en cada despliegue. No usa ningún marco de pruebas: es el primer test del
+repo y no parecía el momento de añadir una dependencia para ejecutar un archivo.

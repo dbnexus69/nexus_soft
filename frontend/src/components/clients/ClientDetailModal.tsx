@@ -85,7 +85,20 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
                 </div>
               )}
             </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-3">{client.name}</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-1">{client.name}</h2>
+            {/* De qué agencia es este cliente.
+                Va aquí, bajo el nombre, y no como una celda más de la rejilla de
+                abajo: eso es procedencia, no un dato de contacto. Entre el
+                teléfono y la fecha de nacimiento se leería como un campo más del
+                formulario, y es otra cosa.
+                Para quien trabaja en una sola agencia siempre dirá lo mismo, y
+                está bien: es la confirmación de dónde estás. Donde de verdad
+                sirve es cuando el superadministrador entra a dar soporte. */}
+            {client.empresaNombre ? (
+              <p className="mb-3 text-center text-xs text-accent">
+                Cliente de <span className="font-semibold">{client.empresaNombre}</span>
+              </p>
+            ) : null}
             <Badge variant={client.status} className="mb-8 shadow-sm">
               {client.status === 'active' ? 'CLIENTE ACTIVO' : 'CLIENTE INACTIVO'}
             </Badge>

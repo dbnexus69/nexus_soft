@@ -12,7 +12,8 @@
     "db:seed": "node prisma/seed.js",
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma db push --force-reset && node prisma/seed.js",
-    "check:prisma": "node scripts/check-prisma-fields.js"
+    "check:prisma": "node scripts/check-prisma-fields.js",
+    "test:aislamiento": "node pruebas/aislamiento.js"
   },
   "keywords": [
     "nexus",

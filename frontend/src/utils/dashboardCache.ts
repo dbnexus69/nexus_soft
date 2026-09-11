@@ -9,16 +9,16 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 function getCacheKey(): string {
   try {
     // Obtener el userId del token guardado en localStorage
-    const token = localStorage.getItem('itea_token');
-    if (!token) return 'itea_dashboard_cache_anonymous';
+    const token = localStorage.getItem('nexus_token');
+    if (!token) return 'nexus_dashboard_cache_anonymous';
     // Decodificar el payload del JWT (sin verificar firma, solo para obtener userId)
     const payload = JSON.parse(atob(token.split('.')[1]));
     // La empresa entra en la clave, no solo el usuario: al suplantar, el
     // superadministrador conserva su userId y el navegador le serviría las
     // cifras de la agencia anterior dentro de la siguiente.
-    return `itea_dashboard_cache_${payload.empresaId || 'sin-empresa'}_${payload.userId || 'unknown'}`;
+    return `nexus_dashboard_cache_${payload.empresaId || 'sin-empresa'}_${payload.userId || 'unknown'}`;
   } catch {
-    return 'itea_dashboard_cache_anonymous';
+    return 'nexus_dashboard_cache_anonymous';
   }
 }
 

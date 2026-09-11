@@ -28,7 +28,7 @@ interface HeaderProps {
 
 export function Header({ onMenuToggle }: HeaderProps) {
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'iTea';
+  const title = pageTitles[location.pathname] || 'Nexus';
   const isRootPath = location.pathname === '/' || location.pathname === '/stats';
   const activeNav = location.pathname === '/stats' ? '/stats' : '/';
   

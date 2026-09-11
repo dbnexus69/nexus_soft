@@ -84,7 +84,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   const { handleCreateSale } = useSalesContext();
   const { user } = useAuth();
 
-  const draftKey = `itea_new_sale_draft_${user?.id || 'unknown'}`;
+  const draftKey = `nexus_new_sale_draft_${user?.id || 'unknown'}`;
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<WizardFormData>(() => {

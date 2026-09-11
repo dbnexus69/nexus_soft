@@ -9,7 +9,7 @@ const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutos
 
 function getCacheKey(baseKey: string): string {
   try {
-    const token = localStorage.getItem('itea_token');
+    const token = localStorage.getItem('nexus_token');
     if (!token) return `${baseKey}_anonymous`;
     const payload = JSON.parse(atob(token.split('.')[1]));
     // La empresa entra en la clave, no solo el usuario: al suplantar, el
@@ -62,15 +62,15 @@ function deleteCache(key: string): void {
 /** Guarda la lista de usuarios en caché */
 /** Guarda la lista de usuarios en caché */
 export function saveUsersCache(users: unknown[]): void {
-  writeCache(getCacheKey('itea_users_cache'), users);
+  writeCache(getCacheKey('nexus_users_cache'), users);
 }
 
 /** Retorna usuarios desde caché si TTL no expiró, null si expirado */
 export function loadUsersCache(): unknown[] | null {
-  return readCache<unknown[]>(getCacheKey('itea_users_cache'));
+  return readCache<unknown[]>(getCacheKey('nexus_users_cache'));
 }
 
 /** Invalida el caché de usuarios. Usar al crear/editar/eliminar. */
 export function invalidateUsersCache(): void {
-  deleteCache(getCacheKey('itea_users_cache'));
+  deleteCache(getCacheKey('nexus_users_cache'));
 }

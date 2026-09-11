@@ -142,7 +142,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
   const { marca } = useAuth();
 
   if (!sale) {
-    return <div className="itea-voucher"><div ref={ref} /></div>;
+    return <div className="nexus-voucher"><div ref={ref} /></div>;
   }
 
   const currentDate = new Date().toLocaleDateString('es-CO', {
@@ -172,7 +172,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
         : '—');
 
   return (
-    <div className="itea-voucher">
+    <div className="nexus-voucher">
       <div className="v-page" ref={ref}>
         
         {/* ══ HERO HEADER ══ */}

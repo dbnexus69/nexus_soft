@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ponerMarca = (m: Marca | null) => { setMarca(m); aplicarMarca(m); };
 
   useEffect(() => {
-    const token = localStorage.getItem('itea_token');
+    const token = localStorage.getItem('nexus_token');
 
     if (token) {
       getMe()
@@ -35,8 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await getBranding().then(ponerMarca).catch(() => {});
         })
         .catch(() => {
-          localStorage.removeItem('itea_token');
-          localStorage.removeItem('itea_session_expiry');
+          localStorage.removeItem('nexus_token');
+          localStorage.removeItem('nexus_session_expiry');
         })
         .finally(() => setIsLoading(false));
     } else {
@@ -49,13 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await apiLogin(email, password, remember);
 
       // Limpiar caché vieja antes de guardar el nuevo token
-      localStorage.removeItem('itea_dashboard_cache');
+      localStorage.removeItem('nexus_dashboard_cache');
 
       setUser(data.user);
       getBranding().then(ponerMarca).catch(() => {});
 
-      localStorage.setItem('itea_token', data.token);
-      localStorage.setItem('itea_remember', String(remember));
+      localStorage.setItem('nexus_token', data.token);
+      localStorage.setItem('nexus_remember', String(remember));
 
       return { success: true };
     } catch (err: any) {
@@ -70,10 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fuera la marca: la pantalla de entrada es común, y dejarla puesta haría
     // que quien sale de una agencia viera sus colores al ir a entrar en otra.
     ponerMarca(null);
-    localStorage.removeItem('itea_token');
-    localStorage.removeItem('itea_user');
-    localStorage.removeItem('itea_session_expiry');
-    localStorage.removeItem('itea_remember');
+    localStorage.removeItem('nexus_token');
+    localStorage.removeItem('nexus_user');
+    localStorage.removeItem('nexus_session_expiry');
+    localStorage.removeItem('nexus_remember');
   };
 
   return (

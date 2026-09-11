@@ -1,12 +1,12 @@
 /* ============================================================
    DB Nexus — Voucher PDF Styles
    Sleek, modern, tech-focused design (Radical Horizontal)
-   Fully scoped under .itea-voucher to prevent global leakage
+   Fully scoped under .nexus-voucher to prevent global leakage
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
-.itea-voucher {
+.nexus-voucher {
   font-family: "Inter", "Segoe UI", Arial, sans-serif;
   font-size: 13px;
   color: #1e293b;
@@ -17,20 +17,20 @@
   pointer-events: none;
 }
 
-.itea-voucher * {
+.nexus-voucher * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
 /* PAGE */
-.itea-voucher .v-page {
+.nexus-voucher .v-page {
   width: 820px;
   background: #ffffff;
 }
 
 /* ── HERO HEADER ── */
-.itea-voucher .v-hero {
+.nexus-voucher .v-hero {
   background: #0f172a; /* Slate 900 */
   color: #ffffff;
   padding: 40px 40px 60px 40px;
@@ -39,7 +39,7 @@
 }
 
 /* Abstract tech decoration in hero */
-.itea-voucher .v-hero::after {
+.nexus-voucher .v-hero::after {
   content: "";
   position: absolute;
   top: -50px;
@@ -51,7 +51,7 @@
   pointer-events: none;
 }
 
-.itea-voucher .v-hero-top {
+.nexus-voucher .v-hero-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -60,16 +60,16 @@
   z-index: 2;
 }
 
-.itea-voucher .v-logo-img {
+.nexus-voucher .v-logo-img {
   max-width: 180px;
   max-height: 50px;
   object-fit: contain;
 }
 
-.itea-voucher .v-hero-title {
+.nexus-voucher .v-hero-title {
   text-align: right;
 }
-.itea-voucher .v-hero-title h1 {
+.nexus-voucher .v-hero-title h1 {
   font-size: 28px;
   font-weight: 900;
   letter-spacing: -1px;
@@ -77,7 +77,7 @@
   text-transform: uppercase;
   margin-bottom: 4px;
 }
-.itea-voucher .v-hero-title p {
+.nexus-voucher .v-hero-title p {
   color: #94a3b8;
   font-size: 11px;
   font-family: "JetBrains Mono", monospace;
@@ -85,7 +85,7 @@
 }
 
 /* ── STATS BAR (Overlap Hero) ── */
-.itea-voucher .v-stats-bar {
+.nexus-voucher .v-stats-bar {
   background: #ffffff;
   border-radius: 12px;
   margin: -40px 40px 20px 40px;
@@ -98,11 +98,11 @@
   border: 1px solid #e2e8f0;
 }
 
-.itea-voucher .v-stat-item {
+.nexus-voucher .v-stat-item {
   display: flex;
   flex-direction: column;
 }
-.itea-voucher .v-stat-label {
+.nexus-voucher .v-stat-label {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -110,18 +110,18 @@
   letter-spacing: 1.5px;
   margin-bottom: 6px;
 }
-.itea-voucher .v-stat-val {
+.nexus-voucher .v-stat-val {
   font-size: 16px;
   font-weight: 800;
   color: #0f172a;
 }
-.itea-voucher .v-stat-val.highlight {
+.nexus-voucher .v-stat-val.highlight {
   color: #2563eb;
   font-family: "JetBrains Mono", monospace;
 }
 
 /* Badges */
-.itea-voucher .v-badge-status {
+.nexus-voucher .v-badge-status {
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
@@ -131,13 +131,13 @@
   margin-left: 10px;
   vertical-align: middle;
 }
-.itea-voucher .v-status-pagado { background: #dcfce7; color: #166534; }
-.itea-voucher .v-status-abonado { background: #fef9c3; color: #854d0e; }
-.itea-voucher .v-status-credito { background: #ffedd5; color: #9a3412; }
-.itea-voucher .v-status-anulado { background: #fee2e2; color: #991b1b; }
+.nexus-voucher .v-status-pagado { background: #dcfce7; color: #166534; }
+.nexus-voucher .v-status-abonado { background: #fef9c3; color: #854d0e; }
+.nexus-voucher .v-status-credito { background: #ffedd5; color: #9a3412; }
+.nexus-voucher .v-status-anulado { background: #fee2e2; color: #991b1b; }
 
 /* ── SECTION TITLE ── */
-.itea-voucher .v-section-title {
+.nexus-voucher .v-section-title {
   padding: 16px 40px 8px 40px;
   font-size: 14px;
   font-weight: 800;
@@ -149,7 +149,7 @@
   gap: 8px;
   margin-top: 16px;
 }
-.itea-voucher .v-section-title::before {
+.nexus-voucher .v-section-title::before {
   content: "";
   display: block;
   width: 16px;
@@ -159,7 +159,7 @@
 }
 
 /* ── FLIGHT CARDS (Timeline Style) ── */
-.itea-voucher .v-flight-card {
+.nexus-voucher .v-flight-card {
   margin: 16px 40px;
   background: #f8fafc;
   border-radius: 12px;
@@ -167,43 +167,43 @@
   padding: 24px;
 }
 
-.itea-voucher .v-route {
+.nexus-voucher .v-route {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
 }
-.itea-voucher .v-route-point {
+.nexus-voucher .v-route-point {
   text-align: center;
   flex: 1;
 }
-.itea-voucher .v-route-city {
+.nexus-voucher .v-route-city {
   font-size: 26px;
   font-weight: 900;
   color: #0f172a;
   text-transform: uppercase;
   letter-spacing: -0.5px;
 }
-.itea-voucher .v-route-airport {
+.nexus-voucher .v-route-airport {
   font-size: 11px;
   color: #64748b;
   margin-top: 4px;
   font-weight: 600;
 }
-.itea-voucher .v-route-divider {
+.nexus-voucher .v-route-divider {
   display: flex;
   flex-direction: column;
   align-items: center;
   flex: 1;
 }
-.itea-voucher .v-route-line {
+.nexus-voucher .v-route-line {
   width: 100%;
   height: 2px;
   background: repeating-linear-gradient(90deg, #cbd5e1 0, #cbd5e1 6px, transparent 6px, transparent 12px);
   position: relative;
   margin-bottom: 8px;
 }
-.itea-voucher .v-route-line::after {
+.nexus-voucher .v-route-line::after {
   content: "✈";
   position: absolute;
   top: -12px;
@@ -215,18 +215,18 @@
   padding: 0 10px;
 }
 
-.itea-voucher .v-flight-details-grid {
+.nexus-voucher .v-flight-details-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   border-top: 1px solid #e2e8f0;
   padding-top: 20px;
 }
-.itea-voucher .v-fd-item {
+.nexus-voucher .v-fd-item {
   display: flex;
   flex-direction: column;
 }
-.itea-voucher .v-fd-label {
+.nexus-voucher .v-fd-label {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -234,23 +234,23 @@
   margin-bottom: 4px;
   letter-spacing: 1px;
 }
-.itea-voucher .v-fd-value {
+.nexus-voucher .v-fd-value {
   font-size: 14px;
   font-weight: 700;
   color: #0f172a;
 }
-.itea-voucher .v-fd-value-small {
+.nexus-voucher .v-fd-value-small {
   font-size: 11px;
   color: #475569;
   margin-top: 2px;
 }
 
-.itea-voucher .v-pax-table {
+.nexus-voucher .v-pax-table {
   width: 100%;
   margin-top: 24px;
   border-collapse: collapse;
 }
-.itea-voucher .v-pax-table th {
+.nexus-voucher .v-pax-table th {
   text-align: left;
   font-size: 9px;
   font-weight: 700;
@@ -260,7 +260,7 @@
   border-bottom: 2px solid #e2e8f0;
   letter-spacing: 1px;
 }
-.itea-voucher .v-pax-table td {
+.nexus-voucher .v-pax-table td {
   padding: 12px 0;
   font-size: 12px;
   font-weight: 600;
@@ -269,14 +269,14 @@
 }
 
 /* ── SERVICE CARDS (Hotels, Tours, etc) ── */
-.itea-voucher .v-service-card {
+.nexus-voucher .v-service-card {
   margin: 16px 40px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
 }
-.itea-voucher .v-service-header {
+.nexus-voucher .v-service-header {
   background: #f8fafc;
   padding: 12px 20px;
   font-size: 11px;
@@ -289,18 +289,18 @@
   align-items: center;
   gap: 8px;
 }
-.itea-voucher .v-service-grid {
+.nexus-voucher .v-service-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0;
 }
-.itea-voucher .v-service-cell {
+.nexus-voucher .v-service-cell {
   padding: 16px 20px;
   border-right: 1px solid #f1f5f9;
   border-bottom: 1px solid #f1f5f9;
 }
-.itea-voucher .v-service-cell:nth-child(3n) { border-right: none; }
-.itea-voucher .v-service-cell-label {
+.nexus-voucher .v-service-cell:nth-child(3n) { border-right: none; }
+.nexus-voucher .v-service-cell-label {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -308,7 +308,7 @@
   margin-bottom: 6px;
   letter-spacing: 1px;
 }
-.itea-voucher .v-service-cell-value {
+.nexus-voucher .v-service-cell-value {
   font-size: 13px;
   font-weight: 600;
   color: #0f172a;
@@ -316,7 +316,7 @@
 }
 
 /* ── PAYMENT & TOTALS ── */
-.itea-voucher .v-payment-box {
+.nexus-voucher .v-payment-box {
   margin: 32px 40px;
   background: #0f172a;
   border-radius: 12px;
@@ -326,30 +326,30 @@
   justify-content: space-between;
   align-items: center;
 }
-.itea-voucher .v-payment-details {
+.nexus-voucher .v-payment-details {
   display: flex;
   gap: 32px;
 }
-.itea-voucher .v-payment-item {
+.nexus-voucher .v-payment-item {
   display: flex;
   flex-direction: column;
 }
-.itea-voucher .v-payment-item label {
+.nexus-voucher .v-payment-item label {
   font-size: 9px;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 4px;
 }
-.itea-voucher .v-payment-item span {
+.nexus-voucher .v-payment-item span {
   font-size: 14px;
   font-weight: 700;
   color: #ffffff;
 }
-.itea-voucher .v-payment-total {
+.nexus-voucher .v-payment-total {
   text-align: right;
 }
-.itea-voucher .v-payment-total label {
+.nexus-voucher .v-payment-total label {
   font-size: 10px;
   color: #3b82f6;
   text-transform: uppercase;
@@ -357,7 +357,7 @@
   display: block;
   margin-bottom: 4px;
 }
-.itea-voucher .v-payment-total span {
+.nexus-voucher .v-payment-total span {
   font-size: 28px;
   font-weight: 900;
   color: #ffffff;
@@ -365,7 +365,7 @@
 }
 
 /* ── LEGAL TERMS ── */
-.itea-voucher .v-legal {
+.nexus-voucher .v-legal {
   margin: 0 40px 40px 40px;
   padding-top: 24px;
   border-top: 2px solid #e2e8f0;
@@ -373,7 +373,7 @@
   color: #475569;
   line-height: 1.6;
 }
-.itea-voucher .v-legal h4 {
+.nexus-voucher .v-legal h4 {
   font-size: 11px;
   font-weight: 800;
   color: #0f172a;
@@ -381,21 +381,21 @@
   margin-bottom: 12px;
   letter-spacing: 0.5px;
 }
-.itea-voucher .v-legal-list {
+.nexus-voucher .v-legal-list {
   padding-left: 16px;
   margin-bottom: 16px;
 }
-.itea-voucher .v-legal-list li {
+.nexus-voucher .v-legal-list li {
   margin-bottom: 6px;
 }
-.itea-voucher .v-company {
+.nexus-voucher .v-company {
   font-weight: 700;
   color: #0f172a;
   margin-top: 16px;
 }
 
 /* ── FOOTER ── */
-.itea-voucher .v-footer {
+.nexus-voucher .v-footer {
   background: #f8fafc;
   padding: 24px 40px;
   display: flex;
@@ -403,16 +403,16 @@
   align-items: center;
   border-top: 1px solid #e2e8f0;
 }
-.itea-voucher .v-footer-brand {
+.nexus-voucher .v-footer-brand {
   font-weight: 900;
   font-size: 16px;
   color: #0f172a;
   letter-spacing: 1px;
 }
-.itea-voucher .v-footer-brand span {
+.nexus-voucher .v-footer-brand span {
   color: #2563eb;
 }
-.itea-voucher .v-footer-right {
+.nexus-voucher .v-footer-right {
   text-align: right;
   color: #64748b;
   font-size: 10px;
@@ -420,13 +420,13 @@
 }
 
 /* PAGINATION CLASSES */
-.itea-voucher .v-page-temp {
+.nexus-voucher .v-page-temp {
   height: 1160px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
-.itea-voucher .v-page-content-temp {
+.nexus-voucher .v-page-content-temp {
   flex-grow: 1;
   display: flex;
   flex-direction: column;

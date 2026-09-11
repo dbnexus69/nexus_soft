@@ -220,7 +220,7 @@ export default function Login() {
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="usuario@itea.com"
+                    placeholder="usuario@nexus.com"
                     disabled={isLoading}
                     autoComplete="email"
                     className="pl-12 pr-4 py-3 bg-white dark:bg-[#131524] border border-slate-200 dark:border-slate-800 rounded-2xl text-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 w-full"
@@ -297,7 +297,7 @@ export default function Login() {
                     required
                     value={resetEmail}
                     onChange={e => setResetEmail(e.target.value)}
-                    placeholder="usuario@itea.com"
+                    placeholder="usuario@nexus.com"
                     disabled={isLoading}
                     maxLength={41}
                     className="pl-12 pr-4 py-3 bg-white dark:bg-[#131524] border border-slate-200 dark:border-slate-800 rounded-2xl text-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 w-full"

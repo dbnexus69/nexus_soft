@@ -9,7 +9,7 @@ const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutos
 
 function getCacheKey(baseKey: string): string {
   try {
-    const token = localStorage.getItem('itea_token');
+    const token = localStorage.getItem('nexus_token');
     if (!token) return `${baseKey}_anonymous`;
     const payload = JSON.parse(atob(token.split('.')[1]));
     // La empresa entra en la clave, no solo el usuario: al suplantar, el
@@ -63,13 +63,13 @@ export function saveConfigCache(config: Record<string, any>): void {
   // Guardamos solo las listas de catálogos, excluyendo permisos de rol si estuviesen presentes
   const cacheData = { ...config };
   delete cacheData.rolePermissions; // Los permisos de roles siempre deben consultarse frescos
-  writeCache(getCacheKey('itea_config_cache_v2'), cacheData);
+  writeCache(getCacheKey('nexus_config_cache_v2'), cacheData);
 }
 
 export function loadConfigCache(): Record<string, any[]> | null {
-  return readCache<Record<string, any[]>>(getCacheKey('itea_config_cache_v2'));
+  return readCache<Record<string, any[]>>(getCacheKey('nexus_config_cache_v2'));
 }
 
 export function invalidateConfigCache(): void {
-  deleteCache(getCacheKey('itea_config_cache_v2'));
+  deleteCache(getCacheKey('nexus_config_cache_v2'));
 }

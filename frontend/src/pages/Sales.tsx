@@ -64,7 +64,7 @@ export default function Sales() {
     handleToggleReviewStatus: updateReviewStatus
   } = useSalesContext();
   const { fetchClients } = useClientsContext();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, marca } = useAuth();
   const { canCreate, canEdit } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -205,7 +205,7 @@ export default function Sales() {
     });
 
     const tempContainer = document.createElement('div');
-    tempContainer.className = 'itea-voucher';
+    tempContainer.className = 'nexus-voucher';
     tempContainer.style.position = 'absolute';
     tempContainer.style.left = '-9999px';
     tempContainer.style.top = '-9999px';
@@ -231,7 +231,10 @@ export default function Sales() {
         const clonedFooter = footerElement.cloneNode(true) as HTMLElement;
         const footerRight = clonedFooter.querySelector('.v-footer-right');
         if (footerRight) {
-          footerRight.innerHTML = `Voucher Electrónico — Orden #${fullSale.id}<br />Comercial@samturtravel.com<br />Impreso el ${currentDate}<br />Página ${i + 1} de ${totalPages}`;
+          // El pie del voucher lleva la marca de la agencia y SU número de
+          // venta, no el id interno: es el documento que se lleva el cliente.
+          const contacto = marca?.slug ? `${marca.nombre}` : 'Nexus';
+          footerRight.innerHTML = `Voucher Electrónico — Orden #${fullSale.numero ?? fullSale.id}<br />${contacto}<br />Impreso el ${currentDate}<br />Página ${i + 1} de ${totalPages}`;
         }
         pageDiv.appendChild(clonedFooter);
       }
@@ -275,7 +278,9 @@ export default function Sales() {
       setShowSuccess(true);
 
       const { doc } = await buildVoucherPdf(voucherSale);
-      doc.save(`Voucher_Samtur_#${voucherSale.id}_${voucherSale.clientName.replace(/\s+/g, '_')}.pdf`);
+      // El nombre del fichero que se descarga el cliente: su agencia y su número.
+      const marcaArchivo = (marca?.nombre ?? 'Nexus').replace(/\s+/g, '_');
+      doc.save(`Voucher_${marcaArchivo}_#${voucherSale.numero ?? voucherSale.id}_${voucherSale.clientName.replace(/\s+/g, '_')}.pdf`);
 
       setSuccessMessage(`✅ Voucher descargado correctamente`);
       setTimeout(() => setShowSuccess(false), 3000);

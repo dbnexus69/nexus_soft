@@ -2,7 +2,23 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
 
-const prisma = new PrismaClient();
+/**
+ * El seed se conecta distinto al resto de la aplicación, y a propósito.
+ *
+ * Desde que hay separación por empresas, cada fila lleva su `empresa_id` y las
+ * políticas de la base rechazan lo que no case con la empresa de la sesión. Un
+ * script de siembra no tiene petición ni token de donde sacarla, así que:
+ *
+ * - Usa `DIRECT_URL`, que va con el rol `postgres` —el que administra y puede
+ *   saltarse las políticas— en lugar del rol de aplicación.
+ * - Con `connection_limit=1` para que la variable de sesión que fija la empresa
+ *   valga para TODAS las consultas. Con varias conexiones, unas la tendrían
+ *   puesta y otras no, y las que no fallarían por `empresa_id` nulo.
+ */
+const urlAdmin = (process.env.DIRECT_URL || process.env.DATABASE_URL || '').split('?')[0];
+const prisma = new PrismaClient({
+  datasourceUrl: urlAdmin ? `${urlAdmin}?connection_limit=1` : undefined,
+});
 
 const SALT_ROUNDS = 12;
 
@@ -24,6 +40,29 @@ async function createIfNotExists(model, where, data) {
 async function main() {
   console.log('Ã°Å¸Å’Â± Iniciando seed...');
   const SALT = await bcrypt.genSalt(SALT_ROUNDS);
+
+  // =========================================================
+  // 0. LA EMPRESA A LA QUE PERTENECE TODO LO QUE SE SIEMBRA
+  // =========================================================
+  //
+  // Se fija en la sesión y de ahí la toma el valor por defecto de `empresa_id`
+  // en las 42 tablas, así que ninguno de los cientos de `create` de más abajo
+  // tiene que pasarla.
+  const empresa = await prisma.empresas.upsert({
+    where: { slug: 'db-nexus' },
+    update: {},
+    create: {
+      slug: 'db-nexus',
+      nombre: 'DB Nexus',
+      nombre_comercial: 'DB Nexus',
+      email_nombre: 'DB Nexus',
+      color_primario: '#2B2D42',
+      color_acento: '#8D99AE',
+      color_realce: '#0F7B8A',
+    },
+  });
+  await prisma.$executeRawUnsafe(`SELECT set_config('app.empresa_id', '${empresa.id}', false)`);
+  console.log(`   Empresa: ${empresa.nombre} (#${empresa.id})`);
 
   // =========================================================
   // 1. CATÃƒÂLOGOS BASE
@@ -305,23 +344,23 @@ async function main() {
 
   const usuariosData = [
     {
-      nombres: 'Admin', apellidos: 'iTea', tipo_documento_id: tipoCC.id, documento: '123456789',
-      email: 'admin@itea.com', telefono: '3001234567', birth_date: new Date('1990-01-15'),
+      nombres: 'Admin', apellidos: 'Nexus', tipo_documento_id: tipoCC.id, documento: '123456789',
+      email: 'admin@nexus.com', telefono: '3001234567', birth_date: new Date('1990-01-15'),
       role: 'admin', password: 'Admin123'
     },
     {
       nombres: 'Juan', apellidos: 'Perez', tipo_documento_id: tipoCC.id, documento: '987654321',
-      email: 'juan@itea.com', telefono: '3002345678', birth_date: new Date('1985-06-20'),
+      email: 'juan@nexus.com', telefono: '3002345678', birth_date: new Date('1985-06-20'),
       role: 'asesor', password: 'Vendor123'
     },
     {
       nombres: 'Maria', apellidos: 'Garcia', tipo_documento_id: tipoCE.id, documento: '5555555',
-      email: 'maria@itea.com', telefono: '3003456789', birth_date: new Date('1992-03-10'),
+      email: 'maria@nexus.com', telefono: '3003456789', birth_date: new Date('1992-03-10'),
       role: 'asesor', password: 'Vendor123'
     },
     {
       nombres: 'Carlos', apellidos: 'Lopez', tipo_documento_id: tipoPasaporte.id, documento: 'XY789654',
-      email: 'carlos@itea.com', telefono: '3004567890', birth_date: new Date('1988-11-25'),
+      email: 'carlos@nexus.com', telefono: '3004567890', birth_date: new Date('1988-11-25'),
       role: 'asesor', password: 'Vendor123', status: 'inactive'
     },
   ];
@@ -391,7 +430,7 @@ async function main() {
     const cliente = await upsertByUnique(
       'clientes',
       { persona_id: persona.id },
-      { persona_id: persona.id, creado_por_id: usuariosMap['admin@itea.com'].id }
+      { persona_id: persona.id, creado_por_id: usuariosMap['admin@nexus.com'].id }
     );
     clientesMap[`${c.nombres} ${c.apellidos}`] = cliente;
   }
@@ -467,7 +506,7 @@ async function main() {
       {
         nombre: p.nombre, destino: p.destino, status: p.status,
         servicios_incluidos: p.servicios_incluidos, no_incluido: p.no_incluido,
-        creado_por_id: usuariosMap['admin@itea.com'].id
+        creado_por_id: usuariosMap['admin@nexus.com'].id
       }
     );
     // Solo crear relaciones si el paquete es nuevo (no existÃƒÂ­a)
@@ -515,9 +554,9 @@ async function main() {
   // 12. VENTAS DE EJEMPLO
   // =========================================================
 
-  const adminUser = usuariosMap['admin@itea.com'];
-  const juanUser = usuariosMap['juan@itea.com'];
-  const mariaUser = usuariosMap['maria@itea.com'];
+  const adminUser = usuariosMap['admin@nexus.com'];
+  const juanUser = usuariosMap['juan@nexus.com'];
+  const mariaUser = usuariosMap['maria@nexus.com'];
   const clientes = await prisma.clientes.findMany({ include: { personas: true } });
   const getCliente = (index) => clientes[index % clientes.length];
 

@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('itea_token');
+  const token = localStorage.getItem('nexus_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -20,9 +20,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('itea_token');
-      localStorage.removeItem('itea_user');
-      localStorage.removeItem('itea_session_expiry');
+      localStorage.removeItem('nexus_token');
+      localStorage.removeItem('nexus_user');
+      localStorage.removeItem('nexus_session_expiry');
     }
     return Promise.reject(error);
   }

@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "iTea Travel Software - Backend API",
+  "description": "Nexus - Backend API",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",

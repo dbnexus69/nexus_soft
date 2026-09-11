@@ -256,13 +256,16 @@ class UsersService {
     });
 
     try {
+      // El nombre es el de la agencia en la que se está creando el usuario: quien
+      // recibe el correo trabaja para ella, no para el software que hay debajo.
+      const { nombre: agencia } = await emailService.marcaDeCorreo();
       await emailService.sendEmail({
         to: data.email,
-        subject: '¡Bienvenido a Samtur Travel - Cuenta Creada!',
+        subject: `Tu cuenta de ${agencia} ya está creada`,
         html: `
           <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaec; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #0f172a; padding: 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido a Samtur Travel!</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Bienvenido a ${agencia}</h1>
             </div>
             <div style="padding: 30px;">
               <p style="font-size: 16px;">Hola <strong>${persona.nombres}</strong>,</p>

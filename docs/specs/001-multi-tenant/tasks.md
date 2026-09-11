@@ -293,9 +293,7 @@ sesión suplantada vive en la empresa de ORIGEN y se buscaba en la de destino, a
 borraba; y aunque se borre, el middleware no vuelve a mirar la fila hasta que la caché
 expira, así que hay que olvidarla a mano. Es el mismo detalle que ya cuidaba `logout`.
 
-## T9 · La marca `[~]`
-
-Hecho el nombre, el logo y los colores. Los correos por empresa quedan pendientes.
+## T9 · La marca `[x]`
 
 - **`GET /branding`**, sin id en la ruta: la empresa sale del token. Un
   `/companies/:id/branding` invitaría a pedir la marca de otra.
@@ -324,13 +322,33 @@ empresas es una lista de MARCAS, así que cada fila lleva la suya —su franja d
 logo, o sus iniciales sobre su color si aún no lo ha subido—. El color ahí no decora,
 identifica: distingue una agencia de otra antes de leer un solo nombre.
 
-**Comprobado:** la marca de la empresa 1 sale con sus colores actuales; una agencia nueva
-con paleta propia sube su logo, se sirve sin sesión (200) y su administradora ve su propia
-marca por `/branding`. **Criterio A10 cumplido**; A11 (correos) pendiente.
+**Los correos salen de su agencia.** `emailService.js` tenía `iTea Travel` escrito en el
+código y los asuntos decían `Samtur Travel`: dos marcas de prueba, y ninguna era la del
+cliente que recibía el correo. Ahora el remitente lo resuelve `sendEmail` por su cuenta,
+desde la empresa que haya en contexto, así que **los cuatro sitios que mandan correo no
+tienen que acordarse** — ni el que venga después. Los asuntos llevan el nombre de la
+agencia, y el voucher usa el número de venta que esa agencia conoce, no el id interno.
 
-### Pendiente de T9
-Remitente y asuntos de correo por empresa: `emailService.js` tiene `iTea Travel` escrito en
-el código y hay una sola cuenta de Resend. Los campos ya están en la tabla.
+Un detalle que costaba ver: el código de recuperación se enviaba **fuera** del contexto de
+la empresa, así que habría salido con la marca por defecto. El envío se movió dentro.
+
+**La marca de prueba fuera del repo:** `iTea`, `Samtur` y `samtour-temp` ya no aparecen en
+el backend ni en los `package.json`. El remitente por defecto queda explícito en el `.env`
+como `Nexus <onboarding@resend.dev>` —el remitente de pruebas de Resend, que funciona sin
+verificar dominio— y la empresa 1 pasa a firmar como `DB Nexus`.
+
+**Lo que NO se tocó, y por qué:** las claves `itea_*` de localStorage y el CSS del voucher
+scopado bajo `.itea-voucher` (~150 selectores). No son valores de entorno, funcionan, y
+renombrar el CSS del documento que recibe el cliente a cambio de nada es riesgo sin premio.
+
+**Comprobado:** la marca de la empresa 1 sale con sus colores; una agencia nueva con paleta
+propia sube su logo, se sirve sin sesión y su administradora ve su marca por `/branding`; y
+el remitente se compone por empresa —`DB Nexus <onboarding@resend.dev>` frente a
+`Agencia Correo <hola@agenciacorreo.com>`—. **Criterios A10 y A11 cumplidos.**
+
+> Resend sigue con clave de pruebas, así que no sale ningún correo de verdad: el 401 de
+> "API key is invalid" es lo esperado. Cuando se configure, cada agencia que quiera su
+> propio dominio tendrá que verificarlo en Resend con su SPF y su DKIM.
 
 ---
 
@@ -339,6 +357,7 @@ el código y hay una sola cuenta de Resend. Los campos ya están en la tabla.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T9 (correos) | Cerrada la última tarea del spec. El remitente se resuelve solo desde el contexto, así que ningún sitio que mande correo tiene que acordarse. |
 | 2026-09-11 | T8 | Suplantación con auditoría y caducidad. Con esto, todas las tareas del spec están cerradas salvo los correos por empresa. |
 | 2026-09-11 | T6 + T7 | Numeración propia con cerrojo por empresa, y los ficheros con dueño. |
 | 2026-09-11 | T9 | Nombre, logo y colores, de punta a punta. Los colores salieron casi gratis por los canales CSS de un trabajo anterior. Quedan los correos. |

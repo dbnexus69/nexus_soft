@@ -1935,11 +1935,16 @@ class SalesService {
     const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
     const pdfBuffer = Buffer.from(base64Data, 'base64');
 
+    // El cliente final recibe esto con el nombre de SU agencia, y con el número
+    // de venta que esa agencia usa —no el id interno, que es global y con huecos.
+    const { nombre: agencia } = await emailService.marcaDeCorreo();
+    const numero = venta.numero ?? saleId;
+
     await emailService.sendEmail({
       to: clientEmail,
-      subject: `Voucher de Servicio - Reserva #${saleId} - Samtur Travel`,
-      html: `<p>Hola <strong>${clientName}</strong>,</p><p>Adjunto encontrarás tu voucher de reserva.</p>`,
-      attachments: [{ filename: `Voucher_Reserva_${saleId}.pdf`, content: pdfBuffer }]
+      subject: `${agencia} · Voucher de tu reserva #${numero}`,
+      html: `<p>Hola <strong>${clientName}</strong>,</p><p>Adjunto encontrarás el voucher de tu reserva.</p><p>${agencia}</p>`,
+      attachments: [{ filename: `Voucher_Reserva_${numero}.pdf`, content: pdfBuffer }]
     });
 
     return { message: `Voucher enviado exitosamente a ${clientEmail}` };

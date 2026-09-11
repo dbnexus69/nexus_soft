@@ -187,15 +187,21 @@ class AuthService {
                            VALUES (${crypto.randomUUID()}, ${usuario.id}, ${codigoHash}, ${expira})`;
     }));
 
-    const envio = await emailService.sendEmail({
-      to: email,
-      subject: `Tu código para restablecer la contraseña: ${codigo}`,
-      html: `
-        <p>Hola ${usuario.personas?.nombres || ''},</p>
-        <p>Tu código para restablecer la contraseña es:</p>
-        <p style="font-size:28px;font-weight:700;letter-spacing:6px">${codigo}</p>
-        <p>Caduca en ${CODIGO_VIGENCIA_MIN} minutos y solo se puede usar una vez.</p>
-        <p>Si no has pedido este cambio, ignora este correo: tu contraseña sigue siendo la misma.</p>`,
+    // El envío va DENTRO del contexto de la empresa, no fuera: es de ahí de donde
+    // `sendEmail` saca el remitente. Fuera, el correo saldría con la marca por
+    // defecto y quien lo recibe no reconocería de quién es.
+    const envio = await conEmpresa(identidad.empresa_id, async () => {
+      const { nombre: agencia } = await emailService.marcaDeCorreo();
+      return emailService.sendEmail({
+        to: email,
+        subject: `${agencia} · tu código para restablecer la contraseña: ${codigo}`,
+        html: `
+          <p>Hola ${usuario.personas?.nombres || ''},</p>
+          <p>Tu código para restablecer la contraseña en ${agencia} es:</p>
+          <p style="font-size:28px;font-weight:700;letter-spacing:6px">${codigo}</p>
+          <p>Caduca en ${CODIGO_VIGENCIA_MIN} minutos y solo se puede usar una vez.</p>
+          <p>Si no has pedido este cambio, ignora este correo: tu contraseña sigue siendo la misma.</p>`,
+      });
     });
     // `sendEmail` no lanza, devuelve { success }. Si el correo falla se anota
     // en el log del servidor, pero la respuesta al cliente no cambia: decirle

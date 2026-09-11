@@ -973,9 +973,10 @@ class FlightsService {
       };
     }
 
+    const { nombre: agencia } = await emailService.marcaDeCorreo();
     const res = await emailService.sendEmail({
       to: destino,
-      subject: `Check-in realizado${vuelo ? ` - Vuelo ${vuelo}` : ''}`,
+      subject: `${agencia} · check-in realizado${vuelo ? ` para el vuelo ${vuelo}` : ''}`,
       html: `
         <p>Hola <strong>${nombre}</strong>,</p>
         <p>Hemos realizado el check-in de tu vuelo:</p>

@@ -1,22 +1,32 @@
 const { PrismaClient } = require('@prisma/client');
-const { empresaActual, enTransaccion, dentroDeTransaccion } = require('./tenant');
+const { empresaActual, esSuperadmin, enTransaccion, dentroDeTransaccion } = require('./tenant');
 
 const base = new PrismaClient();
 
 /** El nombre de la variable de sesión que leerán las políticas de la base. */
 const VAR_EMPRESA = 'app.empresa_id';
 
+const VAR_SUPERADMIN = 'app.es_superadmin';
+
 /**
- * Fija la empresa para el resto de la transacción en curso.
+ * Fija el contexto para el resto de la transacción en curso.
  *
  * `set_config(..., true)` es el equivalente a `SET LOCAL`: muere con la
  * transacción. La variante de sesión NO sirve aquí y la diferencia no es
  * estética — comprobado contra esta base: una variable de sesión sobrevive entre
  * consultas sueltas, y como el pooler reparte la conexión entre peticiones, la
  * empresa de una podría quedarse puesta para la de otro.
+ *
+ * Las dos variables van en UNA sentencia, no en dos: cada sentencia extra dentro
+ * de la transacción es otra ida y vuelta al pooler, y ya se paga una por
+ * consulta.
  */
-const fijarEmpresa = (cliente, empresaId) =>
-  cliente.$executeRawUnsafe(`SELECT set_config('${VAR_EMPRESA}', $1, true)`, String(empresaId));
+const fijarContexto = (cliente, empresaId, superadmin) =>
+  cliente.$executeRawUnsafe(
+    `SELECT set_config('${VAR_EMPRESA}', $1, true), set_config('${VAR_SUPERADMIN}', $2, true)`,
+    empresaId === null ? '' : String(empresaId),
+    superadmin ? 'true' : '',
+  );
 
 /**
  * El cliente de Prisma, con la empresa activa metida en cada consulta.
@@ -41,10 +51,13 @@ const prisma = base.$extends({
   query: {
     $allOperations({ args, query }) {
       const empresa = empresaActual();
-      if (empresa === null || enTransaccion()) return query(args);
+      const superadmin = esSuperadmin();
+      // Sin empresa y sin ser superadmin no hay nada que fijar: la operación
+      // pasa tal cual y no cuesta una transacción de más.
+      if ((empresa === null && !superadmin) || enTransaccion()) return query(args);
 
       return base
-        .$transaction([fijarEmpresa(base, empresa), query(args)])
+        .$transaction([fijarContexto(base, empresa, superadmin), query(args)])
         .then(([, resultado]) => resultado);
     },
   },
@@ -68,6 +81,7 @@ const prisma = base.$extends({
  */
 function transaccion(fn, opciones) {
   const empresa = empresaActual();
+  const superadmin = esSuperadmin();
   return prisma.$transaction(
     (tx) =>
       // La marca se pone ANTES del `set_config`, no después: si no, esa misma
@@ -76,11 +90,32 @@ function transaccion(fn, opciones) {
       // transacción que nadie usa y `tx` seguiría sin empresa. Comprobado: con
       // el orden inverso, `current_setting` dentro de la transacción daba "".
       dentroDeTransaccion(async () => {
-        if (empresa !== null) await fijarEmpresa(tx, empresa);
+        if (empresa !== null || superadmin) await fijarContexto(tx, empresa, superadmin);
         return fn(tx);
       }),
     opciones,
   );
+}
+
+/**
+ * Cambia de empresa DENTRO de una transacción ya abierta.
+ *
+ * Existe por un caso muy concreto: dar de alta una agencia. La ficha se crea con
+ * el contexto del superadministrador y sus roles y su primer usuario con el de
+ * la agencia nueva, y las dos cosas tienen que ir en la misma transacción —o se
+ * crea todo, o no se crea nada—.
+ *
+ * `conEmpresa` a secas no vale aquí, y falla de forma poco evidente: abre un
+ * ámbito con `enTransaccion: false`, así que las operaciones de dentro vuelven a
+ * pasar por la extensión, que las envuelve en OTRA transacción, en otra
+ * conexión, que no ve la empresa recién creada todavía sin confirmar. El error
+ * que sale es una violación de clave ajena que no dice nada de esto.
+ */
+function conEmpresaEnTransaccion(tx, empresaId, fn) {
+  return dentroDeTransaccion(async () => {
+    await fijarContexto(tx, empresaId, esSuperadmin());
+    return fn();
+  }, empresaId);
 }
 
 /**
@@ -98,4 +133,6 @@ function transaccion(fn, opciones) {
  */
 module.exports = prisma;
 module.exports.transaccion = transaccion;
+module.exports.conEmpresaEnTransaccion = conEmpresaEnTransaccion;
 module.exports.VAR_EMPRESA = VAR_EMPRESA;
+module.exports.VAR_SUPERADMIN = VAR_SUPERADMIN;

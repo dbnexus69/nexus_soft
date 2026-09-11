@@ -153,4 +153,10 @@ function authorize(modulo, accion) {
   };
 }
 
-module.exports = { authorize, getEffectivePermissions, getActionScope };
+// Las plantillas se exportan para que el alta de una empresa siembre sus roles
+// desde la MISMA fuente que usa `authorize` para decidir. Copiarlas en el
+// servicio de empresas sería garantizar que un día discrepen.
+module.exports = {
+  authorize, getEffectivePermissions, getActionScope,
+  ADMIN_PERMISSIONS, SUPERADMIN_PERMISSIONS, ROLE_DEFAULT_PERMISSIONS,
+};

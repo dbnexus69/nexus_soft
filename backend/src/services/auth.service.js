@@ -83,6 +83,17 @@ class AuthService {
 
     if (usuario.status === 'inactive') throw new UnauthorizedError('Usuario inactivo. Contacte al administrador');
 
+    // Una agencia suspendida no deja entrar a nadie. Se comprueba después de la
+    // contraseña a propósito: antes, el mensaje distinto convertiría el login en
+    // un detector de qué agencias están suspendidas para quien solo prueba
+    // correos.
+    const empresa = await conEmpresa(usuario.empresa_id, () => prisma.empresas.findFirst({
+      where: { id: usuario.empresa_id }, select: { estado: true, slug: true },
+    }));
+    if (!empresa || empresa.estado !== 'activa') {
+      throw new UnauthorizedError('Esta agencia está suspendida. Contacte con el administrador del sistema');
+    }
+
     const token = generateToken({ userId: usuario.id, role: usuario.roles.nombre, empresaId: usuario.empresa_id }, remember);
     const expiresAt = new Date(getExpiryTime(remember));
 
@@ -110,7 +121,11 @@ class AuthService {
         phone: usuario.personas.telefono,
         status: usuario.status,
         avatar: usuario.personas.avatar_url,
-        birth_date: usuario.personas.birth_date
+        birth_date: usuario.personas.birth_date,
+        empresaId: usuario.empresa_id,
+        // El identificador que va en la URL del navegador. Se manda aquí para
+        // que la interfaz componga la dirección sin una segunda llamada.
+        empresaSlug: empresa.slug,
       }
     };
   }

@@ -38,8 +38,8 @@ const almacen = new AsyncLocalStorage();
  * da igual cómo escriba su callback quien llame. Lo mismo vale para `sinEmpresa`
  * y `dentroDeTransaccion`.
  */
-function conEmpresa(empresaId, fn) {
-  return almacen.run({ empresaId: empresaId ?? null, enTransaccion: false }, async () => fn());
+function conEmpresa(empresaId, fn, { esSuperadmin = false } = {}) {
+  return almacen.run({ empresaId: empresaId ?? null, esSuperadmin, enTransaccion: false }, async () => fn());
 }
 
 /**
@@ -50,13 +50,26 @@ function conEmpresa(empresaId, fn) {
  * administra empresas sin haber entrado en ninguna. Es explícito a propósito: un
  * hueco sin contexto debe ser una decisión escrita, no un olvido.
  */
-function sinEmpresa(fn) {
-  return almacen.run({ empresaId: null, enTransaccion: false }, async () => fn());
+function sinEmpresa(fn, { esSuperadmin = false } = {}) {
+  return almacen.run({ empresaId: null, esSuperadmin, enTransaccion: false }, async () => fn());
 }
 
 /** La empresa activa, o null si se trabaja fuera de toda empresa. */
 function empresaActual() {
   return almacen.getStore()?.empresaId ?? null;
+}
+
+/**
+ * ¿Quien pide es el superadministrador del sistema?
+ *
+ * Es lo único que la base no puede deducir por su cuenta, así que se lo decimos:
+ * el middleware lo pone solo cuando el rol leído de la base es `superadmin`. Le
+ * da acceso a `empresas` y a la auditoría —administrar el sistema—, **no** a los
+ * datos de negocio de nadie: para verlos tiene que entrar en una empresa, y
+ * entrar deja rastro.
+ */
+function esSuperadmin() {
+  return almacen.getStore()?.esSuperadmin === true;
 }
 
 /**
@@ -79,15 +92,23 @@ function enTransaccion() {
  * hermanas lanzadas en paralelo dentro de la misma petición compartirían la
  * marca, y la que no está en la transacción se quedaría sin contexto.
  */
-function dentroDeTransaccion(fn) {
+function dentroDeTransaccion(fn, empresaId) {
   const actual = almacen.getStore();
-  return almacen.run({ empresaId: actual?.empresaId ?? null, enTransaccion: true }, async () => fn());
+  return almacen.run(
+    {
+      empresaId: empresaId === undefined ? (actual?.empresaId ?? null) : empresaId,
+      esSuperadmin: actual?.esSuperadmin === true,
+      enTransaccion: true,
+    },
+    async () => fn(),
+  );
 }
 
 module.exports = {
   conEmpresa,
   sinEmpresa,
   empresaActual,
+  esSuperadmin,
   enTransaccion,
   dentroDeTransaccion,
 };

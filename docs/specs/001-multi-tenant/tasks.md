@@ -175,12 +175,57 @@ de desplegar con el usuario `postgres`, porque `postgres` tiene `BYPASSRLS` y sa
 políticas igual —comprobado—. Esa protección es de despliegue y merece una comprobación al
 arrancar, que queda pendiente.
 
-## T5b · URL, empresa suspendida y roles por empresa `[ ]`
+## T5b · El superadmin da de alta agencias `[x]`
 
-Slugs reservados; 403 si el slug de la URL no es el de tu empresa; login bloqueado para
-empresa suspendida; alta de empresa sembrando sus 4 roles y su matriz de permisos.
+`GET/POST /companies`, `GET/PATCH /companies/:id`, detrás de una guarda propia
+(`soloSuperadmin`) y no de `authorize`: administrar agencias no es un permiso que una
+empresa pueda delegarse, es del sistema. El rol se comprueba contra la **fila** del
+usuario, no contra el token, que es una foto del momento en que se emitió.
 
-**Comprobación:** criterios **A3, A6, A8**.
+- **El alta crea la agencia entera:** ficha, sus tres roles con la matriz de permisos
+  leída de la misma plantilla que usa `authorize` para decidir, y su primer
+  administrador. Todo en una transacción. Una empresa en la que nadie puede entrar no
+  sirve, y dejarlo para un segundo paso obligaría a suplantar solo para crear al primer
+  usuario.
+- **Slugs reservados**: las nueve rutas de `App.tsx` más `api`, `uploads`, `assets`… La
+  lista vive en el backend, porque si viviera en la interfaz bastaría una llamada directa
+  para colarse.
+- **El slug no se puede editar.** Es la dirección por la que la agencia entra y comparte
+  enlaces; cambiarlo rompe todos los marcadores a la vez. Si hace falta, será una
+  operación propia con su redirección.
+- **Suspender cierra las sesiones abiertas.** Si no, quien ya estaba dentro seguiría
+  trabajando hasta que caducara su token y suspender no suspendería nada. El login
+  comprueba el estado **después** de la contraseña: antes, el mensaje distinto convertiría
+  el login en un detector de qué agencias están suspendidas.
+
+**Comprobado de punta a punta**, con una agencia creada y borrada en la prueba:
+
+| | Viajes Sol (nueva) | DB Nexus (la de siempre) |
+|---|---|---|
+| ventas | 0 | 5 |
+| clientes | 0 | 2 |
+| usuarios | 1 (su administradora) | 3 |
+| **aerolíneas** | **18** | 18 |
+
+Las 18 aerolíneas son la decisión de catálogos funcionando: la agencia nueva arranca con
+el catálogo del sistema lleno y utilizable el primer día. Y el superadministrador ve esas
+cifras de uso **sin poder abrir un solo registro**: su propio `/sales` devuelve las de su
+empresa, no las de ella.
+
+Suspender: Ana deja de poder entrar, con el mensaje del estado. Reactivar: vuelve a
+entrar. **Criterios A6 y A8 cumplidos.**
+
+**El fallo de este paso, el mismo patrón otra vez:** `conEmpresa` dentro de una
+transacción abre un ámbito con `enTransaccion: false`, así que lo de dentro volvía a pasar
+por la extensión, que lo envolvía en OTRA transacción en otra conexión — que no veía la
+empresa recién creada y sin confirmar. Salía como violación de clave ajena, que no dice
+nada de esto. Resuelto con `conEmpresaEnTransaccion`, que cambia el contexto sobre la
+transacción que ya está abierta.
+
+**Cambio de decisión, anotado:** el plan pedía un 403 si el slug de la URL no era el de tu
+empresa. No hace falta y se retira: la marca y los datos salen del **token**, no del slug,
+así que pegar la URL de otra agencia no enseña nada suyo — solo una dirección equivocada.
+Lo resuelve la interfaz redirigiendo al slug correcto, que es donde está el problema.
 
 ## T6 · Numeración propia por empresa `[ ]`
 
@@ -217,6 +262,7 @@ la base en los seis sitios, remitente y asuntos de correo por empresa.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T5b | Cerrada. El superadmin ya crea agencias completas. Retirado el 403 por slug: no cerraba ningún hueco real. |
 | 2026-09-11 | T4 + T5a | Cerradas, y en este orden: la RLS no se puede encender antes de que el contexto llegue del token. A1 y A2 pasan con dos empresas reales. |
 | 2026-09-11 | T3 | Cerrada. El paso rompió 61 inserts y 11 findUnique; los dos se arreglan dentro del mismo paso. El valor por defecto sale de la variable de sesión, con un respaldo temporal que hay que quitar en T5. |
 | 2026-09-11 | T2 | Cerrada. De paso, el repo estrena migraciones: `db push` no podía con lo que viene en T3. Y confirmado que el pooler acepta un rol propio. |

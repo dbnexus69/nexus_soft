@@ -41,6 +41,11 @@ async function auth(req, res, next) {
     // la caché se indexa igual y una sesión cerrada se puede olvidar sola.
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
+    // La bandera de superadministrador sale del token porque hace falta ANTES de
+    // poder leer la base: la política de `empresas` la necesita para dejar leer.
+    // No concede nada por sí sola —las 42 tablas de negocio siguen cerradas— y
+    // los endpoints que sí dependen de ella la vuelven a comprobar contra la
+    // fila del usuario, que es la que manda.
     return conEmpresa(decoded.empresaId, async () => {
       // 1. Revisar si esta sesión está en RAM Cache
       const cached = leer(tokenHash);
@@ -101,7 +106,7 @@ async function auth(req, res, next) {
 
       req.user = userData;
       return next();
-    });
+    }, { esSuperadmin: decoded.role === 'superadmin' });
   } catch (err) {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return error(res, 'Token inválido o expirado', 401, 'INVALID_TOKEN');

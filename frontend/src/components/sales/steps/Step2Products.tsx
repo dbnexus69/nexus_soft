@@ -370,7 +370,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
               if (allItems.length === 0) {
                 return (
                   <div className="text-center py-10 bg-slate-50/70 dark:bg-slate-900/40 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-800 p-6 animate-fade-in">
-                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
                       <LuIcons.LuPackagePlus size={24} />
                     </div>
                     <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">No hay servicios seleccionados aún</h4>
@@ -449,7 +449,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                       key={p.id}
                       type="button"
                       onClick={(e) => handleAddAnotherProduct(p.id, e)}
-                      className="px-3 py-1.5 text-xs font-semibold bg-primary/5 text-primary border border-primary/20 rounded-xl hover:bg-primary/10 transition-all flex items-center gap-1.5 shadow-2xs"
+                      className="px-3 py-1.5 text-xs font-semibold bg-primary/5 text-primary border border-primary/20 rounded-xl hover:bg-primary/10 transition-all flex items-center gap-1.5 shadow-sm"
                     >
                       <LuIcons.LuPlus size={14} />
                       <span>+ Agregar otro {p.label}</span>

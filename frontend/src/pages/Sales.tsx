@@ -434,7 +434,7 @@ export default function Sales() {
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       placeholder="Buscar por cliente, asesor, comisionista..." 
-                      className="text-sm border border-slate-200 dark:border-slate-850 rounded-xl pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full transition-all"
+                      className="text-sm border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
@@ -447,7 +447,7 @@ export default function Sales() {
                   <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value as any)}
-                    className="text-sm border border-slate-200 dark:border-slate-850 rounded-xl px-4 py-2.5 bg-slate-50 dark:bg-[#1c1d26] text-slate-600 dark:text-slate-350 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full lg:w-auto cursor-pointer"
+                    className="text-sm border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 bg-slate-50 dark:bg-[#1c1d26] text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full lg:w-auto cursor-pointer"
                   >
                     <option value="all">Todos los estados</option>
                     <option value="pagado">Finalizado</option>
@@ -481,7 +481,7 @@ export default function Sales() {
                     {(startDate || endDate) && (
                       <button 
                         onClick={() => { setStartDate(""); setEndDate(""); }}
-                        className="text-red-500 dark:text-red-300 hover:text-red-650 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center h-[38px] w-[38px] shrink-0 border border-red-100 dark:border-red-900/40 transition-colors shadow-sm"
+                        className="text-red-500 dark:text-red-300 hover:text-red-600 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center h-[38px] w-[38px] shrink-0 border border-red-100 dark:border-red-900/40 transition-colors shadow-sm"
                         title="Limpiar fechas"
                       >
                         <X size={14} />

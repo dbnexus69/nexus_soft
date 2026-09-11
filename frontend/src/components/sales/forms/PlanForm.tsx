@@ -211,13 +211,13 @@ export function PlanForm({
               {plan.transportType === 'Terrestre' ? <Car size={16} /> : <Plane size={16} />}
               {plan.transportType === 'Terrestre' ? 'Reservación y Transporte Terrestre' : 'Reservación y Transporte Aéreo'}
             </h4>
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-2xs">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
               <button
                 type="button"
                 onClick={() => onChange({ transportType: 'Aereo' })}
                 className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
                   plan.transportType !== 'Terrestre'
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 shadow-2xs'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 shadow-sm'
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -228,7 +228,7 @@ export function PlanForm({
                 onClick={() => onChange({ transportType: 'Terrestre' })}
                 className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
                   plan.transportType === 'Terrestre'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 shadow-2xs'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 shadow-sm'
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -496,7 +496,7 @@ export function PlanForm({
         {linkedServices.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {linkedServices.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-purple-100 dark:border-purple-900/50 shadow-2xs">
+              <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-purple-100 dark:border-purple-900/50 shadow-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
                     {item.label} #{item.idx + 1}
@@ -542,7 +542,7 @@ export function PlanForm({
                   key={btn.id}
                   type="button"
                   onClick={() => onAddLinkedService(btn.id as SaleProductId, planIndex)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all shadow-2xs flex items-center gap-1"
+                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all shadow-sm flex items-center gap-1"
                 >
                   <Plus size={12} />
                   {btn.label.replace('+ ', '')}

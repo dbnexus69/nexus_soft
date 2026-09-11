@@ -204,9 +204,9 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
             <span className="v-stat-label">Orden Nexus</span>
             <span className="v-stat-val highlight">#{sale.numero ?? sale.id}
               {sale.status === 'credito' ? (
-                <span className="v-badge-status bg-credito">CRÉDITO</span>
+                <span className="v-badge-status v-status-credito">CRÉDITO</span>
               ) : (
-                <span className={`v-badge-status bg-${sale.status}`}>{sale.status?.toUpperCase()}</span>
+                <span className={`v-badge-status v-status-${sale.status}`}>{sale.status?.toUpperCase()}</span>
               )}
             </span>
           </div>

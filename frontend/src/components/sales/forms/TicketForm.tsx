@@ -338,7 +338,7 @@ export function TicketForm({
                   : "bg-white border-blue-100 hover:border-blue-300"
               }`}
             >
-              <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-150 shadow-sm flex items-center gap-1">
+              <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-sm flex items-center gap-1">
                 <span className={`text-[9px] font-extrabold uppercase tracking-wide ${color === "primary" ? "text-primary" : "text-blue-600"}`}>
                   Escala #{sIdx + 1}
                 </span>
@@ -624,7 +624,7 @@ export function TicketForm({
         <div className="space-y-4">
           {ticket.legs.map((leg, idx) => (
             <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100 relative group">
-              <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-150 shadow-sm">
+              <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-sm">
                 <span className="text-[9px] font-extrabold uppercase tracking-wide text-primary">Tramo #{idx + 1}</span>
               </div>
               {ticket.legs.length > 1 && (

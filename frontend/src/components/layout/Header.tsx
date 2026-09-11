@@ -89,15 +89,15 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <div className="flex items-center gap-2 text-sm font-body">
               {/* La raíz de la ruta es la agencia, no el producto: quien trabaja
                   aquí trabaja en su agencia. */}
-              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline font-bold">{marca?.nombre ?? 'NEXUS'}</span>
-              <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">/</span>
+              <span className="text-slate-600 dark:text-slate-400 hidden sm:inline font-bold">{marca?.nombre ?? 'NEXUS'}</span>
+              <span className="text-slate-400 dark:text-slate-600 hidden sm:inline" aria-hidden>/</span>
               <span className="font-heading font-bold text-primary dark:text-amber-400">{title}</span>
             </div>
           </div>
           <div className="flex items-center gap-3 font-body">
             <button
               onClick={toggleDarkMode}
-              className="p-2 text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
               title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
@@ -105,7 +105,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <button
               onClick={handleRefresh}
               disabled={isSpinning}
-              className={`p-2 text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`p-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
               title="Actualizar datos"
             >
               <RefreshCw size={16} className={isSpinning ? 'animate-spin text-primary dark:text-amber-400' : ''} />

@@ -190,12 +190,12 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col h-full bg-white relative">
-      <div className="px-4 sm:px-6 py-3.5 border-b border-gray-200 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0 shadow-2xs">
+      <div className="px-4 sm:px-6 py-3.5 border-b border-gray-200 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0 shadow-sm">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onCloseForm}
-            className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs"
+            className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-sm"
             title="Volver a la selección de servicios"
           >
             <ArrowLeft size={16} />
@@ -235,7 +235,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
           <Button
             type="button"
             onClick={onCloseForm}
-            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-xs"
+            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-sm"
           >
             <Check size={15} />
             <span>Guardar Servicio</span>
@@ -259,7 +259,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   onClick={() => onSwitchForm && onSwitchForm(activeForm, idx)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
                     isActive
-                      ? "bg-primary text-white border-primary shadow-xs"
+                      ? "bg-primary text-white border-primary shadow-sm"
                       : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50"
                   }`}
                 >
@@ -575,7 +575,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
         <button
           type="button"
           onClick={onCloseForm}
-          className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs"
+          className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-sm"
         >
           <ArrowLeft size={16} />
           <span>Volver a Productos</span>
@@ -594,7 +594,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
           <Button
             type="button"
             onClick={onCloseForm}
-            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-xs"
+            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-sm"
           >
             <Check size={15} />
             <span>Guardar Servicio</span>

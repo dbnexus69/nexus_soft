@@ -55,7 +55,7 @@ export function PassengerManager({ passengers, clients, onChange, documentTypes 
         <button
           type="button"
           onClick={addPassenger}
-          className="text-primary hover:bg-primary-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+          className="text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
         >
           <PlusCircle className="w-4 h-4" />
           Agregar Pasajero

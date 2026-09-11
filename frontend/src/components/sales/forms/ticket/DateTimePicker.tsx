@@ -223,7 +223,7 @@ export function DateTimePicker({
                   type="button"
                   onClick={() => setTempPeriod(p)}
                   className={`px-1.5 py-1 text-[10px] font-bold rounded ${
-                    tempPeriod === p ? "bg-white text-primary shadow-xs" : "text-gray-500"
+                    tempPeriod === p ? "bg-white text-primary shadow-sm" : "text-gray-500"
                   }`}
                 >
                   {p}

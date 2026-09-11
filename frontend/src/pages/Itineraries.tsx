@@ -763,9 +763,9 @@ export default function Itineraries() {
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-gray-850 truncate">{flight.passenger}</span>
+                                <span className="text-xs font-bold text-gray-800 truncate">{flight.passenger}</span>
                                 {client && (
-                                  <span className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-150">
+                                  <span className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-200">
                                     {client.docNumber}
                                   </span>
                                 )}
@@ -914,7 +914,7 @@ export default function Itineraries() {
                                   <span className="flex items-center gap-1"><Clock size={12} /> {formatDate(flight.date)} - {flight.time}</span>
                                   <span className="font-medium text-primary/60 dark:text-slate-500">{flight.airline}</span>
                                   {flight.reservationNumber ? (
-                                    <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[10px] border border-blue-150 dark:border-blue-900/50 font-semibold">
+                                    <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[10px] border border-blue-200 dark:border-blue-900/50 font-semibold">
                                       Reserva: {flight.reservationNumber}
                                     </span>
                                   ) : null}
@@ -1012,7 +1012,7 @@ export default function Itineraries() {
             </div>
 
             <div className="space-y-6">
-              <Card className="bg-primary dark:bg-slate-900 text-white dark:text-slate-100 border-none dark:border dark:border-slate-850 shadow-xl shadow-primary/20 dark:shadow-none">
+              <Card className="bg-primary dark:bg-slate-900 text-white dark:text-slate-100 border-none dark:border dark:border-slate-800 shadow-xl shadow-primary/20 dark:shadow-none">
                 <CardBody className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="p-3 bg-white/20 dark:bg-slate-800/50 rounded-xl">
@@ -1188,7 +1188,7 @@ export default function Itineraries() {
               <div className="space-y-2 border border-gray-border rounded-xl p-3 bg-gray-50/50 max-h-[160px] overflow-y-auto">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Archivos seleccionados ({checkinFiles.length}):</p>
                 {checkinFiles.map((file, idx) => (
-                  <div key={`${file.name}-${idx}`} className="flex items-center justify-between gap-3 p-2 bg-white border border-gray-150 rounded-lg text-xs">
+                  <div key={`${file.name}-${idx}`} className="flex items-center justify-between gap-3 p-2 bg-white border border-gray-200 rounded-lg text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <CheckCircle2 size={16} className="text-green-500 shrink-0" />
                       <span className="font-medium text-gray-700 truncate" title={file.name}>{file.name}</span>

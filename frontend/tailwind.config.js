@@ -46,6 +46,8 @@ export default {
           soft: "rgb(var(--highlight-soft-rgb) / <alpha-value>)",
           ink: "rgb(var(--highlight-ink-rgb) / <alpha-value>)",
         },
+        // El fondo de la barra de navegación, teñido con la marca de la agencia.
+        nav: "rgb(var(--nav-rgb) / <alpha-value>)",
         "gray-light": "rgb(var(--bg-base-rgb) / <alpha-value>)",
         "gray-border": "rgb(var(--border-main-rgb) / <alpha-value>)",
         success: "#16a34a",

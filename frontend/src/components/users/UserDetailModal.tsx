@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from 'react';
+import { Building2 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -6,6 +7,7 @@ import { Pagination } from '../ui/Pagination';
 import { SKELETON } from '../ui/Skeleton';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import * as api from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { User, Sale } from '../../types';
 
 interface UserDetailModalProps {
@@ -71,6 +73,9 @@ const FilaVenta = memo(function FilaVenta({ venta }: { venta: Sale }) {
  * que eso es lo que encabeza.
  */
 export default function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps) {
+  const { user: quienMira } = useAuth();
+  const esSuperadmin = quienMira?.role === 'superadmin';
+
   // Las ventas se piden paginadas y filtradas por su id. Antes llegaban por
   // props filtrando la lista global, que solo trae una página.
   const [userSales, setUserSales] = useState<Sale[]>([]);
@@ -134,6 +139,20 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* La agencia del usuario, solo para el superadministrador.
+                Para quien administra una sola agencia dice siempre lo mismo y
+                sería ruido; para quien administra varias es lo primero que hay
+                que saber de una persona antes que su rol —de quién es— y por eso
+                va delante. Con la separación por empresas, al superadministrador
+                solo le aparecen los usuarios de la agencia en la que está, así
+                que esto confirma dónde está mirando: sirve sobre todo cuando ha
+                entrado a dar soporte. */}
+            {esSuperadmin && user.empresaNombre ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                <Building2 size={12} aria-hidden />
+                {user.empresaNombre}
+              </span>
+            ) : null}
             <Badge variant="accent">{ROLE_LABELS[user.role] || user.role}</Badge>
             {/* Punto y etiqueta, el mismo tratamiento de estado de los
                 catálogos. Antes decía "USUARIO ACTIVO" en mayúsculas. */}

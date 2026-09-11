@@ -44,6 +44,7 @@ class UsersService {
           status: true,
           ultimo_login: true,
           creado_at: true,
+          empresa_id: true,
           personas: {
             select: {
               nombres: true, apellidos: true, telefono: true, documento: true,
@@ -52,6 +53,7 @@ class UsersService {
             },
           },
           roles: { select: { nombre: true } },
+          empresas: { select: { nombre: true, nombre_comercial: true } },
         },
       }),
     ]);
@@ -71,6 +73,11 @@ class UsersService {
       birthDate: u.personas.birth_date,
       lastLogin: u.ultimo_login,
       creado_at: u.creado_at,
+      // La agencia del usuario. Van el id y el nombre, no solo el id: quien lo
+      // recibe no tiene forma de traducirlo —`/companies/:id` es solo del
+      // superadministrador— así que un id suelto sería un número y nada más.
+      empresaId: u.empresa_id,
+      empresaNombre: u.empresas?.nombre_comercial || u.empresas?.nombre || null,
     }));
 
     return {
@@ -91,6 +98,7 @@ class UsersService {
         include: {
           personas: { include: { tipos_documento: true } },
           roles: true,
+          empresas: true,
         }
       }),
       prisma.ventas.aggregate({
@@ -124,7 +132,9 @@ class UsersService {
       avatar: usuario.personas.avatar_url,
       birthDate: usuario.personas.birth_date,
       lastLogin: usuario.ultimo_login,
-      creado_at: usuario.creadoAt
+      creado_at: usuario.creadoAt,
+      empresaId: usuario.empresa_id,
+      empresaNombre: usuario.empresas?.nombre_comercial || usuario.empresas?.nombre || null,
     };
   }
 

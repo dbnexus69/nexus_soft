@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { ShieldCheck, Plus, Search, X } from "lucide-react";
 import { useData } from "../context/DataContext";
+import { useAuth } from "../context/AuthContext";
 import { useUsersContext } from "../context/UsersContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { useToast } from "../context/ToastContext";
@@ -18,6 +19,8 @@ import { User } from "../types";
 
 export default function Users() {
   const { data, fetchConfig } = useData(); // Dejamos data para referencias a config que no hemos migrado aun si las hubiera
+  const { user: quienMira, marca } = useAuth();
+  const esSuperadmin = quienMira?.role === 'superadmin';
   const { 
     users, 
     loading: usersLoading,

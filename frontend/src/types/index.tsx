@@ -11,6 +11,9 @@ import { LuBookCheck } from "react-icons/lu";
 export type UserRole = "superadmin" | "admin" | "asesor" | "freelancer";
 
 export interface User {
+  /** La agencia a la que pertenece. El nombre viene resuelto: ver `Client`. */
+  empresaId?: number;
+  empresaNombre?: string | null;
   id: number;
   personaId?: number;
   firstName?: string;

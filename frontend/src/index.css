@@ -4,6 +4,12 @@
 
 @layer base {
   :root {
+    /* El fondo de la barra de navegación. Estaba escrito como #0b0f19 en cuatro
+       sitios del Sidebar, y por eso era el único trozo de la interfaz que no
+       cambiaba con la marca de la agencia. Es el mismo valor en claro y en
+       oscuro: la barra siempre es oscura, porque siempre lleva texto blanco. */
+    --nav-rgb: 11 15 25;
+
     --bg-base-rgb: 248 249 250;
     --color-bg-base: rgb(var(--bg-base-rgb));
     --color-bg-card: #ffffff;
@@ -43,6 +49,12 @@
   }
 
   .dark {
+    /* El fondo de la barra de navegación. Estaba escrito como #0b0f19 en cuatro
+       sitios del Sidebar, y por eso era el único trozo de la interfaz que no
+       cambiaba con la marca de la agencia. Es el mismo valor en claro y en
+       oscuro: la barra siempre es oscura, porque siempre lleva texto blanco. */
+    --nav-rgb: 11 15 25;
+
     --bg-base-rgb: 17 18 22;
     --color-bg-base: rgb(var(--bg-base-rgb));
     --color-bg-card: #1a1b22;

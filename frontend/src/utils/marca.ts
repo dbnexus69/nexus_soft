@@ -28,6 +28,58 @@ function aCanales(hex: string): string | null {
   return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
 }
 
+/** Pasa un hex a HSL, que es donde se puede razonar sobre claridad y viveza. */
+function aHsl(hex: string): { h: number; s: number; l: number } | null {
+  const canales = aCanales(hex);
+  if (!canales) return null;
+  const [r, g, b] = canales.split(' ').map(n => Number(n) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s, l };
+}
+
+/** De HSL a los canales que espera la variable del tema. */
+function aCanalesDesdeHsl(h: number, s: number, l: number): string {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const [r, g, b] =
+    h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+    : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [r, g, b].map(v => Math.round((v + m) * 255)).join(' ');
+}
+
+/**
+ * El fondo de la barra de navegación, teñido con la marca.
+ *
+ * Aquí es donde de verdad se ve de quién es la aplicación. El resto de la
+ * interfaz es gris —1810 clases de slate frente a 378 de marca— y en modo oscuro
+ * muchos componentes sustituyen el color de marca por blanco, así que el tinte
+ * se diluye hasta no notarse. La barra, en cambio, está siempre a la vista.
+ *
+ * Se queda MUY oscura a propósito, con el tono de la agencia pero no su
+ * claridad: lleva texto blanco encima, y una marca clara —un celeste, un ámbar—
+ * lo dejaría ilegible. Así funciona con cualquier color que elija un cliente sin
+ * que haya que comprobarlo caso por caso.
+ */
+function paraLaBarra(hex: string): string | null {
+  const hsl = aHsl(hex);
+  if (!hsl) return null;
+  // Saturación fija y no la del original: un gris de marca dejaría la barra
+  // exactamente igual que la de todos, y la gracia es reconocerla.
+  return aCanalesDesdeHsl(hsl.h, Math.max(hsl.s, 0.35), 0.08);
+}
+
 /**
  * La variante para modo oscuro de un color de marca.
  *
@@ -60,8 +112,12 @@ function paraModoOscuro(hex: string): string | null {
     if (h < 0) h += 360;
   }
 
-  const lClaro = 0.68;
-  const sSuave = s * 0.55;
+  // Antes se bajaba la saturación al 55 %, y el resultado era un color casi
+  // gris: la marca "apenas se notaba" en oscuro. Se conserva el 85 %, que sigue
+  // siendo más suave que el original —sobre fondo oscuro un color a plena
+  // saturación vibra— pero se reconoce como suyo.
+  const lClaro = 0.64;
+  const sSuave = s * 0.85;
   const c = (1 - Math.abs(2 * lClaro - 1)) * sSuave;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = lClaro - c / 2;
@@ -109,6 +165,13 @@ export function aplicarMarca(marca: Marca | null): void {
     claro.push(`--${variable}-rgb: ${canales};`);
     const enOscuro = paraModoOscuro(hex);
     if (enOscuro) oscuro.push(`--${variable}-rgb: ${enOscuro};`);
+
+    // La barra se tiñe con el color principal, y es igual en los dos modos:
+    // siempre es oscura, porque siempre lleva texto blanco.
+    if (clave === 'primario') {
+      const barra = paraLaBarra(hex);
+      if (barra) { claro.push(`--nav-rgb: ${barra};`); oscuro.push(`--nav-rgb: ${barra};`); }
+    }
   }
   if (!claro.length) return;
 

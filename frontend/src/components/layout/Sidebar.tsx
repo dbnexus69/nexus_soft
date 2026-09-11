@@ -126,7 +126,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     <>
       {/* MOBILE SIDEBAR (Drawer) */}
       <aside 
-        className={`fixed left-0 top-0 h-screen bg-[#0b0f19] text-white flex flex-col transition-all duration-300 ease-in-out z-50 shadow-2xl border-r border-slate-800/40 w-64 md:hidden
+        className={`fixed left-0 top-0 h-screen bg-nav text-white flex flex-col transition-all duration-300 ease-in-out z-50 shadow-2xl border-r border-slate-800/40 w-64 md:hidden
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
@@ -205,7 +205,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       </aside>
 
       {/* DESKTOP NAVBAR (Horizontal Floating Top Bar) */}
-      <header className="hidden md:flex fixed top-4 left-4 right-4 h-16 bg-[#0b0f19]/95 backdrop-blur-xl border border-slate-800/40 rounded-2xl shadow-2xl items-center justify-between px-6 z-50 transition-all duration-300">
+      <header className="hidden md:flex fixed top-4 left-4 right-4 h-16 bg-nav/95 backdrop-blur-xl border border-slate-800/40 rounded-2xl shadow-2xl items-center justify-between px-6 z-50 transition-all duration-300">
         
         {/* Left: Logo */}
         <div className="flex items-center gap-2.5 select-none cursor-pointer">
@@ -258,7 +258,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                 {isAdminMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsAdminMenuOpen(false)} />
-                    <ul className="absolute left-0 mt-2 w-48 bg-[#0b0f19] border border-slate-800/80 rounded-2xl shadow-2xl p-2 z-50 animate-fade-in font-body">
+                    <ul className="absolute left-0 mt-2 w-48 bg-nav border border-slate-800/80 rounded-2xl shadow-2xl p-2 z-50 animate-fade-in font-body">
                       {filteredAdminLinks.map((link) => (
                         <li key={link.to}>
                           <NavLink
@@ -331,7 +331,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             {isUserMenuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
-                <div className="absolute right-0 mt-2 w-52 bg-[#0b0f19] border border-slate-800/80 rounded-2xl shadow-2xl p-4 z-50 animate-fade-in text-left">
+                <div className="absolute right-0 mt-2 w-52 bg-nav border border-slate-800/80 rounded-2xl shadow-2xl p-4 z-50 animate-fade-in text-left">
                   <div className="pb-3 border-b border-slate-800/60 mb-2">
                     <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
                     <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">{user?.role}</p>

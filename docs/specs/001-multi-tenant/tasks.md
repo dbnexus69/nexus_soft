@@ -56,13 +56,38 @@ empresa.
   contraseña. Los 7 están convertidos a la forma interactiva y la de lote queda prohibida,
   documentado en `db.js`.
 
-## T2 · La tabla `empresas` y el rol de aplicación `[ ]`
+## T2 · La tabla `empresas` y el rol de aplicación `[x]`
 
-Migración de Prisma con `empresas` y `suplantaciones`; alta de la empresa 1 con la marca
-actual; rol de Postgres sin `BYPASSRLS` y que no sea dueño de las tablas; `DATABASE_URL`
-apuntando a él.
+**El repo pasa a tener migraciones.** No tenía ninguna: se venía usando `db push`, que no
+sabe expresar el "columna nullable → rellenar → NOT NULL" que T3 necesita sobre 42 tablas
+con datos. Se hizo el baseline (`0_init` con las 47 tablas existentes, marcada como
+aplicada sin ejecutarla) y a partir de ahí cada cambio es una migración versionada.
 
-**Comprobación:** la aplicación arranca con el rol nuevo y los 23 endpoints siguen en 200.
+No se usa `migrate dev` sino `migrate diff` + `migrate deploy`: `dev` necesita una base
+sombra y el rol de Supabase no puede crear bases. El SQL se genera, se lee y se aplica.
+
+**Lo hecho:**
+- Migración `empresas_y_suplantaciones`, puramente aditiva.
+- `empresas` con slug, nombre, logo, tres colores de marca, remitente de correo y estado.
+  La empresa 1 sembrada con la marca EXACTA de hoy —incluido el `iTea Travel` que sale en
+  los correos— para que cuando T9 la conecte no cambie nada.
+- `suplantaciones`, con motivo, caducidad y quién entró.
+- Rol `app_nexus`, **sin `BYPASSRLS`**, con permisos de lectura y escritura sobre las
+  tablas existentes y sobre las que cree T3 (`ALTER DEFAULT PRIVILEGES`). Su contraseña se
+  generó y se escribió sola en el `.env`, sin pasar por pantalla.
+- `DATABASE_URL` apunta ya a ese rol; `postgres` se queda solo en `DIRECT_URL`, para
+  migraciones.
+
+**Comprobado:** la aplicación conecta como `app_nexus` y `rolbypassrls = false` · 24
+endpoints de lectura en 200 · el ciclo de escritura con transacción funciona y la venta
+queda en su importe · `migrate status` dice que la base está al día.
+
+**Lo que no se sabía y ahora sí:** el pooler de Supabase acepta un rol propio con el
+formato `app_nexus.<ref>`. Era el riesgo de este paso, porque si no lo aceptara no habría
+forma de que la aplicación conectara con un rol que no ignore la RLS.
+
+> **Al desplegar:** hay que cambiar `DATABASE_URL` también en el hosting. Si se queda con
+> el usuario `postgres`, la RLS de T4 se aplicará sin error y sin filtrar nada.
 
 ## T3 · `empresa_id` en las 42 tablas `[ ]`
 
@@ -123,4 +148,5 @@ la base en los seis sitios, remitente y asuntos de correo por empresa.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T2 | Cerrada. De paso, el repo estrena migraciones: `db push` no podía con lo que viene en T3. Y confirmado que el pooler acepta un rol propio. |
 | 2026-09-11 | T1 | Cerrada. El mecanismo funciona y está inerte hasta T5. Encontrado de paso que la forma de lote de `$transaction` pierde la atomicidad con la extensión puesta: 7 sitios convertidos. |

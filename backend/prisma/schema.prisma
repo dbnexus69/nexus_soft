@@ -110,6 +110,60 @@ model detalle_venta {
   @@index([venta_id])
 }
 
+/// Una agencia cliente. Todo lo que no sea catálogo del sistema pertenece a una.
+///
+/// Los colores se guardan en hexadecimal, que es lo que devuelve un selector de
+/// color; el frontend los convierte a los canales que usa el tema
+/// (`--primary-rgb: 43 45 66`). Solo se guarda el tono de marca: la variante
+/// para modo oscuro se deriva, y cómo se deriva se decide en T9.
+model empresas {
+  id               Int              @id @default(autoincrement())
+  /// Identifica la empresa en la URL. No puede chocar con las rutas de la
+  /// aplicación, así que hay una lista de reservados al crearla.
+  slug             String           @unique
+  nombre           String
+  nombre_comercial String?
+  logo_url         String?
+  color_primario   String?
+  color_acento     String?
+  color_realce     String?
+  /// Remitente de sus correos. Hoy hay uno solo para todas, con el nombre
+  /// escrito en el código: esto es lo que lo sustituye en T9.
+  email_remitente  String?
+  email_nombre     String?
+  estado           EstadoEmpresa    @default(activa)
+  creado_at        DateTime         @default(now())
+  deleted_at       DateTime?
+  suplantaciones   suplantaciones[]
+}
+
+enum EstadoEmpresa {
+  activa
+  suspendida
+}
+
+/// Cada vez que el superadmin entra en una empresa para dar soporte.
+///
+/// El superadmin no ve datos de negocio por defecto: para verlos tiene que
+/// entrar, y entrar deja rastro. La entrada caduca (`expira_at`) en vez de ser
+/// un permiso permanente, para que olvidarse de salir no equivalga a un acceso
+/// abierto.
+model suplantaciones {
+  id            String    @id
+  superadmin_id Int
+  empresa_id    Int
+  motivo        String
+  iniciada_at   DateTime  @default(now())
+  expira_at     DateTime
+  terminada_at  DateTime?
+  ip            String?
+  empresas      empresas  @relation(fields: [empresa_id], references: [id])
+  usuarios      usuarios  @relation(fields: [superadmin_id], references: [id])
+
+  @@index([empresa_id])
+  @@index([superadmin_id])
+}
+
 model liquidacion_ventas {
   id                     Int                    @id @default(autoincrement())
   liquidacion_id         Int
@@ -675,6 +729,7 @@ model usuarios {
   logs_usuarios    logs_usuarios[]
   paquetes         paquetes[]
   sesiones         sesiones[]
+  suplantaciones   suplantaciones[]
   personas         personas           @relation(fields: [persona_id], references: [id])
   roles            roles              @relation(fields: [rol_id], references: [id])
   ventas           ventas[]

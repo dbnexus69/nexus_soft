@@ -126,7 +126,7 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Venta #${formatSaleId(sale.id)}`}
+      title={`Venta #${formatSaleId(sale.numero ?? sale.id)}`}
       size="lg"
       contentClassName="!p-0"
       footer={<Button variant="outline" onClick={onClose}>Cerrar</Button>}

@@ -13,7 +13,10 @@ function getCacheKey(): string {
     if (!token) return 'itea_dashboard_cache_anonymous';
     // Decodificar el payload del JWT (sin verificar firma, solo para obtener userId)
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return `itea_dashboard_cache_${payload.userId || 'unknown'}`;
+    // La empresa entra en la clave, no solo el usuario: al suplantar, el
+    // superadministrador conserva su userId y el navegador le serviría las
+    // cifras de la agencia anterior dentro de la siguiente.
+    return `itea_dashboard_cache_${payload.empresaId || 'sin-empresa'}_${payload.userId || 'unknown'}`;
   } catch {
     return 'itea_dashboard_cache_anonymous';
   }

@@ -25,7 +25,7 @@ import { useSalesContext } from "../context/SalesContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionsContext";
-import { formatCurrency, formatDate, formatId } from "../utils/formatters";
+import { formatSaleId, formatCurrency, formatDate, formatId } from "../utils/formatters";
 import { buildAirportMap } from "../utils/airportInfo";
 import { Sale } from "../types";
 import { DatePicker } from "../components/sales/forms/TicketForm";
@@ -323,7 +323,7 @@ export default function Sales() {
     setIsVoiding(true);
     try {
       await voidSale(voidConfirm.id, voidReason);
-      setSuccessMessage(`Venta #${voidConfirm.id} anulada correctamente`);
+      setSuccessMessage(`Venta #${formatSaleId(voidConfirm.numero ?? voidConfirm.id)} anulada correctamente`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
       setVoidConfirm(null);

@@ -3,6 +3,7 @@ const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/Ap
 const { buildMeta } = require('../utils/paginationHelper');
 const { enHoraColombia } = require('../utils/fechas');
 const { recalcularVenta, aCentimos, precioProducto } = require('./saleTotals');
+const { empresaActual } = require('../config/tenant');
 const emailService = require('../utils/emailService');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
@@ -483,9 +484,22 @@ class SalesService {
     const catalogos = await this._precargarCatalogos(body);
 
     const created = await prisma.transaccion(async (tx) => {
+      // 0. El número que verá la agencia.
+      //
+      // El cerrojo es por empresa y muere con la transacción. Sin él, dos ventas
+      // creadas a la vez leerían el mismo máximo y una de las dos se estrellaría
+      // contra el índice único — o peor, si no lo hubiera, compartirían número.
+      // Con él, la segunda espera a que la primera confirme. Dos agencias
+      // vendiendo a la vez no se estorban: el cerrojo lleva su empresa dentro.
+      // En dos sentencias y no en una: `pg_advisory_xact_lock` devuelve `void`,
+      // y Prisma no sabe deserializar esa columna en un `$queryRaw`.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('ventas.numero'), ${empresaActual()}::int)`;
+      const [{ siguiente }] = await tx.$queryRaw`SELECT COALESCE(MAX(numero), 0) + 1 AS siguiente FROM ventas`;
+
       // 1. Create sale record
       const venta = await tx.ventas.create({
         data: {
+          numero: Number(siguiente),
           cliente_id: Number(clientId),
           usuario_id: Number(asesorId),
           monto_total: Number(total) || 0,
@@ -1080,7 +1094,7 @@ class SalesService {
         OR (cp.nombres || ' ' || cp.apellidos) ILIKE ?
         OR (up.nombres || ' ' || up.apellidos) ILIKE ?
         OR (comp.nombres || ' ' || comp.apellidos) ILIKE ?
-        ${comoId !== null ? 'OR v.id = ?' : ''}
+        ${comoId !== null ? 'OR v.numero = ?' : ''}
       )`, ...(comoId !== null ? [q, q, q, q, comoId] : [q, q, q, q]));
 
     }
@@ -1130,6 +1144,7 @@ class SalesService {
       prisma.$queryRawUnsafe(`
         SELECT 
           v.id,
+          v.numero,
           v.cliente_id as "cliente_id",
           v.usuario_id as "usuarioId",
           v.creado_at as "creadoAt",
@@ -1208,6 +1223,7 @@ class SalesService {
         asesorId: v.usuarioId,
         asesorName: v.asesorName,
         date: v.creadoAt,
+        numero: v.numero,
         total: v.montoTotal,
         status: v.status,
         observations: v.observaciones,
@@ -1560,6 +1576,9 @@ class SalesService {
       date: venta.creado_at,
       total: venta.monto_total,
       paymentMethod: venta.metodos_pago?.nombre || null,
+      // El número que ve la agencia. El `id` sigue siendo la clave interna y
+      // lo que va en la URL; esto es lo que se pinta.
+      numero: venta.numero,
       status: venta.status,
       observations: venta.observaciones,
       isCredit: venta.es_credito,

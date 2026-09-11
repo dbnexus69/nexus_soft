@@ -24,14 +24,14 @@ const almacen = new AsyncLocalStorage();
  *
  * **Por qué el ámbito se abre con `async () => fn()` y no con `fn`.**
  *
- * Las operaciones de Prisma son perezosas: `prisma.x.findFirst(...)` no consulta
+ * Las operaciones de Prisma son perezosas: una consulta de Prisma no se ejecuta
  * nada, devuelve una promesa que se ejecuta cuando alguien la espera. Si el
  * ámbito se abre con `almacen.run(store, fn)` y `fn` devuelve esa promesa sin
  * esperarla, el ámbito se cierra ANTES de que la consulta arranque: la consulta
  * corre sin empresa.
  *
  * No es teórico: el login devolvía "correo o contraseña incorrectos" con la
- * contraseña correcta, porque `conEmpresa(id, () => prisma.usuarios.findFirst())`
+ * contraseña correcta, porque `conEmpresa(id, () => una consulta sin esperar)`
  * leía sin contexto y la política no dejaba ver ni al propio usuario.
  *
  * Con `async () => fn()`, la promesa se crea Y se encadena dentro del ámbito, y

@@ -10,7 +10,7 @@ import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Input, Select, FormField, CurrencyInput } from "../ui/Form";
 import * as api from "../../api";
-import { formatCurrency, formatDate } from "../../utils/formatters";
+import { formatSaleId, formatCurrency, formatDate } from "../../utils/formatters";
 import { Sale, Client, User, PaymentRecord } from "../../types";
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -284,7 +284,7 @@ export default function SaleEditModal({
           <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
               <h4 className="font-bold text-primary flex items-center gap-2">
-                <Receipt size={18} /> Resumen de Venta #{sale.id}
+                <Receipt size={18} /> Resumen de Venta #{formatSaleId(sale.numero ?? sale.id)}
               </h4>
               {/* El estado del listado puede llevar minutos en memoria; el
                   derivado de los abonos que se están viendo, no. */}

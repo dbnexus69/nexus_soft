@@ -15,7 +15,10 @@ function getCacheKey(baseKey: string): string {
     const token = localStorage.getItem('itea_token');
     if (!token) return `${baseKey}_anonymous`;
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return `${baseKey}_${payload.userId || 'unknown'}`;
+    // La empresa entra en la clave, no solo el usuario: al suplantar, el
+    // superadministrador conserva su userId y el navegador le serviría los datos
+    // de la agencia anterior dentro de la siguiente, sin error y sin aviso.
+    return `${baseKey}_${payload.empresaId || 'sin-empresa'}_${payload.userId || 'unknown'}`;
   } catch {
     return `${baseKey}_anonymous`;
   }

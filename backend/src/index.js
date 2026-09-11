@@ -90,7 +90,11 @@ if (env.nodeEnv === 'development') {
 }
 
 // Archivos estáticos
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Los logos son marca pública y los carga una etiqueta <img>, que no manda
+// cabeceras de sesión: se sirven estáticos. El resto —vouchers y documentos de
+// check-in— pasa por una ruta que comprueba que el fichero sea de tu agencia.
+app.use('/uploads/logos', express.static(path.join(__dirname, '../uploads/logos')));
+app.use('/uploads', require('./routes/uploads.routes'));
 
 // Rutas
 // La API se sirve en /api/v1 y en /api.

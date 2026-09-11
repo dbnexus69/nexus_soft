@@ -617,6 +617,14 @@ export interface PaymentRecord {
 }
 
 export interface Sale {
+  /**
+   * El número que ve la agencia, propio de cada empresa y sin huecos.
+   *
+   * El `id` sigue siendo la clave interna y lo que va en la URL, pero no se
+   * pinta: es un autoincremento global, y sus huecos son las ventas de las
+   * demás agencias — contables por cualquiera que sepa restar.
+   */
+  numero?: number | null;
   id: number;
   clientId: number;
   clientName: string;

@@ -942,6 +942,12 @@ model usuarios {
 
 model ventas {
   id                            Int                  @id @default(autoincrement())
+  /// El número que ve la agencia y que sale en el voucher del cliente.
+  ///
+  /// El `id` es global y con huecos: la agencia A vería 18, 19, 31 y los huecos
+  /// serían las ventas de la B, contables por cualquiera. Este empieza en 1 en
+  /// cada agencia y no se salta ninguno.
+  numero                        Int?
   cliente_id                    Int
   usuario_id                    Int
   monto_total                   Float                @default(0)
@@ -974,6 +980,7 @@ model ventas {
   empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
+  @@unique([empresa_id, numero])
   @@index([empresa_id])
   @@index([cliente_id])
   @@index([comisionista_id])

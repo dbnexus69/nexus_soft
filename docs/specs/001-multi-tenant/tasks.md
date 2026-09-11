@@ -227,20 +227,46 @@ empresa. No hace falta y se retira: la marca y los datos salen del **token**, no
 así que pegar la URL de otra agencia no enseña nada suyo — solo una dirección equivocada.
 Lo resuelve la interfaz redirigiendo al slug correcto, que es donde está el problema.
 
-## T6 · Numeración propia por empresa `[ ]`
+## T6 · Numeración propia por empresa `[x]`
 
-`ventas.numero` y sustituirlo en los cinco sitios donde hoy se pinta el id, incluido el
-voucher que recibe el cliente. La búsqueda por id del listado pasa a `numero`.
+`ventas.numero`, único por `(empresa_id, numero)`, en los cinco sitios donde se pintaba el
+id —incluido el voucher que recibe el cliente— y en la búsqueda del listado, que ahora
+busca lo que el usuario ve.
 
-**Comprobación:** criterio **A4**.
+**Lo interesante fue la concurrencia.** Dos ventas creadas a la vez leerían el mismo
+máximo: una se estrella contra el índice único, o —si no lo hubiera— comparten número. Se
+resuelve con `pg_advisory_xact_lock` **por empresa**, que muere con la transacción: la
+segunda espera a que la primera confirme, y dos agencias vendiendo a la vez no se
+estorban porque el cerrojo lleva su empresa dentro. Probado lanzando dos altas en
+paralelo: salieron 12 y 13.
 
-## T7 · Ficheros y cachés `[ ]`
+Las ventas que ya existían se renumeraron por orden de creación dentro de su empresa, así
+que la agencia de siempre no ve números nuevos y aleatorios: pierde los huecos, que nunca
+fueron suyos. **Criterio A4 cumplido.**
 
-`/uploads` deja de ser estático y se sirve con `auth`; `empresaId` entra en la clave de
-las cuatro cachés del navegador.
+*Dos tropiezos de SQL, anotados porque volverán:* `pg_advisory_xact_lock(int, bigint)` no
+existe —Prisma manda los números como bigint, hay que castear— y devuelve `void`, que
+Prisma no sabe deserializar en un `$queryRaw`; va en su propio `$executeRaw`.
 
-**Comprobación:** criterio **A9**, y que al suplantar y volver se pinten los catálogos de
-la empresa en la que se está.
+## T7 · Ficheros y cachés `[x]`
+
+**Los ficheros tienen dueño sin guardar quién los subió.** `/uploads` era estático: los
+vouchers y los documentos de check-in los leía cualquiera con el enlace, sin sesión. Ahora
+pasan por una ruta con `auth` que le pregunta a la base si alguna fila **que yo pueda ver**
+los referencia —`detalle_venta.voucher_url` o `tramos_vuelo.checkin_docs`—. La política de
+la empresa ya filtra esas filas, así que "no existe" y "es de otra agencia" dan la misma
+respuesta, que es lo correcto.
+
+`/uploads/logos` sigue siendo público, y es deliberado: lo carga una etiqueta `<img>` que
+no manda cabeceras, incluida la del voucher que html2canvas rasteriza.
+
+**Las cachés del navegador llevan la empresa en la clave.** Antes se construía con el
+`userId`, así que el superadministrador que mirara una agencia y luego otra recibiría los
+catálogos y los clientes de la primera dentro de la segunda, sin error y sin aviso,
+durante los 15 minutos del TTL.
+
+**Comprobado:** un fichero sin sesión da 401, con sesión y sin dueño da 404, y un logo
+sigue sirviéndose sin sesión. **Criterio A9 cumplido.**
 
 ## T8 · Suplantación con auditoría `[ ]`
 
@@ -294,6 +320,7 @@ el código y hay una sola cuenta de Resend. Los campos ya están en la tabla.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T6 + T7 | Numeración propia con cerrojo por empresa, y los ficheros con dueño. |
 | 2026-09-11 | T9 | Nombre, logo y colores, de punta a punta. Los colores salieron casi gratis por los canales CSS de un trabajo anterior. Quedan los correos. |
 | 2026-09-11 | T5b | Cerrada. El superadmin ya crea agencias completas. Retirado el 403 por slug: no cerraba ningún hueco real. |
 | 2026-09-11 | T4 + T5a | Cerradas, y en este orden: la RLS no se puede encender antes de que el contexto llegue del token. A1 y A2 pasan con dos empresas reales. |

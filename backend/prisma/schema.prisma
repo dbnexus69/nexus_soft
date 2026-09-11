@@ -47,6 +47,10 @@ model clientes {
   usuarios       usuarios? @relation(fields: [creado_por_id], references: [id])
   personas       personas  @relation(fields: [persona_id], references: [id])
   ventas         ventas[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model comisionistas {
@@ -63,6 +67,10 @@ model comisionistas {
   personas               personas                 @relation(fields: [persona_id], references: [id])
   liquidaciones_comision liquidaciones_comision[]
   ventas                 ventas[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model detalle_venta {
@@ -105,6 +113,10 @@ model detalle_venta {
   prod_tours               prod_tours?
   prod_visas               prod_visas?
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@index([metodo_pago_proveedor_id])
   @@index([proveedor_id])
   @@index([venta_id])
@@ -135,6 +147,48 @@ model empresas {
   creado_at        DateTime         @default(now())
   deleted_at       DateTime?
   suplantaciones   suplantaciones[]
+  clientes                   clientes[]
+  codigos_recuperacion       codigos_recuperacion[]
+  comisionistas              comisionistas[]
+  detalle_venta              detalle_venta[]
+  liquidacion_ventas         liquidacion_ventas[]
+  liquidaciones_comision     liquidaciones_comision[]
+  logs_usuarios              logs_usuarios[]
+  metodos_pago               metodos_pago[]
+  pagos_venta                pagos_venta[]
+  paquete_asistencia_medica  paquete_asistencia_medica[]
+  paquete_hotel              paquete_hotel[]
+  paquete_proveedor          paquete_proveedor[]
+  paquete_tarifas            paquete_tarifas[]
+  paquete_vuelo              paquete_vuelo[]
+  paquetes                   paquetes[]
+  pasajeros_detalle          pasajeros_detalle[]
+  permisos_rol               permisos_rol[]
+  personas                   personas[]
+  prod_autos                 prod_autos[]
+  prod_checkins              prod_checkins[]
+  prod_eventos               prod_eventos[]
+  prod_fincas                prod_fincas[]
+  prod_hoteleria             prod_hoteleria[]
+  prod_mascotas              prod_mascotas[]
+  prod_migracion             prod_migracion[]
+  prod_pasaportes            prod_pasaportes[]
+  prod_planes                prod_planes[]
+  prod_restaurantes          prod_restaurantes[]
+  prod_seguros               prod_seguros[]
+  prod_simcards              prod_simcards[]
+  prod_tiqueteria            prod_tiqueteria[]
+  prod_tours                 prod_tours[]
+  prod_visas                 prod_visas[]
+  proveedores                proveedores[]
+  responsables               responsables[]
+  roles                      roles[]
+  sesiones                   sesiones[]
+  tarjetas_agencia           tarjetas_agencia[]
+  tramos_vuelo               tramos_vuelo[]
+  usuarios                   usuarios[]
+  ventas                     ventas[]
+  ventas_mensuales           ventas_mensuales[]
 }
 
 enum EstadoEmpresa {
@@ -171,6 +225,10 @@ model liquidacion_ventas {
   liquidaciones_comision liquidaciones_comision @relation(fields: [liquidacion_id], references: [id])
   ventas                 ventas                 @relation(fields: [venta_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@unique([liquidacion_id, venta_id])
 }
 
@@ -186,6 +244,10 @@ model liquidaciones_comision {
   liquidacion_ventas liquidacion_ventas[]
   comisionistas      comisionistas        @relation(fields: [comisionista_id], references: [id])
   metodos_pago       metodos_pago?        @relation(fields: [metodo_pago_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model logs_usuarios {
@@ -196,16 +258,25 @@ model logs_usuarios {
   descripcion String?
   fecha       DateTime @default(now())
   usuarios    usuarios @relation(fields: [usuario_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model metodos_pago {
   id                     Int                      @id @default(autoincrement())
-  nombre                 String                   @unique
+  nombre                 String
   detalle_venta          detalle_venta[]
   liquidaciones_comision liquidaciones_comision[]
   pagos_venta            pagos_venta[]
   tarjetas_agencia       tarjetas_agencia[]
   ventas                 ventas[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([empresa_id, nombre])
+  @@index([empresa_id])
 }
 
 model pagos_venta {
@@ -218,6 +289,10 @@ model pagos_venta {
   metodos_pago   metodos_pago? @relation(fields: [metodo_pago_id], references: [id])
   ventas         ventas        @relation(fields: [venta_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@index([venta_id])
 }
 
@@ -227,6 +302,10 @@ model paquete_asistencia_medica {
   cobertura_usd  Float    @default(0)
   dias_cobertura Int      @default(0)
   paquetes       paquetes @relation(fields: [paquete_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model paquete_hotel {
@@ -237,6 +316,10 @@ model paquete_hotel {
   regimen      RegimenAlimenticio? @default(full)
   noches       Int?
   paquetes     paquetes            @relation(fields: [paquete_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model paquete_proveedor {
@@ -245,6 +328,10 @@ model paquete_proveedor {
   proveedor_id Int
   paquetes     paquetes    @relation(fields: [paquete_id], references: [id])
   proveedores  proveedores @relation(fields: [proveedor_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model paquete_tarifas {
@@ -256,6 +343,10 @@ model paquete_tarifas {
   vigencia_hasta DateTime?
   paquetes       paquetes      @relation(fields: [paquete_id], references: [id])
   prod_planes    prod_planes[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model paquete_vuelo {
@@ -269,6 +360,10 @@ model paquete_vuelo {
   tipo_transporte String?     @default("Aereo")
   aerolineas      aerolineas? @relation(fields: [aerolinea_id], references: [id])
   paquetes        paquetes    @relation(fields: [paquete_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model paquetes {
@@ -288,6 +383,10 @@ model paquetes {
   paquete_vuelo             paquete_vuelo[]
   usuarios                  usuarios?                  @relation(fields: [creado_por_id], references: [id])
   prod_planes               prod_planes[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model pasajeros_detalle {
@@ -302,6 +401,10 @@ model pasajeros_detalle {
   detalle_venta    detalle_venta @relation(fields: [detalle_venta_id], references: [id])
   personas         personas      @relation(fields: [persona_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@index([detalle_venta_id])
   @@index([persona_id])
 }
@@ -322,6 +425,10 @@ model permisos_rol {
   permisos   permisos @relation(fields: [permiso_id], references: [id])
   roles      roles    @relation(fields: [rol_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@unique([rol_id, permiso_id])
 }
 
@@ -331,7 +438,7 @@ model personas {
   nombres           String
   apellidos         String
   tipo_documento_id Int?
-  documento         String?             @unique
+  documento         String?
   email             String?
   telefono          String?
   birth_date        DateTime?
@@ -347,6 +454,11 @@ model personas {
   tipos_documento   tipos_documento?    @relation(fields: [tipo_documento_id], references: [id])
   responsables      responsables?
   usuarios          usuarios?
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([empresa_id, documento])
+  @@index([empresa_id])
 }
 
 model politicas_equipaje {
@@ -375,6 +487,10 @@ model prod_autos {
   tipo_seguro             String?
   tarjeta_garantia_info   String?
   detalle_venta           detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_checkins {
@@ -388,6 +504,10 @@ model prod_checkins {
   necesidades_especiales String?
   usa_silla_ruedas       Boolean?      @default(false)
   detalle_venta          detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_eventos {
@@ -408,6 +528,10 @@ model prod_eventos {
   direccion           String?       @db.VarChar(40)
   nombre_lugar        String?       @db.VarChar(40)
   detalle_venta       detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_fincas {
@@ -427,6 +551,10 @@ model prod_fincas {
   ciudad_pueblo         String?
   observaciones         String?
   detalle_venta         detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_hoteleria {
@@ -440,6 +568,10 @@ model prod_hoteleria {
   fecha_salida     DateTime?
   observaciones    String?
   detalle_venta    detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_mascotas {
@@ -458,6 +590,10 @@ model prod_mascotas {
   empresa_transporte  String?
   observaciones       String?
   detalle_venta       detalle_venta  @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_migracion {
@@ -470,6 +606,10 @@ model prod_migracion {
   pasaporte_vence         DateTime?
   pais_destino            String?
   detalle_venta           detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_pasaportes {
@@ -483,6 +623,10 @@ model prod_pasaportes {
   fecha_estimada_viaje DateTime?
   telefono_contacto    String?
   detalle_venta        detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_planes {
@@ -514,6 +658,10 @@ model prod_planes {
   detalle_venta               detalle_venta    @relation(fields: [detalle_venta_id], references: [id])
   paquetes                    paquetes?        @relation(fields: [paqueteId], references: [id])
   paquete_tarifas             paquete_tarifas? @relation(fields: [paquete_tarifa_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_restaurantes {
@@ -528,6 +676,10 @@ model prod_restaurantes {
   ocasion_especial    String?
   telefono_contacto   String?
   detalle_venta       detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_seguros {
@@ -540,6 +692,10 @@ model prod_seguros {
   fecha_fin_vigencia    DateTime?
   telefono_contacto     String?
   detalle_venta         detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_simcards {
@@ -552,6 +708,10 @@ model prod_simcards {
   tipo_sim         String?
   metodo_entrega   String?
   detalle_venta    detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_tiqueteria {
@@ -568,6 +728,10 @@ model prod_tiqueteria {
   detalle_venta      detalle_venta       @relation(fields: [detalle_venta_id], references: [id])
   politicas_equipaje politicas_equipaje? @relation(fields: [planEquipajeId], references: [id])
   tramos_vuelo       tramos_vuelo[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_tours {
@@ -585,6 +749,10 @@ model prod_tours {
   telefono_contacto   String?
   observaciones       String?
   detalle_venta       detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model prod_visas {
@@ -601,6 +769,10 @@ model prod_visas {
   fecha_estimada_viaje  DateTime?
   email_contacto        String?
   detalle_venta         detalle_venta @relation(fields: [detalle_venta_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model proveedores {
@@ -614,6 +786,10 @@ model proveedores {
   status            UserStatus          @default(active)
   detalle_venta     detalle_venta[]
   paquete_proveedor paquete_proveedor[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model responsables {
@@ -624,14 +800,23 @@ model responsables {
   deleted_at DateTime?
   personas   personas   @relation(fields: [persona_id], references: [id])
   ventas     ventas[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model roles {
   id           Int            @id @default(autoincrement())
-  nombre       String         @unique
+  nombre       String
   descripcion  String?
   permisos_rol permisos_rol[]
   usuarios     usuarios[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([empresa_id, nombre])
+  @@index([empresa_id])
 }
 
 /// Códigos de un solo uso para recuperar la contraseña.
@@ -650,6 +835,10 @@ model codigos_recuperacion {
   creado_at   DateTime  @default(now())
   usuarios    usuarios  @relation(fields: [usuario_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@index([usuario_id])
 }
 
@@ -661,6 +850,10 @@ model sesiones {
   creado_at  DateTime @default(now())
   user_agent String?
   usuarios   usuarios @relation(fields: [usuario_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model tarjetas_agencia {
@@ -672,6 +865,10 @@ model tarjetas_agencia {
   status         UserStatus    @default(active)
   creado_at      DateTime      @default(now())
   metodos_pago   metodos_pago? @relation(fields: [metodo_pago_id], references: [id])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model tipos_documento {
@@ -710,6 +907,10 @@ model tramos_vuelo {
   politicas_equipaje                                          politicas_equipaje? @relation(fields: [plan_equipaje_id], references: [id])
   prod_tiqueteria                                             prod_tiqueteria     @relation(fields: [prod_tiqueteria_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@index([aeropuerto_destino_id])
   @@index([aeropuerto_origen_id])
   @@index([prod_tiqueteria_id])
@@ -733,6 +934,10 @@ model usuarios {
   personas         personas           @relation(fields: [persona_id], references: [id])
   roles            roles              @relation(fields: [rol_id], references: [id])
   ventas           ventas[]
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model ventas {
@@ -766,6 +971,10 @@ model ventas {
   responsables                  responsables?        @relation(fields: [responsable_id], references: [id])
   usuarios                      usuarios             @relation(fields: [usuario_id], references: [id])
 
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
   @@index([cliente_id])
   @@index([comisionista_id])
   @@index([usuario_id])
@@ -785,7 +994,11 @@ model ventas_mensuales {
   seguros        Float?
   transferencias Float?
 
-  @@unique([year, month])
+  empresa_id       Int @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
+  @@unique([empresa_id, year, month])
 }
 
 enum ProductCategory {

@@ -224,7 +224,7 @@ class RolesService {
   async getPermissions(role) {
     // Los roles válidos son los que existen en la base, no una lista fija:
     // 'admin' quedaba fuera y por eso el frontend usaba permisos inventados.
-    const rolEnBd = await prisma.roles.findUnique({ where: { nombre: role } });
+    const rolEnBd = await prisma.roles.findFirst({ where: { nombre: role } });
     if (!rolEnBd) throw new BadRequestError(`Rol inválido: ${role}`);
 
     const permisos = await prisma.permisos_rol.findMany({
@@ -297,7 +297,7 @@ class RolesService {
       );
     }
 
-    const roles = await prisma.roles.findUnique({ where: { nombre: role } });
+    const roles = await prisma.roles.findFirst({ where: { nombre: role } });
     if (!roles) throw new NotFoundError('Rol no encontrado');
 
     // Los permisos que falten se crean fuera de la transacción: son un catálogo

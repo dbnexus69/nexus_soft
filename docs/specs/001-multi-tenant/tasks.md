@@ -89,13 +89,35 @@ forma de que la aplicación conectara con un rol que no ignore la RLS.
 > **Al desplegar:** hay que cambiar `DATABASE_URL` también en el hosting. Si se queda con
 > el usuario `postgres`, la RLS de T4 se aplicará sin error y sin filtrar nada.
 
-## T3 · `empresa_id` en las 42 tablas `[ ]`
+## T3 · `empresa_id` en las 42 tablas `[x]`
 
-Columna nullable → relleno con 1 → `NOT NULL` → índices → claves ajenas compuestas → los
-cuatro `@unique` rehechos. Todo en una migración.
+Dos migraciones. La primera añade la columna en tres pasos —opcional, rellenar con 1,
+ponerla obligatoria—, su índice y su clave ajena a `empresas`, y rehace los cuatro únicos
+globales como compuestos: `personas(empresa_id, documento)`, `roles(empresa_id, nombre)`,
+`metodos_pago(empresa_id, nombre)` y `ventas_mensuales(empresa_id, year, month)`.
 
-**Comprobación:** `pnpm check:prisma` limpio y ninguna fila con `empresa_id` nulo en
-ninguna de las 42.
+**El paso rompió 72 sitios, y por eso se arregla aquí y no en T5:**
+
+- **61 inserts**, porque la columna es obligatoria y nadie la pasaba. La segunda migración
+  le da valor por defecto desde la propia variable de sesión:
+  `COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)`. Así ninguno de
+  los 61 tiene que acordarse, y el valor no puede discrepar del que comprobará la política
+  porque sale del mismo sitio.
+  > **Pendiente para T5:** quitar el `COALESCE` a 1. Es un respaldo temporal para que el
+  > login y lo que corre fuera de una petición sigan funcionando mientras no hay contexto.
+  > Con el middleware puesto, un insert sin contexto debe fallar, no caer en la empresa 1.
+- **11 `findUnique`** por documento y por nombre de rol, que dejaron de ser claves únicas.
+  Pasan a `findFirst`: la empresa la aplicará la política, no ese `where`.
+
+**Comprobado:** ninguna columna `empresa_id` admite nulo · 43 tablas la tienen · los
+recuentos de 16 tablas son idénticos antes y después · las 11 ventas pertenecen a la
+empresa 1 · `check:prisma` limpio · 24 endpoints de lectura en 200 · al crear un producto
+la línea nueva nace con `empresa_id = 1` y al borrarlo la venta vuelve a su importe.
+
+**Queda fuera, como T3b:** las claves ajenas compuestas (`detalle_venta(venta_id,
+empresa_id)` → `ventas(id, empresa_id)`). Impiden colgar una línea de la venta de otra
+empresa, pero son una segunda capa: la barrera de verdad es la RLS de T4, y conviene tener
+esa antes que esto.
 
 ## T4 · Encender la RLS `[ ]`
 
@@ -148,5 +170,6 @@ la base en los seis sitios, remitente y asuntos de correo por empresa.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T3 | Cerrada. El paso rompió 61 inserts y 11 findUnique; los dos se arreglan dentro del mismo paso. El valor por defecto sale de la variable de sesión, con un respaldo temporal que hay que quitar en T5. |
 | 2026-09-11 | T2 | Cerrada. De paso, el repo estrena migraciones: `db push` no podía con lo que viene en T3. Y confirmado que el pooler acepta un rol propio. |
 | 2026-09-11 | T1 | Cerrada. El mecanismo funciona y está inerte hasta T5. Encontrado de paso que la forma de lote de `$transaction` pierde la atomicidad con la extensión puesta: 7 sitios convertidos. |

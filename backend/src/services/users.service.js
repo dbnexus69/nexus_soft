@@ -143,7 +143,7 @@ class UsersService {
     if (!existente) throw new NotFoundError('Usuario no encontrado');
 
     const rol = data.role
-      ? await prisma.roles.findUnique({ where: { nombre: data.role } })
+      ? await prisma.roles.findFirst({ where: { nombre: data.role } })
       : null;
 
     await prisma.transaccion(async (tx) => {
@@ -202,7 +202,7 @@ class UsersService {
 
     let persona;
     if (data.docNumber) {
-      const existingPersona = await prisma.personas.findUnique({
+      const existingPersona = await prisma.personas.findFirst({
         where: { documento: data.docNumber }
       });
       if (existingPersona) {
@@ -239,7 +239,7 @@ class UsersService {
       });
     }
 
-    const roles = await prisma.roles.findUnique({ where: { nombre: data.role } });
+    const roles = await prisma.roles.findFirst({ where: { nombre: data.role } });
     if (!roles) {
       throw new BadRequestError('Rol no válido');
     }
@@ -320,7 +320,7 @@ class UsersService {
 
     if (data.docNumber !== undefined) {
       if (data.docNumber) {
-        const existingDoc = await prisma.personas.findUnique({
+        const existingDoc = await prisma.personas.findFirst({
           where: { documento: data.docNumber }
         });
         if (existingDoc && existingDoc.id !== usuario.persona_id) {
@@ -351,7 +351,7 @@ class UsersService {
     if (data.email) updateData.email = data.email;
     if (data.password_hash) updateData.password_hash = data.password_hash;
     if (data.role) {
-      const roles = await prisma.roles.findUnique({ where: { nombre: data.role } });
+      const roles = await prisma.roles.findFirst({ where: { nombre: data.role } });
       if (!roles) throw new BadRequestError('Rol no válido');
       updateData.rol_id = roles.id;
     }

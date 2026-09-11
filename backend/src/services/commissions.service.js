@@ -124,7 +124,7 @@ class CommissionsService {
 
     let persona;
     if (data.docNumber) {
-      const existingPersona = await prisma.personas.findUnique({
+      const existingPersona = await prisma.personas.findFirst({
         where: { documento: data.docNumber }
       });
       if (existingPersona) {
@@ -210,7 +210,7 @@ class CommissionsService {
 
     if (data.docNumber !== undefined) {
       if (data.docNumber) {
-        const existingDoc = await prisma.personas.findUnique({
+        const existingDoc = await prisma.personas.findFirst({
           where: { documento: data.docNumber }
         });
         if (existingDoc && existingDoc.id !== agent.persona_id) {

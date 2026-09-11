@@ -17,7 +17,7 @@ async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaI
   }
   
   if (docNumber) {
-    const match = await tx.personas.findUnique({
+    const match = await tx.personas.findFirst({
       where: { documento: String(docNumber) }
     });
     if (match) return match.id;

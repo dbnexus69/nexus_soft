@@ -47,6 +47,7 @@ Al terminar:
 | Login | **Uno solo y común** para todas las empresas, sin marca. |
 | Identidad | **Un usuario pertenece a una empresa.** El correo sigue siendo único global. |
 | Superadmin | Puede **entrar en una empresa** para soporte, con registro de auditoría. |
+| Colores de marca | **Solo en el voucher**, el documento que llega al cliente final. La interfaz mantiene siempre los mismos colores; el nombre y el logo sí son los de la agencia. |
 
 ## Fuera de alcance
 
@@ -135,7 +136,7 @@ mucho menor. Lo que no cambia es que son **una ida y vuelta más por consulta**.
 ```
 empresas
   id, slug (unique, va en la URL), nombre, nombre_comercial,
-  logo_url, colores (jsonb: primary, accent, highlight en hex),
+  logo_url, colores en hex (se usan en el voucher, no en la interfaz),
   email_remitente, email_nombre,
   estado (activa | suspendida), creado_at, deleted_at
 ```
@@ -257,11 +258,15 @@ alguien pega `app.com/agencia2/ventas` y ve las suyas bajo el nombre de otra.
 
 ### La marca en el frontend
 
-Aquí hay una ventaja que ya está construida: el último trabajo pasó los colores del tema a
-**canales** (`--primary-rgb: 43 45 66`, y el hex derivado). Aplicar la paleta de una
-empresa en caliente es escribir tres variables en `document.documentElement`, sin recompilar
-nada y respetando el modo oscuro, porque `index.css` define los 26 valores en `:root` y en
-`.dark` y solo se sobreescriben los de marca.
+**Los colores van solo al voucher; la interfaz no cambia de color.** Se decidió así al
+ejecutar: la aplicación es la herramienta del equipo de la agencia y conviene que sea
+siempre la misma —dar soporte no debería depender de la paleta que eligió cada cliente—,
+mientras que el voucher es lo único que llega al cliente final. El nombre y el logo sí
+están en la interfaz, porque dicen en qué agencia se está trabajando.
+
+El voucher toma dos variables (`--v-tinta` y `--v-acento`) derivadas del color de la
+agencia y forzadas a una legibilidad comprobada: la cabecera lleva texto blanco encima y
+el acento va sobre papel blanco, con 4,5 a 1 de contraste garantizado.
 
 Lo que hay que parametrizar, con ubicaciones:
 

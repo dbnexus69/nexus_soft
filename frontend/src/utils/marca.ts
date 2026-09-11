@@ -1,12 +1,17 @@
 /**
- * La marca de cada agencia, aplicada sobre el tema en caliente.
+ * Los colores de cada agencia, aplicados al voucher.
  *
- * Esto es barato gracias a una decisión anterior: los colores del tema se
- * declaran en CANALES (`--primary-rgb: 43 45 66`) y el hexadecimal se deriva de
- * ellos. Así que vestir la aplicación con los colores de una agencia es escribir
- * tres variables en la raíz del documento — sin recompilar nada, sin un segundo
- * juego de clases, y respetando las 46 clases con opacidad que dependen de esos
- * mismos canales.
+ * **Solo al voucher, y es una decisión, no una limitación.** La interfaz es la
+ * herramienta con la que trabaja el equipo de la agencia: conviene que sea
+ * siempre la misma, para que dar soporte no dependa de qué colores eligió cada
+ * cliente. El voucher, en cambio, es lo único que sale de la oficina y llega al
+ * cliente final, y ahí la marca que tiene que aparecer es la de la agencia.
+ *
+ * El nombre y el logo sí siguen en la interfaz —en la barra y en la cabecera—,
+ * porque eso no es decoración: dice en qué agencia estás trabajando.
+ *
+ * Como el voucher es un documento impreso, no hay modo oscuro que atender: se
+ * fue toda la derivación que hacía falta para eso.
  */
 
 export interface Marca {
@@ -20,19 +25,12 @@ export interface Marca {
   };
 }
 
-/** '#2B2D42' -> '43 45 66', que es lo que espera la variable del tema. */
-function aCanales(hex: string): string | null {
+/** Pasa un hex a HSL, que es donde se puede razonar sobre claridad y viveza. */
+function aHsl(hex: string): { h: number; s: number; l: number } | null {
   const limpio = hex.trim().replace('#', '');
   if (!/^[0-9a-fA-F]{6}$/.test(limpio)) return null;
   const n = parseInt(limpio, 16);
-  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
-}
-
-/** Pasa un hex a HSL, que es donde se puede razonar sobre claridad y viveza. */
-function aHsl(hex: string): { h: number; s: number; l: number } | null {
-  const canales = aCanales(hex);
-  if (!canales) return null;
-  const [r, g, b] = canales.split(' ').map(n => Number(n) / 255);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => v / 255);
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   const l = (max + min) / 2;
   const d = max - min;
@@ -48,135 +46,97 @@ function aHsl(hex: string): { h: number; s: number; l: number } | null {
   return { h, s, l };
 }
 
-/** De HSL a los canales que espera la variable del tema. */
-function aCanalesDesdeHsl(h: number, s: number, l: number): string {
+/** De HSL a `rgb(r g b)`, listo para meter en una variable CSS. */
+function aRgb(h: number, s: number, l: number): string {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
   const [r, g, b] =
     h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
     : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
-  return [r, g, b].map(v => Math.round((v + m) * 255)).join(' ');
+  return `rgb(${[r, g, b].map(v => Math.round((v + m) * 255)).join(' ')})`;
 }
 
 /**
- * El fondo de la barra de navegación, teñido con la marca.
+ * El color de la franja de cabecera y de la caja de totales: el tono de la
+ * agencia, forzado a oscuro.
  *
- * Aquí es donde de verdad se ve de quién es la aplicación. El resto de la
- * interfaz es gris —1810 clases de slate frente a 378 de marca— y en modo oscuro
- * muchos componentes sustituyen el color de marca por blanco, así que el tinte
- * se diluye hasta no notarse. La barra, en cambio, está siempre a la vista.
- *
- * Se queda MUY oscura a propósito, con el tono de la agencia pero no su
- * claridad: lleva texto blanco encima, y una marca clara —un celeste, un ámbar—
- * lo dejaría ilegible. Así funciona con cualquier color que elija un cliente sin
- * que haya que comprobarlo caso por caso.
+ * Encima va texto blanco. Si una agencia elige un celeste o un ámbar y lo
+ * usáramos tal cual, su voucher saldría ilegible — y sería el documento que
+ * recibe su cliente. Forzando la claridad, funciona con cualquier color que
+ * elijan sin tener que revisarlo caso por caso.
  */
-function paraLaBarra(hex: string): string | null {
-  const hsl = aHsl(hex);
-  if (!hsl) return null;
-  // Saturación fija y no la del original: un gris de marca dejaría la barra
-  // exactamente igual que la de todos, y la gracia es reconocerla.
-  return aCanalesDesdeHsl(hsl.h, Math.max(hsl.s, 0.35), 0.08);
+function tintaOscura(hex: string): string | null {
+  const c = aHsl(hex);
+  return c ? aRgb(c.h, Math.max(c.s, 0.3), Math.min(c.l, 0.16)) : null;
 }
 
-/**
- * La variante para modo oscuro de un color de marca.
- *
- * El tema no usa el mismo tono en los dos modos, y por un motivo: sobre un fondo
- * oscuro, un azul marino de marca deja de leerse. El tema propio lo resuelve a
- * mano —su primario pasa de #2B2D42 a #8D99AE—, pero una agencia solo elige UN
- * color, así que la variante se deriva: se sube la luminosidad hasta un mínimo
- * legible y se baja algo la saturación, que es lo que hace el tema de la casa.
- *
- * Un color que ya es claro se deja como está: subirle la luminosidad lo
- * convertiría en blanco.
- */
-function paraModoOscuro(hex: string): string | null {
-  const canales = aCanales(hex);
-  if (!canales) return null;
-  const [r, g, b] = canales.split(' ').map(n => Number(n) / 255);
+/** Luminancia relativa, para medir contraste de verdad. */
+function luminancia(r: number, g: number, b: number): number {
+  const f = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
 
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (l >= 0.6) return canales;
-
-  const d = max - min;
-  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
-  let h = 0;
-  if (d !== 0) {
-    if (max === r) h = ((g - b) / d) % 6;
-    else if (max === g) h = (b - r) / d + 2;
-    else h = (r - g) / d + 4;
-    h *= 60;
-    if (h < 0) h += 360;
-  }
-
-  // Antes se bajaba la saturación al 55 %, y el resultado era un color casi
-  // gris: la marca "apenas se notaba" en oscuro. Se conserva el 85 %, que sigue
-  // siendo más suave que el original —sobre fondo oscuro un color a plena
-  // saturación vibra— pero se reconoce como suyo.
-  const lClaro = 0.64;
-  const sSuave = s * 0.85;
-  const c = (1 - Math.abs(2 * lClaro - 1)) * sSuave;
+/** Contraste de un color HSL contra el blanco del papel. */
+function contrasteConBlanco(h: number, s: number, l: number): number {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = lClaro - c / 2;
-  const [r2, g2, b2] =
+  const m = l - c / 2;
+  const [r, g, b] =
     h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
     : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
-
-  return [r2, g2, b2].map(v => Math.round((v + m) * 255)).join(' ');
+  return 1.05 / (luminancia(r + m, g + m, b + m) + 0.05);
 }
 
 /**
- * Las variables que el tema ya define, y que la marca sobreescribe.
+ * El acento: sobre blanco, en detalles pequeños —la marca de cada sección, la
+ * cifra destacada, la segunda palabra del pie—.
  *
- * Son solo tres de las veintiséis. El resto —fondos, bordes, texto— siguen
- * siendo del tema: una agencia elige su color, no rehace la aplicación.
+ * No se le pone un techo de claridad fijo, se le **exige un contraste**: se va
+ * oscureciendo hasta llegar a 4,5 a 1, que es el mínimo legible para texto
+ * normal. Un techo fijo no basta, y se ve con un ámbar: a la claridad que
+ * bastaba para un azul, el ámbar se quedaba en 3,0 y no se leía. Esto funciona
+ * con el tono que elija cualquier agencia sin revisarlo a mano.
  */
-const VARIABLES: Array<[keyof Marca['colores'], string]> = [
-  ['primario', 'primary'],
-  ['acento', 'accent'],
-  ['realce', 'highlight'],
-];
+const CONTRASTE_MINIMO = 4.5;
+
+function acentoLegible(hex: string): string | null {
+  const c = aHsl(hex);
+  if (!c) return null;
+  const s = Math.max(c.s, 0.45);
+  let l = Math.min(c.l, 0.42);
+  while (l > 0.08 && contrasteConBlanco(c.h, s, l) < CONTRASTE_MINIMO) l -= 0.02;
+  return aRgb(c.h, s, l);
+}
 
 const ETIQUETA_ESTILO = 'marca-empresa';
 
 /**
- * Aplica la marca. Se llama al entrar y al cambiar de empresa.
+ * Aplica los colores de la agencia al voucher. Se llama al entrar y al salir.
  *
- * Los colores van en una etiqueta `<style>` propia y no en el atributo `style`
- * del elemento raíz, porque hacen falta dos juegos: el de modo claro y el de
- * `.dark`. Con `style` en línea solo cabría uno, y al cambiar de modo la marca
- * se quedaría con el color equivocado.
+ * Van en una etiqueta `<style>` con el selector `.nexus-voucher` y no en el
+ * atributo `style` del componente, por un motivo concreto: el PDF se genera
+ * clonando el contenido dentro de un contenedor temporal que se crea a mano
+ * (`Sales.tsx`). Un estilo en línea se quedaría en el original y el PDF saldría
+ * con los colores por defecto; una regla por clase la hereda también el clon.
  */
 export function aplicarMarca(marca: Marca | null): void {
-  const anterior = document.getElementById(ETIQUETA_ESTILO);
-  if (anterior) anterior.remove();
+  document.getElementById(ETIQUETA_ESTILO)?.remove();
   if (!marca) return;
 
-  const claro: string[] = [];
-  const oscuro: string[] = [];
-  for (const [clave, variable] of VARIABLES) {
-    const hex = marca.colores[clave];
-    if (!hex) continue;
-    const canales = aCanales(hex);
-    if (!canales) continue;
-    claro.push(`--${variable}-rgb: ${canales};`);
-    const enOscuro = paraModoOscuro(hex);
-    if (enOscuro) oscuro.push(`--${variable}-rgb: ${enOscuro};`);
+  const tinta = marca.colores.primario ? tintaOscura(marca.colores.primario) : null;
+  const acento = marca.colores.realce
+    ? acentoLegible(marca.colores.realce)
+    : marca.colores.acento ? acentoLegible(marca.colores.acento) : null;
 
-    // La barra se tiñe con el color principal, y es igual en los dos modos:
-    // siempre es oscura, porque siempre lleva texto blanco.
-    if (clave === 'primario') {
-      const barra = paraLaBarra(hex);
-      if (barra) { claro.push(`--nav-rgb: ${barra};`); oscuro.push(`--nav-rgb: ${barra};`); }
-    }
-  }
-  if (!claro.length) return;
+  const reglas = [
+    tinta ? `--v-tinta: ${tinta};` : '',
+    acento ? `--v-acento: ${acento};` : '',
+  ].join('');
+  if (!reglas) return;
 
   const estilo = document.createElement('style');
   estilo.id = ETIQUETA_ESTILO;
-  estilo.textContent = `:root{${claro.join('')}}\n.dark{${oscuro.join('')}}`;
+  estilo.textContent = `.nexus-voucher{${reglas}}`;
   document.head.appendChild(estilo);
 }

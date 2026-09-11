@@ -269,6 +269,12 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
 
         <fieldset>
           <legend className="text-xs text-accent">Colores de la marca</legend>
+          {/* Dice dónde se ven, que es lo que hay que saber al elegirlos: si no,
+              quien los elige espera que cambien la aplicación entera. */}
+          <p className="mt-1 text-xs text-accent">
+            Se usan en el voucher que recibe su cliente. La aplicación mantiene siempre
+            los mismos colores; el logo y el nombre sí son los de la agencia.
+          </p>
           <div className="mt-2 flex flex-wrap gap-3">
             {([['primario', 'Principal'], ['acento', 'Acento'], ['realce', 'Realce']] as const).map(([clave, etiqueta]) => (
               <label key={clave} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
@@ -413,6 +419,12 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
 
         <fieldset>
           <legend className="text-xs text-accent">Colores de la marca</legend>
+          {/* Dice dónde se ven, que es lo que hay que saber al elegirlos: si no,
+              quien los elige espera que cambien la aplicación entera. */}
+          <p className="mt-1 text-xs text-accent">
+            Se usan en el voucher que recibe su cliente. La aplicación mantiene siempre
+            los mismos colores; el logo y el nombre sí son los de la agencia.
+          </p>
           <div className="mt-2 flex flex-wrap gap-3">
             {([['primario', 'Principal'], ['acento', 'Acento'], ['realce', 'Realce']] as const).map(([clave, etiqueta]) => (
               <label key={clave} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">

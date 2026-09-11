@@ -297,16 +297,20 @@ expira, así que hay que olvidarla a mano. Es el mismo detalle que ya cuidaba `l
 
 - **`GET /branding`**, sin id en la ruta: la empresa sale del token. Un
   `/companies/:id/branding` invitaría a pedir la marca de otra.
-- **Los colores se aplican en caliente**, y esto salió casi gratis por una decisión
-  anterior: el tema declara los colores en canales (`--primary-rgb: 43 45 66`) y el
-  hexadecimal se deriva de ellos, así que vestir la aplicación con la paleta de una
-  agencia es escribir tres variables. Las 46 clases con opacidad siguen funcionando
-  porque dependen de esos mismos canales.
-- **La variante para modo oscuro se deriva**: una agencia elige un color, no dos. Se sube
-  la luminosidad a un mínimo legible y se baja la saturación, que es lo que hace el tema de
-  la casa a mano (su primario pasa de `#2B2D42` a `#8D99AE`). Comprobado con la misma
-  aritmética: `#2B2D42 → 164 166 183`, `#1D4ED8 → 139 157 208`, y un color que ya es claro
-  se deja quieto para que no se vaya a blanco.
+- **Los colores van al voucher, no a la interfaz.** Es una decisión, no una limitación: la
+  aplicación es la herramienta con la que trabaja el equipo de la agencia y conviene que
+  sea siempre la misma, para que dar soporte no dependa de qué colores eligió cada
+  cliente. El voucher es lo único que sale de la oficina y llega al cliente final, y ahí
+  la marca que debe aparecer es la de la agencia. El nombre y el logo **sí** siguen en la
+  interfaz —barra y cabecera—, porque eso no es decoración: dice en qué agencia estás.
+- **Dos colores derivados, con la legibilidad garantizada.** `--v-tinta` es la franja de
+  cabecera y la caja de totales, que llevan texto blanco encima; `--v-acento` son los
+  detalles sobre papel blanco. El primero se fuerza a oscuro; el segundo se va oscureciendo
+  hasta alcanzar **4,5 a 1** de contraste, que es el mínimo legible. Un techo de claridad
+  fijo no bastaba y se vio con un ámbar: a la claridad que le valía a un azul, el ámbar se
+  quedaba en 3,0. Medido con seis colores distintos, todos pasan.
+- Como el voucher es un documento impreso, **no hay modo oscuro que atender**: se fue toda
+  la derivación que hacía falta para eso.
 - **`PUT /companies/:id/logo`**, no POST: subir el logo reemplaza el que hubiera, así que
   repetirlo deja el mismo resultado. El anterior se borra, para que la carpeta no acabe
   siendo un archivo de todos los logos que una agencia ha tenido.
@@ -342,8 +346,9 @@ scopado bajo `.itea-voucher` (~150 selectores). No son valores de entorno, funci
 renombrar el CSS del documento que recibe el cliente a cambio de nada es riesgo sin premio.
 
 **Comprobado:** la marca de la empresa 1 sale con sus colores; una agencia nueva con paleta
-propia sube su logo, se sirve sin sesión y su administradora ve su marca por `/branding`; y
-el remitente se compone por empresa —`DB Nexus <onboarding@resend.dev>` frente a
+propia sube su logo, se sirve sin sesión y su administradora ve su marca por `/branding`;
+los dos colores derivados del voucher superan el contraste mínimo con seis marcas
+distintas; y el remitente se compone por empresa —`DB Nexus <onboarding@resend.dev>` frente a
 `Agencia Correo <hola@agenciacorreo.com>`—. **Criterios A10 y A11 cumplidos.**
 
 > Resend sigue con clave de pruebas, así que no sale ningún correo de verdad: el 401 de

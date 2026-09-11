@@ -1,3 +1,12 @@
+/* Los dos colores del documento salen de la agencia.
+ *
+ * `--v-tinta` es la franja de cabecera, la caja de totales y los títulos;
+ * `--v-acento`, los detalles. Los pone `utils/marca.ts` al entrar, derivados del
+ * color que eligió la agencia y forzados a una claridad legible: la cabecera
+ * lleva texto blanco encima y el acento va sobre blanco.
+ *
+ * Los valores de reserva son los de siempre, para cuando una agencia todavía no
+ * ha elegido colores. */
 /* ============================================================
    DB Nexus — Voucher PDF Styles
    Sleek, modern, tech-focused design (Radical Horizontal)
@@ -31,7 +40,7 @@
 
 /* ── HERO HEADER ── */
 .nexus-voucher .v-hero {
-  background: #0f172a; /* Slate 900 */
+  background: var(--v-tinta, #0f172a); /* Slate 900 */
   color: #ffffff;
   padding: 40px 40px 60px 40px;
   position: relative;
@@ -113,10 +122,10 @@
 .nexus-voucher .v-stat-val {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
 }
 .nexus-voucher .v-stat-val.highlight {
-  color: #2563eb;
+  color: var(--v-acento, #2563eb);
   font-family: "JetBrains Mono", monospace;
 }
 
@@ -141,7 +150,7 @@
   padding: 16px 40px 8px 40px;
   font-size: 14px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   display: flex;
@@ -154,7 +163,7 @@
   display: block;
   width: 16px;
   height: 4px;
-  background: #2563eb;
+  background: var(--v-acento, #2563eb);
   border-radius: 2px;
 }
 
@@ -180,7 +189,7 @@
 .nexus-voucher .v-route-city {
   font-size: 26px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   text-transform: uppercase;
   letter-spacing: -0.5px;
 }
@@ -210,7 +219,7 @@
   left: 50%;
   transform: translateX(-50%);
   font-size: 20px;
-  color: #2563eb;
+  color: var(--v-acento, #2563eb);
   background: #f8fafc;
   padding: 0 10px;
 }
@@ -237,7 +246,7 @@
 .nexus-voucher .v-fd-value {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
 }
 .nexus-voucher .v-fd-value-small {
   font-size: 11px;
@@ -281,7 +290,7 @@
   padding: 12px 20px;
   font-size: 11px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   text-transform: uppercase;
   letter-spacing: 1px;
   border-bottom: 1px solid #e2e8f0;
@@ -311,14 +320,14 @@
 .nexus-voucher .v-service-cell-value {
   font-size: 13px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   line-height: 1.5;
 }
 
 /* ── PAYMENT & TOTALS ── */
 .nexus-voucher .v-payment-box {
   margin: 32px 40px;
-  background: #0f172a;
+  background: var(--v-tinta, #0f172a);
   border-radius: 12px;
   color: #ffffff;
   padding: 24px 32px;
@@ -376,7 +385,7 @@
 .nexus-voucher .v-legal h4 {
   font-size: 11px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   text-transform: uppercase;
   margin-bottom: 12px;
   letter-spacing: 0.5px;
@@ -390,7 +399,7 @@
 }
 .nexus-voucher .v-company {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   margin-top: 16px;
 }
 
@@ -406,11 +415,11 @@
 .nexus-voucher .v-footer-brand {
   font-weight: 900;
   font-size: 16px;
-  color: #0f172a;
+  color: var(--v-tinta, #0f172a);
   letter-spacing: 1px;
 }
 .nexus-voucher .v-footer-brand span {
-  color: #2563eb;
+  color: var(--v-acento, #2563eb);
 }
 .nexus-voucher .v-footer-right {
   text-align: right;

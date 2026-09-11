@@ -268,11 +268,30 @@ durante los 15 minutos del TTL.
 **Comprobado:** un fichero sin sesión da 401, con sesión y sin dueño da 404, y un logo
 sigue sirviéndose sin sesión. **Criterio A9 cumplido.**
 
-## T8 · Suplantación con auditoría `[ ]`
+## T8 · Suplantación con auditoría `[x]`
 
-Entrar, salir, token con caducidad, tabla de auditoría y pantalla del superadmin.
+`POST /companies/:id/impersonations` para entrar, `DELETE …/:suplantacionId` para salir, y
+`GET /companies/impersonations` para el historial. Entrar es crear un recurso y salir es
+borrarlo, igual que la anulación de una venta que ya existía en este API.
 
-**Comprobación:** criterio **A7**.
+- **Hay que decir para qué.** Mínimo una frase: el motivo es lo que convierte el registro
+  en algo que sirve para rendir cuentas.
+- **Caduca sola a la hora.** Un permiso permanente convierte olvidarse de salir en un
+  acceso indefinido.
+- **El token lleva las DOS empresas.** En la de destino se trabaja; en la de origen vive la
+  fila del propio superadministrador. Así `usuarios` no necesita una excepción en su
+  política —que le habría dejado leer los usuarios de todas las agencias, suplantando o
+  no—: cada cosa se lee en su contexto.
+
+**Comprobado:** antes de entrar ve las ventas de SU empresa (5); un motivo corto se
+rechaza; dentro ve las de la agencia (0), su marca y su único usuario; la auditoría guarda
+empresa, motivo, hora y caducidad; al salir el token suplantado queda en 401 y el suyo
+propio sigue valiendo. **Criterio A7 cumplido.**
+
+**El fallo del paso:** al salir, el token seguía entrando. Dos motivos encadenados — la
+sesión suplantada vive en la empresa de ORIGEN y se buscaba en la de destino, así que no se
+borraba; y aunque se borre, el middleware no vuelve a mirar la fila hasta que la caché
+expira, así que hay que olvidarla a mano. Es el mismo detalle que ya cuidaba `logout`.
 
 ## T9 · La marca `[~]`
 
@@ -320,6 +339,7 @@ el código y hay una sola cuenta de Resend. Los campos ya están en la tabla.
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
+| 2026-09-11 | T8 | Suplantación con auditoría y caducidad. Con esto, todas las tareas del spec están cerradas salvo los correos por empresa. |
 | 2026-09-11 | T6 + T7 | Numeración propia con cerrojo por empresa, y los ficheros con dueño. |
 | 2026-09-11 | T9 | Nombre, logo y colores, de punta a punta. Los colores salieron casi gratis por los canales CSS de un trabajo anterior. Quedan los correos. |
 | 2026-09-11 | T5b | Cerrada. El superadmin ya crea agencias completas. Retirado el 403 por slug: no cerraba ningún hueco real. |

@@ -1,9 +1,13 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { randomUUID } = require('crypto');
+const { generateTokenConCaducidad } = require('../utils/tokenUtils');
 const fs = require('fs/promises');
 const path = require('path');
 const { CARPETA_LOGOS } = require('../middleware/uploadLogo');
 const prisma = require('../config/db');
 const { conEmpresa, empresaActual } = require('../config/tenant');
+const { olvidarToken } = require('../middleware/authCache');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { ROLE_DEFAULT_PERMISSIONS, ADMIN_PERMISSIONS } = require('../middleware/authorize');
@@ -30,6 +34,9 @@ const ROLES_DE_UNA_EMPRESA = {
   asesor: ROLE_DEFAULT_PERMISSIONS.asesor,
   freelancer: ROLE_DEFAULT_PERMISSIONS.freelancer,
 };
+
+/** Cuánto dura una entrada de soporte antes de caducar sola. */
+const SUPLANTACION_MINUTOS = 60;
 
 /** Los permisos se guardan como texto: 'true'/'false' o el alcance. */
 const comoTexto = (valor) => (typeof valor === 'boolean' ? String(valor) : String(valor));
@@ -225,6 +232,105 @@ class CompaniesService {
       await fs.unlink(path.join(CARPETA_LOGOS, path.basename(anterior))).catch(() => {});
     }
     return this.getById(empresa.id);
+  }
+
+  /**
+   * Entrar en una agencia para dar soporte.
+   *
+   * El superadministrador no ve datos de negocio de nadie: las políticas le
+   * abren la tabla de empresas y la de auditoría, y las 42 de negocio le siguen
+   * cerradas. Esto es la puerta, y tiene luz: cada entrada deja fila con quién,
+   * cuándo, por qué y hasta cuándo.
+   *
+   * **Caduca sola.** Un permiso permanente convierte olvidarse de salir en un
+   * acceso indefinido; una hora obliga a volver a pedirlo y a volver a decir
+   * para qué.
+   *
+   * El token lleva las dos empresas: en la de destino se trabaja, y en la de
+   * origen vive la fila del propio superadministrador.
+   */
+  async iniciarSuplantacion(empresaId, { motivo, usuario, ip }) {
+    const empresa = await prisma.empresas.findFirst({ where: { id: Number(empresaId), deleted_at: null } });
+    if (!empresa) throw new NotFoundError('Empresa no encontrada');
+    if (empresa.id === usuario.empresaId) {
+      throw new BadRequestError('Esa ya es tu empresa: no hace falta suplantar para verla');
+    }
+
+    const expira = new Date(Date.now() + SUPLANTACION_MINUTOS * 60 * 1000);
+    const id = randomUUID();
+
+    const token = generateTokenConCaducidad({
+      userId: usuario.id,
+      role: 'superadmin',
+      empresaId: empresa.id,
+      empresaOrigen: usuario.empresaId,
+      suplantacion: id,
+    }, SUPLANTACION_MINUTOS * 60);
+
+    await prisma.transaccion(async (tx) => {
+      await tx.suplantaciones.create({
+        data: { id, superadmin_id: usuario.id, empresa_id: empresa.id, motivo, expira_at: expira, ip: ip || null },
+      });
+      // La sesión se guarda en la empresa de ORIGEN, que es donde el middleware
+      // la va a buscar: es la sesión del superadministrador, no de la agencia.
+      await prisma.conEmpresaEnTransaccion(tx, usuario.empresaId, () => tx.sesiones.create({
+        data: {
+          id: randomUUID(),
+          usuario_id: usuario.id,
+          token_hash: crypto.createHash('sha256').update(token).digest('hex'),
+          expires_at: expira,
+          user_agent: `suplantación de ${empresa.slug}`,
+          empresa_id: usuario.empresaId,
+        },
+      }));
+    });
+
+    return { token, empresa: aFicha(empresa), expiraAt: expira, motivo };
+  }
+
+  /** Salir. Cierra la sesión suplantada y cierra la fila de auditoría. */
+  async terminarSuplantacion(suplantacionId, { usuario, tokenHash }) {
+    const [fila] = await prisma.$queryRaw`
+      SELECT id FROM suplantaciones WHERE id = ${suplantacionId} AND terminada_at IS NULL`;
+    if (!fila) throw new NotFoundError('Esa suplantación no está abierta');
+
+    await prisma.$executeRaw`UPDATE suplantaciones SET terminada_at = NOW() WHERE id = ${suplantacionId}`;
+    if (tokenHash) {
+      await conEmpresa(usuario.empresaId, () => prisma.sesiones.deleteMany({ where: { token_hash: tokenHash } }));
+      // Borrar la fila no basta: el middleware solo vuelve a mirarla cuando la
+      // caché expira, así que hasta cinco minutos después el token suplantado
+      // seguiría entrando. Es el mismo detalle que ya cuida `logout`.
+      olvidarToken(tokenHash);
+    }
+    return { message: 'Has salido de la agencia' };
+  }
+
+  /** El historial, para rendir cuentas. Solo lo ve el superadministrador. */
+  async listarSuplantaciones({ pagination }) {
+    const { page, perPage, skip } = pagination;
+    const [total, filas] = await Promise.all([
+      prisma.suplantaciones.count(),
+      prisma.suplantaciones.findMany({
+        skip, take: perPage, orderBy: [{ iniciada_at: 'desc' }],
+        // `include: { empresas: true }` y no un `select` anidado: el validador de
+        // campos del repo no sigue los select dentro de un include y da un falso
+        // positivo. Son dos columnas de más en una consulta de auditoría.
+        include: { empresas: true },
+      }),
+    ]);
+    return {
+      data: filas.map(f => ({
+        id: f.id,
+        empresa: f.empresas?.nombre,
+        empresaSlug: f.empresas?.slug,
+        motivo: f.motivo,
+        iniciadaAt: f.iniciada_at,
+        expiraAt: f.expira_at,
+        terminadaAt: f.terminada_at,
+        ip: f.ip,
+      })),
+      meta: buildMeta(total, page, perPage),
+    };
   }
 
   /**

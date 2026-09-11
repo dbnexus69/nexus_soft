@@ -44,3 +44,36 @@ exports.branding = async (req, res, next) => {
     success(res, await companiesService.brandingActual());
   } catch (err) { next(err); }
 };
+
+exports.iniciarSuplantacion = async (req, res, next) => {
+  try {
+    const data = await companiesService.iniciarSuplantacion(req.params.id, {
+      motivo: req.validatedBody.motivo,
+      usuario: { id: req.user.id, empresaId: req.empresaId },
+      ip: req.ip,
+    });
+    success(res, data, null, 201);
+  } catch (err) { next(err); }
+};
+
+exports.terminarSuplantacion = async (req, res, next) => {
+  try {
+    const crypto = require('crypto');
+    const token = (req.headers.authorization || '').split(' ')[1];
+    const data = await companiesService.terminarSuplantacion(req.params.suplantacionId, {
+      // La sesión suplantada vive en la empresa de ORIGEN, no en la que se está
+      // trabajando: es la sesión del superadministrador. Buscarla en la de
+      // destino no la encuentra, y el token seguiría valiendo.
+      usuario: { id: req.user.id, empresaId: req.empresaOrigen },
+      tokenHash: token ? crypto.createHash('sha256').update(token).digest('hex') : null,
+    });
+    success(res, data);
+  } catch (err) { next(err); }
+};
+
+exports.listarSuplantaciones = async (req, res, next) => {
+  try {
+    const r = await companiesService.listarSuplantaciones({ pagination: req.pagination });
+    success(res, r.data, r.meta);
+  } catch (err) { next(err); }
+};

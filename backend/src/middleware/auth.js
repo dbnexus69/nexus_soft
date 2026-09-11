@@ -37,6 +37,16 @@ async function auth(req, res, next) {
       return error(res, 'La sesión es anterior a la separación por empresas, vuelve a iniciar sesión', 401, 'SESSION_SIN_EMPRESA');
     }
     req.empresaId = decoded.empresaId;
+    // Al suplantar, la empresa de trabajo y la del usuario son distintas: el
+    // superadministrador trabaja en la agencia ajena, pero su propia fila vive
+    // en la suya. Se lee cada cosa en su contexto, y así `usuarios` no necesita
+    // una excepción en su política — que le habría dejado ver los usuarios de
+    // todas las agencias, con o sin suplantar.
+    const empresaDelUsuario = decoded.empresaOrigen ?? decoded.empresaId;
+    // La empresa donde vive la fila del usuario y su sesión. Al suplantar no es
+    // la misma que `empresaId`, que es en la que se está trabajando.
+    req.empresaOrigen = empresaDelUsuario;
+    req.suplantacion = decoded.suplantacion ?? null;
     // El mismo hash que guarda `login`. La sesión se identifica por él, así que
     // la caché se indexa igual y una sesión cerrada se puede olvidar sola.
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -46,12 +56,12 @@ async function auth(req, res, next) {
     // No concede nada por sí sola —las 42 tablas de negocio siguen cerradas— y
     // los endpoints que sí dependen de ella la vuelven a comprobar contra la
     // fila del usuario, que es la que manda.
-    return conEmpresa(decoded.empresaId, async () => {
+    return conEmpresa(empresaDelUsuario, async () => {
       // 1. Revisar si esta sesión está en RAM Cache
       const cached = leer(tokenHash);
       if (cached) {
         req.user = cached;
-        return next();
+        return conEmpresa(decoded.empresaId, () => next(), { esSuperadmin: decoded.role === 'superadmin' });
       }
 
       // 2. La sesión tiene que existir en la base y estar en plazo.
@@ -105,7 +115,9 @@ async function auth(req, res, next) {
       recordar(tokenHash, userData);
 
       req.user = userData;
-      return next();
+      // A partir de aquí se trabaja en la empresa de destino. Si no se suplanta,
+      // es la misma y esto no cambia nada.
+      return conEmpresa(decoded.empresaId, () => next(), { esSuperadmin: decoded.role === 'superadmin' });
     }, { esSuperadmin: decoded.role === 'superadmin' });
   } catch (err) {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {

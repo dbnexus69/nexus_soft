@@ -87,4 +87,14 @@ const updateCompanySchema = z.object({
   estado: z.enum(['activa', 'suspendida']).optional(),
 }).strict().refine(o => Object.keys(o).length > 0, 'No se envió ningún campo que editar');
 
-module.exports = { createCompanySchema, updateCompanySchema, SLUGS_RESERVADOS };
+/**
+ * Entrar en una agencia exige decir para qué.
+ *
+ * El motivo no es burocracia: es lo que convierte el registro en algo que sirve
+ * para rendir cuentas. "Revisando" no explica nada, así que se pide una frase.
+ */
+const suplantacionSchema = z.object({
+  motivo: z.string().trim().min(10, 'Explica en una frase para qué necesitas entrar').max(300),
+}).strict();
+
+module.exports = { createCompanySchema, updateCompanySchema, suplantacionSchema, SLUGS_RESERVADOS };

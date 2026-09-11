@@ -6,6 +6,17 @@ function generateToken(payload, remember = false) {
   return jwt.sign(payload, env.jwtSecret, { expiresIn });
 }
 
+/**
+ * Un token con caducidad propia, en segundos.
+ *
+ * Lo usa la suplantación: entrar en una agencia para dar soporte no puede durar
+ * lo que dura una sesión normal. Que caduque sola es lo que impide que olvidarse
+ * de salir equivalga a un acceso permanente.
+ */
+function generateTokenConCaducidad(payload, segundos) {
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: segundos });
+}
+
 function verifyToken(token) {
   return jwt.verify(token, env.jwtSecret);
 }
@@ -15,4 +26,4 @@ function getExpiryTime(remember = false) {
   return Date.now() + ms;
 }
 
-module.exports = { generateToken, verifyToken, getExpiryTime };
+module.exports = { generateToken, generateTokenConCaducidad, verifyToken, getExpiryTime };

@@ -42,7 +42,7 @@ class CommissionsService {
     }
     const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    const [totalRows, agentsRaw] = await transaccion(async (tx) => {
+    const [totalRows, agentsRaw] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawUnsafe(`
           SELECT COUNT(*)::int AS total
@@ -284,7 +284,7 @@ class CommissionsService {
     if (dateTo) push('lc.fecha <= ?', new Date(dateTo));
     const whereLiq = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    const [totalLiqRows, settlementsRaw] = await transaccion(async (tx) => {
+    const [totalLiqRows, settlementsRaw] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawUnsafe(`
           SELECT COUNT(*)::int AS total

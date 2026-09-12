@@ -81,7 +81,7 @@ class StatsService {
     // había filtro de estado— ni aportaba nada: mismas columnas que /sales, con
     // cinco filas y sin búsqueda ni filtros. El dashboard ahora usa
     // GET /stats/attention, que responde algo que /sales no responde.
-    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount] = await transaccion(async (tx) => {
+    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawTyped(dashboardAggregates(
           dateFrom ? new Date(dateFrom) : null,
@@ -204,7 +204,7 @@ class StatsService {
       * (GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0)
          / NULLIF(v.monto_total, 0))`;
 
-    const [composicion, proveedores, totalProveedores] = await transaccion(async (tx) => {
+    const [composicion, proveedores, totalProveedores] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawUnsafe(`
           WITH pesos AS (
@@ -300,7 +300,7 @@ class StatsService {
 
   async getTopClients({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
-    return transaccion(async (tx) => tx.$queryRaw`
+    return prisma.transaccion(async (tx) => tx.$queryRaw`
       SELECT p.nombres || ' ' || p.apellidos AS name,
              COALESCE(SUM(v.monto_total), 0)::float AS total,
              COUNT(v.id)::int AS count
@@ -317,7 +317,7 @@ class StatsService {
 
   async getAsesorPerformance({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
-    return transaccion(async (tx) => tx.$queryRaw`
+    return prisma.transaccion(async (tx) => tx.$queryRaw`
       SELECT p.nombres || ' ' || p.apellidos AS "asesorName",
              COALESCE(SUM(v.ta_total), 0)::float AS "totalIngresos",
              COUNT(v.id)::int AS "totalVentas"
@@ -334,7 +334,7 @@ class StatsService {
 
   async getCategoryDistribution({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
-    return transaccion(async (tx) => tx.$queryRaw`
+    return prisma.transaccion(async (tx) => tx.$queryRaw`
       SELECT mp.nombre AS name, COUNT(v.id)::int AS value
       FROM ventas v
       JOIN metodos_pago mp ON v.metodo_pago_principal_id = mp.id
@@ -378,7 +378,7 @@ class StatsService {
       prod_tiqueteria: { detalle_venta: { ventas: ventaVigente } },
     };
 
-    const [vencidos, checkins, sinRevisar, checkinsCount] = await transaccion(async (tx) => {
+    const [vencidos, checkins, sinRevisar, checkinsCount] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         // Crédito vencido: la fecha de vencimiento ya pasó y queda saldo.
         tx.$queryRaw`

@@ -81,7 +81,9 @@ async function main() {
 
   // ── 1. Una segunda agencia con datos propios
   const otra = await admin.empresas.create({ data: { slug: SLUG, nombre: 'Agencia de Prueba' } });
-  const rolAsesor = await admin.roles.findFirst({ where: { nombre: 'asesor' } });
+  // Su propio rol, no el de la empresa 1: desde que las claves ajenas llevan
+  // la empresa dentro, un usuario no puede colgar de un rol ajeno.
+  const rolAsesor = await admin.roles.create({ data: { empresa_id: otra.id, nombre: 'asesor' } });
   const perU = await admin.personas.create({ data: { empresa_id: otra.id, nombres: 'Usuaria', apellidos: 'Ajena', documento: `pa-${otra.id}-u`, status: 'active' } });
   const usr = await admin.usuarios.create({ data: { empresa_id: otra.id, persona_id: perU.id, email: `ajena-${otra.id}@prueba.local`, password_hash: 'x', rol_id: rolAsesor.id } });
   const perC = await admin.personas.create({ data: { empresa_id: otra.id, nombres: 'Cliente', apellidos: 'Ajeno', documento: `pa-${otra.id}-c`, status: 'active' } });
@@ -124,6 +126,32 @@ async function main() {
     } catch { return 'rechazado'; }
   });
   comprobar('insertar una fila con el empresa_id de otra queda rechazado', escritura === 'rechazado');
+
+  // ── 4b. Colgar una fila propia de un padre ajeno
+  //
+  // Esta es la que no se ve venir: la fila se escribe en TU empresa, así que la
+  // RLS la deja pasar; lo que es de otra agencia es el cliente al que apunta.
+  // Sin las claves ajenas compuestas, la base la aceptaba y el listado —que
+  // hace JOIN con clientes, filtrado por la RLS— no la mostraba nunca. Una
+  // venta guardada e invisible, sin un solo error por ningún lado.
+  const cruzada = await conEmpresa(1, async () => {
+    try {
+      await prisma.$executeRawUnsafe(
+        'INSERT INTO ventas (cliente_id, usuario_id, monto_total, numero) VALUES ($1,$2,0,998)',
+        cli.id, usr.id,
+      );
+      return 'pasó';
+    } catch { return 'rechazado'; }
+  });
+  comprobar('colgar una venta propia de un cliente de otra empresa queda rechazado', cruzada === 'rechazado');
+
+  // Y que las claves que lo impiden sigan puestas: un diff del schema que las
+  // tirara dejaría las pruebas de arriba en verde igualmente, porque la RLS
+  // seguiría filtrando. Lo único que avisa es contarlas.
+  const [{ n: compuestas }] = await admin.$queryRawUnsafe(`
+    SELECT count(*)::int AS n FROM pg_constraint
+    WHERE contype = 'f' AND conname LIKE '%_empresa_fkey'`);
+  comprobar('siguen las claves ajenas compuestas', compuestas === 53, `${compuestas} de 53`);
 
   // ── 5. Sin contexto: ni se ve ni se escribe
   const sin = await sinEmpresa(async () => {

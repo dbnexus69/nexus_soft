@@ -88,6 +88,49 @@ const NO_EDITABLES = {
   isReviewed: 'se marca en PATCH /sales/:id/review-status',
 };
 
+/**
+ * Las referencias que trae una venta nueva, y de quién tienen que ser.
+ *
+ * `createSale` cogía `clientId`, `asesorId`, `responsableId` y
+ * `commissionAgentId` del cuerpo y los escribía tal cual. Zod valida la forma
+ * —que sea un entero—, no la pertenencia, y el controlador ni siquiera le
+ * pasaba el usuario al servicio. Con la RLS puesta eso NO es una fuga de
+ * lectura, pero sí algo peor de encontrar: las comprobaciones de clave ajena
+ * de Postgres se saltan las políticas, así que la fila se escribía apuntando a
+ * un cliente de otra agencia, y el listado —que hace JOIN con `clientes`, ya
+ * filtrado— no la enseñaba nunca. Una venta guardada e invisible.
+ *
+ * Desde la migración `integridad_entre_empresas` la base lo rechaza, pero lo
+ * haría con un 23503 y un 500. Comprobarlo aquí lo convierte en un 400 que
+ * dice cuál de los cuatro ids no vale.
+ *
+ * "No existe" y no "no puede": leídos con la RLS puesta, un id de otra agencia
+ * es indistinguible de uno inventado, y así debe contestarse.
+ */
+const REFERENCIAS_NUEVA_VENTA = {
+  clientId:          { modelo: 'clientes',      vigente: true, etiqueta: 'El cliente' },
+  asesorId:          { modelo: 'usuarios',                     etiqueta: 'El asesor' },
+  responsableId:     { modelo: 'responsables',  vigente: true, etiqueta: 'El responsable' },
+  commissionAgentId: { modelo: 'comisionistas',                etiqueta: 'El comisionista' },
+};
+
+/**
+ * Comprueba que cada id exista DENTRO de la empresa activa.
+ *
+ * No hace falta filtrar por `empresa_id`: `prisma` va por la extensión que fija
+ * el inquilino, así que la fila de otra agencia sencillamente no está.
+ */
+async function comprobarReferencias(definiciones, valores) {
+  for (const [clave, def] of Object.entries(definiciones)) {
+    const valor = valores[clave];
+    if (!def.modelo || valor === null || valor === undefined) continue;
+    const filtro = { id: Number(valor) };
+    if (def.vigente) filtro.deleted_at = null;
+    const existe = await prisma[def.modelo].findFirst({ where: filtro, select: { id: true } });
+    if (!existe) throw new BadRequestError(`${def.etiqueta} no existe`);
+  }
+}
+
 const CLAVES_COMISION = [
   'commissionAgentId',
   'commissionAgentAmount',
@@ -443,7 +486,7 @@ class SalesService {
     };
   }
 
-  async createSale(body) {
+  async createSale(body, alcance = {}) {
     const {
       clientId, asesorId, total, paymentMethod, payments = [],
       status = 'credito', isCredit = false, creditDueDate,
@@ -455,6 +498,21 @@ class SalesService {
       fincaData = [], tourData = [], conventionData = [], restaurantData = [],
       visaData = [], passportData = [], petServiceData = []
     } = body;
+
+    // Quien solo puede ver sus propias ventas tampoco puede crear una a nombre
+    // de otro asesor: sería la forma de escribir en un sitio que no puede leer.
+    // Se rechaza en vez de reasignarla en silencio, que es la clase de arreglo
+    // callado que hace que nadie entienda por qué la venta salió con otro
+    // nombre.
+    const asesorPedido = asesorId === undefined || asesorId === null ? null : Number(asesorId);
+    if (soloLasSuyas(alcance) && asesorPedido !== null && asesorPedido !== alcance.user.id) {
+      throw new ForbiddenError('No puede crear una venta a nombre de otro asesor');
+    }
+
+    // Los cuatro ids del cuerpo, comprobados contra la empresa activa.
+    await comprobarReferencias(REFERENCIAS_NUEVA_VENTA, {
+      clientId, asesorId, responsableId, commissionAgentId,
+    });
 
     // Resolve payment method principal id
     let metodo_pago_principal_id = null;
@@ -478,6 +536,23 @@ class SalesService {
           }
         }
       }
+    }
+
+    // Los métodos de pago de los abonos, también de la agencia.
+    //
+    // Antes, un id que no existiera —el de otra empresa, o uno que ya se borró—
+    // se guardaba como NULL sin decir nada, y el abono se quedaba sin método
+    // para siempre. Un abono cobrado del que no consta cómo entró el dinero es
+    // justo lo que no puede perderse en silencio.
+    const metodosDeAbono = new Map();
+    for (const p of payments) {
+      if (p.method === undefined || p.method === null || p.method === '') continue;
+      const id = Number(p.method);
+      if (!Number.isInteger(id)) throw new BadRequestError(`Método de pago inválido en un abono: ${p.method}`);
+      if (metodosDeAbono.has(id)) continue;
+      const mp = await prisma.metodos_pago.findFirst({ where: { id }, select: { id: true } });
+      if (!mp) throw new BadRequestError('El método de pago de un abono no existe');
+      metodosDeAbono.set(id, mp.id);
     }
 
     // Los catálogos se resuelven fuera: dentro de la transacción solo escrituras.
@@ -1018,11 +1093,7 @@ class SalesService {
       // 3. Payments
       const totalPaid = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
       for (const p of payments) {
-        let mpId = null;
-        if (p.method) {
-          const mp = await tx.metodos_pago.findUnique({ where: { id: Number(p.method) } });
-          if (mp) mpId = mp.id;
-        }
+        const mpId = metodosDeAbono.get(Number(p.method)) ?? null;
         await tx.pagos_venta.create({
           data: {
             id: uuidv4(), venta_id: ventaId,
@@ -1048,6 +1119,10 @@ class SalesService {
     // Return the new sale in the same format used by listSales
     return {
       id: created.id,
+      // El número que la agencia acaba de estrenar. Faltaba, y el listado sí lo
+      // devuelve: quien creaba la venta no podía enseñar con qué número quedó
+      // hasta que se recargaba la lista.
+      numero: created.numero,
       clientId: created.cliente_id,
       asesorId: created.usuario_id,
       date: created.creado_at,
@@ -1139,7 +1214,7 @@ class SalesService {
         LEFT JOIN personas comp ON com.persona_id = comp.id
         WHERE v.deleted_at IS NULL ${whereSql}`;
 
-    const [totalRows, ventasRaw] = await transaccion(async (tx) => {
+    const [totalRows, ventasRaw] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS total ${fromSql}`, ...params),
         tx.$queryRawUnsafe(`
@@ -1334,7 +1409,7 @@ class SalesService {
     const pEstado = status && status !== 'all' ? status : null;
     const pTramo = bucket && bucket !== 'all' ? bucket : null;
 
-    const [filas, conteo, totales] = await transaccion(async (tx) => {
+    const [filas, conteo, totales] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawUnsafe(`
           ${baseSql}
@@ -1468,7 +1543,7 @@ class SalesService {
     const extraSql = 'AND ' + filtros.join(' AND ');
     const baseSql = ctesDeCredito(extraSql);
 
-    const [resumen, creditos, conteo] = await transaccion(async (tx) => {
+    const [resumen, creditos, conteo] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawUnsafe(`
           ${baseSql},${CTE_POR_CLIENTE}
@@ -1862,15 +1937,12 @@ class SalesService {
       data.monto_comision_neto = 0;
     }
 
-    for (const clave of Object.keys(body)) {
-      const def = CAMPOS_EDITABLES[clave];
-      const valor = data[def.columna];
-      if (!def.modelo || valor === null) continue;
-      const filtro = { id: valor };
-      if (def.vigente) filtro.deleted_at = null;
-      const existe = await prisma[def.modelo].findFirst({ where: filtro, select: { id: true } });
-      if (!existe) throw new BadRequestError(`${def.etiqueta} no existe`);
-    }
+    // La misma comprobación que en el alta, con el mismo helper: los ids que
+    // llegan tienen que ser de la empresa activa.
+    await comprobarReferencias(
+      Object.fromEntries(Object.keys(body).map(clave => [clave, CAMPOS_EDITABLES[clave]])),
+      Object.fromEntries(Object.keys(body).map(clave => [clave, data[CAMPOS_EDITABLES[clave].columna]])),
+    );
 
     const esCredito = 'es_credito' in data ? data.es_credito : Boolean(venta.es_credito);
     const conSaldo = aCentimos(venta.monto_pagado_credito) < aCentimos(venta.monto_total);

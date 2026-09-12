@@ -51,6 +51,9 @@ model clientes {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model comisionistas {
@@ -71,6 +74,9 @@ model comisionistas {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model detalle_venta {
@@ -120,6 +126,9 @@ model detalle_venta {
   @@index([metodo_pago_proveedor_id])
   @@index([proveedor_id])
   @@index([venta_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 /// Una agencia cliente. Todo lo que no sea catálogo del sistema pertenece a una.
@@ -248,6 +257,9 @@ model liquidaciones_comision {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model logs_usuarios {
@@ -277,6 +289,9 @@ model metodos_pago {
 
   @@unique([empresa_id, nombre])
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model pagos_venta {
@@ -347,6 +362,9 @@ model paquete_tarifas {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model paquete_vuelo {
@@ -387,6 +405,9 @@ model paquetes {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model pasajeros_detalle {
@@ -459,6 +480,9 @@ model personas {
 
   @@unique([empresa_id, documento])
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model politicas_equipaje {
@@ -732,6 +756,9 @@ model prod_tiqueteria {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model prod_tours {
@@ -790,6 +817,9 @@ model proveedores {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model responsables {
@@ -804,6 +834,9 @@ model responsables {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model roles {
@@ -817,6 +850,9 @@ model roles {
 
   @@unique([empresa_id, nombre])
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 /// Códigos de un solo uso para recuperar la contraseña.
@@ -938,6 +974,9 @@ model usuarios {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model ventas {
@@ -987,6 +1026,9 @@ model ventas {
   @@index([usuario_id])
   // El listado de ventas ordena siempre por esta columna.
   @@index([creado_at])
+  // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
+  // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  @@unique([id, empresa_id])
 }
 
 model ventas_mensuales {

@@ -231,7 +231,7 @@ class AuthService {
     // dentro de su contexto. Se devuelve la empresa para que `resetPassword`
     // escriba dentro de la misma.
     return conEmpresa(identidad.empresa_id, async () => {
-      return transaccion(async (tx) => {
+      return prisma.transaccion(async (tx) => {
         const [fila] = await tx.$queryRaw`
           SELECT id, codigo_hash, intentos
             FROM codigos_recuperacion

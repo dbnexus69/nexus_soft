@@ -49,7 +49,7 @@ class ResponsablesService {
     // ventana, una página vacía no devuelve total y hay que contar aparte, esta
     // vez en serie: medido, 441ms -> 440ms con resultados, pero 520ms -> 892ms
     // en una búsqueda sin coincidencias. Menos consultas no es menos latencia.
-    const [totalRows, responsablesRaw] = await transaccion(async (tx) => {
+    const [totalRows, responsablesRaw] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         // Mismo FROM y mismo WHERE que las filas, con los mismos parámetros.
         tx.$queryRawUnsafe(`
@@ -262,7 +262,7 @@ class ResponsablesService {
     }
 
     if (status === 'inactive' && responsable.status === 'active') {
-      const debtCheck = await transaccion(async (tx) => tx.$queryRawUnsafe(`
+      const debtCheck = await prisma.transaccion(async (tx) => tx.$queryRawUnsafe(`
         SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)) as "deuda"
         FROM ventas v
         WHERE v.responsable_id = $1 AND v.status IN ('credito', 'abonado')

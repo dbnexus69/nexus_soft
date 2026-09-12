@@ -35,6 +35,28 @@ const ROLES_DE_UNA_EMPRESA = {
   freelancer: ROLE_DEFAULT_PERMISSIONS.freelancer,
 };
 
+/**
+ * Los métodos de pago con los que arranca una agencia nueva.
+ *
+ * Sin esto, la agencia recién creada no tenía ninguno: el selector salía vacío,
+ * `createSale` no encontraba el método principal y lo guardaba como NULL, y el
+ * abono quedaba registrado sin decir por dónde entró el dinero. No fallaba
+ * nada; simplemente la venta salía coja y había que crearlos a mano uno a uno
+ * antes de poder facturar.
+ *
+ * Son los mismos seis que tiene la agencia original. Cada una es dueña de los
+ * suyos —la tabla lleva `empresa_id` y el único es `(empresa_id, nombre)`—, así
+ * que puede borrarlos o añadir los que use.
+ */
+const METODOS_DE_PAGO_INICIALES = [
+  'Efectivo',
+  'Transferencia',
+  'Tarjeta de Crédito',
+  'Tarjeta Débito',
+  'PSE',
+  'Consignación',
+];
+
 /** Cuánto dura una entrada de soporte antes de caducar sola. */
 const SUPLANTACION_MINUTOS = 60;
 
@@ -148,6 +170,10 @@ class CompaniesService {
           }
           if (filas.length) await tx.permisos_rol.createMany({ data: filas });
         }
+
+        await tx.metodos_pago.createMany({
+          data: METODOS_DE_PAGO_INICIALES.map(nombre => ({ nombre, empresa_id: creada.id })),
+        });
 
         const persona = await tx.personas.create({
           data: {
@@ -290,7 +316,7 @@ class CompaniesService {
 
   /** Salir. Cierra la sesión suplantada y cierra la fila de auditoría. */
   async terminarSuplantacion(suplantacionId, { usuario, tokenHash }) {
-    await transaccion(async (tx) => {
+    await prisma.transaccion(async (tx) => {
       const [fila] = await tx.$queryRaw`
         SELECT id FROM suplantaciones WHERE id = ${suplantacionId} AND terminada_at IS NULL`;
       if (!fila) throw new NotFoundError('Esa suplantación no está abierta');

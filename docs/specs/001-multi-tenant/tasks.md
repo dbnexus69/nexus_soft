@@ -114,10 +114,10 @@ recuentos de 16 tablas son idénticos antes y después · las 11 ventas pertenec
 empresa 1 · `check:prisma` limpio · 24 endpoints de lectura en 200 · al crear un producto
 la línea nueva nace con `empresa_id = 1` y al borrarlo la venta vuelve a su importe.
 
-**Queda fuera, como T3b:** las claves ajenas compuestas (`detalle_venta(venta_id,
+**Quedó fuera, como T3b:** las claves ajenas compuestas (`detalle_venta(venta_id,
 empresa_id)` → `ventas(id, empresa_id)`). Impiden colgar una línea de la venta de otra
-empresa, pero son una segunda capa: la barrera de verdad es la RLS de T4, y conviene tener
-esa antes que esto.
+empresa, pero son una segunda capa: la barrera de verdad es la RLS de T4, y convenía tener
+esa antes que esto. **Cerrada el 2026-09-12**, ver T3b más abajo.
 
 ## T5a · El contexto llega desde el token `[x]`
 
@@ -355,12 +355,84 @@ distintas; y el remitente se compone por empresa —`DB Nexus <onboarding@resend
 > "API key is invalid" es lo esperado. Cuando se configure, cada agencia que quiera su
 > propio dominio tendrá que verificarlo en Resend con su SPF y su DKIM.
 
+## T3b · Las claves ajenas llevan la empresa dentro `[x]`
+
+Se aplazó en T3 y se cerró al aparecer el fallo que predecía, con una diferencia: no era
+un riesgo teórico, era **el que hace que una venta se guarde y no se vea**.
+
+**Por qué la RLS no basta.** Las comprobaciones de clave ajena de Postgres las ejecuta el
+motor con los permisos del dueño de la tabla y **se saltan las políticas**. Así que una
+venta escrita en la empresa 9 podía apuntar a un cliente de la 1: la fila es tuya, la RLS
+la deja pasar, y el listado —que hace `JOIN clientes`, ya filtrado— no la enseña jamás.
+Ni error, ni aviso, ni forma de encontrarla desde la interfaz.
+
+Comprobado antes de arreglarlo, con la inserción revertida:
+
+```
+venta empresa_id=9 con cliente_id=22 (empresa 1)  ->  LA BASE LA ACEPTA
+¿la ve el listado?                                ->  0
+```
+
+**53 claves ajenas** entre tablas de inquilino pasan a llevar `empresa_id` dentro, sobre
+**14 tablas padre** que estrenan un único `(id, empresa_id)`. No se enumeraron a mano: se
+generaron leyendo `pg_constraint`, para que ninguna se quedara por el camino.
+
+Tres decisiones de forma:
+
+- **Se añaden junto a las que ya había, no las sustituyen.** Así el modelo de Prisma sigue
+  describiendo la base y un diff futuro no intenta recrear nada. Comprobado:
+  `migrate diff` no genera un solo `DROP CONSTRAINT`.
+- **Las que anulan al borrar el padre nombran su columna** (`ON DELETE SET NULL (col)`, de
+  Postgres 15+; aquí corre 17.6). Un `SET NULL` a secas anularía también `empresa_id`, que
+  es `NOT NULL`, y el borrado fallaría.
+- **`suplantaciones.superadmin_id` se queda fuera**, y es la única: esa fila es cruzada por
+  definición —el superadmin es de su empresa y la fila apunta a la visitada—.
+
+**Comprobado:** las 53 puestas sin una sola fila que las incumpliera · la inserción
+cruzada pasa a `23503` · `pnpm test:aislamiento` en verde con dos comprobaciones nuevas
+(la venta cruzada rechazada, y que las 53 sigan ahí) · los 9 endpoints de lectura en 200
+para dos empresas, con totales disjuntos.
+
+De paso descubrió que **la propia prueba de aislamiento colgaba su usuario del rol
+`asesor` de la empresa 1**. Estaba en verde igualmente, porque lo que medía era la RLS.
+
+## T3c · El alta de una venta comprueba de quién son los ids `[x]`
+
+`createSale` cogía `clientId`, `asesorId`, `responsableId` y `commissionAgentId` del
+cuerpo y los escribía tal cual; el controlador ni siquiera le pasaba el usuario. Con T3b
+la base ya lo rechaza, pero lo haría con un 500. Ahora:
+
+- Los cuatro ids se comprueban contra la empresa activa y responden **400 "El cliente no
+  existe"** — *no existe*, no *no puedes*: leídos con la RLS puesta, un id de otra agencia
+  es indistinguible de uno inventado. Es el criterio A3.
+- **Los métodos de pago de los abonos también.** Antes, un id que no existiera se guardaba
+  como `NULL` sin decir nada: un cobro del que no consta cómo entró el dinero.
+- Quien solo puede ver sus propias ventas ya no puede crear una a nombre de otro asesor
+  (**403**). Se rechaza en vez de reasignarla en silencio.
+- La misma comprobación la comparte `updateSale`: una sola copia.
+- El 201 devuelve `numero`, que faltaba. El comentario decía "mismo formato que el
+  listado" y el listado sí lo devuelve: quien creaba la venta no podía enseñar con qué
+  número quedó.
+
+## T3d · Una agencia nueva nace con sus métodos de pago `[x]`
+
+`create` sembraba los 3 roles, su matriz de permisos y el primer administrador, pero
+ningún método de pago. El selector salía vacío, `createSale` no encontraba el principal y
+lo guardaba como `NULL`. Ahora nacen con los seis de siempre, suyos y editables, y una
+migración se los da a las agencias que ya estaban creadas sin ninguno.
+
+*La primera versión de esa migración sembraba en todas y le metió a la agencia original un
+"Tarjeta Débito" con tilde al lado del "Tarjeta Debito" que ya tenía —dos nombres para el
+mismo método reparten los cobros entre dos filas—. Corregida para tocar solo a las que no
+tienen ninguno.*
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-12 | T3b + T3c + T3d | Cerrado el hueco que quedó abierto en T3. Lo encontró un síntoma real: una venta de una agencia nueva que se creaba bien y no aparecía en el listado. El fallo de ese día era otro (un `transaccion` sin importar en 15 sitios), pero al mirarlo apareció que la base aceptaba filas cruzadas. |
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
 | 2026-09-11 | T9 (correos) | Cerrada la última tarea del spec. El remitente se resuelve solo desde el contexto, así que ningún sitio que mande correo tiene que acordarse. |
 | 2026-09-11 | T8 | Suplantación con auditoría y caducidad. Con esto, todas las tareas del spec están cerradas salvo los correos por empresa. |

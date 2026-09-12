@@ -168,6 +168,12 @@ detalle_venta(venta_id, empresa_id) REFERENCES ventas(id, empresa_id)
 Así es imposible colgar una línea de una venta de otra empresa: no hay código que pueda
 equivocarse, lo rechaza el motor.
 
+*Se aplazaron al ejecutar (T3b) y se pusieron el 2026-09-12, cuando el fallo que predecían
+apareció de verdad: una venta que se guardaba bien y no aparecía nunca en el listado. Son
+**53 claves ajenas** sobre 14 tablas padre, y la única excepción es
+`suplantaciones.superadmin_id`, cruzada por definición. El detalle, en
+[`tasks.md`](../specs/001-multi-tenant/tasks.md).*
+
 ### Los `@unique` que cambian de forma
 
 | Tabla | Antes | Después |

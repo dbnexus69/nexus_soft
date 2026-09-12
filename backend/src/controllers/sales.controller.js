@@ -182,7 +182,7 @@ exports.sendVoucher = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await salesService.createSale(req.validatedBody || req.body);
+    const result = await salesService.createSale(req.validatedBody || req.body, alcanceDe(req));
     success(res, result, null, 201);
   } catch (err) {
     next(err);

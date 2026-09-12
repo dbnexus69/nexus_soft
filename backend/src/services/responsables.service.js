@@ -49,41 +49,43 @@ class ResponsablesService {
     // ventana, una página vacía no devuelve total y hay que contar aparte, esta
     // vez en serie: medido, 441ms -> 440ms con resultados, pero 520ms -> 892ms
     // en una búsqueda sin coincidencias. Menos consultas no es menos latencia.
-    const [totalRows, responsablesRaw] = await Promise.all([
-      // Mismo FROM y mismo WHERE que las filas, con los mismos parámetros.
-      prisma.$queryRawUnsafe(`
-        SELECT COUNT(*)::int AS total
-        FROM responsables r
-        JOIN personas p ON r.persona_id = p.id
-        WHERE r.deleted_at IS NULL ${whereSql}
-      `, ...params),
-      prisma.$queryRawUnsafe(`
-        SELECT 
-          r.id,
-          r.creado_at as "creadoAt",
-          p.id as "persona_id",
-          p.nombres as "firstName",
-          p.apellidos as "lastName",
-          p.documento as "docNumber",
-          p.telefono as "phone",
-          p.email,
-          p.birth_date as "birthDate",
-          r.status,
-          td.id as "docTypeId",
-          td.nombre as "docType",
-          COALESCE(
-            (SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0))
-             FROM ventas v
-             WHERE v.responsable_id = r.id AND v.status IN ('credito', 'abonado')), 0
-          ) as "deudaTotal"
-        FROM responsables r
-        JOIN personas p ON r.persona_id = p.id
-        LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        WHERE r.deleted_at IS NULL ${whereSql}
-        ORDER BY ${sqlOrderBy} ${orderDirection}
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip)
-    ]);
+    const [totalRows, responsablesRaw] = await transaccion(async (tx) => {
+      return Promise.all([
+        // Mismo FROM y mismo WHERE que las filas, con los mismos parámetros.
+        tx.$queryRawUnsafe(`
+          SELECT COUNT(*)::int AS total
+          FROM responsables r
+          JOIN personas p ON r.persona_id = p.id
+          WHERE r.deleted_at IS NULL ${whereSql}
+        `, ...params),
+        tx.$queryRawUnsafe(`
+          SELECT 
+            r.id,
+            r.creado_at as "creadoAt",
+            p.id as "persona_id",
+            p.nombres as "firstName",
+            p.apellidos as "lastName",
+            p.documento as "docNumber",
+            p.telefono as "phone",
+            p.email,
+            p.birth_date as "birthDate",
+            r.status,
+            td.id as "docTypeId",
+            td.nombre as "docType",
+            COALESCE(
+              (SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0))
+               FROM ventas v
+               WHERE v.responsable_id = r.id AND v.status IN ('credito', 'abonado')), 0
+            ) as "deudaTotal"
+          FROM responsables r
+          JOIN personas p ON r.persona_id = p.id
+          LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
+          WHERE r.deleted_at IS NULL ${whereSql}
+          ORDER BY ${sqlOrderBy} ${orderDirection}
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `, ...params, perPage, skip)
+      ]);
+    });
 
     const data = responsablesRaw.map(r => ({
       id: r.id,
@@ -260,11 +262,11 @@ class ResponsablesService {
     }
 
     if (status === 'inactive' && responsable.status === 'active') {
-      const debtCheck = await prisma.$queryRawUnsafe(`
+      const debtCheck = await transaccion(async (tx) => tx.$queryRawUnsafe(`
         SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)) as "deuda"
         FROM ventas v
         WHERE v.responsable_id = $1 AND v.status IN ('credito', 'abonado')
-      `, id);
+      `, id));
       const pendingDebt = Number(debtCheck[0]?.deuda) || 0;
       if (pendingDebt > 0) {
         throw new BadRequestError(`No se puede desactivar: El responsable tiene una deuda de $${pendingDebt.toLocaleString('es-CO')}`);

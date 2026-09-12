@@ -33,5 +33,6 @@ export {
 // Empresas: solo el superadministrador. `getBranding` la usa cualquiera.
 export {
   listCompanies, getCompany, createCompany, updateCompany, uploadCompanyLogo, getBranding,
+  startImpersonation, stopImpersonation,
 } from './companies';
 export type { Empresa, NuevaEmpresa } from './companies';

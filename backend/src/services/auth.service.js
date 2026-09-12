@@ -231,29 +231,31 @@ class AuthService {
     // dentro de su contexto. Se devuelve la empresa para que `resetPassword`
     // escriba dentro de la misma.
     return conEmpresa(identidad.empresa_id, async () => {
-      const [fila] = await prisma.$queryRaw`
-        SELECT id, codigo_hash, intentos
-          FROM codigos_recuperacion
-         WHERE usuario_id = ${usuario.id}
-           AND usado_at IS NULL
-           AND expires_at > NOW()
-         ORDER BY creado_at DESC
-         LIMIT 1`;
-      if (!fila) return null;
-
-      if (await bcrypt.compare(code, fila.codigo_hash)) {
-        return { usuarioId: usuario.id, codigoId: fila.id, empresaId: identidad.empresa_id };
-      }
-
-      const intentos = Number(fila.intentos) + 1;
-      // Al llegar al tope el código se marca usado: quemarlo es más seguro que
-      // dejarlo en plazo con un contador alto.
-      await prisma.$executeRaw`
-        UPDATE codigos_recuperacion
-           SET intentos = ${intentos},
-               usado_at = CASE WHEN ${intentos} >= ${CODIGO_MAX_INTENTOS} THEN NOW() ELSE NULL END
-         WHERE id = ${fila.id}`;
-      return null;
+      return transaccion(async (tx) => {
+        const [fila] = await tx.$queryRaw`
+          SELECT id, codigo_hash, intentos
+            FROM codigos_recuperacion
+           WHERE usuario_id = ${usuario.id}
+             AND usado_at IS NULL
+             AND expires_at > NOW()
+           ORDER BY creado_at DESC
+           LIMIT 1`;
+        if (!fila) return null;
+  
+        if (await bcrypt.compare(code, fila.codigo_hash)) {
+          return { usuarioId: usuario.id, codigoId: fila.id, empresaId: identidad.empresa_id };
+        }
+  
+        const intentos = Number(fila.intentos) + 1;
+        // Al llegar al tope el código se marca usado: quemarlo es más seguro que
+        // dejarlo en plazo con un contador alto.
+        await tx.$executeRaw`
+          UPDATE codigos_recuperacion
+             SET intentos = ${intentos},
+                 usado_at = CASE WHEN ${intentos} >= ${CODIGO_MAX_INTENTOS} THEN NOW() ELSE NULL END
+           WHERE id = ${fila.id}`;
+        return null;
+      });
     });
   }
 

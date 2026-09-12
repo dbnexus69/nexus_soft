@@ -81,22 +81,21 @@ class StatsService {
     // había filtro de estado— ni aportaba nada: mismas columnas que /sales, con
     // cinco filas y sin búsqueda ni filtros. El dashboard ahora usa
     // GET /stats/attention, que responde algo que /sales no responde.
-    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount] = await Promise.all([
-      // Doce agregados en una consulta. Los filtros son opcionales dentro del
-      // SQL con `($n IS NULL OR ...)`, así que la consulta es estática y
-      // TypedSQL puede analizarla.
-      prisma.$queryRawTyped(dashboardAggregates(
-        dateFrom ? new Date(dateFrom) : null,
-        dateTo ? new Date(dateTo) : null,
-        scopeUserId,
-        currentYear,
-      )),
-      prisma.clientes.count({ where: { ...clientsWhere, personas: { status: 'active' } } }),
-      prisma.clientes.count({ where: clientsWhere }),
-      prisma.$queryRawUnsafe(categorySql, ...cDetalle.params),
-      prisma.$queryRawUnsafe(monthlyTrendSql, ...cTendencia.params),
-      prisma.proveedores.count({ where: { status: 'active' } }),
-    ]);
+    const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawTyped(dashboardAggregates(
+          dateFrom ? new Date(dateFrom) : null,
+          dateTo ? new Date(dateTo) : null,
+          scopeUserId,
+          currentYear,
+        )),
+        tx.clientes.count({ where: { ...clientsWhere, personas: { status: 'active' } } }),
+        tx.clientes.count({ where: clientsWhere }),
+        tx.$queryRawUnsafe(categorySql, ...cDetalle.params),
+        tx.$queryRawUnsafe(monthlyTrendSql, ...cTendencia.params),
+        tx.proveedores.count({ where: { status: 'active' } }),
+      ]);
+    });
 
     const agg = aggResult[0] || {};
     const currentSales = Number(agg.currentYearSales) || 0;
@@ -205,59 +204,61 @@ class StatsService {
       * (GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0)
          / NULLIF(v.monto_total, 0))`;
 
-    const [composicion, proveedores, totalProveedores] = await Promise.all([
-      prisma.$queryRawUnsafe(`
-        WITH pesos AS (
+    const [composicion, proveedores, totalProveedores] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawUnsafe(`
+          WITH pesos AS (
+            SELECT
+              GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0) AS pendiente,
+              COALESCE(v.ta_total, 0)              AS ta,
+              COALESCE(v.costo_proveedor_total, 0) AS cp,
+              GREATEST(v.monto_total - COALESCE(v.ta_total, 0) - COALESCE(v.costo_proveedor_total, 0), 0) AS resto
+            FROM ventas v
+            WHERE ${vigencia}
+          )
           SELECT
-            GREATEST(v.monto_total - COALESCE(v.monto_pagado_credito, 0), 0) AS pendiente,
-            COALESCE(v.ta_total, 0)              AS ta,
-            COALESCE(v.costo_proveedor_total, 0) AS cp,
-            GREATEST(v.monto_total - COALESCE(v.ta_total, 0) - COALESCE(v.costo_proveedor_total, 0), 0) AS resto
-          FROM ventas v
-          WHERE ${vigencia}
-        )
-        SELECT
-          COALESCE(SUM(pendiente), 0)::float                                              AS "pending",
-          -- Se normaliza por la suma de los tres pesos, no por el total: así las
-          -- tres partes cierran exactamente contra el pendiente incluso cuando
-          -- ta + coste no coincide con el total de la venta.
-          COALESCE(SUM(pendiente * cp    / NULLIF(ta + cp + resto, 0)), 0)::float          AS "supplier",
-          COALESCE(SUM(pendiente * ta    / NULLIF(ta + cp + resto, 0)), 0)::float          AS "agency",
-          COALESCE(SUM(pendiente * resto / NULLIF(ta + cp + resto, 0)), 0)::float          AS "unclassified",
-          COUNT(*)::int                                                                    AS "salesCount",
-          COUNT(*) FILTER (WHERE resto > 0)::int                                           AS "salesWithoutBreakdown"
-        FROM pesos
-      `, ...params),
+            COALESCE(SUM(pendiente), 0)::float                                              AS "pending",
+            -- Se normaliza por la suma de los tres pesos, no por el total: así las
+            -- tres partes cierran exactamente contra el pendiente incluso cuando
+            -- ta + coste no coincide con el total de la venta.
+            COALESCE(SUM(pendiente * cp    / NULLIF(ta + cp + resto, 0)), 0)::float          AS "supplier",
+            COALESCE(SUM(pendiente * ta    / NULLIF(ta + cp + resto, 0)), 0)::float          AS "agency",
+            COALESCE(SUM(pendiente * resto / NULLIF(ta + cp + resto, 0)), 0)::float          AS "unclassified",
+            COUNT(*)::int                                                                    AS "salesCount",
+            COUNT(*) FILTER (WHERE resto > 0)::int                                           AS "salesWithoutBreakdown"
+          FROM pesos
+        `, ...params),
 
-      prisma.$queryRawUnsafe(`
-        SELECT
-          d.proveedor_id AS id,
-          pr.nombre      AS name,
-          COALESCE(SUM(${sqlPendienteProveedor}), 0)::float   AS pending,
-          COUNT(DISTINCT v.id)::int AS "salesCount"
-        FROM detalle_venta d
-        JOIN ventas v ON v.id = d.venta_id
-        LEFT JOIN proveedores pr ON pr.id = d.proveedor_id
-        WHERE ${vigencia}
-        GROUP BY d.proveedor_id, pr.nombre
-        HAVING COALESCE(SUM(${sqlPendienteProveedor}), 0) > 0
-        ORDER BY pending DESC, "salesCount" DESC
-        LIMIT $${params.length + 1}
-      `, ...params, tope),
-
-      // Cuántos hay en total: el listado va topado y la pantalla no debe
-      // presentarlo como si fuera la lista completa.
-      prisma.$queryRawUnsafe(`
-        SELECT COUNT(*)::int AS total FROM (
-          SELECT d.proveedor_id
+        tx.$queryRawUnsafe(`
+          SELECT
+            d.proveedor_id AS id,
+            pr.nombre      AS name,
+            COALESCE(SUM(${sqlPendienteProveedor}), 0)::float   AS pending,
+            COUNT(DISTINCT v.id)::int AS "salesCount"
           FROM detalle_venta d
           JOIN ventas v ON v.id = d.venta_id
+          LEFT JOIN proveedores pr ON pr.id = d.proveedor_id
           WHERE ${vigencia}
-          GROUP BY d.proveedor_id
+          GROUP BY d.proveedor_id, pr.nombre
           HAVING COALESCE(SUM(${sqlPendienteProveedor}), 0) > 0
-        ) x
-      `, ...params),
-    ]);
+          ORDER BY pending DESC, "salesCount" DESC
+          LIMIT $${params.length + 1}
+        `, ...params, tope),
+
+        // Cuántos hay en total: el listado va topado y la pantalla no debe
+        // presentarlo como si fuera la lista completa.
+        tx.$queryRawUnsafe(`
+          SELECT COUNT(*)::int AS total FROM (
+            SELECT d.proveedor_id
+            FROM detalle_venta d
+            JOIN ventas v ON v.id = d.venta_id
+            WHERE ${vigencia}
+            GROUP BY d.proveedor_id
+            HAVING COALESCE(SUM(${sqlPendienteProveedor}), 0) > 0
+          ) x
+        `, ...params),
+      ]);
+    });
 
     const c = composicion[0] || {};
 
@@ -299,7 +300,7 @@ class StatsService {
 
   async getTopClients({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
-    return prisma.$queryRaw`
+    return transaccion(async (tx) => tx.$queryRaw`
       SELECT p.nombres || ' ' || p.apellidos AS name,
              COALESCE(SUM(v.monto_total), 0)::float AS total,
              COUNT(v.id)::int AS count
@@ -311,12 +312,12 @@ class StatsService {
       GROUP BY c.id, p.nombres, p.apellidos
       ORDER BY total DESC
       LIMIT ${Math.min(Number(limit) || 6, 50)}
-    `;
+    `);
   }
 
   async getAsesorPerformance({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
-    return prisma.$queryRaw`
+    return transaccion(async (tx) => tx.$queryRaw`
       SELECT p.nombres || ' ' || p.apellidos AS "asesorName",
              COALESCE(SUM(v.ta_total), 0)::float AS "totalIngresos",
              COUNT(v.id)::int AS "totalVentas"
@@ -328,12 +329,12 @@ class StatsService {
       GROUP BY u.id, p.nombres, p.apellidos
       ORDER BY "totalIngresos" DESC
       LIMIT ${Math.min(Number(limit) || 6, 50)}
-    `;
+    `);
   }
 
   async getCategoryDistribution({ permissionScope, user, limit = 6 } = {}) {
     const propio = permissionScope === 'own' && user ? Number(user.id) : null;
-    return prisma.$queryRaw`
+    return transaccion(async (tx) => tx.$queryRaw`
       SELECT mp.nombre AS name, COUNT(v.id)::int AS value
       FROM ventas v
       JOIN metodos_pago mp ON v.metodo_pago_principal_id = mp.id
@@ -342,7 +343,7 @@ class StatsService {
       GROUP BY mp.id, mp.nombre
       ORDER BY value DESC
       LIMIT ${Math.min(Number(limit) || 6, 50)}
-    `;
+    `);
   }
 
   /**
@@ -377,40 +378,42 @@ class StatsService {
       prod_tiqueteria: { detalle_venta: { ventas: ventaVigente } },
     };
 
-    const [vencidos, checkins, sinRevisar, checkinsCount] = await Promise.all([
-      // Crédito vencido: la fecha de vencimiento ya pasó y queda saldo.
-      prisma.$queryRaw`
-        SELECT COUNT(*)::int AS count,
-               COALESCE(SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)), 0)::float AS amount,
-               MIN(v.fecha_vence_credito) AS oldest
-        FROM ventas v
-        WHERE v.deleted_at IS NULL
-          AND v.status <> 'anulado'
-          AND (v.es_credito = true OR v.status IN ('credito', 'abonado'))
-          AND v.fecha_vence_credito IS NOT NULL
-          AND v.fecha_vence_credito < CURRENT_DATE
-          AND v.monto_total - COALESCE(v.monto_pagado_credito, 0) > 0
-          AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
-      `,
-      // Check-ins críticos: pendientes con salida en las próximas 48 h. Misma
-      // regla que usa GET /flights/checkins?status=critico.
-      prisma.tramos_vuelo.findMany({
-        where: whereCheckin,
-        orderBy: { salida: 'asc' },
-        take: 1,
-        select: {
-          salida: true,
-          aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos: { select: { codigo_iata: true } },
-          aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos: { select: { codigo_iata: true } },
-        },
-      }),
-      prisma.ventas.aggregate({
-        where: { ...ventaVigente, is_reviewed: false },
-        _count: { _all: true },
-        _sum: { monto_total: true },
-      }),
-      prisma.tramos_vuelo.count({ where: whereCheckin }),
-    ]);
+    const [vencidos, checkins, sinRevisar, checkinsCount] = await transaccion(async (tx) => {
+      return Promise.all([
+        // Crédito vencido: la fecha de vencimiento ya pasó y queda saldo.
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS count,
+                 COALESCE(SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)), 0)::float AS amount,
+                 MIN(v.fecha_vence_credito) AS oldest
+          FROM ventas v
+          WHERE v.deleted_at IS NULL
+            AND v.status <> 'anulado'
+            AND (v.es_credito = true OR v.status IN ('credito', 'abonado'))
+            AND v.fecha_vence_credito IS NOT NULL
+            AND v.fecha_vence_credito < CURRENT_DATE
+            AND v.monto_total - COALESCE(v.monto_pagado_credito, 0) > 0
+            AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
+        `,
+        // Check-ins críticos: pendientes con salida en las próximas 48 h. Misma
+        // regla que usa GET /flights/checkins?status=critico.
+        tx.tramos_vuelo.findMany({
+          where: whereCheckin,
+          orderBy: { salida: 'asc' },
+          take: 1,
+          select: {
+            salida: true,
+            aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos: { select: { codigo_iata: true } },
+            aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos: { select: { codigo_iata: true } },
+          },
+        }),
+        tx.ventas.aggregate({
+          where: { ...ventaVigente, is_reviewed: false },
+          _count: { _all: true },
+          _sum: { monto_total: true },
+        }),
+        tx.tramos_vuelo.count({ where: whereCheckin }),
+      ]);
+    });
 
     const v = vencidos[0] || {};
     const proximo = checkins[0];

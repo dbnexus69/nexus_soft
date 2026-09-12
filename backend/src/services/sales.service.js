@@ -1139,67 +1139,69 @@ class SalesService {
         LEFT JOIN personas comp ON com.persona_id = comp.id
         WHERE v.deleted_at IS NULL ${whereSql}`;
 
-    const [totalRows, ventasRaw] = await Promise.all([
-      prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS total ${fromSql}`, ...params),
-      prisma.$queryRawUnsafe(`
-        SELECT 
-          v.id,
-          v.numero,
-          v.cliente_id as "cliente_id",
-          v.usuario_id as "usuarioId",
-          v.creado_at as "creadoAt",
-          v.monto_total as "montoTotal",
-          v.status,
-          v.observaciones,
-          v.es_credito as "esCredito",
-          v.fecha_vence_credito as "fechaVenceCredito",
-          v.monto_pagado_credito as "montoPagadoCredito",
-          v.is_reviewed as "isReviewed",
-          v.comisionista_id as "comisionistaId",
-          v.monto_comision_bruto as "montoComisionBruto",
-          v.porcentaje_retencion_comision as "porcentajeRetencionComision",
-          v.monto_comision_neto as "montoComisionNeto",
-          v.costo_proveedor_total as "costoProveedorTotal",
-          v.ta_total as "taTotal",
-          v.comision_liquidada as "comision_liquidada",
-          v.responsable_id as "responsableId",
-          cp.nombres || ' ' || cp.apellidos as "clientName",
-          cp.email as "clientEmail",
-          cp.avatar_url as "clientAvatar",
-          up.nombres || ' ' || up.apellidos as "asesorName",
-          comp.nombres || ' ' || comp.apellidos as "commissionAgentName",
-          
-          COALESCE((
-            SELECT json_agg(json_build_object(
-              'id', p.id,
-              'fechaPago', p.fecha_pago,
-              'monto', p.monto,
-              'metodoPago', (SELECT json_build_object('nombre', mp.nombre) FROM metodos_pago mp WHERE mp.id = p.metodo_pago_id)
-            ))
-            FROM pagos_venta p WHERE p.venta_id = v.id
-          ), '[]'::json) as "pagosVenta",
+    const [totalRows, ventasRaw] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS total ${fromSql}`, ...params),
+        tx.$queryRawUnsafe(`
+          SELECT 
+            v.id,
+            v.numero,
+            v.cliente_id as "cliente_id",
+            v.usuario_id as "usuarioId",
+            v.creado_at as "creadoAt",
+            v.monto_total as "montoTotal",
+            v.status,
+            v.observaciones,
+            v.es_credito as "esCredito",
+            v.fecha_vence_credito as "fechaVenceCredito",
+            v.monto_pagado_credito as "montoPagadoCredito",
+            v.is_reviewed as "isReviewed",
+            v.comisionista_id as "comisionistaId",
+            v.monto_comision_bruto as "montoComisionBruto",
+            v.porcentaje_retencion_comision as "porcentajeRetencionComision",
+            v.monto_comision_neto as "montoComisionNeto",
+            v.costo_proveedor_total as "costoProveedorTotal",
+            v.ta_total as "taTotal",
+            v.comision_liquidada as "comision_liquidada",
+            v.responsable_id as "responsableId",
+            cp.nombres || ' ' || cp.apellidos as "clientName",
+            cp.email as "clientEmail",
+            cp.avatar_url as "clientAvatar",
+            up.nombres || ' ' || up.apellidos as "asesorName",
+            comp.nombres || ' ' || comp.apellidos as "commissionAgentName",
+            
+            COALESCE((
+              SELECT json_agg(json_build_object(
+                'id', p.id,
+                'fechaPago', p.fecha_pago,
+                'monto', p.monto,
+                'metodoPago', (SELECT json_build_object('nombre', mp.nombre) FROM metodos_pago mp WHERE mp.id = p.metodo_pago_id)
+              ))
+              FROM pagos_venta p WHERE p.venta_id = v.id
+            ), '[]'::json) as "pagosVenta",
 
-          COALESCE((
-            SELECT json_agg(json_build_object(
-              'categoria', dv.categoria,
-              'nombreServicio', dv.nombre_servicio,
-              'origen', dv.origen,
-              'destino', dv.destino,
-              'pasajerosDetalle', COALESCE((
-                SELECT json_agg(json_build_object(
-                  'persona', (SELECT json_build_object('nombres', paxp.nombres, 'apellidos', paxp.apellidos) FROM personas paxp WHERE paxp.id = pd.persona_id)
-                ))
-                FROM pasajeros_detalle pd WHERE pd.detalle_venta_id = dv.id
-              ), '[]'::json)
-            ))
-            FROM detalle_venta dv WHERE dv.venta_id = v.id
-          ), '[]'::json) as "detalleVentas"
+            COALESCE((
+              SELECT json_agg(json_build_object(
+                'categoria', dv.categoria,
+                'nombreServicio', dv.nombre_servicio,
+                'origen', dv.origen,
+                'destino', dv.destino,
+                'pasajerosDetalle', COALESCE((
+                  SELECT json_agg(json_build_object(
+                    'persona', (SELECT json_build_object('nombres', paxp.nombres, 'apellidos', paxp.apellidos) FROM personas paxp WHERE paxp.id = pd.persona_id)
+                  ))
+                  FROM pasajeros_detalle pd WHERE pd.detalle_venta_id = dv.id
+                ), '[]'::json)
+              ))
+              FROM detalle_venta dv WHERE dv.venta_id = v.id
+            ), '[]'::json) as "detalleVentas"
 
-        ${fromSql}
-        ORDER BY ${sqlOrderBy} ${sortOrder === 'desc' ? 'DESC' : 'ASC'}
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip)
-    ]);
+          ${fromSql}
+          ORDER BY ${sqlOrderBy} ${sortOrder === 'desc' ? 'DESC' : 'ASC'}
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `, ...params, perPage, skip)
+      ]);
+    });
 
     const data = ventasRaw.map(v => {
       const servicesSummary = (v.detalleVentas || []).map(d => {
@@ -1332,60 +1334,62 @@ class SalesService {
     const pEstado = status && status !== 'all' ? status : null;
     const pTramo = bucket && bucket !== 'all' ? bucket : null;
 
-    const [filas, conteo, totales] = await Promise.all([
-      prisma.$queryRawUnsafe(`
-        ${baseSql}
-        SELECT
-          c2.*,
-          cp.nombres || ' ' || cp.apellidos AS "clientName",
-          cp.documento  AS "clientDocNumber",
-          cp.email      AS "clientEmail",
-          cp.avatar_url AS "clientAvatar"
-        FROM clasificados c2
-        JOIN clientes c ON c2.cliente_id = c.id
-        JOIN personas cp ON c.persona_id = cp.id
-        ${filtroSql}
-        ORDER BY ${ordenSql}, c2.cliente_id ASC
-        LIMIT $${iTramo + 1} OFFSET $${iTramo + 2}
-      `, ...params, pEstado, pTramo, perPage, skip),
+    const [filas, conteo, totales] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawUnsafe(`
+          ${baseSql}
+          SELECT
+            c2.*,
+            cp.nombres || ' ' || cp.apellidos AS "clientName",
+            cp.documento  AS "clientDocNumber",
+            cp.email      AS "clientEmail",
+            cp.avatar_url AS "clientAvatar"
+          FROM clasificados c2
+          JOIN clientes c ON c2.cliente_id = c.id
+          JOIN personas cp ON c.persona_id = cp.id
+          ${filtroSql}
+          ORDER BY ${ordenSql}, c2.cliente_id ASC
+          LIMIT $${iTramo + 1} OFFSET $${iTramo + 2}
+        `, ...params, pEstado, pTramo, perPage, skip),
 
-      prisma.$queryRawUnsafe(`
-        ${baseSql}
-        SELECT COUNT(*)::int AS total FROM clasificados c2 ${filtroSql}
-      `, ...params, pEstado, pTramo),
+        tx.$queryRawUnsafe(`
+          ${baseSql}
+          SELECT COUNT(*)::int AS total FROM clasificados c2 ${filtroSql}
+        `, ...params, pEstado, pTramo),
 
-      // Los contadores van SIN los filtros, para que al pulsar un tramo los
-      // demás sigan mostrando su cifra. Tramos y estados son excluyentes y
-      // exhaustivos, así que cada familia suma el total de la cartera: es un
-      // invariante comprobable.
-      prisma.$queryRawUnsafe(`
-        ${baseSql}
-        SELECT
-          COUNT(*)::int                                              AS "clientsCount",
-          COALESCE(SUM("pendingAmount"), 0)::float                   AS "totalPending",
-          COALESCE(SUM("overdueAmount"), 0)::float                   AS "totalOverdue",
-          COALESCE(SUM("agingCurrent"), 0)::float                    AS "totalCurrent",
-          COALESCE(SUM("aging1_30"), 0)::float                       AS "total1_30",
-          COALESCE(SUM("aging31_60"), 0)::float                      AS "total31_60",
-          COALESCE(SUM("aging61_90"), 0)::float                      AS "total61_90",
-          COALESCE(SUM("aging90plus"), 0)::float                     AS "total90plus",
-          COALESCE(SUM("agingUndated"), 0)::float                    AS "totalUndated",
-          COALESCE(MAX("daysOverdue"), 0)::int                       AS "maxDaysOverdue",
-          COALESCE(SUM(CASE WHEN estado = 'urgent'
-                       THEN "pendingAmount" ELSE 0 END), 0)::float   AS "totalUrgent",
-          COUNT(*) FILTER (WHERE tramo = 'current')::int             AS "countCurrent",
-          COUNT(*) FILTER (WHERE tramo = 'days1_30')::int            AS "count1_30",
-          COUNT(*) FILTER (WHERE tramo = 'days31_60')::int           AS "count31_60",
-          COUNT(*) FILTER (WHERE tramo = 'days61_90')::int           AS "count61_90",
-          COUNT(*) FILTER (WHERE tramo = 'days90plus')::int          AS "count90plus",
-          COUNT(*) FILTER (WHERE tramo = 'undated')::int             AS "countUndated",
-          COUNT(*) FILTER (WHERE estado = 'overdue')::int            AS "countOverdue",
-          COUNT(*) FILTER (WHERE estado = 'urgent')::int             AS "countUrgent",
-          COUNT(*) FILTER (WHERE estado = 'pending')::int            AS "countPending",
-          COUNT(*) FILTER (WHERE estado = 'ok')::int                 AS "countOk"
-        FROM clasificados
-      `, ...params),
-    ]);
+        // Los contadores van SIN los filtros, para que al pulsar un tramo los
+        // demás sigan mostrando su cifra. Tramos y estados son excluyentes y
+        // exhaustivos, así que cada familia suma el total de la cartera: es un
+        // invariante comprobable.
+        tx.$queryRawUnsafe(`
+          ${baseSql}
+          SELECT
+            COUNT(*)::int                                              AS "clientsCount",
+            COALESCE(SUM("pendingAmount"), 0)::float                   AS "totalPending",
+            COALESCE(SUM("overdueAmount"), 0)::float                   AS "totalOverdue",
+            COALESCE(SUM("agingCurrent"), 0)::float                    AS "totalCurrent",
+            COALESCE(SUM("aging1_30"), 0)::float                       AS "total1_30",
+            COALESCE(SUM("aging31_60"), 0)::float                      AS "total31_60",
+            COALESCE(SUM("aging61_90"), 0)::float                      AS "total61_90",
+            COALESCE(SUM("aging90plus"), 0)::float                     AS "total90plus",
+            COALESCE(SUM("agingUndated"), 0)::float                    AS "totalUndated",
+            COALESCE(MAX("daysOverdue"), 0)::int                       AS "maxDaysOverdue",
+            COALESCE(SUM(CASE WHEN estado = 'urgent'
+                         THEN "pendingAmount" ELSE 0 END), 0)::float   AS "totalUrgent",
+            COUNT(*) FILTER (WHERE tramo = 'current')::int             AS "countCurrent",
+            COUNT(*) FILTER (WHERE tramo = 'days1_30')::int            AS "count1_30",
+            COUNT(*) FILTER (WHERE tramo = 'days31_60')::int           AS "count31_60",
+            COUNT(*) FILTER (WHERE tramo = 'days61_90')::int           AS "count61_90",
+            COUNT(*) FILTER (WHERE tramo = 'days90plus')::int          AS "count90plus",
+            COUNT(*) FILTER (WHERE tramo = 'undated')::int             AS "countUndated",
+            COUNT(*) FILTER (WHERE estado = 'overdue')::int            AS "countOverdue",
+            COUNT(*) FILTER (WHERE estado = 'urgent')::int             AS "countUrgent",
+            COUNT(*) FILTER (WHERE estado = 'pending')::int            AS "countPending",
+            COUNT(*) FILTER (WHERE estado = 'ok')::int                 AS "countOk"
+          FROM clasificados
+        `, ...params),
+      ]);
+    });
 
     const t = totales[0] || {};
 
@@ -1464,39 +1468,41 @@ class SalesService {
     const extraSql = 'AND ' + filtros.join(' AND ');
     const baseSql = ctesDeCredito(extraSql);
 
-    const [resumen, creditos, conteo] = await Promise.all([
-      prisma.$queryRawUnsafe(`
-        ${baseSql},${CTE_POR_CLIENTE}
-        SELECT
-          c2.*,
-          cp.nombres || ' ' || cp.apellidos AS "clientName",
-          cp.documento  AS "clientDocNumber",
-          cp.email      AS "clientEmail",
-          cp.avatar_url AS "clientAvatar"
-        FROM clasificados c2
-        JOIN clientes c ON c2.cliente_id = c.id
-        JOIN personas cp ON c.persona_id = cp.id
-      `, ...params),
+    const [resumen, creditos, conteo] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawUnsafe(`
+          ${baseSql},${CTE_POR_CLIENTE}
+          SELECT
+            c2.*,
+            cp.nombres || ' ' || cp.apellidos AS "clientName",
+            cp.documento  AS "clientDocNumber",
+            cp.email      AS "clientEmail",
+            cp.avatar_url AS "clientAvatar"
+          FROM clasificados c2
+          JOIN clientes c ON c2.cliente_id = c.id
+          JOIN personas cp ON c.persona_id = cp.id
+        `, ...params),
 
-      prisma.$queryRawUnsafe(`
-        ${baseSql}
-        SELECT
-          venta_id, creado_at, venta_status, fecha_vence_credito,
-          monto_total::float AS total, pagado::float AS paid, pendiente::float AS pending,
-          COALESCE(dias_mora, 0)::int AS "daysOverdue", liquidada, tramo
-        FROM por_credito
-        WHERE NOT liquidada
-        -- Lo más atrasado primero, que es el orden en que se cobra. Los sin
-        -- fecha van al final: no tienen vencimiento con el que ordenarlos.
-        ORDER BY dias_mora DESC NULLS LAST, fecha_vence_credito ASC NULLS LAST, venta_id ASC
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip),
+        tx.$queryRawUnsafe(`
+          ${baseSql}
+          SELECT
+            venta_id, creado_at, venta_status, fecha_vence_credito,
+            monto_total::float AS total, pagado::float AS paid, pendiente::float AS pending,
+            COALESCE(dias_mora, 0)::int AS "daysOverdue", liquidada, tramo
+          FROM por_credito
+          WHERE NOT liquidada
+          -- Lo más atrasado primero, que es el orden en que se cobra. Los sin
+          -- fecha van al final: no tienen vencimiento con el que ordenarlos.
+          ORDER BY dias_mora DESC NULLS LAST, fecha_vence_credito ASC NULLS LAST, venta_id ASC
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `, ...params, perPage, skip),
 
-      prisma.$queryRawUnsafe(`
-        ${baseSql}
-        SELECT COUNT(*)::int AS total FROM por_credito WHERE NOT liquidada
-      `, ...params),
-    ]);
+        tx.$queryRawUnsafe(`
+          ${baseSql}
+          SELECT COUNT(*)::int AS total FROM por_credito WHERE NOT liquidada
+        `, ...params),
+      ]);
+    });
 
     const r = resumen[0];
     if (!r) throw new NotFoundError('El cliente no tiene créditos pendientes');

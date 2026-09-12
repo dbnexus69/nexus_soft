@@ -290,11 +290,13 @@ class CompaniesService {
 
   /** Salir. Cierra la sesión suplantada y cierra la fila de auditoría. */
   async terminarSuplantacion(suplantacionId, { usuario, tokenHash }) {
-    const [fila] = await prisma.$queryRaw`
-      SELECT id FROM suplantaciones WHERE id = ${suplantacionId} AND terminada_at IS NULL`;
-    if (!fila) throw new NotFoundError('Esa suplantación no está abierta');
+    await transaccion(async (tx) => {
+      const [fila] = await tx.$queryRaw`
+        SELECT id FROM suplantaciones WHERE id = ${suplantacionId} AND terminada_at IS NULL`;
+      if (!fila) throw new NotFoundError('Esa suplantación no está abierta');
 
-    await prisma.$executeRaw`UPDATE suplantaciones SET terminada_at = NOW() WHERE id = ${suplantacionId}`;
+      await tx.$executeRaw`UPDATE suplantaciones SET terminada_at = NOW() WHERE id = ${suplantacionId}`;
+    });
     if (tokenHash) {
       await conEmpresa(usuario.empresaId, () => prisma.sesiones.deleteMany({ where: { token_hash: tokenHash } }));
       // Borrar la fila no basta: el middleware solo vuelve a mirarla cuando la

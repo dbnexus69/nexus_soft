@@ -258,7 +258,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                 {isAdminMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsAdminMenuOpen(false)} />
-                    <ul className="absolute left-0 mt-2 w-48 bg-nav border border-slate-800/80 rounded-2xl shadow-2xl p-2 z-50 animate-fade-in font-body">
+                    <ul className="absolute left-0 mt-2 w-48 bg-[#0b0f19] border border-slate-800/80 rounded-2xl shadow-xl shadow-black/50 p-2 z-50 animate-fade-in font-body">
                       {filteredAdminLinks.map((link) => (
                         <li key={link.to}>
                           <NavLink
@@ -331,7 +331,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             {isUserMenuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
-                <div className="absolute right-0 mt-2 w-52 bg-nav border border-slate-800/80 rounded-2xl shadow-2xl p-4 z-50 animate-fade-in text-left">
+                <div className="absolute right-0 mt-2 w-52 bg-[#0b0f19] border border-slate-800/80 rounded-2xl shadow-xl shadow-black/50 p-4 z-50 animate-fade-in text-left">
                   <div className="pb-3 border-b border-slate-800/60 mb-2">
                     <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
                     <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">{user?.role}</p>

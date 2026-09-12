@@ -16,6 +16,9 @@ export interface LoginResponse {
     docType: string | null;
     docNumber: string;
     lastLogin: string | null;
+    suplantacionId?: string;
+    empresaId: number;
+    empresaSlug: string;
   };
   token: string;
   expiresAt: string;

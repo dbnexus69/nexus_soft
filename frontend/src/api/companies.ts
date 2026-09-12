@@ -58,3 +58,13 @@ export async function getBranding() {
   const res = await api.get('/branding');
   return res.data.data;
 }
+
+export async function startImpersonation(id: number, motivo: string) {
+  const res = await api.post(`/companies/${id}/impersonations`, { motivo });
+  return res.data.data as { token: string; empresa: Empresa; expiraAt: string; motivo: string };
+}
+
+export async function stopImpersonation(companyId: number, impersonationId: string) {
+  const res = await api.delete(`/companies/${companyId}/impersonations/${impersonationId}`);
+  return res.data;
+}

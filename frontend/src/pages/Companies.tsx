@@ -224,8 +224,8 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
         admin,
       });
       onCreada();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo dar de alta la agencia');
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message || e.message || 'No se pudo dar de alta la agencia');
     } finally {
       setGuardando(false);
     }
@@ -240,7 +240,7 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button onClick={guardar} disabled={guardando || !nombre.trim() || !admin.email}>
+          <Button onClick={guardar} disabled={guardando || !nombre.trim() || !admin.email || !admin.firstName || !admin.password}>
             {guardando ? 'Creando…' : 'Crear la agencia'}
           </Button>
         </>
@@ -347,6 +347,27 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
     }
   };
 
+  const suplantar = async () => {
+    setGuardando(true); setError('');
+    try {
+      const motivo = window.prompt('Motivo de la suplantación (visible en auditoría):', 'Soporte técnico');
+      if (!motivo) { setGuardando(false); return; }
+      const res = await api.startImpersonation(empresa.id, motivo);
+      
+      const currentToken = localStorage.getItem('nexus_token');
+      if (currentToken) {
+        localStorage.setItem('nexus_original_token', currentToken);
+      }
+      
+      localStorage.setItem('nexus_token', res.token);
+      localStorage.setItem('nexus_session_expiry', new Date(res.expiraAt).getTime().toString());
+      window.location.href = '/';
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message || e.message || 'No se pudo suplantar');
+      setGuardando(false);
+    }
+  };
+
   const guardar = async () => {
     setGuardando(true); setError('');
     try {
@@ -357,8 +378,8 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
         colorRealce: colores.realce,
       });
       onGuardada();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar');
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message || e.message || 'No se pudo guardar');
     } finally {
       setGuardando(false);
     }
@@ -373,7 +394,7 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
       footer={
         <>
           {empresa.estado === 'activa' ? (
-            <Button variant="outline" onClick={onSuspender} className="mr-auto text-red-600">Suspender</Button>
+            <Button variant="outline" onClick={onSuspender} className="mr-auto text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20">Suspender</Button>
           ) : (
             <Button
               variant="outline"
@@ -383,15 +404,20 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
               Reactivar
             </Button>
           )}
+          {empresa.estado === 'activa' && (
+            <Button variant="outline" onClick={suplantar} className="hidden sm:flex text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+              Entrar
+            </Button>
+          )}
           <Button variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button onClick={guardar} disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</Button>
+          <Button onClick={guardar} disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar'}</Button>
         </>
       }
     >
       <div className="space-y-5">
         <div className="flex items-center gap-4">
           <Marca empresa={{ ...empresa, logoUrl: logo, colorPrimario: colores.primario }} tamano={64} />
-          <div>
+          <div className="flex-1">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-300">
               <Upload size={15} />
               {subiendo ? 'Subiendo…' : logo ? 'Cambiar el logo' : 'Subir un logo'}
@@ -405,6 +431,14 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
             <p className="mt-1 text-xs text-accent">PNG, JPG, SVG o WEBP, hasta 2 MB.</p>
           </div>
         </div>
+
+        {empresa.estado === 'activa' && (
+          <div className="sm:hidden">
+            <Button variant="outline" onClick={suplantar} className="w-full justify-center text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+              Entrar como Agencia
+            </Button>
+          </div>
+        )}
 
         <FormField label="Nombre de la agencia">
           <Input value={nombre} onChange={e => setNombre(e.target.value)} />

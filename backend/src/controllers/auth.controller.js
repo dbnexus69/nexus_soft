@@ -31,6 +31,9 @@ exports.logout = async (req, res, next) => {
 exports.me = async (req, res, next) => {
   try {
     const data = await authService.me(req.user.id);
+    if (req.suplantacion) {
+      data.user.suplantacionId = req.suplantacion;
+    }
     success(res, data.user);
   } catch (err) {
     next(err);

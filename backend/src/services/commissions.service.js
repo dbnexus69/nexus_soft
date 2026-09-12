@@ -42,45 +42,47 @@ class CommissionsService {
     }
     const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    const [totalRows, agentsRaw] = await Promise.all([
-      prisma.$queryRawUnsafe(`
-        SELECT COUNT(*)::int AS total
-        FROM comisionistas c
-        JOIN personas p ON c.persona_id = p.id
-        WHERE 1=1 ${whereSql}
-      `, ...params),
-      prisma.$queryRawUnsafe(`
-        SELECT 
-          c.id,
-          c.tipo as "type",
-          c.status,
-          -- El acumulado se suma aquí, no en el cliente: c.acumulado es un campo
-          -- denormalizado que se desincroniza, y sumarlo en el frontend obligaba
-          -- a traerse todas las ventas para calcularlo.
-          COALESCE((
-            SELECT SUM(v.monto_comision_neto)
-            FROM ventas v
-            WHERE v.comisionista_id = c.id AND v.comision_liquidada = false
-          ), 0) as "accumulated",
-          c.umbral_pago as "paymentThreshold",
-          c.banco,
-          c.tipo_cuenta as "tipoCuenta",
-          c.numero_cuenta as "numeroCuenta",
-          p.nombres as "firstName",
-          p.apellidos as "lastName",
-          p.telefono as "phone",
-          p.email,
-          p.documento as "docNumber",
-          p.avatar_url as "avatar",
-          td.abreviatura as "docType"
-        FROM comisionistas c
-        JOIN personas p ON c.persona_id = p.id
-        LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-        WHERE 1=1 ${whereSql}
-        ORDER BY c.id DESC
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip)
-    ]);
+    const [totalRows, agentsRaw] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawUnsafe(`
+          SELECT COUNT(*)::int AS total
+          FROM comisionistas c
+          JOIN personas p ON c.persona_id = p.id
+          WHERE 1=1 ${whereSql}
+        `, ...params),
+        tx.$queryRawUnsafe(`
+          SELECT 
+            c.id,
+            c.tipo as "type",
+            c.status,
+            -- El acumulado se suma aquí, no en el cliente: c.acumulado es un campo
+            -- denormalizado que se desincroniza, y sumarlo en el frontend obligaba
+            -- a traerse todas las ventas para calcularlo.
+            COALESCE((
+              SELECT SUM(v.monto_comision_neto)
+              FROM ventas v
+              WHERE v.comisionista_id = c.id AND v.comision_liquidada = false
+            ), 0) as "accumulated",
+            c.umbral_pago as "paymentThreshold",
+            c.banco,
+            c.tipo_cuenta as "tipoCuenta",
+            c.numero_cuenta as "numeroCuenta",
+            p.nombres as "firstName",
+            p.apellidos as "lastName",
+            p.telefono as "phone",
+            p.email,
+            p.documento as "docNumber",
+            p.avatar_url as "avatar",
+            td.abreviatura as "docType"
+          FROM comisionistas c
+          JOIN personas p ON c.persona_id = p.id
+          LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
+          WHERE 1=1 ${whereSql}
+          ORDER BY c.id DESC
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `, ...params, perPage, skip)
+      ]);
+    });
 
     const data = agentsRaw.map(a => ({
       id: a.id,
@@ -282,36 +284,38 @@ class CommissionsService {
     if (dateTo) push('lc.fecha <= ?', new Date(dateTo));
     const whereLiq = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
-    const [totalLiqRows, settlementsRaw] = await Promise.all([
-      prisma.$queryRawUnsafe(`
-        SELECT COUNT(*)::int AS total
-        FROM liquidaciones_comision lc
-        WHERE 1=1 ${whereLiq}
-      `, ...params),
-      prisma.$queryRawUnsafe(`
-        SELECT 
-          lc.id,
-          lc.comisionista_id as "agentId",
-          lc.monto as "amount",
-          lc.fecha as "date",
-          lc.referencia as "reference",
-          lc.notas as "notes",
-          p.nombres as "firstName",
-          p.apellidos as "lastName",
-          mp.nombre as "paymentMethod",
-          COALESCE((
-            SELECT json_agg(lv.venta_id)
-            FROM liquidacion_ventas lv WHERE lv.liquidacion_id = lc.id
-          ), '[]'::json) as "salesIds"
-        FROM liquidaciones_comision lc
-        JOIN comisionistas c ON lc.comisionista_id = c.id
-        JOIN personas p ON c.persona_id = p.id
-        LEFT JOIN metodos_pago mp ON lc.metodo_pago_id = mp.id
-        WHERE 1=1 ${whereLiq}
-        ORDER BY lc.creado_at DESC
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-      `, ...params, perPage, skip)
-    ]);
+    const [totalLiqRows, settlementsRaw] = await transaccion(async (tx) => {
+      return Promise.all([
+        tx.$queryRawUnsafe(`
+          SELECT COUNT(*)::int AS total
+          FROM liquidaciones_comision lc
+          WHERE 1=1 ${whereLiq}
+        `, ...params),
+        tx.$queryRawUnsafe(`
+          SELECT 
+            lc.id,
+            lc.comisionista_id as "agentId",
+            lc.monto as "amount",
+            lc.fecha as "date",
+            lc.referencia as "reference",
+            lc.notas as "notes",
+            p.nombres as "firstName",
+            p.apellidos as "lastName",
+            mp.nombre as "paymentMethod",
+            COALESCE((
+              SELECT json_agg(lv.venta_id)
+              FROM liquidacion_ventas lv WHERE lv.liquidacion_id = lc.id
+            ), '[]'::json) as "salesIds"
+          FROM liquidaciones_comision lc
+          JOIN comisionistas c ON lc.comisionista_id = c.id
+          JOIN personas p ON c.persona_id = p.id
+          LEFT JOIN metodos_pago mp ON lc.metodo_pago_id = mp.id
+          WHERE 1=1 ${whereLiq}
+          ORDER BY lc.creado_at DESC
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `, ...params, perPage, skip)
+      ]);
+    });
 
     const data = settlementsRaw.map(s => {
       const d = s.date;

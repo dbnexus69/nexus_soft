@@ -23,8 +23,16 @@ const { execSync } = require('child_process');
 
 const modelos = new Map();
 for (const m of Prisma.dmmf.datamodel.models) {
+  // Los `@@unique([a, b])` no son campos, pero SÍ son claves válidas en un
+  // `where`: Prisma inventa `a_b` (o el `name:` que se le haya puesto). Sin
+  // esto, un upsert por clave compuesta —la forma correcta desde que el único
+  // de `personas` lleva la empresa dentro— se denunciaba como campo inexistente.
+  const compuestas = [
+    ...(m.uniqueFields || []).map((campos, i) => (m.uniqueIndexes?.[i]?.name) || campos.join('_')),
+    ...(m.primaryKey ? [m.primaryKey.name || m.primaryKey.fields.join('_')] : []),
+  ];
   modelos.set(m.name, {
-    campos: new Set(m.fields.map(f => f.name)),
+    campos: new Set([...m.fields.map(f => f.name), ...compuestas]),
     relaciones: new Set(m.fields.filter(f => f.kind === 'object').map(f => f.name)),
     porRelacion: new Map(m.fields.filter(f => f.kind === 'object').map(f => [f.name, f.type])),
   });
@@ -74,8 +82,18 @@ function clavesDe(txt) {
     if (c === '}' || c === ']') { prof--; i++; continue; }
     if (prof === 1) {
       const resto = txt.slice(i);
-      const m = resto.match(/^([A-Za-z_$][\w$]*)\s*:/);
-      if (m && (i === 0 || /[{,\s]/.test(txt[i - 1]))) {
+      // `nombre:` y también `{ nombre }` a secas.
+      //
+      // Solo se miraba la forma con dos puntos, y por eso un `data: { isReviewed }`
+      // —la columna es `is_reviewed`— pasó meses por delante de este guardián
+      // dando 500 en cada intento de marcar una venta como revisada.
+      const m = resto.match(/^([A-Za-z_$][\w$]*)\s*(:|,|\})/);
+      // En posición de CLAVE, que es lo anterior a `{` o a `,`. Mirar solo que
+      // haya un espacio delante hacía que `{ a: null }` contara `null` como
+      // clave: el valor de la anterior se leía como la siguiente.
+      const previo = txt.slice(0, i).replace(/\s+$/, '');
+      const enPosicionDeClave = i === 0 || previo.endsWith('{') || previo.endsWith(',');
+      if (m && enPosicionDeClave) {
         claves.push(m[1]);
         i += m[0].length;
         continue;

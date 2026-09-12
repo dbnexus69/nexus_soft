@@ -336,15 +336,25 @@ const productHandler = (category, tableName, transformData) => ({
             });
           }
 
-          for (const passengerData of pasajerosDetalleData) {
+          // Las mismas claves con las que se construyó la lista, y el uuid.
+          //
+          // Esta copia se había quedado atrás respecto a la del alta: leía
+          // `esTitular`, `nroReserva` y `nroTiquete` de un objeto cuyas claves
+          // son `es_titular`, `nro_reserva` y `nro_tiquete`, y no ponía `id`,
+          // que en esta tabla no tiene valor por defecto. El resultado era que
+          // editar CUALQUIER producto con pasajeros daba 500, en las quince
+          // categorías; y si solo se hubiera arreglado el id, cada edición
+          // habría borrado en silencio el número de reserva y el de tiquete.
+          for (const p of pasajerosDetalleData) {
             await tx.pasajeros_detalle.create({
               data: {
+                id: randomUUID(),
                 detalle_venta_id: prod.detalle_venta_id,
-                persona_id: passengerData.persona_id,
-                es_titular: passengerData.esTitular,
-                asiento: passengerData.asiento,
-                nro_reserva: passengerData.nroReserva,
-                nro_tiquete: passengerData.nroTiquete
+                persona_id: p.persona_id,
+                es_titular: p.es_titular,
+                asiento: p.asiento,
+                nro_reserva: p.nro_reserva,
+                nro_tiquete: p.nro_tiquete
               }
             });
           }

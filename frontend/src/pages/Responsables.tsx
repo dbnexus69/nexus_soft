@@ -556,7 +556,7 @@ export default function Responsables() {
         >
           {paginatedResponsables.map(responsable => (
             <TableRow key={responsable.id} className={toggledResponsableId === responsable.id ? (toggleAction === 'activated' ? 'animate-flash-green' : 'animate-flash-red') : ''}>
-              <TableCell>{formatId(responsable.id)}</TableCell>
+              <TableCell>{formatId(responsable.numero ?? responsable.id)}</TableCell>
               <TableCell>
                 <div className="flex flex-col">
                   <span className="font-medium text-gray-900">{responsable.name}</span>

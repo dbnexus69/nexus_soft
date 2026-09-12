@@ -123,7 +123,7 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                     {sales.map(s => (
                       <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
-                        <td className="p-2 font-mono text-gray-500 dark:text-slate-400">#{s.id.toString().padStart(4, '0')}</td>
+                        <td className="p-2 font-mono text-gray-500 dark:text-slate-400">#{(s.numero ?? s.id).toString().padStart(4, '0')}</td>
                         <td className="p-2 text-gray-600 dark:text-slate-300">{formatDate(s.date)}</td>
                         <td className="p-2 font-semibold text-primary">{formatCurrency(s.total)}</td>
                         <td className="p-2"><Badge variant={s.status}>{s.status}</Badge></td>

@@ -40,6 +40,10 @@ model aeropuertos {
 
 model clientes {
   id             Int       @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
   persona_id     Int       @unique
   creado_por_id  Int?
   fecha_registro DateTime  @default(now())
@@ -54,10 +58,16 @@ model clientes {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
 }
 
 model comisionistas {
   id                     Int                      @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
+  /// Único solo entre los vivos: el índice de la base es parcial.
   persona_id             Int                      @unique
   tipo                   String?
   umbral_pago            Float?                   @default(0)
@@ -77,6 +87,12 @@ model comisionistas {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
+  /// Dar de baja no borra: el número no se reutiliza y el histórico
+  /// —comisiones liquidadas, registros de actividad— conserva a quién
+  /// señalaba. Los únicos de `email` y `persona_id` son parciales y solo
+  /// se aplican entre los vivos, así que el correo sí se libera.
+  deleted_at       DateTime?
 }
 
 model detalle_venta {
@@ -278,6 +294,10 @@ model logs_usuarios {
 
 model metodos_pago {
   id                     Int                      @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
   nombre                 String
   detalle_venta          detalle_venta[]
   liquidaciones_comision liquidaciones_comision[]
@@ -292,6 +312,7 @@ model metodos_pago {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
 }
 
 model pagos_venta {
@@ -386,6 +407,10 @@ model paquete_vuelo {
 
 model paquetes {
   id                        Int                        @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
   nombre                    String
   destino                   String
   servicios_incluidos       String?
@@ -408,6 +433,7 @@ model paquetes {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
 }
 
 model pasajeros_detalle {
@@ -804,6 +830,10 @@ model prod_visas {
 
 model proveedores {
   id                Int                 @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
   nombre            String
   tipo              String?
   email_contacto    String?
@@ -820,10 +850,15 @@ model proveedores {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
 }
 
 model responsables {
   id         Int        @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
   persona_id Int        @unique
   status     UserStatus @default(active)
   creado_at  DateTime   @default(now())
@@ -837,6 +872,7 @@ model responsables {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
 }
 
 model roles {
@@ -894,6 +930,10 @@ model sesiones {
 
 model tarjetas_agencia {
   id             Int           @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
   nombre         String
   metodo_pago_id Int?
   ultimos_cuatro String?
@@ -905,6 +945,7 @@ model tarjetas_agencia {
   empresas         empresas @relation(fields: [empresa_id], references: [id])
 
   @@index([empresa_id])
+  @@unique([empresa_id, numero])
 }
 
 model tipos_documento {
@@ -954,7 +995,15 @@ model tramos_vuelo {
 
 model usuarios {
   id               Int                @id @default(autoincrement())
+  /// El número que ve la agencia. El `id` es global y con huecos —los huecos
+  /// son las filas de las otras agencias, contables por cualquiera—; este
+  /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
+  numero           Int?
+  /// Único solo entre los vivos, igual que `email`.
   persona_id       Int                @unique
+  /// Único, pero SOLO entre los vivos: el índice de la base lleva
+  /// `WHERE deleted_at IS NULL`, para que dar de baja libere el correo.
+  /// Buscar por aquí con `findUnique` puede devolver una fila dada de baja.
   email            String             @unique
   password_hash    String
   rol_id           Int
@@ -977,6 +1026,12 @@ model usuarios {
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
+  @@unique([empresa_id, numero])
+  /// Dar de baja no borra: el número no se reutiliza y el histórico
+  /// —comisiones liquidadas, registros de actividad— conserva a quién
+  /// señalaba. Los únicos de `email` y `persona_id` son parciales y solo
+  /// se aplican entre los vivos, así que el correo sí se libera.
+  deleted_at       DateTime?
 }
 
 model ventas {

@@ -25,7 +25,14 @@ class ResponsablesService {
     // parámetros. Así no hay dos versiones que puedan discrepar.
     if (search) {
       const q = `%${search}%`;
-      push('(p.nombres ILIKE ? OR p.apellidos ILIKE ? OR p.documento ILIKE ? OR p.email ILIKE ?)', q, q, q, q);
+      // Si el término son solo cifras, se busca también por el número de la
+      // agencia: es el que aparece en la lista, y si no se pudiera buscar por
+      // él no sería un identificador, sería un adorno.
+      const comoNumero = /^\d+$/.test(search.trim()) ? parseInt(search.trim(), 10) : null;
+      push(
+        `(p.nombres ILIKE ? OR p.apellidos ILIKE ? OR p.documento ILIKE ? OR p.email ILIKE ?${comoNumero !== null ? ' OR r.numero = ?' : ''})`,
+        ...(comoNumero !== null ? [q, q, q, q, comoNumero] : [q, q, q, q]),
+      );
     }
     if (status) {
       push('r.status = ?::"UserStatus"', status);
@@ -61,6 +68,7 @@ class ResponsablesService {
         tx.$queryRawUnsafe(`
           SELECT 
             r.id,
+            r.numero,
             r.creado_at as "creadoAt",
             p.id as "persona_id",
             p.nombres as "firstName",
@@ -89,6 +97,7 @@ class ResponsablesService {
 
     const data = responsablesRaw.map(r => ({
       id: r.id,
+      numero: r.numero,
       persona_id: r.persona_id,
       firstName: r.firstName,
       lastName: r.lastName,
@@ -146,6 +155,7 @@ class ResponsablesService {
 
     return {
       id: responsable.id,
+      numero: responsable.numero,
       persona_id: responsable.personas.id,
       firstName: responsable.personas.nombres,
       lastName: responsable.personas.apellidos,

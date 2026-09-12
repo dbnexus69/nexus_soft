@@ -20,15 +20,25 @@ class ClientsService {
     const where = {};
     if (permissionScope === 'own') where.creado_por_id = user.id;
 
-    const personas = {};
+    // El estado filtra siempre; la búsqueda de texto es la que se combina.
+    if (status) where.personas = { status };
+
     if (search) {
       const como = { contains: search, mode: 'insensitive' };
-      personas.OR = [
-        { nombres: como }, { apellidos: como }, { documento: como }, { email: como },
+      const porTexto = [
+        { personas: { nombres: como } }, { personas: { apellidos: como } },
+        { personas: { documento: como } }, { personas: { email: como } },
       ];
+      // Un término que sean solo cifras busca además por el número de la
+      // agencia, el que se ve en la lista. Sin esto el número serviría para
+      // leerlo y para nada más: quien lo tiene apuntado no llegaría a la ficha.
+      //
+      // Va en el `OR` de la búsqueda, NO en el `where` de arriba: el alcance
+      // `own` y el estado tienen que seguir aplicándose, o buscar por número
+      // sería la forma de ver la ficha de un cliente que no te toca.
+      if (/^\d+$/.test(search.trim())) porTexto.push({ numero: parseInt(search.trim(), 10) });
+      where.OR = porTexto;
     }
-    if (status) personas.status = status;
-    if (Object.keys(personas).length) where.personas = personas;
 
     const dir = sortOrder === 'desc' ? 'desc' : 'asc';
     // Ordenar por nombre ahora ordena por el nombre. El SQL anterior ordenaba
@@ -46,6 +56,7 @@ class ClientsService {
         relationLoadStrategy: 'join',
         select: {
           id: true,
+          numero: true,
           fecha_registro: true,
           creado_por_id: true,
           personas: {
@@ -61,6 +72,7 @@ class ClientsService {
 
     const data = filas.map(c => ({
       id: c.id,
+      numero: c.numero,
       firstName: c.personas.nombres,
       lastName: c.personas.apellidos,
       name: `${c.personas.nombres} ${c.personas.apellidos}`,
@@ -112,6 +124,7 @@ class ClientsService {
 
     return {
       id: cliente.id,
+      numero: cliente.numero,
       firstName: cliente.personas.nombres,
       lastName: cliente.personas.apellidos,
       name: `${cliente.personas.nombres} ${cliente.personas.apellidos}`,
@@ -209,6 +222,7 @@ class ClientsService {
 
     return {
       id: cliente.id,
+      numero: cliente.numero,
       firstName: persona.nombres,
       lastName: persona.apellidos,
       name: `${persona.nombres} ${persona.apellidos}`,
@@ -312,7 +326,10 @@ class ClientsService {
     const avatarUrl = `/uploads/${file.filename}`;
     await prisma.personas.update({
       where: { id: cliente.persona_id },
-      data: { avatarUrl }
+      // `avatar_url`, que es la columna. Escrito abreviado, y abreviado es
+      // justo lo que `check:prisma` no miraba: subir un avatar daba 500 desde
+      // siempre, sin que nada lo señalara.
+      data: { avatar_url: avatarUrl }
     });
 
     return { avatarUrl };

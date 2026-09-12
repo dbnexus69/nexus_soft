@@ -153,6 +153,36 @@ async function main() {
     WHERE contype = 'f' AND conname LIKE '%_empresa_fkey'`);
   comprobar('siguen las claves ajenas compuestas', compuestas === 53, `${compuestas} de 53`);
 
+  // ── 4c. El número propio de cada agencia
+  //
+  // Lo pone un disparador, así que lo que hay que comprobar no es que el código
+  // se acuerde: es que el disparador siga puesto. Una agencia recién creada
+  // tiene que empezar por el 1 en todo, aunque el `id` de esas filas venga de
+  // muy arriba.
+  const numeros = await conEmpresa(otra.id, async () => ({
+    cliente: (await prisma.clientes.findFirst({ where: { id: cli.id } }))?.numero,
+    usuario: (await prisma.usuarios.findFirst({ where: { id: usr.id } }))?.numero,
+    venta: (await prisma.ventas.findFirst({ where: { id: venta.id } }))?.numero,
+  }));
+  comprobar(
+    'la agencia nueva empieza por el 1 aunque sus ids vengan de muy arriba',
+    numeros.cliente === 1 && numeros.usuario === 1 && numeros.venta === 1,
+    `cliente ${numeros.cliente} (id ${cli.id}), usuario ${numeros.usuario} (id ${usr.id}), venta ${numeros.venta} (id ${venta.id})`,
+  );
+
+  const [{ n: disparadores }] = await admin.$queryRawUnsafe(`
+    SELECT count(*)::int AS n FROM pg_trigger
+    WHERE NOT tgisinternal AND tgfoid = 'app_asignar_numero'::regproc`);
+  comprobar('siguen los disparadores que numeran', disparadores === 9, `${disparadores} de 9`);
+
+  // Y los únicos parciales, que son los que dejan que una baja libere su correo
+  // sin que su número vuelva a salir.
+  const [{ n: parciales }] = await admin.$queryRawUnsafe(`
+    SELECT count(*)::int AS n FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+    WHERE i.indpred IS NOT NULL AND c.relname IN
+      ('usuarios_email_key', 'usuarios_persona_id_key', 'comisionistas_persona_id_key')`);
+  comprobar('los únicos de las bajas siguen siendo parciales', parciales === 3, `${parciales} de 3`);
+
   // ── 5. Sin contexto: ni se ve ni se escribe
   const sin = await sinEmpresa(async () => {
     const visibles = await prisma.ventas.count();

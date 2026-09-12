@@ -432,6 +432,8 @@ tienen ninguno.*
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-12 | Revisión de flujos | Cuatro 500 que no daba ninguna prueba: crear una venta con un pasajero nuevo, editar cualquier producto con pasajeros, marcar una venta como revisada y subir el avatar de un cliente. Los cuatro anteriores al multi-tenant o a su margen. Y la suplantación, que no se podía abandonar desde la pantalla. |
+| 2026-09-12 | Números visibles | Cerrado A4 de verdad: el número propio pasa a ponerlo la base en nueve tablas, no solo en ventas. Ver [`docs/designs/numeros-visibles-por-agencia.md`](../../designs/numeros-visibles-por-agencia.md). |
 | 2026-09-12 | T3b + T3c + T3d | Cerrado el hueco que quedó abierto en T3. Lo encontró un síntoma real: una venta de una agencia nueva que se creaba bien y no aparecía en el listado. El fallo de ese día era otro (un `transaccion` sin importar en 15 sitios), pero al mirarlo apareció que la base aceptaba filas cruzadas. |
 | 2026-09-11 | T0 | Cerrada. El bloqueo era una línea del `.env`, no el TypedSQL: con `DIRECT_URL` bueno, la migración de las 42 tablas ya no hay que escribirla a mano. |
 | 2026-09-11 | T9 (correos) | Cerrada la última tarea del spec. El remitente se resuelve solo desde el contexto, así que ningún sitio que mande correo tiene que acordarse. |

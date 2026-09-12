@@ -17,7 +17,10 @@ class UsersService {
     // prohíbe expresamente ("Nunca interpolar valores en SQL"): el escapado
     // artesanal es exactamente lo que se acaba haciendo mal. Con el API de
     // objetos la parametrización es por construcción, no por disciplina.
-    const where = { personas: { deleted_at: null } };
+    // `usuarios.deleted_at` además de la persona: cuando la persona es también
+    // cliente o comisionista sigue viva aunque el usuario se dé de baja, y sin
+    // esta condición el usuario dado de baja reaparecía en el listado.
+    const where = { deleted_at: null, personas: { deleted_at: null } };
 
     if (search) {
       const como = { contains: search, mode: 'insensitive' };
@@ -26,6 +29,8 @@ class UsersService {
         { personas: { apellidos: como } },
         { email: como },
       ];
+      // Y por el número de la agencia, que es el que se ve en la lista.
+      if (/^\d+$/.test(search.trim())) where.OR.push({ numero: parseInt(search.trim(), 10) });
     }
     if (role) where.roles = { nombre: role };
     if (status) where.status = status;
@@ -40,6 +45,7 @@ class UsersService {
         relationLoadStrategy: 'join',
         select: {
           id: true,
+          numero: true,
           email: true,
           status: true,
           ultimo_login: true,
@@ -60,6 +66,7 @@ class UsersService {
 
     const data = filas.map(u => ({
       id: u.id,
+      numero: u.numero,
       name: `${u.personas.nombres} ${u.personas.apellidos}`,
       firstName: u.personas.nombres,
       lastName: u.personas.apellidos,
@@ -94,7 +101,7 @@ class UsersService {
       // `findFirst` con la persona vigente: un usuario dado de baja seguía
       // siendo legible por su id aunque no apareciera en el listado.
       prisma.usuarios.findFirst({
-        where: { id, personas: { deleted_at: null } },
+        where: { id, deleted_at: null, personas: { deleted_at: null } },
         include: {
           personas: { include: { tipos_documento: true } },
           roles: true,
@@ -120,6 +127,7 @@ class UsersService {
       salesCount: resumenVentas._count._all,
       salesTotal: resumenVentas._sum.monto_total || 0,
       id: usuario.id,
+      numero: usuario.numero,
       name: `${usuario.personas.nombres} ${usuario.personas.apellidos}`,
       firstName: usuario.personas.nombres,
       lastName: usuario.personas.apellidos,
@@ -296,6 +304,7 @@ class UsersService {
 
     return {
       id: usuario.id,
+      numero: usuario.numero,
       name: `${usuario.personas.nombres} ${usuario.personas.apellidos}`,
       firstName: usuario.personas.nombres,
       lastName: usuario.personas.apellidos,
@@ -386,6 +395,7 @@ class UsersService {
 
     return {
       id: updated.id,
+      numero: updated.numero,
       name: `${updated.personas.nombres} ${updated.personas.apellidos}`,
       firstName: updated.personas.nombres,
       lastName: updated.personas.apellidos,
@@ -488,11 +498,26 @@ class UsersService {
       };
     }
 
+    // Sin historial tampoco se borra la fila.
+    //
+    // Borrarla reutilizaba el número: entraba otro usuario y volvía a ser el
+    // #0004, y las liquidaciones y los registros de actividad viejos pasaban a
+    // señalar a dos personas distintas. La fila se queda dada de baja; el
+    // correo y el documento quedan libres, porque sus únicos solo se aplican
+    // entre los vivos. Sus `logs_usuarios` tampoco se tiran: eran la traza de
+    // lo que hizo mientras estuvo.
     await prisma.transaccion(async (tx) => {
       await tx.sesiones.deleteMany({ where: { usuario_id: id } });
-      await tx.logs_usuarios.deleteMany({ where: { usuario_id: id } });
-      await tx.usuarios.delete({ where: { id } });
-      if (!personaCompartida) await tx.personas.delete({ where: { id: usuario.persona_id } });
+      await tx.usuarios.update({
+        where: { id },
+        data: { deleted_at: new Date(), status: 'inactive' },
+      });
+      if (!personaCompartida) {
+        await tx.personas.update({
+          where: { id: usuario.persona_id },
+          data: { deleted_at: new Date(), status: 'inactive' },
+        });
+      }
     });
     olvidarUsuario(id);
 

@@ -143,7 +143,7 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
                 {sales.map((sale: any) => (
                   <tr key={sale.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="text-xs font-bold font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg">#{sale.id}</span>
+                      <span className="text-xs font-bold font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg">#{sale.numero ?? sale.id}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 text-gray-500">

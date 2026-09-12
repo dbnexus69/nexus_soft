@@ -48,11 +48,12 @@ class CommissionsService {
           SELECT COUNT(*)::int AS total
           FROM comisionistas c
           JOIN personas p ON c.persona_id = p.id
-          WHERE 1=1 ${whereSql}
+          WHERE c.deleted_at IS NULL ${whereSql}
         `, ...params),
         tx.$queryRawUnsafe(`
           SELECT 
             c.id,
+            c.numero,
             c.tipo as "type",
             c.status,
             -- El acumulado se suma aquí, no en el cliente: c.acumulado es un campo
@@ -77,7 +78,7 @@ class CommissionsService {
           FROM comisionistas c
           JOIN personas p ON c.persona_id = p.id
           LEFT JOIN tipos_documento td ON p.tipo_documento_id = td.id
-          WHERE 1=1 ${whereSql}
+          WHERE c.deleted_at IS NULL ${whereSql}
           ORDER BY c.id DESC
           LIMIT $${params.length + 1} OFFSET $${params.length + 2}
         `, ...params, perPage, skip)
@@ -116,7 +117,7 @@ class CommissionsService {
 
     if (data.docNumber) {
       const existingAgent = await prisma.comisionistas.findFirst({
-        where: { personas: { documento: data.docNumber } },
+        where: { deleted_at: null, personas: { documento: data.docNumber } },
         include: { personas: true }
       });
       if (existingAgent && !existingAgent.personas.deleted_at) {
@@ -195,8 +196,8 @@ class CommissionsService {
   }
 
   async updateAgent(id, data) {
-    const agent = await prisma.comisionistas.findUnique({
-      where: { id },
+    const agent = await prisma.comisionistas.findFirst({
+      where: { id, deleted_at: null },
       include: { personas: { include: { tipos_documento: true } } }
     });
     if (!agent) {
@@ -257,11 +258,16 @@ class CommissionsService {
   }
 
   async deleteAgent(id) {
-    const agent = await prisma.comisionistas.findUnique({ where: { id } });
+    const agent = await prisma.comisionistas.findFirst({ where: { id, deleted_at: null } });
     if (!agent) {
       throw new NotFoundError('Comisionista no encontrado');
     }
-    await prisma.comisionistas.delete({ where: { id } });
+    // Baja, no borrado. Borrar la fila reutilizaba su número, y además dejaba
+    // sin dueño las comisiones ya liquidadas que la nombran.
+    await prisma.comisionistas.update({
+      where: { id },
+      data: { deleted_at: new Date(), status: 'Inactivo' },
+    });
     return { message: 'Comisionista eliminado' };
   }
 

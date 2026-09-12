@@ -37,6 +37,18 @@ export interface DefinicionCatalogo {
   id: string;
   /** Sección de la API. Era un mapa aparte en `api/config.ts`. */
   seccion: string;
+  /**
+   * ¿Es de la agencia, o del sistema?
+   *
+   * Los de la agencia llevan su propio número, que empieza en 1 en cada una.
+   * Los del sistema —aerolíneas, aeropuertos, tipos de documento, equipaje— son
+   * los mismos para todas y no llevan número visible: darles uno por empresa
+   * sería inventarse un dato, porque la misma aerolínea saldría con un número
+   * distinto en cada agencia y dar soporte se volvería un acertijo. Y su `id`
+   * no delata nada, porque es igual para todo el mundo, así que tampoco hay que
+   * esconderlo: simplemente no le sirve a nadie.
+   */
+  propio: boolean;
   etiqueta: string;
   singular: string;
   desc: string;
@@ -133,9 +145,9 @@ const Enlace = ({ url }: { url?: string | null }) => {
  * ocupa poco y no compite con el nombre.
  */
 const COL_ID: ColumnaCatalogo = {
-  clave: 'id', rotulo: '#', orden: 'id', derecha: true,
+  clave: 'numero', rotulo: '#', orden: 'id', derecha: true,
   render: item => (
-    <span className="tabular-nums text-xs text-slate-400 dark:text-slate-500">{item.id}</span>
+    <span className="tabular-nums text-xs text-slate-400 dark:text-slate-500">{item.numero ?? item.id}</span>
   ),
 };
 
@@ -152,7 +164,7 @@ const COL_NOMBRE: ColumnaCatalogo = {
 
 export const CATALOGOS: DefinicionCatalogo[] = [
   {
-    id: 'cards', seccion: 'cards',
+    id: 'cards', propio: true, seccion: 'cards',
     etiqueta: 'Tarjetas', singular: 'Tarjeta',
     desc: 'Tarjetas de crédito y débito de la agencia',
     detalle: [
@@ -181,7 +193,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     ],
   },
   {
-    id: 'paymentMethods', seccion: 'payment-methods',
+    id: 'paymentMethods', propio: true, seccion: 'payment-methods',
     etiqueta: 'Formas de pago', singular: 'Forma de pago',
     desc: 'Cómo se cobra y se paga en el sistema',
     vista: 'fichas',
@@ -191,7 +203,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     columnas: [COL_ID, COL_NOMBRE],
   },
   {
-    id: 'documentTypes', seccion: 'document-types',
+    id: 'documentTypes', propio: false, seccion: 'document-types',
     etiqueta: 'Tipos de documento', singular: 'Tipo de documento',
     desc: 'Documentos de identidad admitidos',
     // Nombre y abreviatura: dos datos cortos, no una tabla.
@@ -202,7 +214,6 @@ export const CATALOGOS: DefinicionCatalogo[] = [
       { rotulo: 'Abreviatura', render: i => <Codigo valor={i.abbreviation} /> },
     ],
     columnas: [
-      COL_ID,
       COL_NOMBRE,
       // La abreviatura NO se mostraba: la cabecera solo tenía '#' y 'Nombre'
       // aunque es un campo obligatorio y único, y es lo que se elige en los
@@ -211,7 +222,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     ],
   },
   {
-    id: 'airlines', seccion: 'airlines',
+    id: 'airlines', propio: false, seccion: 'airlines',
     etiqueta: 'Aerolíneas', singular: 'Aerolínea',
     desc: 'Líneas aéreas del catálogo de vuelos',
     detalle: [
@@ -220,7 +231,6 @@ export const CATALOGOS: DefinicionCatalogo[] = [
       { rotulo: 'Sitio web', ancho: true, render: i => <Enlace url={i.website} /> },
     ],
     columnas: [
-      COL_ID,
       COL_NOMBRE,
       { clave: 'code', rotulo: 'IATA', orden: 'code', render: i => <Codigo valor={i.code} /> },
       { clave: 'type', rotulo: 'Cobertura', orden: 'type', render: i => texto(i.type) },
@@ -228,7 +238,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     ],
   },
   {
-    id: 'suppliers', seccion: 'suppliers',
+    id: 'suppliers', propio: true, seccion: 'suppliers',
     etiqueta: 'Proveedores', singular: 'Proveedor',
     desc: 'Hoteles, operadores y mayoristas',
     detalle: [
@@ -256,7 +266,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     ],
   },
   {
-    id: 'airports', seccion: 'airports',
+    id: 'airports', propio: false, seccion: 'airports',
     etiqueta: 'Aeropuertos', singular: 'Aeropuerto',
     desc: 'Aeropuertos y sus ciudades',
     detalle: [
@@ -268,7 +278,6 @@ export const CATALOGOS: DefinicionCatalogo[] = [
       { rotulo: 'Estado', render: i => <Estado valor={i.status} /> },
     ],
     columnas: [
-      COL_ID,
       COL_NOMBRE,
       { clave: 'abbreviation', rotulo: 'IATA', orden: 'abbreviation', render: i => <Codigo valor={i.abbreviation} /> },
       { clave: 'location', rotulo: 'Ubicación', orden: 'city', render: i => texto(i.location || i.city) },
@@ -277,7 +286,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     ],
   },
   {
-    id: 'baggage', seccion: 'baggage',
+    id: 'baggage', propio: false, seccion: 'baggage',
     etiqueta: 'Equipaje', singular: 'Política de equipaje',
     desc: 'Qué se puede llevar con cada tarifa',
     detalle: [
@@ -290,7 +299,6 @@ export const CATALOGOS: DefinicionCatalogo[] = [
       { rotulo: 'Notas', ancho: true, render: i => texto(i.notes) },
     ],
     columnas: [
-      COL_ID,
       {
         clave: 'airlineName', rotulo: 'Aerolínea', orden: 'airlineName',
         render: i => (
@@ -306,7 +314,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
     ],
   },
   {
-    id: 'packages', seccion: 'packages',
+    id: 'packages', propio: true, seccion: 'packages',
     etiqueta: 'Paquetes', singular: 'Paquete',
     desc: 'Paquetes turísticos armados',
     conDetalle: true,

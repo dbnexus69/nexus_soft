@@ -76,7 +76,7 @@ export const UserTable: React.FC<UserTableProps> = ({
             users.map((user) => (
               <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <TableCell className="py-3 px-4">
-                  <span className="text-xs font-mono font-bold text-slate-400">#{user.id}</span>
+                  <span className="text-xs font-mono font-bold text-slate-400">#{user.numero ?? user.id}</span>
                 </TableCell>
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center gap-3">

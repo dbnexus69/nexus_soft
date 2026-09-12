@@ -311,7 +311,10 @@ class CompaniesService {
       }));
     });
 
-    return { token, empresa: aFicha(empresa), expiraAt: expira, motivo };
+    // El id va en la respuesta además de dentro del token: es lo que hace falta
+    // para volver a salir, y quien entra no debería tener que pedir otra cosa
+    // para poder deshacerlo.
+    return { suplantacionId: id, token, empresa: aFicha(empresa), expiraAt: expira, motivo };
   }
 
   /** Salir. Cierra la sesión suplantada y cierra la fila de auditoría. */

@@ -8,7 +8,7 @@ const SECTION_MAP = {
     buscarEn: ['nombre', 'ultimos_cuatro'],
     usos: [],
     orden: { defecto: 'name', campos: { name: 'nombre', status: 'status', id: 'id' } },
-    transform: (r) => ({ id: r.id, name: r.nombre, paymentMethod: r.metodos_pago?.nombre || null, lastFourDigits: r.ultimos_cuatro, description: r.descripcion, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
+    transform: (r) => ({ id: r.id, numero: r.numero, name: r.nombre, paymentMethod: r.metodos_pago?.nombre || null, lastFourDigits: r.ultimos_cuatro, description: r.descripcion, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
     reverseTransform: async (d) => {
       // Por id si viene, y si no por nombre. Resolver una clave ajena por
       // texto libre se rompe en cuanto alguien renombra el método de pago.
@@ -36,7 +36,7 @@ const SECTION_MAP = {
       { etiqueta: 'servicios de venta', modelo: 'detalle_venta', campo: 'metodo_pago_proveedor_id' },
       { etiqueta: 'tarjetas', modelo: 'tarjetas_agencia', campo: 'metodo_pago_id' },
     ],
-    transform: (r) => ({ id: r.id, name: r.nombre }),
+    transform: (r) => ({ id: r.id, numero: r.numero, name: r.nombre }),
     reverseTransform: async (d) => ({ nombre: d.name || 'Sin nombre' })
   },
   'document-types': {
@@ -76,7 +76,7 @@ const SECTION_MAP = {
       { etiqueta: 'paquetes', modelo: 'paquete_proveedor', campo: 'proveedor_id' },
     ],
     orden: { defecto: 'name', campos: { name: 'nombre', type: 'tipo', id: 'id' } },
-    transform: (r) => ({ id: r.id, name: r.nombre, type: r.tipo, email: r.email_contacto, phone: r.telefono, website: r.web, observations: r.observaciones || '' }),
+    transform: (r) => ({ id: r.id, numero: r.numero, name: r.nombre, type: r.tipo, email: r.email_contacto, phone: r.telefono, website: r.web, observations: r.observaciones || '' }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
       tipo: d.type,
@@ -148,12 +148,13 @@ const SECTION_MAP = {
     // El include completo son 5 relaciones = 6 viajes a la base por consulta;
     // el detalle entero se pide con GET /config/packages/:id al elegir uno.
     listSelect: {
-      id: true, nombre: true, destino: true,
+      id: true, numero: true, nombre: true, destino: true,
       paquete_hotel: { select: { noches: true } },
       paquete_tarifas: { select: { tarifa_adulto: true, tarifa_menor: true } }
     },
     listTransform: (r) => ({
       id: r.id,
+      numero: r.numero,
       name: r.nombre,
       destination: r.destino,
       nights: r.paquete_hotel?.[0]?.noches || null,

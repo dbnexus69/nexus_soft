@@ -55,7 +55,7 @@ export default function SalesTable({
       {currentSales.map((sale) => {
         return (
           <TableRow key={sale.id}>
-            <TableCell>{formatSaleId(sale.id)}</TableCell>
+            <TableCell>{formatSaleId(sale.numero ?? sale.id)}</TableCell>
             <TableCell>
               <div className="flex items-center gap-3">
                 <div className="flex flex-col">

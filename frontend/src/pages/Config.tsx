@@ -374,9 +374,14 @@ export default function Config() {
                         {item.name}
                       </div>
                       <div className="mt-0.5 flex items-center gap-2">
-                        <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
-                          #{item.id}
-                        </span>
+                        {/* Solo los catálogos de la agencia llevan número. Los
+                            del sistema son los mismos para todas, así que su id
+                            no dice nada que le sirva a nadie. */}
+                        {def.propio && (
+                          <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
+                            #{item.numero ?? item.id}
+                          </span>
+                        )}
                         {def.fichaApoyo?.(item)}
                       </div>
                     </div>

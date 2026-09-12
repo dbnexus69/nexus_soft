@@ -11,6 +11,9 @@ import { LuBookCheck } from "react-icons/lu";
 export type UserRole = "superadmin" | "admin" | "asesor" | "freelancer";
 
 export interface User {
+  /** El número que ve la agencia, que empieza en 1 en cada una. El `id` es
+   *  global y sus huecos son las filas de las otras agencias. */
+  numero?: number | null;
   /** La agencia a la que pertenece. El nombre viene resuelto: ver `Client`. */
   empresaId?: number;
   empresaNombre?: string | null;
@@ -150,6 +153,9 @@ export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTe
 }
 
 export interface Client {
+  /** El número que ve la agencia, que empieza en 1 en cada una. El `id` es
+   *  global y sus huecos son las filas de las otras agencias. */
+  numero?: number | null;
   /**
    * La agencia a la que pertenece.
    *
@@ -176,6 +182,9 @@ export interface Client {
 }
 
 export interface Responsable {
+  /** El número que ve la agencia, que empieza en 1 en cada una. El `id` es
+   *  global y sus huecos son las filas de las otras agencias. */
+  numero?: number | null;
   id: number;
   personaId: number;
   firstName: string;

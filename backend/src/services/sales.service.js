@@ -559,22 +559,15 @@ class SalesService {
     const catalogos = await this._precargarCatalogos(body);
 
     const created = await prisma.transaccion(async (tx) => {
-      // 0. El número que verá la agencia.
-      //
-      // El cerrojo es por empresa y muere con la transacción. Sin él, dos ventas
-      // creadas a la vez leerían el mismo máximo y una de las dos se estrellaría
-      // contra el índice único — o peor, si no lo hubiera, compartirían número.
-      // Con él, la segunda espera a que la primera confirme. Dos agencias
-      // vendiendo a la vez no se estorban: el cerrojo lleva su empresa dentro.
-      // En dos sentencias y no en una: `pg_advisory_xact_lock` devuelve `void`,
-      // y Prisma no sabe deserializar esa columna en un `$queryRaw`.
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('ventas.numero'), ${empresaActual()}::int)`;
-      const [{ siguiente }] = await tx.$queryRaw`SELECT COALESCE(MAX(numero), 0) + 1 AS siguiente FROM ventas`;
-
       // 1. Create sale record
+      //
+      // El número que verá la agencia no se pide: lo pone un disparador de la
+      // base (`app_asignar_numero`), igual que en las otras ocho tablas que
+      // enseñan un número. Aquí vivía el cerrojo y el MAX+1, y era el único
+      // sitio del sistema que los tenía; con ocho tablas más habría sido copiar
+      // ese bloque ocho veces y confiar en que la novena se acordara.
       const venta = await tx.ventas.create({
         data: {
-          numero: Number(siguiente),
           cliente_id: Number(clientId),
           usuario_id: Number(asesorId),
           monto_total: Number(total) || 0,
@@ -619,9 +612,16 @@ class SalesService {
         //
         // Sin documento no hay con qué identificar a la persona, así que ahí no
         // queda más que crear.
+        //
+        // La clave del upsert es `(empresa_id, documento)`, no el documento
+        // suelto: desde que cada agencia puede tener a la misma persona, el
+        // único dejó de ser global y Prisma rechaza la forma antigua. Rechazaba
+        // la petición entera, así que crear una venta con un pasajero que no
+        // estuviera ya en la agencia daba 500 — lo primero que le pasa a una
+        // agencia recién abierta, donde todos los pasajeros son nuevos.
         const created = doc
           ? await tx.personas.upsert({
-              where: { documento: doc },
+              where: { empresa_id_documento: { empresa_id: empresaActual(), documento: doc } },
               update: {},
               create: { nombres, apellidos, documento: doc, tipo_documento_id: null },
               select: { id: true },
@@ -1969,11 +1969,16 @@ class SalesService {
     const sale = await prisma.ventas.findFirst({ where: { id: saleId, deleted_at: null } });
     if (!sale) throw new NotFoundError('Venta no encontrada');
     if (sale.status !== 'pagado') throw new BadRequestError('La venta debe estar pagada para ser revisada');
-    if (sale.isReviewed) throw new BadRequestError('Esta venta ya fue revisada y no se puede modificar su estado');
+    // `is_reviewed`, que es como se llama la columna. Con `isReviewed` esta
+    // guarda nunca saltaba —leía siempre undefined— y el update de abajo
+    // rechazaba la petición entera: marcar una venta como revisada daba 500 sin
+    // excepción. `check:prisma` no lo vio porque su regex pide `nombre:` y esto
+    // iba abreviado.
+    if (sale.is_reviewed) throw new BadRequestError('Esta venta ya fue revisada y no se puede modificar su estado');
 
     const updatedSale = await prisma.ventas.update({
       where: { id: saleId },
-      data: { isReviewed }
+      data: { is_reviewed: isReviewed }
     });
 
     return updatedSale;

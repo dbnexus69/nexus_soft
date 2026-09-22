@@ -16,7 +16,9 @@ configuración). Two packages, no shared workspace tooling beyond pnpm:
 # backend (from backend/)
 pnpm dev                    # node --watch src/index.js, http://localhost:3000
 pnpm db:generate            # prisma generate --sql — required after any schema.prisma change
-pnpm db:push                # prisma db push
+pnpm db:push                # prisma db push — see the migrations note below before using it
+pnpm db:seed                # node prisma/seed.js
+pnpm db:reset               # db push --force-reset + seed — DESTRUCTIVE, and see note below
 pnpm db:studio
 pnpm check:prisma           # validates every prisma.<model>.<method>({...}) call against the
                              # DMMF (catches camelCase vs snake_case field mistakes); exits 1 on
@@ -34,6 +36,12 @@ pnpm build                  # tsc && vite build — tsc is the real type-check s
 
 There is no lint script and no unit-test framework in either package — `check:prisma` and
 `test:aislamiento` are the only backend guards, and `tsc` (via `build`) is the frontend one.
+
+**Migrations hold things `schema.prisma` can't express.** `backend/prisma/migrations/` contains
+hand-written SQL for the RLS policies, the `app.empresa_id` context functions, the
+`empresa_id` column defaults, and the per-agency `numero` triggers. `db push` / `db:reset` build
+the DB from `schema.prisma` alone and don't run that SQL. Prefer `npx prisma migrate dev` for schema
+changes so the tenancy machinery stays versioned alongside them.
 
 ### Environment
 
@@ -76,9 +84,17 @@ design record: `docs/decisions/multi-tenant-agencias-independientes.md`.
 - A superadmin user has `empresa_id = null`; entering an agency for support ("suplantación") is a
   logged, time-boxed action (`suplantaciones` table), not a standing permission — RLS policies make
   no exception for the superadmin role itself.
-- When adding a new tenant-owned table, it needs its own RLS policy and its `empresa_id` **denormalized**
-  (not just inferable via a parent join) — the alternative turns every listing query into a
-  per-row subquery.
+- `empresa_id` is also never set in a `create`: every tenant column defaults to
+  `current_setting('app.empresa_id')` at the DB level, and is `NOT NULL`, so an insert outside a
+  tenant context fails loudly.
+- When adding a new tenant-owned table, it needs its own RLS policy, that column default, and its
+  `empresa_id` **denormalized** (not just inferable via a parent join) — the alternative turns every
+  listing query into a per-row subquery.
+- User-visible numbers are the per-agency `numero` column (unique per `empresa_id`, assigned by
+  a `BEFORE INSERT` trigger `app_asignar_numero()` as `MAX+1`), never the global `id` — the `id`
+  leaks how many rows other agencies have. Code never computes `numero`. Numbered tables
+  soft-delete via `deleted_at` so numbers aren't reused. See
+  `docs/designs/numeros-visibles-por-agencia.md`.
 
 ### Permissions: role-based, DB-backed, three places to touch
 

@@ -33,9 +33,14 @@ export async function logout() {
   await api.post('/auth/logout');
 }
 
-export async function getMe() {
+/**
+ * El usuario de la sesión en curso. Devuelve lo mismo que `login`: es la fuente
+ * tras una recarga de página, así que cualquier campo que falte aquí y esté allí
+ * desaparece sin que nadie se entere.
+ */
+export async function getMe(): Promise<LoginResponse['user']> {
   const res = await api.get('/auth/me');
-  return res.data.data;
+  return res.data.data as LoginResponse['user'];
 }
 
 export async function forgotPassword(email: string) {

@@ -4,7 +4,6 @@ import { DataProvider } from './context/DataContext';
 import { ClientsProvider } from './context/ClientsContext';
 import { UsersProvider } from './context/UsersContext';
 import { SalesProvider } from './context/SalesContext';
-import { ConfigProvider } from './context/ConfigContext';
 import { CommissionsProvider } from './context/CommissionsContext';
 import { PermissionsProvider } from './context/PermissionsContext';
 import { Layout } from './components/layout/Layout';
@@ -89,13 +88,11 @@ export default function App() {
             <UsersProvider>
               <ClientsProvider>
                 <SalesProvider>
-                  <ConfigProvider>
-                    <CommissionsProvider>
-                      <DataProvider>
-                        <AppRoutes />
-                      </DataProvider>
-                    </CommissionsProvider>
-                  </ConfigProvider>
+                  <CommissionsProvider>
+                    <DataProvider>
+                      <AppRoutes />
+                    </DataProvider>
+                  </CommissionsProvider>
                 </SalesProvider>
               </ClientsProvider>
             </UsersProvider>

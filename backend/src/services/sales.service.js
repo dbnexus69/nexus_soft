@@ -895,7 +895,7 @@ class SalesService {
         await tx.prod_migracion.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
-            tipo_tramite_migratorio: m.tramiteType || null, nacionalidad: m.nationality || null,
+            tipo_tramite_migratorio: m.requestedDocType || null, nacionalidad: m.nationality || null,
             tipo_documento: m.docType || 'Pasaporte', pasaporte_nro: m.docNumber || null,
             pasaporte_vence: m.passportExpiry ? new Date(m.passportExpiry) : null,
             pais_destino: m.destinationCountry || null,
@@ -928,7 +928,7 @@ class SalesService {
         await tx.prod_autos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
-            conductor_nombre: c.driverName || null, licencia_nro: c.licenseNumber || null,
+            conductor_nombre: c.mainDriver || null, licencia_nro: c.licenseNumber || null,
             fecha_recogida: c.pickupDate ? new Date(c.pickupDate) : null,
             fecha_devolucion: c.returnDate ? new Date(c.returnDate) : null,
             lugar_recogida: c.pickupLocation || null, categoria_auto: c.vehicleCategory || null,
@@ -948,7 +948,7 @@ class SalesService {
             id: uuidv4(), detalle_venta_id: detalleId,
             nombre_finca: f.fincaName || null, ciudad_pueblo: f.city || null,
             direccion_finca: f.address || null,
-            responsable_nombre: f.responsible || null,
+            responsable_nombre: f.responsibleName || null,
             documento_responsable: f.docNumber || null,
             fecha_entrada: f.checkInDate ? new Date(f.checkInDate) : null,
             fecha_salida: f.checkOutDate ? new Date(f.checkOutDate) : null,
@@ -999,7 +999,9 @@ class SalesService {
             fechaInicio: c.startDate ? new Date(c.startDate) : null,
             fechaFin: c.endDate ? new Date(c.endDate) : null,
             asistencia_estimada: Number(c.estimatedAttendance || 0),
-            espacio_requerido: c.spaceRequired || null, tipo_evento: c.eventType || null,
+            espacio_requerido: c.requiredSpace || null, tipo_evento: c.eventType || null,
+            equipos_av: c.avEquipment?.join(', ') || null,
+            requiere_catering: c.hasCatering || false,
             notas_catering: c.cateringNotes || null,
             nombre_lugar: c.venueName || null, ciudad: c.city || null, direccion: c.address || null,
           }
@@ -1016,10 +1018,10 @@ class SalesService {
             id: uuidv4(), detalle_venta_id: detalleId,
             nombre_reserva: r.reservationName || null,
             fecha_hora_reserva: r.dateTime ? new Date(r.dateTime) : null,
-            personas_count: Number(r.personsCount || 1),
+            personas_count: Number(r.peopleCount || 1),
             preferencia_mesa: r.tablePreference || null,
             tipo_menu: r.menuType || null,
-            restricciones_dieta: r.dietRestrictions || null,
+            restricciones_dieta: r.dietaryRestrictions?.join(', ') || null,
             ocasion_especial: r.specialOccasion || null,
             telefono_contacto: r.phone || null,
           }

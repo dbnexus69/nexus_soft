@@ -103,6 +103,12 @@ async function auth(req, res, next) {
         nombre: `${usuario.personas.nombres} ${usuario.personas.apellidos}`,
         avatar_url: usuario.personas.avatar_url,
         role: usuario.roles.nombre,
+        // La empresa a la que PERTENECE el usuario, que no es la que se está
+        // visitando al suplantar. Se guarda para poder invalidar la caché de una
+        // agencia entera: suspenderla borra sus filas de `sesiones`, pero sin
+        // esto no había forma de tirar las entradas ya cacheadas y quien
+        // estuviera dentro seguía trabajando hasta que expirasen.
+        empresa_id: usuario.empresa_id,
         permisos_rol: usuario.roles.permisos_rol.map(pr => ({
           modulo: pr.permisos.modulo,
           accion: pr.permisos.accion,

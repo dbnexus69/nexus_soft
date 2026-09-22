@@ -7,7 +7,7 @@ const path = require('path');
 const { CARPETA_LOGOS } = require('../middleware/uploadLogo');
 const prisma = require('../config/db');
 const { conEmpresa, empresaActual } = require('../config/tenant');
-const { olvidarToken } = require('../middleware/authCache');
+const { olvidarToken, olvidarEmpresa } = require('../middleware/authCache');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { ROLE_DEFAULT_PERMISSIONS, ADMIN_PERMISSIONS } = require('../middleware/authorize');
@@ -233,6 +233,11 @@ class CompaniesService {
     // suspendería nada.
     if (data.estado === 'suspendida') {
       await conEmpresa(empresa.id, () => prisma.sesiones.deleteMany({}));
+      // Borrar la fila no basta: el middleware solo vuelve a mirarla cuando la
+      // entrada de caché expira, así que sin esto la suspensión tardaba hasta
+      // cinco minutos en notarse. Es el mismo detalle que cuidan `logout` y la
+      // salida de una suplantación.
+      olvidarEmpresa(empresa.id);
     }
     return this.getById(empresa.id);
   }

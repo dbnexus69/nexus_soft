@@ -50,9 +50,27 @@ function olvidarUsuario(usuarioId) {
   }
 }
 
+/**
+ * Al suspender una agencia: todas las sesiones de su gente.
+ *
+ * Suspender borra las filas de `sesiones` de la empresa, pero eso solo se mira
+ * cuando la entrada de caché ha expirado, así que sin esto quien ya estuviera
+ * dentro seguía trabajando hasta cinco minutos más y suspender no suspendía.
+ *
+ * Compara contra la empresa del USUARIO, no contra la que esté visitando. Así
+ * un superadministrador que esté suplantando la agencia suspendida no se cae de
+ * ella: su entrada lleva su propia empresa, y dar soporte a una agencia
+ * suspendida es justamente cuando hace falta.
+ */
+function olvidarEmpresa(empresaId) {
+  for (const [hash, entrada] of AUTH_CACHE) {
+    if (entrada.user?.empresa_id === empresaId) AUTH_CACHE.delete(hash);
+  }
+}
+
 /** Al cambiar los permisos de un rol, que afectan a todo el mundo. */
 function olvidarTodo() {
   AUTH_CACHE.clear();
 }
 
-module.exports = { AUTH_CACHE, CACHE_TTL_MS, leer, recordar, olvidarToken, olvidarUsuario, olvidarTodo };
+module.exports = { AUTH_CACHE, CACHE_TTL_MS, leer, recordar, olvidarToken, olvidarUsuario, olvidarEmpresa, olvidarTodo };

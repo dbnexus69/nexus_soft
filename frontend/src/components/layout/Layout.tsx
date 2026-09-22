@@ -3,15 +3,22 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { stopImpersonation } from '../../api';
 
 export function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { user, marca } = useAuth();
+  const { error } = useToast();
   const [isStopping, setIsStopping] = useState(false);
 
   const salirSuplantacion = async () => {
-    if (user?.suplantacionId && user.empresaId) {
+    // Solo se exige `suplantacionId`, que es lo que de verdad hace falta para
+    // salir. Pedir además `empresaId` convertía el botón en un adorno: el campo
+    // no venía en la respuesta de `me`, la condición era falsa y el manejador se
+    // iba sin pedir nada ni avisar. Si algo faltara ahora, la petición sale, el
+    // backend responde y el fallo se ve.
+    if (user?.suplantacionId) {
       setIsStopping(true);
       try {
         await stopImpersonation(user.empresaId, user.suplantacionId);
@@ -29,8 +36,11 @@ export function Layout() {
           localStorage.removeItem('nexus_session_expiry');
           window.location.href = '/login';
         }
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        // Un fallo aquí deja al superadministrador atrapado dentro de la agencia,
+        // así que tiene que verse. Antes solo iba a la consola: desde la pantalla,
+        // salir y que fallara eran indistinguibles.
+        error(e.response?.data?.error?.message || 'No se pudo salir de la suplantación');
         setIsStopping(false);
       }
     }

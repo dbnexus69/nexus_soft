@@ -27,9 +27,9 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { FormField, Input, Select } from '../components/ui/Form';
 import { Table, TableRow, TableCell } from '../components/ui/Table';
-import { useConfigContext } from '../context/ConfigContext';
+import { useData } from '../context/DataContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { ConfigData } from '../hooks/useConfig';
+import { ConfigData } from '../types';
 import ConfigForms from '../components/config/ConfigForms';
 
 import { getConfigSection, updateConfigItem, createConfigItem as addConfigItem, deleteConfigItem } from '../api/config';
@@ -57,7 +57,14 @@ const isOptimisticId = (item: any): boolean => {
 };
 
 export default function Config() {
-  const { config, loading, addConfigItem: addContextItem, updateConfigItem: updateContextItem, deleteConfigItem: deleteContextItem, fetchConfig } = useConfigContext();
+  // Antes leía de ConfigContext, una copia del catálogo completamente aparte de
+  // la de DataContext —que es la que alimenta los selectores del asistente de
+  // venta—. Dar de alta una aerolínea aquí actualizaba esa copia y la del
+  // wizard se quedaba con la de antes hasta el siguiente login. Es el mismo bug
+  // que ya se corrigió para ventas (ver docs/designs/retirar-rama-sales-datacontext.md),
+  // sin aplicar todavía a config.
+  const { data, addConfigItem: addContextItem, updateConfigItem: updateContextItem, deleteConfigItem: deleteContextItem, fetchConfig } = useData();
+  const config = data.config;
   const [currentSection, setCurrentSection] = useState<SectionId>('cards');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);

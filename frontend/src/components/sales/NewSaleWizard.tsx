@@ -84,7 +84,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   const { handleCreateSale } = useSalesContext();
   const { user } = useAuth();
 
-  const draftKey = `nexus_new_sale_draft_${user?.id || 'unknown'}`;
+  // La empresa entra en la clave, no solo el usuario: al suplantar, el
+  // superadministrador conserva su userId, así que un borrador a medias con el
+  // cliente, los pasajeros y los importes de una agencia se rehidrataba dentro
+  // de la siguiente y podía enviarse a la equivocada. Es lo mismo que ya cuidan
+  // los cachés de `utils/*Cache.ts`.
+  const draftKey = `nexus_new_sale_draft_${user?.empresaId || 'sin-empresa'}_${user?.id || 'unknown'}`;
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<WizardFormData>(() => {

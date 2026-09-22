@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { login as apiLogin, logout as apiLogout, getMe, getBranding } from '../api';
 import { aplicarMarca, type Marca } from '../utils/marca';
+import { invalidateClientsCache } from '../utils/clientsCache';
+import { invalidateUsersCache } from '../utils/usersCache';
+import { invalidateConfigCache } from '../utils/configCache';
+import { invalidateDashboardCache } from '../utils/dashboardCache';
 import type { LoginResponse } from '../api/auth';
 
 interface AuthContextType {
@@ -48,9 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await apiLogin(email, password, remember);
 
-      // Limpiar caché vieja antes de guardar el nuevo token
-      localStorage.removeItem('nexus_dashboard_cache');
-
       setUser(data.user);
       getBranding().then(ponerMarca).catch(() => {});
 
@@ -70,10 +71,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fuera la marca: la pantalla de entrada es común, y dejarla puesta haría
     // que quien sale de una agencia viera sus colores al ir a entrar en otra.
     ponerMarca(null);
+    // Los cachés, ANTES de borrar el token: cada uno compone su clave con la
+    // empresa y el usuario que lee del token, así que sin él borrarían la clave
+    // anónima y dejarían intactos los datos de la agencia.
+    invalidateClientsCache();
+    invalidateUsersCache();
+    invalidateConfigCache();
+    invalidateDashboardCache();
     localStorage.removeItem('nexus_token');
     localStorage.removeItem('nexus_user');
     localStorage.removeItem('nexus_session_expiry');
     localStorage.removeItem('nexus_remember');
+    // El token del superadministrador guardado al suplantar. Es un token válido
+    // por su cuenta: dejarlo aquí significa que cerrar sesión dentro de una
+    // agencia deja en el navegador una sesión de superadministrador lista para
+    // restaurarse a mano.
+    localStorage.removeItem('nexus_original_token');
   };
 
   return (

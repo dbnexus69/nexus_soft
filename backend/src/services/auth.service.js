@@ -325,6 +325,18 @@ class AuthService {
       }
     };
   }
+
+  /**
+   * La agencia en la que se está trabajando.
+   *
+   * Se lee aparte de `me` porque no son la misma empresa al suplantar: la ficha
+   * del usuario vive en su empresa de origen y esta es la visitada. Quien llama
+   * la invoca en el contexto de la petición, que ya es el de la empresa activa.
+   */
+  async empresaActiva(empresaId) {
+    if (empresaId == null) return null;
+    return prisma.empresas.findFirst({ where: { id: empresaId }, select: { slug: true } });
+  }
 }
 
 module.exports = new AuthService();

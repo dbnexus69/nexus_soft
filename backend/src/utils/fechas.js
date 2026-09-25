@@ -61,4 +61,21 @@ function enHoraColombia(fecha, hora) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-module.exports = { enHoraColombia, OFFSET_COLOMBIA_H };
+/**
+ * El día de calendario de un instante, en Colombia: 'YYYY-MM-DD'.
+ *
+ * La mitad de lectura de `enHoraColombia`. Formatear con `getDate()` usa la
+ * zona del proceso: una liquidación del 25 guardada como medianoche UTC salía
+ * el 24 en un servidor en Bogotá. `en-CA` da el formato ISO sin montarlo a mano.
+ *
+ * @param {Date|null} instante
+ * @returns {string|null}
+ */
+function fechaEnColombia(instante) {
+  if (!instante || isNaN(new Date(instante).getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(instante));
+}
+
+module.exports = { enHoraColombia, fechaEnColombia, OFFSET_COLOMBIA_H };

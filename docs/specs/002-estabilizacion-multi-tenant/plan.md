@@ -64,7 +64,11 @@ decisión que ya se tomó para la lista de ventas, aplicada aquí.
 | `GET /auth/me` | Añade `empresaId` y `empresaSlug`. Ningún campo se quita. |
 | Rutas con subida (`PUT /users/:id/avatar`, `PUT /clients/:id/avatar`, `POST /sales/:saleId/products/:category/:productId/voucher`, `PUT /flights/:id/checkin`, `PUT /companies/:id/logo`) | Mismo contrato; ahora funcionan con la RLS activa. |
 
-Ningún endpoint nuevo ni retirado.
+| `PUT` y `PATCH /sales/:saleId/products/:categoria/:productId` | **Retirados** (T8). Ninguna pantalla editaba productos, y el `PUT` de un tiquete ignoraba sus tramos. Responden 404. |
+| Cualquier ruta inexistente bajo `/api` | 404 en el formato de la API (`ROUTE_NOT_FOUND`), no la página HTML de Express. |
+| `POST /commissions/settlements` | El monto lo calcula el servidor (`amount` opcional; si llega y no coincide, 409). Errores con código propio. |
+
+Ningún endpoint nuevo.
 
 ## Entorno
 

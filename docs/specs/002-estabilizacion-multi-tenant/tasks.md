@@ -275,34 +275,53 @@ $55.000 a $65.000; confirmar otra vez liquida y la liquidación aparece en el hi
 detrás las ventas pendientes, confirmar da el 400 "no tiene comisiones pendientes", el monto pasa a
 $0 y el botón queda deshabilitado. `tsc` limpio y el verificador por la API sigue en verde.
 
-*Anotado sin arreglar:*
-- Editar o borrar un producto por la API puede dejar el total por debajo de lo ya pagado. Ninguna
-  pantalla lo permite (ver T8), así que hoy solo es alcanzable con una llamada directa.
-- **La fecha de una liquidación sale un día antes.** Se elige el 25 y el historial dice el 24:
-  `new Date('2026-09-25')` es medianoche UTC y `listSettlements` la formatea con la hora local del
-  servidor (UTC-5).
-- `DataContext` sigue cargando `commissionSettlements` con `fetchAllPages` al iniciar sesión, y ya
-  no la lee nadie: una petición de más, y una copia que puede volver a usarse por error.
+*Resuelto después (2026-09-25):*
+- **La fecha de una liquidación salía un día antes.** Se elegía el 25 y el historial decía el 24:
+  `new Date('2026-09-25')` es medianoche UTC y se formateaba con la hora del servidor (UTC-5). Ahora se
+  guarda como día de Colombia (`enHoraColombia`) y se lee con `fechaEnColombia`, nuevo en
+  `utils/fechas.js`; los filtros `dateFrom`/`dateTo` cubren el día entero de Colombia. Comprobado por la
+  API con el servidor en hora de Bogotá y en UTC (el 25 se guarda, se lee y se filtra como el 25, y
+  el 24 y el 26 no lo encuentran) y en pantalla.
+- `DataContext` tenía `commissionSettlements`, `fetchSettlements` y `refreshSettlements`, que nadie
+  llamaba (no se descargaban al iniciar sesión, como se anotó antes: era código muerto). Retirados,
+  junto con el campo de `AppData`.
+- Editar un producto ya no es posible (T8). Borrarlo sí: ver la nota de T8.
 
-## T8 · Los tramos de un tiquete no se pueden editar `[ ]` — a replantear
+## T8 · Los tramos de un tiquete no se pueden editar `[x]` — cerrada retirando la edición
 
-El `update` de `products.controller.js` nunca lee `legs` ni escribe en `tramos_vuelo`: un `PUT` con
-tramos modificados los ignora sin error. Al implementarlo hay que conservar `checkin_status` de cada
-tramo, que hoy está protegido (la edición no lo toca). **Comprobación de cierre:** B13.
+El `update` de `products.controller.js` nunca leía `legs` ni escribía en `tramos_vuelo`: un `PUT` con
+tramos modificados los ignoraba sin error.
 
-**Replanteo (2026-09-25):** en la aplicación **no se editan los productos de una venta**. `updateProduct`
-existe en `api/sales.ts` pero ninguna pantalla lo usa, así que este fallo solo se alcanza por la API.
-Hay que decidir si el `PUT`/`DELETE` de productos se retira o se mantiene como API sin pantalla (y
-entonces se arregla). Lo que la pantalla llama "editar" una venta es **gestionar sus abonos**, y está
-mal nombrado en el código: `SaleEditModal.tsx` (título "Gestión de Abonos y Pagos", con props
-`editingSale`, `onUpdateSale`, `onAddSale`), `onEdit`/`canEditThis` en `SalesTable.tsx` (el botón dice
-"Actualizar abonos") y `handleOpenModal`/`editingSale` en `Sales.tsx`.
+**Decisión (2026-09-25): los productos de una venta no se editan.** Ninguna pantalla lo hacía:
+`updateProduct` estaba en `api/sales.ts` desde el primer commit (`94385ba`) y nada lo llamaba, ni con
+`PUT` ni con `PATCH`. El check-in de vuelos no pasa por aquí: usa `PUT /flights/:id/checkin`, con su
+propio servicio (el `productsController.updateCheckin` que se retira es el de la *categoría* de
+producto "checkin", sin uso). En vez de arreglar un camino que nadie usa, se retira:
+
+- Los 15 `PUT /sales/:saleId/products/<categoría>/:productId` y el `PATCH` genérico, con el manejador
+  `update`, `ACTUALIZADORES` y `patchProducto`. `updateProduct` sale del frontend.
+- Cualquier ruta inexistente bajo `/api` responde 404 en el formato de la API (`ROUTE_NOT_FOUND`); antes
+  era la página HTML de Express ("Cannot PUT …").
+- Lo que la pantalla llamaba "editar" una venta es gestionar sus abonos: `SaleEditModal` pasa a
+  `SalePaymentsModal` (prop `sale`, sin las props `user` ni `onAddSale`, que no se usaban),
+  `onEdit`/`canEditThis` a `onManagePayments`/`canManagePayments` y el botón dice "Gestionar abonos".
+  Conserva `onUpdateSale` porque ahí también se cambia la fecha de vencimiento del crédito.
+
+**Comprobado** con el servidor real y una agencia de prueba montada y desmontada: `PUT` y `PATCH` de
+un producto responden 404 `ROUTE_NOT_FOUND` y el producto queda intacto · añadir un producto sigue
+(201, el total pasa de 1000 a 1500) y borrarlo también (204). En pantalla, "Gestionar abonos" abre
+`SalePaymentsModal`. `tsc` y `check:prisma` limpios. **B13 cumplido, por retirada.**
+
+*Anotado:* `createProduct` y `deleteProduct` tampoco los usa ninguna pantalla: añadir y quitar
+productos de una venta ya creada también es solo API. Borrar un producto puede dejar el total por
+debajo de lo ya pagado. Si tampoco se van a usar, merecen la misma decisión.
 
 ## T9 · El producto y la venta no se validan entre sí `[ ]`
 
-`delete` comprueba que la línea pertenezca a la venta de la URL; `update` y `uploadVoucher` no. Con
-la RLS activa no es explotable entre agencias (verificado en T3: 404), pero dentro de una agencia se
-puede operar sobre un producto de otra venta pasando el `saleId` propio. Igualar los tres.
+`delete` comprueba que la línea pertenezca a la venta de la URL; `uploadVoucher` no (`update` ya no
+existe, T8). Con la RLS activa no es explotable entre agencias (verificado en T3: 404), pero dentro de
+una agencia se puede subir el voucher de un producto de otra venta pasando el `saleId` propio.
+Igualarlo con `delete`.
 
 ## T10 · La aplicación no debe poder escribir el historial de migraciones `[ ]`
 
@@ -351,6 +370,7 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T8 | Cerrada retirando la edición de productos: el `PUT` y el `PATCH` no los usaba ninguna pantalla. Las rutas que no existen responden 404 en JSON. El modal de "editar venta" pasa a `SalePaymentsModal`. La fecha de las liquidaciones deja de salir un día antes, y `DataContext` pierde su copia muerta de liquidaciones. |
 | 2026-09-25 | T7 (mensajes) | Ningún error de comisionistas llegaba a la pantalla. Los rechazos de liquidar llevan código y un mensaje claro, se enseñan en el modal y el historial deja de leer una copia que no se refrescaba. Probado en pantalla. T8 queda a replantear: los productos no se editan desde ninguna pantalla. |
 | 2026-09-25 | T7 | Cerrada, 27 comprobaciones por la API sin fallos. Tope y cerrojo en los cobros, comisiones sin anuladas ni borradas, liquidación decidida por el servidor. De paso: liquidar no marcaba ninguna venta, y el acumulado se podía pagar dos veces. |
 | 2026-09-25 | Entorno | **La contraseña de `app_nexus` se restableció otra vez** (desde `feat-bayrol`, con el hash SCRAM generado en local: la contraseña no pasó por el MCP). La del 2026-09-24 deja de valer: el `.env` de `feat-dbmoon` y el hosting, si ya la usan, necesitan la nueva. |

@@ -875,7 +875,6 @@ export interface AppData {
   // Las ventas no viven aquí: su listado, filtros y paginación están en
   // SalesContext, y los detalles se piden filtrados por cliente o asesor.
   commissionAgents: CommissionAgent[];
-  commissionSettlements: CommissionSettlement[];
   config: ConfigData;
   salesHistory: MonthlySale[];
 }

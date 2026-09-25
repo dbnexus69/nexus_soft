@@ -50,7 +50,7 @@ Los de la 001 (A1–A12) siguen vigentes. Estos se añaden, y la columna dice si
 | B10 | El asistente de venta guarda todos los campos que se rellenan | Crear una venta con cada categoría y leer el detalle | 5 categorías corregidas, sin prueba automática |
 | B11 | La pantalla de gestión interna y el asistente de venta leen los mismos catálogos | Crear una aerolínea y verla en el selector del tiquete sin recargar | hecho, falta confirmar en pantalla |
 | B12 | El dinero de una venta es coherente | Sin sobrepago; dos abonos simultáneos no superan el total; anular libera la comisión | cumplido |
-| B13 | Los tramos de un tiquete se pueden editar | `PUT` de producto con `legs` modificados cambia `tramos_vuelo` | pendiente |
+| B13 | Ningún camino edita un producto a medias (los tramos de un tiquete se ignoraban) | Los productos no se editan: `PUT` y `PATCH` de producto responden 404 `ROUTE_NOT_FOUND` y el producto queda intacto | cumplido (se retiró la edición) |
 | B14 | La aplicación no puede escribir el historial de migraciones | `app_nexus` sin `INSERT`/`UPDATE`/`DELETE` sobre `_prisma_migrations` | pendiente |
 
 ## Fuera de alcance

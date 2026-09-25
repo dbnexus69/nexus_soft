@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
-import { AppData, User, Client, Sale, Flight, Responsable, CommissionAgent, CommissionSettlement, RolePermissions, ADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
+import { AppData, User, Client, Sale, Flight, Responsable, CommissionAgent, RolePermissions, ADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
 import * as api from '../api';
 import { fetchAllPages } from '../api/fetchAll';
 import { useAuth } from './AuthContext';
@@ -65,7 +65,6 @@ interface DataContextType {
   /** Se incrementa cuando alguien pide refrescar los vuelos. */
   flightsRefreshToken: number;
   fetchCommissionAgents: () => Promise<void>;
-  fetchSettlements: () => Promise<void>;
   refreshData: () => void;
   addUser: (user: Omit<User, 'id'>) => Promise<User>;
   updateUser: (id: number, user: Partial<User>) => Promise<void>;
@@ -77,7 +76,6 @@ interface DataContextType {
   updateResponsable: (id: number, responsable: any) => Promise<void>;
   deleteResponsable: (id: number) => Promise<void>;
   updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<any>;
-  refreshSettlements: () => Promise<void>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;
@@ -89,7 +87,7 @@ interface DataContextType {
 
 const emptyData: AppData = {
   users: [], clients: [], responsables: [],
-  commissionAgents: [], commissionSettlements: [],
+  commissionAgents: [],
   config: {
     cards: [], paymentMethods: [], documentTypes: [],
     airlines: [], suppliers: [], airports: [],
@@ -282,16 +280,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const fetchSettlements = useCallback(async () => {
-    try {
-      const res = await fetchAllPages<CommissionSettlement>(api.listSettlements, { sortOrder: 'desc' });
-      if (res && res.data) {
-        setData(prev => ({ ...prev, commissionSettlements: res.data }));
-      }
-    } catch (err) {
-      console.error('[DataContext] Error fetching settlements:', err);
-    }
-  }, []);
+  // Las liquidaciones no viven aquí: las lleva `useCommissions` (paginadas y
+  // refrescadas al liquidar). Aquí había una segunda copia que nadie refrescaba
+  // y que el historial leía, así que una liquidación recién hecha no aparecía.
 
   useEffect(() => {
     if (!user) {
@@ -441,11 +432,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
 
-  const refreshSettlements = async () => {
-    const res = await fetchAllPages<CommissionSettlement>(api.listSettlements).catch(() => ({ data: [] as any[] }));
-    setData(prev => ({ ...prev, commissionSettlements: res.data || [] }));
-  };
-
   const addConfigItem = async (section: ConfigSection, item: Record<string, unknown>): Promise<Record<string, unknown>> => {
     const list = (data.config as any)[section] || [];
     const maxId = list.reduce((max: number, i: any) => {
@@ -594,7 +580,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       flightsRefreshToken,
       fetchResponsables,
       fetchCommissionAgents,
-      fetchSettlements,
       refreshData,
       addUser,
       updateUser,
@@ -605,7 +590,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addResponsable,
       updateResponsable,
       deleteResponsable,
-      refreshSettlements,
       updateFlight,
       addConfigItem,
       updateConfigItem,

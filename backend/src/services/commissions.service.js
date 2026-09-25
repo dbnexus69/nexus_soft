@@ -3,6 +3,7 @@ const { NotFoundError, BadRequestError, ConflictError } = require('../errors/App
 const { buildMeta } = require('../utils/paginationHelper');
 const { formatName } = require('../utils/stringUtils');
 const { aCentimos } = require('./saleTotals');
+const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
 
 /**
  * Qué ventas deben comisión todavía. Una sola definición: la usan el acumulado
@@ -317,8 +318,10 @@ class CommissionsService {
       filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
     };
     if (agentId) push('lc.comisionista_id = ?', parseInt(agentId));
-    if (dateFrom) push('lc.fecha >= ?', new Date(dateFrom));
-    if (dateTo) push('lc.fecha <= ?', new Date(dateTo));
+    // Días de Colombia, como se guardan: desde la medianoche de `dateFrom` hasta
+    // antes de la medianoche siguiente a `dateTo`, para que el último día entre.
+    if (dateFrom) push('lc.fecha >= ?', enHoraColombia(dateFrom));
+    if (dateTo) push('lc.fecha < ?', new Date(enHoraColombia(dateTo).getTime() + 24 * 3600 * 1000));
     const whereLiq = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
     const [totalLiqRows, settlementsRaw] = await prisma.transaccion(async (tx) => {
@@ -355,8 +358,7 @@ class CommissionsService {
     });
 
     const data = settlementsRaw.map(s => {
-      const d = s.date;
-      const dateStr = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : null;
+      const dateStr = fechaEnColombia(s.date);
 
       return {
         id: s.id,
@@ -478,7 +480,9 @@ class CommissionsService {
       const settlement = await tx.liquidaciones_comision.create({
         data: {
           comisionista_id: comisionista.id,
-          fecha: data.date ? new Date(data.date) : new Date(),
+          // El día que eligió el operador, como día de Colombia. `new Date('2026-09-25')`
+          // es medianoche UTC, que en Bogotá todavía es el 24.
+          fecha: (data.date && enHoraColombia(data.date)) || new Date(),
           monto,
           metodo_pago_id,
           referencia: data.reference || null,
@@ -502,8 +506,7 @@ class CommissionsService {
         }
       });
 
-      const date = fullSettlement.fecha;
-      const dateStr = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : null;
+      const dateStr = fechaEnColombia(fullSettlement.fecha);
 
       return {
         id: fullSettlement.id,

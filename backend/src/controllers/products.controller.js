@@ -50,8 +50,8 @@ async function findOrCreatePersona(tx, name, docType, docNumber, defaultPersonaI
 /**
  * La venta a la que se le van a tocar los productos.
  *
- * `deleted_at: null`: sin este filtro se podían añadir, editar y borrar
- * productos de una venta eliminada, que no aparece en ningún listado.
+ * `deleted_at: null`: sin este filtro se podían añadir y borrar productos de
+ * una venta eliminada, que no aparece en ningún listado.
  *
  * Y con el alcance de quien pide: si su permiso de ver ventas es 'own', no
  * puede añadir ni quitar productos de la venta de otro. El alcance solo se
@@ -92,13 +92,18 @@ async function createDetalleProducto(tx, venta_id, categoria, data) {
 }
 
 /**
- * Las 45 rutas de producto salen de aquí, así que aquí va la validación.
+ * Las 30 rutas de producto (alta y baja de cada categoría) salen de aquí, así
+ * que aquí va la validación.
  *
- * Los 15 POST y los 15 PUT no tenían ninguna: el cuerpo entraba entero al
- * transform y de ahí a Prisma. Ponerla en las treinta declaraciones de ruta
- * habría sido treinta sitios donde olvidarla al añadir la categoría dieciséis;
- * el esquema se resuelve por `category`, que es lo que distingue a un handler
- * de otro. Las reglas y el por qué están en schemas/products.schema.js.
+ * Los 15 POST no tenían ninguna: el cuerpo entraba entero al transform y de ahí
+ * a Prisma. Ponerla en cada declaración de ruta habría sido quince sitios donde
+ * olvidarla al añadir la categoría dieciséis; el esquema se resuelve por
+ * `category`, que es lo que distingue a un handler de otro. Las reglas y el por
+ * qué están en schemas/products.schema.js.
+ *
+ * No hay `update`: los productos de una venta no se editan desde ninguna
+ * pantalla, y el PUT y el PATCH que existían solo se alcanzaban por la API, sin
+ * tocar los tramos de un tiquete (T8 de la spec 002). Se retiraron.
  */
 const productHandler = (category, tableName, transformData) => ({
   create: async (req, res, next) => {
@@ -257,145 +262,6 @@ const productHandler = (category, tableName, transformData) => ({
       next(err);
     }
   },
-  update: async (req, res, next) => {
-    try {
-      const revisado = esquemaDeCategoria(category).safeParse(req.body);
-      if (!revisado.success) return responderInvalido(res, revisado.error);
-
-      const venta_id = parseInt(req.params.saleId);
-      const id = req.params.productId;
-
-      const venta = await getSale(venta_id, req);
-      if (!venta) return error(res, 'Venta no encontrada', 404);
-
-      const data = req.body;
-      const product = await prisma.transaccion(async (tx) => {
-        // El cuerpo de la petición NO va directo a Prisma. Antes sí: como en el
-        // update no se pasaba `transformData`, `data` llegaba crudo, así que
-        // cualquier campo que no fuese columna reventaba con un 500 —probado con
-        // un PUT de simcard: `Unknown argument 'ta'`— y los que sí lo eran se
-        // escribían sin filtro. Con el mismo mapeo del POST hay una sola
-        // definición de qué campo del cliente va a qué columna.
-        const transformado = transformData ? transformData(data, null) : {};
-        // La línea de venta a la que pertenece no se reasigna nunca.
-        delete transformado.detalle_venta_id;
-        // Ni se reinicia el progreso: el POST lo fija en 'pendiente', y aplicar
-        // eso en un update borraría un check-in ya realizado.
-        delete transformado.checkin_status;
-
-        // Lo que el cliente no manda, no se toca.
-        //
-        // El transform devuelve TODAS las columnas de la categoría, así que un
-        // PUT con `{hotelName}` escribía también `nro_reserva: null`,
-        // `fecha_entrada: null`… y borraba el resto de la ficha. El formulario
-        // reenvía el objeto entero y por eso no se notaba, pero cualquier
-        // petición parcial —la de un script, o un campo que el formulario deje
-        // de mandar— vaciaba datos sin avisar.
-        //
-        // Se distingue lo que el cliente mandó de lo que el transform rellena
-        // solo, pasándole un cuerpo vacío: lo que sale igual con cuerpo vacío
-        // no viene de la petición, y se descarta. Es genérico a las quince
-        // categorías, que es la única forma de que no se quede atrás cuando se
-        // añada una.
-        const relleno = transformData ? transformData({}, null) : {};
-        for (const [columna, valor] of Object.entries(transformado)) {
-          const porDefecto = relleno[columna];
-          const igual = valor instanceof Date && porDefecto instanceof Date
-            ? valor.getTime() === porDefecto.getTime()
-            : valor === porDefecto;
-          if (igual) delete transformado[columna];
-        }
-
-        comprobarColumnas(tableName, transformado);
-
-        const prod = await tx[tableName].update({
-          where: { id },
-          data: transformado
-        });
-
-        if (data.passengers || data.passengerInfo || data.guests) {
-          const passengers = data.passengers ? data.passengers : (data.passengerInfo ? [data.passengerInfo] : (data.guests || []));
-          
-          await tx.pasajeros_detalle.deleteMany({ where: { detalle_venta_id: prod.detalle_venta_id } });
-
-          const cliente = await tx.clientes.findUnique({
-            where: { id: venta.cliente_id },
-            select: { persona_id: true }
-          });
-          const defaultPersonaId = cliente?.persona_id;
-
-          const pasajerosDetalleData = [];
-          for (const p of passengers) {
-            const resolvedPid = await findOrCreatePersona(tx, p.name || p.passengerName || p.fullName, p.docType, p.docNumber, defaultPersonaId);
-            pasajerosDetalleData.push({
-              persona_id: resolvedPid,
-              es_titular: p.esTitular ?? true,
-              asiento: p.asiento || p.seat || null,
-              nro_reserva: p.nroReserva || null,
-              nro_tiquete: p.nroTiquete || null
-            });
-          }
-
-          // Las mismas claves con las que se construyó la lista, y el uuid.
-          //
-          // Esta copia se había quedado atrás respecto a la del alta: leía
-          // `esTitular`, `nroReserva` y `nroTiquete` de un objeto cuyas claves
-          // son `es_titular`, `nro_reserva` y `nro_tiquete`, y no ponía `id`,
-          // que en esta tabla no tiene valor por defecto. El resultado era que
-          // editar CUALQUIER producto con pasajeros daba 500, en las quince
-          // categorías; y si solo se hubiera arreglado el id, cada edición
-          // habría borrado en silencio el número de reserva y el de tiquete.
-          for (const p of pasajerosDetalleData) {
-            await tx.pasajeros_detalle.create({
-              data: {
-                id: randomUUID(),
-                detalle_venta_id: prod.detalle_venta_id,
-                persona_id: p.persona_id,
-                es_titular: p.es_titular,
-                asiento: p.asiento,
-                nro_reserva: p.nro_reserva,
-                nro_tiquete: p.nro_tiquete
-              }
-            });
-          }
-        }
-        
-        // `detalle_venta` no se tocaba aquí: editar el precio de un producto
-        // actualizaba su tabla de categoría y dejaba intacta la línea de venta,
-        // así que el cambio de importe se perdía sin decir nada.
-        //
-        // Sólo se escribe si la petición trae cifras. Es un PUT parcial: lo que
-        // no venga conserva su valor, en vez de irse a cero.
-        const traeDinero = ['total', 'subtotal', 'ta', 'supplierCost']
-          .some((k) => data[k] !== undefined);
-        if (traeDinero) {
-          const actual = await tx.detalle_venta.findUnique({
-            where: { id: prod.detalle_venta_id },
-            select: { ta: true, costo_proveedor: true },
-          });
-          const ta = data.ta !== undefined ? Number(data.ta) || 0 : (actual?.ta || 0);
-          const costo_proveedor = data.supplierCost !== undefined
-            ? Number(data.supplierCost) || 0
-            : (actual?.costo_proveedor || 0);
-          await tx.detalle_venta.update({
-            where: { id: prod.detalle_venta_id },
-            data: {
-              subtotal: precioProducto({ total: data.total, subtotal: data.subtotal, ta, supplierCost: costo_proveedor }),
-              ta,
-              costo_proveedor,
-            },
-          });
-          await recalcularVenta(tx, venta_id);
-        }
-
-        return prod;
-      });
-
-      success(res, product);
-    } catch (err) {
-      next(err);
-    }
-  },
   delete: async (req, res, next) => {
     try {
       const id = req.params.productId;
@@ -460,7 +326,6 @@ const handlerTicket = H('ticket', 'prod_tiqueteria', (d, detalleId) => ({
   checkin_status: 'pendiente'
 }));
 exports.createTicket = handlerTicket.create;
-exports.updateTicket = handlerTicket.update;
 exports.deleteTicket = handlerTicket.delete;
 
 // =========================================================
@@ -477,7 +342,6 @@ const handlerHotel = H('hotel', 'prod_hoteleria', (d, detalleId) => ({
   observaciones: d.observations || null
 }));
 exports.createHotel = handlerHotel.create;
-exports.updateHotel = handlerHotel.update;
 exports.deleteHotel = handlerHotel.delete;
 
 // =========================================================
@@ -495,7 +359,6 @@ const handlerInsurance = H('insurance', 'prod_seguros', (d, detalleId) => ({
   fecha_fin_vigencia: d.endDate ? new Date(d.endDate) : null
 }));
 exports.createInsurance = handlerInsurance.create;
-exports.updateInsurance = handlerInsurance.update;
 exports.deleteInsurance = handlerInsurance.delete;
 
 // =========================================================
@@ -531,7 +394,6 @@ const handlerPlan = H('plan', 'prod_planes', (d, detalleId) => ({
   observaciones: d.observations || null
 }));
 exports.createPlan = handlerPlan.create;
-exports.updatePlan = handlerPlan.update;
 exports.deletePlan = handlerPlan.delete;
 
 // =========================================================
@@ -548,7 +410,6 @@ const handlerCheckin = H('checkin', 'prod_checkins', (d, detalleId) => ({
   usa_silla_ruedas: d.needsWheelchair || false
 }));
 exports.createCheckin = handlerCheckin.create;
-exports.updateCheckin = handlerCheckin.update;
 exports.deleteCheckin = handlerCheckin.delete;
 
 // =========================================================
@@ -563,7 +424,6 @@ const handlerMigration = H('migration', 'prod_migracion', (d, detalleId) => ({
   pais_destino: d.destinationCountry || null
 }));
 exports.createMigration = handlerMigration.create;
-exports.updateMigration = handlerMigration.update;
 exports.deleteMigration = handlerMigration.delete;
 
 // =========================================================
@@ -579,7 +439,6 @@ const handlerSimcard = H('simcard', 'prod_simcards', (d, detalleId) => ({
   metodo_entrega: d.deliveryMethod || null
 }));
 exports.createSimcard = handlerSimcard.create;
-exports.updateSimcard = handlerSimcard.update;
 exports.deleteSimcard = handlerSimcard.delete;
 
 // =========================================================
@@ -598,7 +457,6 @@ const handlerCarRental = H('car', 'prod_autos', (d, detalleId) => ({
   tarjeta_garantia_info: d.guaranteeCreditCard || null
 }));
 exports.createCarRental = handlerCarRental.create;
-exports.updateCarRental = handlerCarRental.update;
 exports.deleteCarRental = handlerCarRental.delete;
 
 // =========================================================
@@ -617,7 +475,6 @@ const handlerFinca = H('finca', 'prod_fincas', (d, detalleId) => ({
   servicios_extra: d.additionalServices?.join(', ') || null
 }));
 exports.createFinca = handlerFinca.create;
-exports.updateFinca = handlerFinca.update;
 exports.deleteFinca = handlerFinca.delete;
 
 // =========================================================
@@ -637,7 +494,6 @@ const handlerTour = H('tour', 'prod_tours', (d, detalleId) => ({
   telefono_contacto: d.phone || null
 }));
 exports.createTour = handlerTour.create;
-exports.updateTour = handlerTour.update;
 exports.deleteTour = handlerTour.delete;
 
 // =========================================================
@@ -658,7 +514,6 @@ const handlerConvention = H('convention', 'prod_eventos', (d, detalleId) => ({
   notas_catering: d.cateringNotes || null
 }));
 exports.createConvention = handlerConvention.create;
-exports.updateConvention = handlerConvention.update;
 exports.deleteConvention = handlerConvention.delete;
 
 // =========================================================
@@ -676,7 +531,6 @@ const handlerRestaurant = H('restaurant', 'prod_restaurantes', (d, detalleId) =>
   telefono_contacto: d.phone || null
 }));
 exports.createRestaurant = handlerRestaurant.create;
-exports.updateRestaurant = handlerRestaurant.update;
 exports.deleteRestaurant = handlerRestaurant.delete;
 
 // =========================================================
@@ -695,7 +549,6 @@ const handlerVisa = H('visa', 'prod_visas', (d, detalleId) => ({
   email_contacto: d.email || null
 }));
 exports.createVisa = handlerVisa.create;
-exports.updateVisa = handlerVisa.update;
 exports.deleteVisa = handlerVisa.delete;
 
 // =========================================================
@@ -712,7 +565,6 @@ const handlerPassport = H('passport', 'prod_pasaportes', (d, detalleId) => ({
   telefono_contacto: d.phone || null
 }));
 exports.createPassport = handlerPassport.create;
-exports.updatePassport = handlerPassport.update;
 exports.deletePassport = handlerPassport.delete;
 
 // =========================================================
@@ -732,7 +584,6 @@ const handlerPetService = H('pet', 'prod_mascotas', (d, detalleId) => ({
   telefono_contacto: d.phone || null
 }));
 exports.createPetService = handlerPetService.create;
-exports.updatePetService = handlerPetService.update;
 exports.deletePetService = handlerPetService.delete;
 
 // =========================================================
@@ -767,34 +618,4 @@ exports.uploadVoucher = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
-
-/**
- * Categoría -> su manejador de actualización.
- *
- * Existe para la ruta PATCH genérica: el `update` de estos endpoints escribe
- * solo lo que llega —descarta lo que el transform rellena por su cuenta—, así
- * que su semántica es la de PATCH, no la de PUT. Los quince PUT se mantienen,
- * que son los que usa el frontend.
- *
- * Se construye a partir de los propios exports, no a mano: una categoría nueva
- * entra en el mapa por definir su handler, sin acordarse de este bloque.
- */
-exports.ACTUALIZADORES = Object.fromEntries(
-  Object.entries({
-    ticket: exports.updateTicket, hotel: exports.updateHotel, insurance: exports.updateInsurance,
-    plan: exports.updatePlan, checkin: exports.updateCheckin, migration: exports.updateMigration,
-    simcard: exports.updateSimcard, car: exports.updateCarRental, finca: exports.updateFinca,
-    tour: exports.updateTour, convention: exports.updateConvention, restaurant: exports.updateRestaurant,
-    visa: exports.updateVisa, passport: exports.updatePassport, pet: exports.updatePetService,
-  })
-);
-
-/** Despacha PATCH /:saleId/products/:categoria/:productId a su categoría. */
-exports.patchProducto = (req, res, next) => {
-  const manejador = exports.ACTUALIZADORES[req.params.categoria];
-  if (!manejador) {
-    return error(res, `Categoría de producto desconocida: ${req.params.categoria}`, 404, 'NOT_FOUND');
-  }
-  return manejador(req, res, next);
 };

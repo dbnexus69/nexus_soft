@@ -3,11 +3,11 @@ const { Prisma } = require('@prisma/client');
 const { BadRequestError } = require('../errors/AppError');
 
 /**
- * Validación de los productos de una venta: las 30 rutas de POST/PUT que no
- * tenían ninguna.
+ * Validación de los productos de una venta: las 15 rutas de alta (POST), que
+ * no tenían ninguna. Los productos no se editan: el PUT y el PATCH se retiraron.
  *
- * Las 45 rutas de producto salen de un solo `productHandler`, así que esto se
- * comprueba en un sitio y no en treinta declaraciones de ruta que alguien
+ * Las 30 rutas de producto salen de un solo `productHandler`, así que esto se
+ * comprueba en un sitio y no en quince declaraciones de ruta que alguien
  * puede olvidar al añadir la categoría dieciséis.
  *
  * Son dos capas, porque protegen cosas distintas:

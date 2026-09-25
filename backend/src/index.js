@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const env = require('./config/env');
 const prisma = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { error } = require('./utils/apiResponse');
 const routes = require('./routes');
 
 const app = express();
@@ -111,6 +112,14 @@ app.use('/api', routes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok', uptime: process.uptime() } });
+});
+
+// Una ruta de la API que no existe responde en el formato de la API, no con la
+// página HTML de Express ("Cannot PUT …"). Importa sobre todo con las rutas
+// retiradas, como el PUT y el PATCH de productos: quien las llame tiene que
+// poder leer el error igual que cualquier otro.
+app.use('/api', (req, res) => {
+  error(res, `No existe la ruta ${req.method} ${req.originalUrl}`, 404, 'ROUTE_NOT_FOUND');
 });
 
 // Error handler

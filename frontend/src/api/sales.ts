@@ -83,11 +83,6 @@ export async function createProduct(saleId: number, category: string, data: Reco
   return res.data.data;
 }
 
-export async function updateProduct(saleId: number, category: string, id: string, data: Record<string, unknown>) {
-  const res = await api.put(`/sales/${saleId}/products/${category}/${id}`, data);
-  return res.data.data;
-}
-
 export async function deleteProduct(saleId: number, category: string, id: string) {
   await api.delete(`/sales/${saleId}/products/${category}/${id}`);
 }

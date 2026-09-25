@@ -50,72 +50,55 @@ router.post('/:id/send-voucher', authorize('sales', 'view'), salesController.sen
 //
 // El id del producto es `:productId`, no `:id`, y no es cosmético: los
 // productos tienen id uuid y `paramsNumericos` de arriba se aplica a TODO el
-// router, así que con `:id` el uuid se rechazaba con un 400 y ni el PUT ni el
-// DELETE de ninguna categoría funcionaban. Igual que en la ruta del voucher.
+// router, así que con `:id` el uuid se rechazaba con un 400 y el DELETE de
+// ninguna categoría funcionaba. Igual que en la ruta del voucher.
 router.post('/:saleId/products/ticket', authorize('sales', 'create'), productsController.createTicket);
-router.put('/:saleId/products/ticket/:productId', authorize('sales', 'edit'), productsController.updateTicket);
 router.delete('/:saleId/products/ticket/:productId', authorize('sales', 'delete'), productsController.deleteTicket);
 
 router.post('/:saleId/products/hotel', authorize('sales', 'create'), productsController.createHotel);
-router.put('/:saleId/products/hotel/:productId', authorize('sales', 'edit'), productsController.updateHotel);
 router.delete('/:saleId/products/hotel/:productId', authorize('sales', 'delete'), productsController.deleteHotel);
 
 router.post('/:saleId/products/insurance', authorize('sales', 'create'), productsController.createInsurance);
-router.put('/:saleId/products/insurance/:productId', authorize('sales', 'edit'), productsController.updateInsurance);
 router.delete('/:saleId/products/insurance/:productId', authorize('sales', 'delete'), productsController.deleteInsurance);
 
 router.post('/:saleId/products/plan', authorize('sales', 'create'), productsController.createPlan);
-router.put('/:saleId/products/plan/:productId', authorize('sales', 'edit'), productsController.updatePlan);
 router.delete('/:saleId/products/plan/:productId', authorize('sales', 'delete'), productsController.deletePlan);
 
 router.post('/:saleId/products/checkin', authorize('sales', 'create'), productsController.createCheckin);
-router.put('/:saleId/products/checkin/:productId', authorize('sales', 'edit'), productsController.updateCheckin);
 router.delete('/:saleId/products/checkin/:productId', authorize('sales', 'delete'), productsController.deleteCheckin);
 
 router.post('/:saleId/products/migration', authorize('sales', 'create'), productsController.createMigration);
-router.put('/:saleId/products/migration/:productId', authorize('sales', 'edit'), productsController.updateMigration);
 router.delete('/:saleId/products/migration/:productId', authorize('sales', 'delete'), productsController.deleteMigration);
 
 router.post('/:saleId/products/simcard', authorize('sales', 'create'), productsController.createSimcard);
-router.put('/:saleId/products/simcard/:productId', authorize('sales', 'edit'), productsController.updateSimcard);
 router.delete('/:saleId/products/simcard/:productId', authorize('sales', 'delete'), productsController.deleteSimcard);
 
 router.post('/:saleId/products/car', authorize('sales', 'create'), productsController.createCarRental);
-router.put('/:saleId/products/car/:productId', authorize('sales', 'edit'), productsController.updateCarRental);
 router.delete('/:saleId/products/car/:productId', authorize('sales', 'delete'), productsController.deleteCarRental);
 
 router.post('/:saleId/products/finca', authorize('sales', 'create'), productsController.createFinca);
-router.put('/:saleId/products/finca/:productId', authorize('sales', 'edit'), productsController.updateFinca);
 router.delete('/:saleId/products/finca/:productId', authorize('sales', 'delete'), productsController.deleteFinca);
 
 router.post('/:saleId/products/tour', authorize('sales', 'create'), productsController.createTour);
-router.put('/:saleId/products/tour/:productId', authorize('sales', 'edit'), productsController.updateTour);
 router.delete('/:saleId/products/tour/:productId', authorize('sales', 'delete'), productsController.deleteTour);
 
 router.post('/:saleId/products/convention', authorize('sales', 'create'), productsController.createConvention);
-router.put('/:saleId/products/convention/:productId', authorize('sales', 'edit'), productsController.updateConvention);
 router.delete('/:saleId/products/convention/:productId', authorize('sales', 'delete'), productsController.deleteConvention);
 
 router.post('/:saleId/products/restaurant', authorize('sales', 'create'), productsController.createRestaurant);
-router.put('/:saleId/products/restaurant/:productId', authorize('sales', 'edit'), productsController.updateRestaurant);
 router.delete('/:saleId/products/restaurant/:productId', authorize('sales', 'delete'), productsController.deleteRestaurant);
 
 router.post('/:saleId/products/visa', authorize('sales', 'create'), productsController.createVisa);
-router.put('/:saleId/products/visa/:productId', authorize('sales', 'edit'), productsController.updateVisa);
 router.delete('/:saleId/products/visa/:productId', authorize('sales', 'delete'), productsController.deleteVisa);
 
 router.post('/:saleId/products/passport', authorize('sales', 'create'), productsController.createPassport);
-router.put('/:saleId/products/passport/:productId', authorize('sales', 'edit'), productsController.updatePassport);
 router.delete('/:saleId/products/passport/:productId', authorize('sales', 'delete'), productsController.deletePassport);
 
 router.post('/:saleId/products/pet', authorize('sales', 'create'), productsController.createPetService);
-router.put('/:saleId/products/pet/:productId', authorize('sales', 'edit'), productsController.updatePetService);
 router.delete('/:saleId/products/pet/:productId', authorize('sales', 'delete'), productsController.deletePetService);
 
-// PATCH de producto, uno para las quince categorías. Mismo manejador que el
-// PUT de arriba: escribe solo los campos que llegan, que es lo que significa
-// PATCH. Va DESPUÉS de los PUT literales y no interfiere: es otro verbo.
-router.patch('/:saleId/products/:categoria/:productId', authorize('sales', 'edit'), productsController.patchProducto);
+// Los productos de una venta no se editan: sin PUT ni PATCH. Ninguna pantalla
+// los usaba y el PUT de un tiquete ignoraba sus tramos (T8, spec 002).
 
 // Voucher upload
 router.post('/:saleId/products/:category/:productId/voucher', authorize('sales', 'edit'), upload.single('file'), productsController.uploadVoucher);

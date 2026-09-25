@@ -325,11 +325,19 @@ Igualarlo con `delete`.
 con la línea de otra venta de la misma agencia responde 404, la otra venta queda sin voucher y el
 archivo rechazado no queda en disco.
 
-## T10 · La aplicación no debe poder escribir el historial de migraciones `[ ]`
+## T10 · La aplicación no debe poder escribir el historial de migraciones `[x]`
 
 `app_nexus` tiene `SELECT`, `INSERT`, `UPDATE` y `DELETE` sobre `_prisma_migrations`, y no lo necesita:
 las migraciones corren con `postgres`. Es una migración de una línea (`REVOKE ALL … FROM app_nexus`).
 Se hace después de T6, porque toca la base compartida. **Comprobación de cierre:** B14.
+
+**Hecho (2026-09-25):** migración `20260925160000_la_app_no_toca_el_historial_de_migraciones`,
+`REVOKE ALL ON "_prisma_migrations" FROM app_nexus`. Tenía `SELECT`, `INSERT`, `UPDATE` y `DELETE`.
+
+**Comprobado:** conectado como `app_nexus`, leer, escribir y borrar el historial dan `42501 permission
+denied` · `migrate status` (con `postgres`) sigue diciendo "up to date" · `/api/health` 200,
+`test:aislamiento` "Todo aislado" y el verificador de T7 en verde · aviso de seguridad de Supabase
+vacío. **B14 cumplido.**
 
 ## T11 · Convertir el verificador en prueba del repo `[ ]`
 
@@ -506,6 +514,7 @@ todos; bloquearlo es una decisión para los ocho a la vez. `feat-dbmoon` tiene q
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T10 | `app_nexus` pierde todo acceso a `_prisma_migrations`. |
 | 2026-09-25 | T17 | La tarjeta de pago al proveedor se guarda (columna nueva con su clave compuesta) y los formularios mandan su id. |
 | 2026-09-25 | T16 | La sesión pasa a caducar por inactividad (30 min) y, al caducar, la pantalla vuelve al login con el motivo. De paso: cerrar sesión no la cerraba en el servidor (el token no viajaba). El error de `useData` en consola era la recarga en caliente de Vite. |
 | 2026-09-25 | T15, T9 | La venta se crea entera. Validación de productos en `POST /sales`, fuera los productos sueltos, y los vouchers del asistente por fin se guardan. "Hotel Turístico" entra en la base (migración). T9 cerrada con la nueva subida. |

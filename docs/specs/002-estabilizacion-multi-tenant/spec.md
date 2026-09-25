@@ -21,6 +21,18 @@ trabajar en una máquina de desarrollo apareció una serie de fallos que su prue
 - En ventas, el asistente perdía en silencio campos que el usuario había rellenado, y había errores
   de dinero anteriores a la migración que la migración no tocó.
 
+**Lo que apareció al ejecutarla (2026-09-25).** Arreglar el dinero y probarlo de punta a punta destapó
+una segunda tanda, todas del mismo tipo —datos que la pantalla pide y el servidor pierde, o estados que
+la pantalla no se entera de que cambiaron—:
+
+- Liquidar a un comisionista no marcaba ninguna venta como liquidada: el acumulado se podía pagar dos
+  veces. Y la pantalla no enseñaba ningún error de la API, de ningún tipo.
+- El voucher adjuntado a un producto en el asistente se ignoraba (0 de 37 productos con voucher), y la
+  tarjeta con la que se paga al proveedor también. "Hotel Turístico" tumbaba el alta con un 500 y un
+  `ta` negativo bajaba el total: `POST /sales` no validaba sus productos.
+- La sesión caducaba a los 30 minutos de entrar aunque se estuviera trabajando, la pantalla no volvía al
+  login, y cerrar sesión no la cerraba en el servidor.
+
 ## Qué será posible al terminar
 
 1. Un despliegue o una máquina de desarrollo **no puede arrancar** con un rol que se salta la RLS.
@@ -31,6 +43,10 @@ trabajar en una máquina de desarrollo apareció una serie de fallos que su prue
    catálogos de gestión interna, ventas con todos sus campos.
 5. El dinero de una venta es coherente: no hay sobrepagos, dos cobros simultáneos no se pisan y
    anular una venta no deja comisiones vivas.
+6. Una venta se crea entera, en un solo `POST /sales` que valida cada producto, y todo lo que el
+   asistente pide llega a la base: voucher, tarjeta de pago al proveedor, tipo de hotel.
+7. Liquidar comisiones paga lo que se ve, una sola vez, y cualquier rechazo dice qué pasó y qué hacer.
+8. La sesión dura mientras se trabaja; cuando caduca, la pantalla lo dice y vuelve al login.
 
 ## Criterios de aceptación
 
@@ -51,9 +67,12 @@ Los de la 001 (A1–A12) siguen vigentes. Estos se añaden, y la columna dice si
 | B11 | La pantalla de gestión interna y el asistente de venta leen los mismos catálogos | Crear una aerolínea y verla en el selector del tiquete sin recargar | hecho, falta confirmar en pantalla |
 | B12 | El dinero de una venta es coherente | Sin sobrepago; dos abonos simultáneos no superan el total; anular libera la comisión | cumplido |
 | B13 | Ningún camino edita un producto a medias (los tramos de un tiquete se ignoraban) | Los productos no se editan: `PUT` y `PATCH` de producto responden 404 `ROUTE_NOT_FOUND` y el producto queda intacto | cumplido (se retiró la edición) |
-| B15 | Una venta se crea entera y se valida en su única puerta | `POST /sales` con un `ta` negativo o un tipo de hotel inexistente: 422 que nombra el campo, y no se crea nada. Con "Hotel Turístico": 201 | cumplido |
-| B16 | Un voucher adjuntado en el asistente se guarda en su producto | Tras el 201, `PUT /sales/:id/products/:detalleId/voucher` lo guarda; con la línea de otra venta, 404 y sin huérfano en disco | cumplido |
 | B14 | La aplicación no puede escribir el historial de migraciones | `app_nexus` sin `INSERT`/`UPDATE`/`DELETE` sobre `_prisma_migrations` | cumplido (sin ningún acceso) |
+| B15 | Una venta se crea entera y se valida en su única puerta | `POST /sales` con un `ta` negativo o un tipo de hotel inexistente: 422 que nombra el campo, y no se crea nada. Con "Hotel Turístico": 201 | cumplido |
+| B16 | Un voucher adjuntado en el asistente se guarda en su producto | Tras el 201, `PUT /sales/:id/products/:detalleId/voucher` lo guarda; con la línea de otra venta, 404 y sin huérfano en disco | cumplido (API y cliente del frontend; sin recorrido del asistente con archivo en pantalla) |
+| B17 | Liquidar paga lo que se ve, una vez, y los rechazos se entienden | Sin `salesIds` liquida todo lo pendiente y marca las ventas; con un monto distinto, 409 con el actual; dos liquidaciones a la vez pagan una sola; la fecha elegida es la que se guarda y se lee (servidor en Bogotá y en UTC); el mensaje sale en el modal | cumplido |
+| B18 | La tarjeta con la que se paga al proveedor se guarda | `POST /sales` con la tarjeta (por id o, en borradores viejos, por nombre) la guarda en la línea; una inexistente o de otra agencia, 400 sin venta; el detalle la devuelve | cumplido |
+| B19 | La sesión dura mientras se trabaja y, al caducar, se vuelve al login | Una sesión a 1 min de caducar se renueva al usarla; una caducada da 401 y la pantalla vuelve al login con el motivo; "recordarme" no se acorta; cerrar sesión borra la fila de `sesiones` | cumplido |
 
 ## Fuera de alcance
 
@@ -64,6 +83,11 @@ Los de la 001 (A1–A12) siguen vigentes. Estos se añaden, y la columna dice si
   tres dan mensajes falsos ("ya está asignado en el sistema" cuando solo miraron la agencia activa).
 - **Rendimiento.** Con ~0,8 a 1,2 s de ida y vuelta al pooler desde la máquina de desarrollo, el
   dashboard tarda ~2 s. En el hosting, en la misma región que la base, no aplica.
+- **Borrar un catálogo en uso.** Los 8 catálogos de configuración se pueden borrar aunque algo los
+  referencie (lo que apuntaba queda en `NULL`); el modal solo informa. Bloquearlo es una decisión para
+  los ocho a la vez.
+- **Añadir o quitar productos de una venta ya creada.** No existe en ninguna pantalla y se retiró de la
+  API (B13, T15). Si hace falta, se diseña como una operación propia.
 
 ## Riesgos
 
@@ -74,3 +98,8 @@ comprobación al arrancar y no una recomendación en un README.
 **Que los fallos solo aparezcan con la barrera puesta.** Con `postgres` (que se salta la RLS) las
 subidas funcionan y no hay 500 por transacciones: el rol equivocado tapa justo lo que hay que ver.
 Regla: todo lo que se pruebe, se prueba con `app_nexus`.
+
+**Que dos ramas trabajen sobre la misma base.** `feat-bayrol` y `feat-dbmoon` comparten `nexus-bd`:
+una migración aplicada desde una rama deja a la otra con `migrate status` desincronizado hasta que la
+trae, y cambiar la contraseña de `app_nexus` deja sin conexión el `.env` de la otra. Cada cambio de ese
+tipo se anota en el registro de `tasks.md` con lo que la otra rama tiene que hacer.

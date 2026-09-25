@@ -4,6 +4,9 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
+**Estado (2026-09-25).** Hechas T0, T1, T3, T6–T10 y T15–T17. Por confirmar en pantalla T2, T4 y T5.
+Pendientes T11 (verificadores al repo), T12 (despliegue), T13 (`moon-travel`) y T14 (deuda menor).
+
 ---
 
 ## T0 · La barrera estaba inerte en esta máquina `[x]`
@@ -202,7 +205,7 @@ antes de tocar la base: una migración aplicada desde una rama que la otra no ti
 
 ---
 
-## Pendientes
+## Después de la verificación
 
 ## T7 · El dinero de una venta `[x]`
 

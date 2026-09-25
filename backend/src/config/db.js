@@ -93,7 +93,8 @@ function transaccion(fn, opciones) {
         if (empresa !== null || superadmin) await fijarContexto(tx, empresa, superadmin);
         return fn(tx);
       }),
-    opciones,
+    // Con los 2 s / 5 s por defecto, un pico de latencia al pooler tumba las lecturas del dashboard (Unable to start a transaction / Transaction not found).
+    { maxWait: 10000, timeout: 30000, ...opciones },
   );
 }
 

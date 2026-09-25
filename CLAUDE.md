@@ -53,7 +53,7 @@ Flights/check-in is the one naming split worth knowing: the screen and API are `
 - Superadmin (`soloSuperadmin.js`, `/companies`) has `empresa_id = null`, administers agencies and can impersonate one (`suplantaciones`, audited, expiring) — the token then has `empresaId` (working agency) ≠ `empresaOrigen` (where the user's own row and session live). RLS makes no exception for the superadmin on business tables. Anything that touches the user's own session/row during an impersonation (logout, `/auth/me`) must run in `empresaOrigen`.
 - Postgres FK checks skip RLS, so composite `(id, empresa_id)` foreign keys stop a row in one agency from pointing at another's. Anything validating "this id belongs to my agency" by a plain `findFirst` relies on RLS actually filtering — it silently passes with a role that bypasses it.
 - User-visible numbers are the per-agency `numero` column (unique per `empresa_id`, assigned by the `BEFORE INSERT` trigger `app_asignar_numero()` as `MAX+1` under a per-empresa lock), never the global `id`, which leaks how many rows other agencies have. Code never computes `numero`. Numbered tables soft-delete via `deleted_at` so numbers aren't reused. See `docs/designs/numeros-visibles-por-agencia.md`.
-- Uploaded files are namespaced per empresa and served through an authenticated route; email sender/branding resolve from the tenant context automatically.
+- Uploaded files are namespaced per empresa and served through an authenticated route; email sender/branding resolve from the tenant context automatically. **Routes that upload files must use `upload.single/array` from `middleware/upload.js` (or `uploadLogo`), never `multer` directly:** multer reads the request in event callbacks and the `AsyncLocalStorage` context is lost, so the handler runs without an empresa and RLS hides every row (a 404 on your own resource). `middleware/conservarContexto.js` restores it.
 - When adding a tenant-owned table: its own RLS policy, the `empresa_id` default, and `empresa_id` **denormalized** (not inferable via a parent join — that turns every listing into a per-row subquery).
 
 ### Permissions
@@ -85,4 +85,4 @@ Any route that should be permission-scoped **must** call `authorize(...)` after 
 
 - `docs/decisions/` — architecture decisions with the problem, discarded alternatives and measured outcome (the multi-tenant one is required reading before backend work on tenancy, permissions or transactions).
 - `docs/designs/` — narrower design docs for specific features.
-- `docs/specs/` — screen/feature specs and the multi-tenant spec/plan/task log.
+- `docs/specs/` — spec-driven work, one folder per spec with `spec.md` (what and how it is checked), `plan.md` (how) and `tasks.md` (done/pending, with what was verified): `001-multi-tenant` (the build) and `002-estabilizacion-multi-tenant` (what broke once it ran, and what is still pending). Update the `tasks.md` of the spec you are working under; new work gets a new numbered folder.

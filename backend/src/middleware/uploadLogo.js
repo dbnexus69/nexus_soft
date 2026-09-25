@@ -2,6 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { BadRequestError } = require('../errors/AppError');
+const { conservarContexto } = require('./conservarContexto');
 
 /**
  * El logo de una agencia, con su propia carpeta y sus propias reglas.
@@ -42,4 +43,7 @@ const uploadLogo = multer({
   },
 });
 
-module.exports = { uploadLogo, CARPETA_LOGOS: CARPETA };
+module.exports = {
+  uploadLogo: { single: (...args) => conservarContexto(uploadLogo.single(...args)) },
+  CARPETA_LOGOS: CARPETA,
+};

@@ -173,7 +173,9 @@ quien lo use.
 **Corrección a un comentario de la migración**, anotada en su carpeta: `FORCE` no protege
 de desplegar con el usuario `postgres`, porque `postgres` tiene `BYPASSRLS` y salta las
 políticas igual —comprobado—. Esa protección es de despliegue y merece una comprobación al
-arrancar, que queda pendiente.
+arrancar. **Saldada el 2026-09-24:** `src/index.js` consulta `rolbypassrls`/`rolsuper` del rol de
+la conexión antes de abrir el puerto y sale con código 1 si salta la RLS o si no puede comprobarlo.
+Ver [spec 002, T1](../002-estabilizacion-multi-tenant/tasks.md).
 
 ## T5b · El superadmin da de alta agencias `[x]`
 
@@ -432,6 +434,7 @@ tienen ninguno.*
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-24 | Estabilización | Sigue en [spec 002](../002-estabilizacion-multi-tenant/spec.md): la barrera estaba inerte en una máquina de desarrollo, la suplantación no se podía abandonar, las subidas de archivos daban 404 y aparecían 500 intermitentes con la RLS activa. Verificado por la API con dos agencias: 80 comprobaciones sin fallos. |
 | 2026-09-12 | Revisión de flujos | Cuatro 500 que no daba ninguna prueba: crear una venta con un pasajero nuevo, editar cualquier producto con pasajeros, marcar una venta como revisada y subir el avatar de un cliente. Los cuatro anteriores al multi-tenant o a su margen. Y la suplantación, que no se podía abandonar desde la pantalla. |
 | 2026-09-12 | Números visibles | Cerrado A4 de verdad: el número propio pasa a ponerlo la base en nueve tablas, no solo en ventas. Ver [`docs/designs/numeros-visibles-por-agencia.md`](../../designs/numeros-visibles-por-agencia.md). |
 | 2026-09-12 | T3b + T3c + T3d | Cerrado el hueco que quedó abierto en T3. Lo encontró un síntoma real: una venta de una agencia nueva que se creaba bien y no aparecía en el listado. El fallo de ese día era otro (un `transaccion` sin importar en 15 sitios), pero al mirarlo apareció que la base aceptaba filas cruzadas. |

@@ -7,6 +7,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 
 const env = require('./config/env');
+const prisma = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const routes = require('./routes');
 
@@ -115,9 +116,29 @@ app.get('/api/health', (req, res) => {
 // Error handler
 app.use(errorHandler);
 
+// Sin este chequeo, un rol con BYPASSRLS arranca sin error y ninguna política filtra.
+async function comprobarAislamiento() {
+  try {
+    const [rol] = await prisma.$queryRaw`
+      SELECT current_user AS usuario, (rolbypassrls OR rolsuper) AS salta
+      FROM pg_roles WHERE rolname = current_user`;
+    if (rol?.salta === false) return;
+    console.error(
+      `\nNo arranco: DATABASE_URL conecta con el rol "${rol?.usuario ?? '?'}", que se salta la RLS.\n` +
+      'Con ese rol las políticas de aislamiento no filtran nada y todas las agencias se ven entre sí.\n' +
+      'Usa el rol app_nexus (ver backend/.env.example).\n'
+    );
+  } catch (err) {
+    console.error(`\nNo arranco: no pude comprobar con qué rol conecta la base (${err.message}).\n`);
+  }
+  process.exit(1);
+}
+
 // Iniciar servidor
-app.listen(env.port, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${env.port}`);
-  console.log(`🌐 Frontend URL: ${env.frontendUrl}`);
-  console.log(`⚙️  Modo: ${env.nodeEnv}`);
+comprobarAislamiento().then(() => {
+  app.listen(env.port, () => {
+    console.log(`🚀 Servidor corriendo en puerto ${env.port}`);
+    console.log(`🌐 Frontend URL: ${env.frontendUrl}`);
+    console.log(`⚙️  Modo: ${env.nodeEnv}`);
+  });
 });

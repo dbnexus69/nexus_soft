@@ -1,5 +1,6 @@
 const multer = require('multer');
 const { BadRequestError } = require('../errors/AppError');
+const { conservarContexto } = require('./conservarContexto');
 const path = require('path');
 
 const storage = multer.diskStorage({
@@ -32,4 +33,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-module.exports = upload;
+module.exports = {
+  single: (...args) => conservarContexto(upload.single(...args)),
+  array: (...args) => conservarContexto(upload.array(...args)),
+};

@@ -296,7 +296,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
               value={supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={paymentMethods.map(m => ({
-                value: m.name,
+                value: String(m.id),
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name
               }))}
               placeholder="Seleccionar método..."

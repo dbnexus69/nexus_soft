@@ -17,7 +17,7 @@ interface TicketFormProps {
   airlines: { name: string }[];
   suppliers: { name: string }[];
   airports: any[];
-  paymentMethods: { name: string; lastFourDigits?: string }[];
+  paymentMethods: { id: number; name: string; lastFourDigits?: string }[];
   baggage: {
     id: number;
     airlineName: string;
@@ -1074,7 +1074,7 @@ export function TicketForm({
               value={ticket.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={paymentMethods.map((m) => ({
-                value: m.name,
+                value: String(m.id),
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."

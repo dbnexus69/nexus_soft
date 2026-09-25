@@ -6,7 +6,11 @@ const SECTION_MAP = {
   'cards': {
     model: 'tarjetas_agencia', idField: 'id', include: { metodos_pago: true },
     buscarEn: ['nombre', 'ultimos_cuatro'],
-    usos: [],
+    // Una tarjeta con la que ya se pagó a un proveedor no se borra: la venta
+    // perdería con qué se pagó.
+    usos: [
+      { etiqueta: 'servicios de venta', modelo: 'detalle_venta', campo: 'tarjeta_proveedor_id' },
+    ],
     orden: { defecto: 'name', campos: { name: 'nombre', status: 'status', id: 'id' } },
     transform: (r) => ({ id: r.id, numero: r.numero, name: r.nombre, paymentMethod: r.metodos_pago?.nombre || null, lastFourDigits: r.ultimos_cuatro, description: r.descripcion, status: r.status === 'active' || r.status === 'Activo' ? 'Activo' : 'Inactivo' }),
     reverseTransform: async (d) => {

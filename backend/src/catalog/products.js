@@ -39,6 +39,12 @@ const PRODUCT_INCLUDES = {
 };
 
 
+/** La tarjeta de la agencia con la que se le pagó al proveedor, o null. */
+function tarjetaDelProveedor(d) {
+  const t = d.tarjetas_agencia;
+  return t ? { id: t.id, name: t.nombre, lastFourDigits: t.ultimos_cuatro || null } : null;
+}
+
 function mapPassengers(detalle) {
   return (detalle.pasajeros_detalle || []).map(p => ({
     id: p.id,
@@ -106,6 +112,7 @@ const PRODUCT_TRANSFORMS = {
       legs: mapLegs(t.tramos_vuelo),
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -135,6 +142,7 @@ const PRODUCT_TRANSFORMS = {
       })),
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -157,6 +165,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -191,6 +200,7 @@ const PRODUCT_TRANSFORMS = {
       })),
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -214,6 +224,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -236,6 +247,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -258,6 +270,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -283,6 +296,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -312,6 +326,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -342,6 +357,7 @@ const PRODUCT_TRANSFORMS = {
       passengerName: (passengers.find(p => p.esTitular) || passengers[0])?.nombreCompleto || null,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -372,6 +388,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -396,6 +413,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -422,6 +440,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -448,6 +467,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
@@ -478,6 +498,7 @@ const PRODUCT_TRANSFORMS = {
       passengers,
       supplier: d.proveedores?.nombre || null,
       supplierCost: d.costo_proveedor || 0,
+      supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin

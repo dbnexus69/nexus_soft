@@ -216,7 +216,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               value={insurance.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
               options={(data?.config?.cards || []).map((m: any) => ({
-                value: m.name,
+                value: String(m.id),
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
               placeholder="Seleccionar método..."

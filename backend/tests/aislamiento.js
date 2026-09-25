@@ -151,7 +151,11 @@ async function main() {
   const [{ n: compuestas }] = await admin.$queryRawUnsafe(`
     SELECT count(*)::int AS n FROM pg_constraint
     WHERE contype = 'f' AND conname LIKE '%_empresa_fkey'`);
-  comprobar('siguen las claves ajenas compuestas', compuestas === 53, `${compuestas} de 53`);
+  // 53 de la spec 001 (T3b) + la de la tarjeta de pago al proveedor (spec 002,
+  // `20260925150000_tarjeta_de_pago_al_proveedor`). Una clave compuesta nueva
+  // sube este número; una que desaparece lo baja y pone esto en rojo.
+  const ESPERADAS = 54;
+  comprobar('siguen las claves ajenas compuestas', compuestas === ESPERADAS, `${compuestas} de ${ESPERADAS}`);
 
   // ── 4c. El número propio de cada agencia
   //

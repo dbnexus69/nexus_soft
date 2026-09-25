@@ -419,8 +419,7 @@ el aviso de seguridad de Supabase vacío tras la migración.
 pruebas no puede adjuntar ficheros a un `<input type="file">`.
 
 *Anotado sin arreglar:*
-- `createSale` **ignora `supplierPaymentMethod`**: la tarjeta con la que se paga al proveedor no se
-  guarda (`detalle_venta.metodo_pago_proveedor_id` queda vacío). Mismo patrón que T4.
+- ~~`createSale` ignora `supplierPaymentMethod`~~: resuelto en T17.
 - La casilla `sendVoucher` ("enviar al cliente") no hace nada en el backend.
 - Si falla la subida de un voucher no hay pantalla para adjuntarlo después: el aviso pide conservar
   el archivo.
@@ -467,12 +466,47 @@ cargando sus datos. `tsc` limpio.
 login y sin sesión (dos 401 de ruido; no disparan el aviso porque no llevan token). Clientes y Ventas
 dependen de esa carga inicial, así que gatearla por sesión es un cambio propio.
 
+
+## T17 · La tarjeta con la que se paga al proveedor se perdía `[x]`
+
+El asistente pide, por producto, con qué tarjeta de la agencia se le paga al proveedor (en los paquetes
+es obligatorio) y `createSale` no leía el campo: se perdía siempre. Además había un desajuste de
+modelo: el formulario elige una **tarjeta** (`tarjetas_agencia`, "Visa Empresa ****4242") y la columna
+que existía, `metodo_pago_proveedor_id`, apunta a un **método** genérico, que no dice qué tarjeta fue.
+
+**Decisión del equipo: guardar la tarjeta exacta.** Su método sale de `tarjetas_agencia.metodo_pago_id`.
+
+**Lo hecho:**
+- Migración `20260925150000_tarjeta_de_pago_al_proveedor`: `detalle_venta.tarjeta_proveedor_id` →
+  `tarjetas_agencia`, con su índice y la clave ajena compuesta `(tarjeta_proveedor_id, empresa_id)`
+  (nuevo único `(id, empresa_id)` en `tarjetas_agencia`), `ON DELETE SET NULL` de la columna. Del diff
+  se descartó el `SET DEFAULT … , 1)` de `empresa_id`, que reintroducía el respaldo que quitó la 001.
+- `createSale` resuelve la tarjeta de cada producto (por id; por nombre en borradores viejos) y la
+  guarda en las 15 líneas. Una tarjeta que no existe, o de otra agencia, es 400 y no crea la venta.
+- Los 5 selectores (`VoucherField`, tiquete, hotel, seguro, plan) mandan el **id**, no el nombre: un
+  nombre se rompe al renombrar la tarjeta o con dos iguales.
+- El detalle de la venta devuelve `supplierPaymentCard: { id, name, lastFourDigits }`, y el detalle de
+  una tarjeta en configuración dice en cuántos servicios de venta se usó.
+- `test:aislamiento` pasa a esperar 54 claves compuestas (53 + esta).
+
+**Comprobado** con el servidor real y dos agencias de prueba (13 comprobaciones): por id y por nombre
+se guarda · sin tarjeta queda vacía · inexistente, de la otra agencia y por el nombre de la otra: 400
+sin venta · el detalle la devuelve con sus últimos cuatro · la tarjeta dice "servicios de venta: 2" ·
+borrarla deja la línea sin tarjeta y la venta se sigue leyendo · la clave compuesta está puesta.
+`test:aislamiento` (54 de 54), verificadores de venta y de T7 en verde, `tsc` y `check:prisma`
+limpios, aviso de seguridad de Supabase vacío.
+
+*Anotado sin arreglar:* los catálogos de configuración (los 8) **se pueden borrar aunque estén en
+uso**: `usos` solo informa en el modal y lo que apuntaba queda en `NULL`. Es el contrato actual de
+todos; bloquearlo es una decisión para los ocho a la vez. `feat-dbmoon` tiene que traer esta migración.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T17 | La tarjeta de pago al proveedor se guarda (columna nueva con su clave compuesta) y los formularios mandan su id. |
 | 2026-09-25 | T16 | La sesión pasa a caducar por inactividad (30 min) y, al caducar, la pantalla vuelve al login con el motivo. De paso: cerrar sesión no la cerraba en el servidor (el token no viajaba). El error de `useData` en consola era la recarga en caliente de Vite. |
 | 2026-09-25 | T15, T9 | La venta se crea entera. Validación de productos en `POST /sales`, fuera los productos sueltos, y los vouchers del asistente por fin se guardan. "Hotel Turístico" entra en la base (migración). T9 cerrada con la nueva subida. |
 | 2026-09-25 | T8 | Cerrada retirando la edición de productos: el `PUT` y el `PATCH` no los usaba ninguna pantalla. Las rutas que no existen responden 404 en JSON. El modal de "editar venta" pasa a `SalePaymentsModal`. La fecha de las liquidaciones deja de salir un día antes, y `DataContext` pierde su copia muerta de liquidaciones. |

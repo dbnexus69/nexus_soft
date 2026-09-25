@@ -1,6 +1,6 @@
 # Spec 002 — Estabilización tras la migración a multi-tenant
 
-**Estado:** en ejecución · **Rama:** `feat-dbmoon` · **Continúa:** [`001-multi-tenant`](../001-multi-tenant/spec.md)
+**Estado:** en ejecución · **Ramas:** `feat-bayrol` y `feat-dbmoon`, una por persona, sobre la misma base `nexus-bd` · **Continúa:** [`001-multi-tenant`](../001-multi-tenant/spec.md)
 
 Este documento dice **qué** tiene que pasar y **cómo se comprueba**. El *cómo* técnico está en
 `plan.md`; el reparto en tareas, con lo que ya se hizo y lo que falta, en `tasks.md`.

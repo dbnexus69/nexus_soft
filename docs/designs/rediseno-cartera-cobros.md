@@ -254,8 +254,8 @@ cobro sin salir de la pantalla y las cifras se mueven.
 | 2 — `GET /sales/credit/:clientId` | hecho, `0bed680` |
 | 3 — la tabla | hecho |
 | 4 — desplegable y cobro | hecho |
-| 5 — ordenación por columna | pendiente |
+| 5 — ordenación por columna | hecho, `9d4f089` |
 
-Fuera todavía: la ordenación por columna (`?sortBy=`), y el `parseInt` de
-`req.params` que devuelve 500 con un id no numérico en 24 sitios de 6
-controladores.
+Fuera todavía: el `parseInt` de `req.params` que devuelve 500 con un id no
+numérico en 24 sitios de 6 controladores. Anotado en la T14 de la
+[spec 002](../specs/002-estabilizacion-multi-tenant/tasks.md).

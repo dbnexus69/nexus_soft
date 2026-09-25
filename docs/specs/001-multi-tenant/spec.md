@@ -1,6 +1,6 @@
 # Spec 001 — Varias agencias independientes en el mismo software
 
-**Estado:** en ejecución · **Rama:** `feat-bayrol` · **Decisiones:** [`docs/decisions/multi-tenant-agencias-independientes.md`](../../decisions/multi-tenant-agencias-independientes.md)
+**Estado:** completada (2026-09-12) · **Rama:** `feat-bayrol` · **Sigue en:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md) · **Decisiones:** [`docs/decisions/multi-tenant-agencias-independientes.md`](../../decisions/multi-tenant-agencias-independientes.md)
 
 Este documento dice **qué** tiene que pasar y **cómo se comprueba**. El *cómo* técnico
 está en `plan.md`; el reparto en tareas, en `tasks.md`.

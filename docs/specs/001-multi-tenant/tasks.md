@@ -453,7 +453,7 @@ tienen ninguno.*
 
 ## La prueba que se queda
 
-`pnpm test:aislamiento` (`backend/pruebas/aislamiento.js`).
+`pnpm test:aislamiento` (`backend/tests/aislamiento.js`).
 
 El criterio A1 pedía una prueba automática y durante la ejecución se verificó a mano, con
 scripts de usar y tirar. Esto lo cierra: monta una segunda agencia con datos, comprueba

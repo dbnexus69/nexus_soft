@@ -18,7 +18,7 @@ pnpm dev                 # node --watch src/index.js, http://localhost:3000 — 
 pnpm start
 pnpm db:generate         # prisma generate --sql (typedSql preview; also what `pnpm build` runs; needs DB access). Required after any schema.prisma change
 pnpm check:prisma        # scripts/check-prisma-fields.js — validates every prisma.<model>.<method>({...}) call against the DMMF (catches camelCase vs snake_case); exits 1 on findings
-pnpm test:aislamiento    # pruebas/aislamiento.js — the only test: builds a 2nd agency, checks RLS isolation, tears it down
+pnpm test:aislamiento    # tests/aislamiento.js — the only test: builds a 2nd agency, checks RLS isolation, tears it down
 pnpm db:seed | db:studio
 
 # frontend

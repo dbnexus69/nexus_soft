@@ -1,5 +1,9 @@
 # Design Doc: Refactorización de Modales y Paginación (Enfoque Tabs)
 
+> **Estado: sustituido.** No se implementó tal cual. Lo reemplazó
+> [`docs/designs/carga-bajo-demanda-ventas.md`](../designs/carga-bajo-demanda-ventas.md), que es lo
+> que se construyó. Se conserva como registro.
+
 **Fecha:** 2026-08-27
 **Módulo:** Ventas (Detalles de Venta) y Modales UI
 **Autor:** Agente IA (Antigravity) & Usuario

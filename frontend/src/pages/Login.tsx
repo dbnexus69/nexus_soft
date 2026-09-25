@@ -8,7 +8,7 @@ import { forgotPassword, verifyCode, resetPassword } from '../api/auth';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, avisoSesion, limpiarAvisoSesion } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -71,6 +71,14 @@ export default function Login() {
       setShowErrorToast(false);
     }, 4000);
   };
+
+  // Si se llegó aquí porque la sesión caducó, se dice: si no, parece un fallo.
+  useEffect(() => {
+    if (avisoSesion) {
+      triggerErrorToast(avisoSesion);
+      limpiarAvisoSesion();
+    }
+  }, [avisoSesion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

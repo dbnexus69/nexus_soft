@@ -426,12 +426,54 @@ pruebas no puede adjuntar ficheros a un `<input type="file">`.
   el archivo.
 - `feat-dbmoon` tiene que traer la migración nueva: la base ya la tiene aplicada.
 
+
+## T16 · La sesión caducaba trabajando, y la pantalla no se enteraba `[x]`
+
+Reportado con la consola del navegador: una ristra de 401 en todas las peticiones y, encima, "`useData`
+must be used within DataProvider". Cuatro cosas distintas:
+
+- **La sesión duraba 30 minutos desde el login, se usara o no** (`getExpiryTime`). Decisión del
+  equipo: 30 minutos **sin actividad**. El middleware de auth ya consultaba `sesiones` cuando la caché
+  (5 min) no tenía la sesión; ese `findFirst` pasa a ser un `UPDATE … SET expires_at = GREATEST(…, ahora
+  + 30 min) … RETURNING`: comprueba y renueva en el mismo viaje, sin una escritura por petición.
+  `GREATEST` no acorta "recordarme" (7 días), y el JWT sigue caducando a su hora (1 día; 1 hora al
+  suplantar), así que la renovación no estira nada más allá de su token.
+- **Al caducar, la pantalla seguía dentro.** `client.ts` borraba el token pero React no se enteraba:
+  cada pantalla seguía pidiendo datos y todo daba 401, sin llegar nunca al login. Ahora un 401 de una
+  petición con sesión emite `nexus:sesion-caducada`; `AuthContext` cierra la sesión en pantalla (la
+  misma limpieza que `logout`) y el login enseña el motivo que dio la API.
+- **Cerrar sesión no la cerraba en el servidor** (encontrado al probar lo anterior). `logout` borraba
+  el token en el mismo tick en que pedía `POST /auth/logout`, y axios lee las cabeceras en un
+  interceptor asíncrono: la petición salía sin token, daba 401 y la fila de `sesiones` seguía viva.
+  Comprobado en el navegador antes y después: 1 sesión viva tras salir → 0. El token va explícito.
+  La T2 lo daba por arreglado en el servidor; el fallo estaba en el cliente.
+- **`CommissionsProvider` pedía comisionistas y liquidaciones al montarse**, en la raíz de la app: en
+  cualquier pantalla, el login incluido y sin sesión. Su único consumidor (`CommissionAgents`) ya los
+  pide al abrirse. Se quita.
+
+El "`useData`/`useAuth` must be used within…" **no es un fallo del código**: sale justo después de
+avisos de Vite `Could not Fast Refresh (… export is incompatible)` al cambiar un archivo de contexto,
+cuando el módulo nuevo crea un contexto nuevo y el provider montado sigue con el viejo. Con una recarga
+limpia no aparece.
+
+**Comprobado** con un servidor propio (6 comprobaciones): una sesión a 1 minuto de caducar se usa y
+vuelve a tener 30 · una ya caducada da 401 `SESSION_REVOKED` y no revive · "recordarme" sigue en 7
+días · `logout` con token la borra y el token deja de entrar. En el navegador: con la sesión caducada
+a mitad de uso, al navegar se vuelve al login sin ristra ni caída; abriendo la app con una sesión
+caducada, el login muestra "La sesión ya no es válida, vuelve a iniciar sesión"; comisionistas sigue
+cargando sus datos. `tsc` limpio.
+
+*Anotado sin arreglar:* `ClientsProvider` y `SalesProvider` también piden datos al montarse, en el
+login y sin sesión (dos 401 de ruido; no disparan el aviso porque no llevan token). Clientes y Ventas
+dependen de esa carga inicial, así que gatearla por sesión es un cambio propio.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T16 | La sesión pasa a caducar por inactividad (30 min) y, al caducar, la pantalla vuelve al login con el motivo. De paso: cerrar sesión no la cerraba en el servidor (el token no viajaba). El error de `useData` en consola era la recarga en caliente de Vite. |
 | 2026-09-25 | T15, T9 | La venta se crea entera. Validación de productos en `POST /sales`, fuera los productos sueltos, y los vouchers del asistente por fin se guardan. "Hotel Turístico" entra en la base (migración). T9 cerrada con la nueva subida. |
 | 2026-09-25 | T8 | Cerrada retirando la edición de productos: el `PUT` y el `PATCH` no los usaba ninguna pantalla. Las rutas que no existen responden 404 en JSON. El modal de "editar venta" pasa a `SalePaymentsModal`. La fecha de las liquidaciones deja de salir un día antes, y `DataContext` pierde su copia muerta de liquidaciones. |
 | 2026-09-25 | T7 (mensajes) | Ningún error de comisionistas llegaba a la pantalla. Los rechazos de liquidar llevan código y un mensaje claro, se enseñan en el modal y el historial deja de leer una copia que no se refrescaba. Probado en pantalla. T8 queda a replantear: los productos no se editan desde ninguna pantalla. |

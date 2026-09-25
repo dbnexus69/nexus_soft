@@ -21,9 +21,17 @@ function verifyToken(token) {
   return jwt.verify(token, env.jwtSecret);
 }
 
+/**
+ * Sin "recordarme", la sesión caduca tras este tiempo SIN ACTIVIDAD: el
+ * middleware de auth la renueva mientras se usa (ver `auth.js`). Antes eran 30
+ * minutos fijos desde el login, y quien llevaba media hora trabajando se
+ * quedaba fuera a mitad de una venta.
+ */
+const VENTANA_INACTIVIDAD_MS = 30 * 60 * 1000;
+
 function getExpiryTime(remember = false) {
-  const ms = remember ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000;
+  const ms = remember ? 7 * 24 * 60 * 60 * 1000 : VENTANA_INACTIVIDAD_MS;
   return Date.now() + ms;
 }
 
-module.exports = { generateToken, generateTokenConCaducidad, verifyToken, getExpiryTime };
+module.exports = { generateToken, generateTokenConCaducidad, verifyToken, getExpiryTime, VENTANA_INACTIVIDAD_MS };

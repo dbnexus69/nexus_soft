@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { verifyToken } = require('../utils/tokenUtils');
+const { verifyToken, VENTANA_INACTIVIDAD_MS } = require('../utils/tokenUtils');
 const prisma = require('../config/db');
 const { error } = require('../utils/apiResponse');
 // La caché vive en su propio archivo: quien cierra sesión o cambia una
@@ -67,14 +67,24 @@ async function auth(req, res, next) {
       // 2. La sesión tiene que existir en la base y estar en plazo.
       //
       // Sin esta comprobación el JWT era irrevocable: `logout` no borraba nada,
-      // y aunque lo hubiera borrado el token seguía valiendo hasta caducar
-      // —treinta minutos, o siete días con "recordarme"—. Una contraseña
-      // cambiada o un usuario dado de baja tampoco cortaban las sesiones
-      // abiertas. Ahora la fila de `sesiones` es lo que manda.
-      const sesion = await prisma.sesiones.findFirst({
-        where: { usuario_id: decoded.userId, token_hash: tokenHash, expires_at: { gt: new Date() } },
-        select: { id: true },
-      });
+      // y aunque lo hubiera borrado el token seguía valiendo hasta caducar.
+      // Una contraseña cambiada o un usuario dado de baja tampoco cortaban las
+      // sesiones abiertas. Ahora la fila de `sesiones` es lo que manda.
+      //
+      // Y en el mismo viaje se RENUEVA: la sesión caduca tras 30 minutos sin
+      // actividad, no a los 30 minutos de entrar. Solo se llega aquí cuando la
+      // caché (5 min) no tiene la sesión, así que un usuario activo la alarga
+      // cada pocos minutos sin una escritura por petición. `GREATEST` no acorta
+      // nunca: una sesión con "recordarme" (7 días) queda igual. El JWT sigue
+      // caducando a su hora (1 día, o 1 hora al suplantar), así que la
+      // renovación no estira una sesión más allá de su token.
+      const [sesion] = await prisma.$queryRaw`
+        UPDATE sesiones
+           SET expires_at = GREATEST(expires_at, (now() AT TIME ZONE 'UTC') + make_interval(secs => ${VENTANA_INACTIVIDAD_MS / 1000}))
+         WHERE usuario_id = ${decoded.userId}
+           AND token_hash = ${tokenHash}
+           AND expires_at > (now() AT TIME ZONE 'UTC')
+        RETURNING id`;
       if (!sesion) {
         return error(res, 'La sesión ya no es válida, vuelve a iniciar sesión', 401, 'SESSION_REVOKED');
       }

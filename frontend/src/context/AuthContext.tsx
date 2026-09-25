@@ -6,6 +6,7 @@ import { invalidateUsersCache } from '../utils/usersCache';
 import { invalidateConfigCache } from '../utils/configCache';
 import { invalidateDashboardCache } from '../utils/dashboardCache';
 import type { LoginResponse } from '../api/auth';
+import { SESION_CADUCADA } from '../api/client';
 
 interface AuthContextType {
   user: LoginResponse['user'] | null;
@@ -15,6 +16,9 @@ interface AuthContextType {
   isLoading: boolean;
   /** Nombre, logo y colores de la agencia en la que estás. */
   marca: Marca | null;
+  /** Por qué se cerró la sesión sin que el usuario lo pidiera (caducó, se revocó). */
+  avisoSesion: string | null;
+  limpiarAvisoSesion: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LoginResponse['user'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [avisoSesion, setAvisoSesion] = useState<string | null>(null);
   const [marca, setMarca] = useState<Marca | null>(null);
 
   /** La marca se guarda para pintarla y se aplica sobre el tema, a la vez. */
@@ -66,7 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    apiLogout().catch(() => {});
+    apiLogout(localStorage.getItem('nexus_token')).catch(() => {});
+    cerrarSesionLocal();
+  };
+
+  /** Lo que `logout` hace en el navegador, sin avisar al servidor. */
+  const cerrarSesionLocal = () => {
     setUser(null);
     // Fuera la marca: la pantalla de entrada es común, y dejarla puesta haría
     // que quien sale de una agencia viera sus colores al ir a entrar en otra.
@@ -89,12 +99,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('nexus_original_token');
   };
 
+  // La sesión caducó (30 min sin actividad) o se cerró en el servidor: fuera,
+  // al login, con el motivo. Muchas peticiones fallan a la vez; da igual, el
+  // cierre es idempotente. El borrador de una venta a medias sobrevive: vive
+  // en localStorage con su propia clave.
+  useEffect(() => {
+    const alCaducar = (e: Event) => {
+      const mensaje = (e as CustomEvent).detail?.mensaje;
+      setAvisoSesion(mensaje || 'Tu sesión terminó. Vuelve a entrar para seguir.');
+      cerrarSesionLocal();
+    };
+    window.addEventListener(SESION_CADUCADA, alCaducar);
+    return () => window.removeEventListener(SESION_CADUCADA, alCaducar);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user,
       login,
       logout,
       marca,
+      avisoSesion,
+      limpiarAvisoSesion: () => setAvisoSesion(null),
       // Rol administrativo, no el rol llamado 'admin'. `superadmin` se creó
       // como un admin con MÁS permisos, pero esta comparación exacta lo dejaba
       // fuera: al pasar el usuario 1 a superadmin desapareció del menú la

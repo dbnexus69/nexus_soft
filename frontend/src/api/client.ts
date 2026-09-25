@@ -16,6 +16,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Evento que se emite cuando una petición CON sesión recibe un 401: la sesión
+ * caducó o se cerró. `AuthContext` lo escucha y saca al usuario al login.
+ *
+ * Antes solo se borraba el token de `localStorage`, pero React seguía creyendo
+ * que había alguien dentro: la pantalla seguía pidiendo datos, todo daba 401 y
+ * nunca se llegaba al login. El login fallido no cuenta: no lleva token.
+ */
+export const SESION_CADUCADA = 'nexus:sesion-caducada';
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -23,6 +33,13 @@ api.interceptors.response.use(
       localStorage.removeItem('nexus_token');
       localStorage.removeItem('nexus_user');
       localStorage.removeItem('nexus_session_expiry');
+      // El 401 del propio logout (sesión ya caducada) no es un aviso que dar:
+      // el usuario pidió salir.
+      if (error.config?.headers?.Authorization && !String(error.config?.url || '').endsWith('/auth/logout')) {
+        window.dispatchEvent(new CustomEvent(SESION_CADUCADA, {
+          detail: { mensaje: error.response?.data?.error?.message },
+        }));
+      }
     }
     return Promise.reject(error);
   }

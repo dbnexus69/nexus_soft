@@ -1,8 +1,14 @@
 class AppError extends Error {
-  constructor(message, statusCode = 400, code = 'BAD_REQUEST') {
+  /**
+   * `details` viaja tal cual en `error.details`: la lista `[{ field, message }]`
+   * de siempre, con un `value` cuando la pantalla necesita la cifra además del
+   * texto (por ejemplo, el acumulado actual en un 409 de liquidación).
+   */
+  constructor(message, statusCode = 400, code = 'BAD_REQUEST', details = null) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
+    this.details = details;
     this.isOperational = true;
     Error.captureStackTrace(this, this.constructor);
   }
@@ -15,8 +21,8 @@ class NotFoundError extends AppError {
 }
 
 class BadRequestError extends AppError {
-  constructor(message = 'Petición inválida', code = 'BAD_REQUEST') {
-    super(message, 400, code);
+  constructor(message = 'Petición inválida', code = 'BAD_REQUEST', details = null) {
+    super(message, 400, code, details);
   }
 }
 
@@ -33,8 +39,8 @@ class ForbiddenError extends AppError {
 }
 
 class ConflictError extends AppError {
-  constructor(message = 'Conflicto con recurso existente') {
-    super(message, 409, 'CONFLICT');
+  constructor(message = 'Conflicto con recurso existente', code = 'CONFLICT', details = null) {
+    super(message, 409, code, details);
   }
 }
 

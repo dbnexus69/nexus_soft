@@ -35,46 +35,29 @@ export function useCommissions() {
     }
   }, []);
 
+  // Los errores se dejan pasar tal cual. Antes cada manejador los envolvía en
+  // `new Error(err.message)`, que descarta la respuesta de la API: la pantalla
+  // solo podía enseñar "Request failed with status code 409".
   const handleCreateAgent = async (agent: any) => {
-    try {
-      const created = await api.createCommissionAgent(agent);
-      await fetchCommissionAgents({ page: 1, perPage: agentsMeta.perPage });
-      return created;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear comisionista';
-      throw new Error(msg);
-    }
+    const created = await api.createCommissionAgent(agent);
+    await fetchCommissionAgents({ page: 1, perPage: agentsMeta.perPage });
+    return created;
   };
 
   const handleUpdateAgent = async (id: number, agentUpdate: any) => {
-    try {
-      await api.updateCommissionAgent(id, agentUpdate);
-      await fetchCommissionAgents({ page: agentsMeta.page, perPage: agentsMeta.perPage });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar comisionista';
-      throw new Error(msg);
-    }
+    await api.updateCommissionAgent(id, agentUpdate);
+    await fetchCommissionAgents({ page: agentsMeta.page, perPage: agentsMeta.perPage });
   };
 
   const handleDeleteAgent = async (id: number) => {
-    try {
-      await api.deleteCommissionAgent(id);
-      await fetchCommissionAgents({ page: agentsMeta.page, perPage: agentsMeta.perPage });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar comisionista';
-      throw new Error(msg);
-    }
+    await api.deleteCommissionAgent(id);
+    await fetchCommissionAgents({ page: agentsMeta.page, perPage: agentsMeta.perPage });
   };
 
   const handleCreateSettlement = async (settlementData: any) => {
-    try {
-      const created = await api.createSettlement(settlementData);
-      await fetchSettlements({ page: 1, perPage: settlementsMeta.perPage });
-      return created;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al liquidar comisiones';
-      throw new Error(msg);
-    }
+    const created = await api.createSettlement(settlementData);
+    await fetchSettlements({ page: 1, perPage: settlementsMeta.perPage });
+    return created;
   };
 
   return {

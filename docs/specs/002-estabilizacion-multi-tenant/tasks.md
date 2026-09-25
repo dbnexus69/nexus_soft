@@ -253,18 +253,50 @@ pendientes: 400 · **dos liquidaciones simultáneas: una 201 y otra 400**, la ve
 El verificador vive en el scratchpad de la sesión, fuera del repo: pasarlo a `backend/tests/` es
 parte de T11.
 
-*Anotado sin arreglar:*
-- Editar o borrar un producto puede dejar el total por debajo de lo ya pagado (una venta sobrepagada
-  por el otro lado). Hace falta decidir si se rechaza la edición o se permite un saldo a favor.
-- La pantalla de comisionistas no enseña el motivo de un rechazo: `useCommissions` relanza con
-  `new Error(err.message)` y la página lee `err.response.data.message`, que ya no existe. Un 409 o
-  un 400 salen como "Error al procesar la liquidación".
+**Los mensajes de la liquidación** (2026-09-25). Ningún error de la pantalla de comisionistas llegaba
+al usuario, no solo los de liquidar: `useCommissions` relanzaba cada error como
+`new Error(err.message)`, que descarta la respuesta, y la página leía `response.data.message` en vez de
+`response.data.error.message`. Crear, editar, borrar y liquidar enseñaban siempre el texto genérico.
 
-## T8 · Los tramos de un tiquete no se pueden editar `[ ]`
+- Cada rechazo de `POST /commissions/settlements` lleva su `code` y un mensaje escrito para quien
+  liquida, con el nombre del comisionista y el número de venta que ve la agencia (antes salía el id
+  interno): `SETTLEMENT_AMOUNT_CHANGED` (409), `NO_PENDING_COMMISSIONS`, `SALES_NOT_SETTLEABLE` y
+  `PAYMENT_METHOD_NOT_FOUND` (400). `AppError` acepta `details`, que el manejador de errores devuelve
+  en `error.details`; en el 409 y en "sin pendientes", `details` trae el acumulado actual en `value`.
+- En pantalla, el rechazo se enseña dentro del modal, junto al botón. Con 409 o sin pendientes, el
+  modal pasa a mostrar la cifra de la base y la lista se refresca; sin nada pendiente el botón se
+  deshabilita. Un canal de pago que ya no existe marca su campo.
+- El historial leía `data.commissionSettlements` de `DataContext`, una segunda copia que nadie
+  refrescaba al liquidar: la liquidación recién hecha no aparecía. Pasa a la lista del hook, paginada.
+
+**Comprobado en pantalla** con una agencia de prueba montada y desmontada: con el modal abierto se
+añade una venta por detrás y confirmar da el 409 dentro del modal, con el monto actualizado de
+$55.000 a $65.000; confirmar otra vez liquida y la liquidación aparece en el historial. Anulando por
+detrás las ventas pendientes, confirmar da el 400 "no tiene comisiones pendientes", el monto pasa a
+$0 y el botón queda deshabilitado. `tsc` limpio y el verificador por la API sigue en verde.
+
+*Anotado sin arreglar:*
+- Editar o borrar un producto por la API puede dejar el total por debajo de lo ya pagado. Ninguna
+  pantalla lo permite (ver T8), así que hoy solo es alcanzable con una llamada directa.
+- **La fecha de una liquidación sale un día antes.** Se elige el 25 y el historial dice el 24:
+  `new Date('2026-09-25')` es medianoche UTC y `listSettlements` la formatea con la hora local del
+  servidor (UTC-5).
+- `DataContext` sigue cargando `commissionSettlements` con `fetchAllPages` al iniciar sesión, y ya
+  no la lee nadie: una petición de más, y una copia que puede volver a usarse por error.
+
+## T8 · Los tramos de un tiquete no se pueden editar `[ ]` — a replantear
 
 El `update` de `products.controller.js` nunca lee `legs` ni escribe en `tramos_vuelo`: un `PUT` con
 tramos modificados los ignora sin error. Al implementarlo hay que conservar `checkin_status` de cada
 tramo, que hoy está protegido (la edición no lo toca). **Comprobación de cierre:** B13.
+
+**Replanteo (2026-09-25):** en la aplicación **no se editan los productos de una venta**. `updateProduct`
+existe en `api/sales.ts` pero ninguna pantalla lo usa, así que este fallo solo se alcanza por la API.
+Hay que decidir si el `PUT`/`DELETE` de productos se retira o se mantiene como API sin pantalla (y
+entonces se arregla). Lo que la pantalla llama "editar" una venta es **gestionar sus abonos**, y está
+mal nombrado en el código: `SaleEditModal.tsx` (título "Gestión de Abonos y Pagos", con props
+`editingSale`, `onUpdateSale`, `onAddSale`), `onEdit`/`canEditThis` en `SalesTable.tsx` (el botón dice
+"Actualizar abonos") y `handleOpenModal`/`editingSale` en `Sales.tsx`.
 
 ## T9 · El producto y la venta no se validan entre sí `[ ]`
 
@@ -319,6 +351,7 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T7 (mensajes) | Ningún error de comisionistas llegaba a la pantalla. Los rechazos de liquidar llevan código y un mensaje claro, se enseñan en el modal y el historial deja de leer una copia que no se refrescaba. Probado en pantalla. T8 queda a replantear: los productos no se editan desde ninguna pantalla. |
 | 2026-09-25 | T7 | Cerrada, 27 comprobaciones por la API sin fallos. Tope y cerrojo en los cobros, comisiones sin anuladas ni borradas, liquidación decidida por el servidor. De paso: liquidar no marcaba ninguna venta, y el acumulado se podía pagar dos veces. |
 | 2026-09-25 | Entorno | **La contraseña de `app_nexus` se restableció otra vez** (desde `feat-bayrol`, con el hash SCRAM generado en local: la contraseña no pasó por el MCP). La del 2026-09-24 deja de valer: el `.env` de `feat-dbmoon` y el hosting, si ya la usan, necesitan la nueva. |
 | 2026-09-25 | T6, docs | T6 cerrada: el commit y el push estaban hechos en `e697576`. La prueba de aislamiento pasa de `backend/pruebas/` a `backend/tests/` (script y documentación al día). Las dos ramas de trabajo quedan anotadas. La spec 001 pasa a completada y el rediseño de la cartera, a terminado. |

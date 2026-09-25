@@ -32,6 +32,7 @@ import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, capitalizeName, todayStr } from "../utils/formatters";
 import StatCard from "../components/ui/StatCard";
 import { SkeletonRows } from "../components/ui/Table";
+import { Pagination } from "../components/ui/Pagination";
 import { AgentDetailsModal } from "../components/commissions/AgentDetailsModal";
 
 export default function CommissionAgents() {
@@ -44,7 +45,10 @@ export default function CommissionAgents() {
     handleDeleteAgent: deleteCommissionAgent,
     handleCreateSettlement: settleCommissions,
     fetchCommissionAgents,
-    fetchSettlements
+    fetchSettlements,
+    agentsMeta,
+    settlementsMeta,
+    loadingSettlements
   } = useCommissionsContext();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +75,10 @@ export default function CommissionAgents() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  // Los rechazos de la liquidación se enseñan dentro del modal, junto al botón
+  // que los provocó: un aviso flotante de 3 s se pierde detrás del modal abierto.
+  const [settleError, setSettleError] = useState<string | null>(null);
+  const [settleFieldErrors, setSettleFieldErrors] = useState<{ paymentMethod?: string }>({});
 
   // Lazy Load Fetch
   useEffect(() => {
@@ -79,6 +87,17 @@ export default function CommissionAgents() {
       fetchSettlements()
     ]).finally(() => setIsLoading(false));
   }, [fetchCommissionAgents, fetchSettlements]);
+
+  const notifyError = (msg: string) => {
+    setErrorMessage(msg);
+    setShowError(true);
+    setTimeout(() => setShowError(false), 4000);
+  };
+
+  // El mensaje de la API ya está escrito para quien usa la pantalla; el texto
+  // propio solo cubre lo que no llega a la API (sin red, 500).
+  const mensajeDeApi = (err: any, respaldo: string): string =>
+    err?.response?.data?.error?.message || respaldo;
 
   const notifySuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -169,9 +188,7 @@ export default function CommissionAgents() {
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || "Error al guardar el comisionista");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 3000);
+      notifyError(mensajeDeApi(err, "No se pudo guardar el comisionista. Revisa la conexión e inténtalo de nuevo."));
     } finally {
       setIsSaving(false);
     }
@@ -185,9 +202,7 @@ export default function CommissionAgents() {
       notifySuccess("Comisionista eliminado correctamente");
       setDeleteConfirm(null);
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || "Error al eliminar el comisionista");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 3000);
+      notifyError(mensajeDeApi(err, "No se pudo eliminar el comisionista. Revisa la conexión e inténtalo de nuevo."));
     } finally {
       setIsDeleting(false);
     }
@@ -195,6 +210,8 @@ export default function CommissionAgents() {
 
   const openSettleModal = (agent: any) => {
     setSelectedAgent(agent);
+    setSettleError(null);
+    setSettleFieldErrors({});
     const defaultPM = (data.config.paymentMethods || []).find((pm: any) => pm.name === "Transferencia");
     setSettleData({
       date: todayStr(),
@@ -209,6 +226,8 @@ export default function CommissionAgents() {
   const handleSettle = async () => {
     if (!selectedAgent) return;
     setIsSaving(true);
+    setSettleError(null);
+    setSettleFieldErrors({});
     try {
       await settleCommissions({ agentId: selectedAgent.id, ...settleData, agentName: selectedAgent.name });
       await fetchSettlements();
@@ -216,9 +235,20 @@ export default function CommissionAgents() {
       setIsSettleModalOpen(false);
       setActiveTab("history");
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || "Error al procesar la liquidación");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 3000);
+      const apiError = err?.response?.data?.error;
+      const actual = apiError?.details?.find((d: any) => d.field === "amount")?.value;
+      setSettleError(mensajeDeApi(err, "No se pudo registrar la liquidación. Revisa la conexión e inténtalo de nuevo."));
+      setSettleFieldErrors(
+        apiError?.code === "PAYMENT_METHOD_NOT_FOUND" ? { paymentMethod: "Este canal ya no existe. Elige otro." } : {}
+      );
+      // El acumulado cambió (409) o ya no queda nada (400): el modal pasa a
+      // enseñar la cifra que tiene la base y la lista se refresca por detrás,
+      // para que confirmar otra vez pague lo que se ve.
+      if (typeof actual === "number") {
+        setSelectedAgent((a: any) => (a ? { ...a, accumulated: actual } : a));
+        setSettleData((d: any) => ({ ...d, amount: actual }));
+        fetchCommissionAgents({ page: agentsMeta.page, perPage: agentsMeta.perPage });
+      }
     } finally {
       setIsSaving(false);
     }
@@ -543,9 +573,12 @@ export default function CommissionAgents() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
-                      {isLoading && commissionAgents.length === 0 && <SkeletonRows columnas={6} filas={5} />}
-                      {(data.commissionSettlements || []).length > 0 ? (
-                        [...(data.commissionSettlements || [])].reverse().map((s: any) => (
+                      {loadingSettlements && settlements.length === 0 && <SkeletonRows columnas={5} filas={5} />}
+                      {/* La lista del hook, la que se refresca al liquidar. Antes se leía
+                          `data.commissionSettlements` de DataContext, una segunda copia que
+                          nadie actualizaba: la liquidación recién hecha no aparecía. */}
+                      {settlements.length > 0 ? (
+                        settlements.map((s: any) => (
                           <tr key={s.id} className="hover:bg-accent/5 transition-all group">
                             <td className="px-8 py-5">
                               <div className="flex items-center gap-2 text-gray-500">
@@ -589,6 +622,15 @@ export default function CommissionAgents() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  className="px-8 py-4"
+                  currentPage={settlementsMeta.page}
+                  totalPages={settlementsMeta.totalPages}
+                  total={settlementsMeta.total}
+                  perPage={settlementsMeta.perPage}
+                  loading={loadingSettlements}
+                  onPageChange={(page) => fetchSettlements({ page, perPage: settlementsMeta.perPage })}
+                />
               </div>
             </Card>
           )}
@@ -816,16 +858,20 @@ export default function CommissionAgents() {
             <FormField label="Fecha de Ejecución">
               <DatePicker
                 value={settleData.date}
-                onChange={(val) => setSettleData({ ...settleData, date: val })}
+                onChange={(val) => { setSettleData({ ...settleData, date: val }); setSettleError(null); }}
                 fieldName="ejecución"
                 className="h-12 rounded-xl"
               />
             </FormField>
-            <FormField label="Canal de Pago">
+            <FormField label="Canal de Pago" error={settleFieldErrors.paymentMethod}>
               <Select
                 className="h-12 rounded-xl"
                 value={settleData.paymentMethod?.toString() || ""}
-                onChange={(e) => setSettleData({ ...settleData, paymentMethod: e.target.value })}
+                onChange={(e) => {
+                  setSettleData({ ...settleData, paymentMethod: e.target.value });
+                  setSettleError(null);
+                  setSettleFieldErrors({});
+                }}
                 options={[
                   { value: "", label: "Seleccione un canal" },
                   ...(data.config.paymentMethods || []).map((pm: any) => ({
@@ -855,8 +901,18 @@ export default function CommissionAgents() {
             />
           </FormField>
 
+          {settleError && (
+            <div
+              role="alert"
+              className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200"
+            >
+              <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <p>{settleError}</p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3 pt-4">
-            <Button onClick={handleSettle} className="bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 transition-all hover:scale-[1.02] active:scale-95" disabled={isSaving}>
+            <Button onClick={handleSettle} className="bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 transition-all hover:scale-[1.02] active:scale-95" disabled={isSaving || !(selectedAgent?.accumulated > 0)}>
               {isSaving ? "Procesando..." : "Confirmar y Saldar Cuentas"}
             </Button>
             <Button variant="outline" onClick={() => setIsSettleModalOpen(false)} className="h-12 rounded-xl border-gray-200 text-gray-400 font-bold" disabled={isSaving}>

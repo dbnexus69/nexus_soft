@@ -19,6 +19,21 @@ const VENTA_CON_COMISION_PENDIENTE = `
   AND v.status <> 'anulado'
 `;
 
+// Los importes de los mensajes, como los pinta la pantalla: pesos sin
+// decimales salvo que los haya. Si no, un 409 por céntimos diría "ahora es
+// $170, no $170".
+const pesos = (valor) => new Intl.NumberFormat('es-CO', {
+  style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2,
+}).format(valor);
+
+/** "la venta N.º 7", "las ventas N.º 7 y 9", "las ventas N.º 7, 9 y 12". */
+function nombrarVentas(numeros) {
+  const lista = numeros.length === 1
+    ? String(numeros[0])
+    : `${numeros.slice(0, -1).join(', ')} y ${numeros[numeros.length - 1]}`;
+  return `${numeros.length === 1 ? 'la venta' : 'las ventas'} N.º ${lista}`;
+}
+
 const splitFullName = (fullName) => {
   const parts = fullName ? fullName.trim().split(/\s+/) : [];
   let firstName = fullName || '';
@@ -384,9 +399,10 @@ class CommissionsService {
     return await prisma.transaccion(async (tx) => {
       const comisionista = await tx.comisionistas.findFirst({
         where: { id: data.agentId, deleted_at: null },
-        select: { id: true },
+        select: { id: true, personas: { select: { nombres: true, apellidos: true } } },
       });
-      if (!comisionista) throw new NotFoundError('Comisionista no encontrado');
+      if (!comisionista) throw new NotFoundError('Este comisionista ya no existe o fue eliminado.');
+      const nombre = `${comisionista.personas.nombres} ${comisionista.personas.apellidos}`.trim();
 
       let metodo_pago_id = null;
       if (data.paymentMethod !== undefined && data.paymentMethod !== null && data.paymentMethod !== '') {
@@ -394,7 +410,13 @@ class CommissionsService {
         const mp = Number.isInteger(id)
           ? await tx.metodos_pago.findFirst({ where: { id }, select: { id: true } })
           : null;
-        if (!mp) throw new BadRequestError('El método de pago no existe');
+        if (!mp) {
+          throw new BadRequestError(
+            'El canal de pago elegido ya no existe. Elige otro para registrar la liquidación.',
+            'PAYMENT_METHOD_NOT_FOUND',
+            [{ field: 'paymentMethod', message: 'Este canal de pago ya no existe' }],
+          );
+        }
         metodo_pago_id = mp.id;
       }
 
@@ -411,18 +433,44 @@ class CommissionsService {
         const porId = new Map(pendientes.map(v => [v.id, v]));
         const ajenas = data.salesIds.filter(id => !porId.has(id));
         if (ajenas.length) {
-          throw new BadRequestError(
-            `Estas ventas no tienen comisión pendiente para este comisionista: ${ajenas.join(', ')}`
-          );
+          // El mensaje nombra el número que ve la agencia, nunca el id interno.
+          // Las que no se encuentran son de otra agencia o no existen: para
+          // quien liquida es lo mismo, y no se distingue.
+          const vistas = await tx.ventas.findMany({
+            where: { id: { in: ajenas } }, select: { numero: true }, orderBy: { numero: 'asc' },
+          });
+          const numeros = vistas.map(v => v.numero);
+          const partes = [];
+          if (numeros.length) {
+            partes.push(`${nombrarVentas(numeros)} ya no ${numeros.length === 1 ? 'tiene' : 'tienen'} comisión pendiente para ${nombre}: ${numeros.length === 1 ? 'está liquidada, anulada o es' : 'están liquidadas, anuladas o son'} de otro comisionista.`);
+          }
+          if (numeros.length < ajenas.length) {
+            const faltan = ajenas.length - numeros.length;
+            partes.push(faltan === 1 ? 'Una de las ventas elegidas no existe.' : `${faltan} de las ventas elegidas no existen.`);
+          }
+          partes.push(`${ajenas.length === 1 ? 'Quítala' : 'Quítalas'} de la liquidación y vuelve a confirmar.`);
+          const mensaje = partes.join(' ');
+          throw new BadRequestError(mensaje[0].toUpperCase() + mensaje.slice(1), 'SALES_NOT_SETTLEABLE', [
+            { field: 'salesIds', message: 'Hay ventas sin comisión pendiente', value: numeros },
+          ]);
         }
         ventas = [...new Set(data.salesIds)].map(id => porId.get(id));
       }
-      if (!ventas.length) throw new BadRequestError('El comisionista no tiene comisiones pendientes');
+      if (!ventas.length) {
+        throw new BadRequestError(
+          `${nombre} no tiene comisiones pendientes. Si esperabas alguna, revisa que su venta no esté anulada ni liquidada.`,
+          'NO_PENDING_COMMISSIONS',
+          [{ field: 'amount', message: 'No hay nada pendiente', value: 0 }],
+        );
+      }
 
       const monto = aCentimos(ventas.reduce((s, v) => s + Number(v.neto || 0), 0));
       if (data.amount !== undefined && data.amount !== null && aCentimos(data.amount) !== monto) {
         throw new ConflictError(
-          `El monto a liquidar cambió: ahora es ${monto}, no ${aCentimos(data.amount)}. Recargue y vuelva a intentarlo`
+          `El acumulado de ${nombre} cambió mientras preparabas la liquidación: ahora es ${pesos(monto)}, ` +
+          `no ${pesos(aCentimos(data.amount))}. Revisa la nueva cifra y confirma otra vez.`,
+          'SETTLEMENT_AMOUNT_CHANGED',
+          [{ field: 'amount', message: `El acumulado actual es ${pesos(monto)}`, value: monto }],
         );
       }
 

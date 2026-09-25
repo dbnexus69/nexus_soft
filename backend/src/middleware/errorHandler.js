@@ -65,7 +65,7 @@ function errorHandler(err, req, res, _next) {
 
   // ── Errores nuestros: el mensaje se escribió para el usuario ────────────
   if (err.statusCode) {
-    return error(res, err.message, err.statusCode, err.code || 'BAD_REQUEST');
+    return error(res, err.message, err.statusCode, err.code || 'BAD_REQUEST', err.details || null);
   }
 
   // ── Cualquier otra cosa: nada del error sale de aquí ────────────────────

@@ -1,7 +1,23 @@
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError } = require('../errors/AppError');
+const { NotFoundError, BadRequestError, ConflictError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { formatName } = require('../utils/stringUtils');
+const { aCentimos } = require('./saleTotals');
+
+/**
+ * Qué ventas deben comisión todavía. Una sola definición: la usan el acumulado
+ * que ve la pantalla y la liquidación que lo paga, y si no coincidieran se
+ * pagaría una cifra distinta de la mostrada.
+ *
+ * Las anuladas y las borradas no cuentan: antes el acumulado solo miraba
+ * `comision_liquidada`, así que anular una venta dejaba su comisión viva y
+ * lista para pagarse. Espera el alias `v` para `ventas`.
+ */
+const VENTA_CON_COMISION_PENDIENTE = `
+  v.comision_liquidada = false
+  AND v.deleted_at IS NULL
+  AND v.status <> 'anulado'
+`;
 
 const splitFullName = (fullName) => {
   const parts = fullName ? fullName.trim().split(/\s+/) : [];
@@ -62,7 +78,7 @@ class CommissionsService {
             COALESCE((
               SELECT SUM(v.monto_comision_neto)
               FROM ventas v
-              WHERE v.comisionista_id = c.id AND v.comision_liquidada = false
+              WHERE v.comisionista_id = c.id AND ${VENTA_CON_COMISION_PENDIENTE}
             ), 0) as "accumulated",
             c.umbral_pago as "paymentThreshold",
             c.banco,
@@ -346,32 +362,89 @@ class CommissionsService {
     };
   }
 
+  /**
+   * Liquida las comisiones pendientes de un comisionista.
+   *
+   * Qué se paga y cuánto lo decide el servidor, no el cuerpo de la petición.
+   * Antes se guardaba el `amount` que llegara y solo se marcaban las ventas de
+   * `salesIds`, que la pantalla nunca mandaba: la liquidación quedaba sin
+   * ventas, ninguna pasaba a liquidada y el mismo acumulado se podía volver a
+   * pagar. Y una venta anulada se podía liquidar.
+   *
+   * - Sin `salesIds`, se liquida todo lo pendiente (lo que muestra la pantalla).
+   *   Con `salesIds`, solo esas, y todas tienen que estar pendientes.
+   * - Las ventas se bloquean (`FOR UPDATE`) antes de sumar: dos liquidaciones a
+   *   la vez no pagan dos veces lo mismo. La segunda espera, vuelve a evaluar
+   *   el filtro y ya no las encuentra pendientes.
+   * - `amount`, si llega, es lo que el operador vio. Si no coincide con lo que
+   *   la base suma ahora (entró o se anuló una venta mientras tanto), 409: mejor
+   *   que pagar una cifra distinta de la que aprobó.
+   */
   async createSettlement(data) {
     return await prisma.transaccion(async (tx) => {
-      const metodo_pago_id = data.paymentMethod ? parseInt(data.paymentMethod) : null;
+      const comisionista = await tx.comisionistas.findFirst({
+        where: { id: data.agentId, deleted_at: null },
+        select: { id: true },
+      });
+      if (!comisionista) throw new NotFoundError('Comisionista no encontrado');
 
+      let metodo_pago_id = null;
+      if (data.paymentMethod !== undefined && data.paymentMethod !== null && data.paymentMethod !== '') {
+        const id = Number(data.paymentMethod);
+        const mp = Number.isInteger(id)
+          ? await tx.metodos_pago.findFirst({ where: { id }, select: { id: true } })
+          : null;
+        if (!mp) throw new BadRequestError('El método de pago no existe');
+        metodo_pago_id = mp.id;
+      }
+
+      const pendientes = await tx.$queryRawUnsafe(`
+        SELECT v.id, v.monto_comision_neto AS neto
+        FROM ventas v
+        WHERE v.comisionista_id = $1 AND ${VENTA_CON_COMISION_PENDIENTE}
+        ORDER BY v.id
+        FOR UPDATE
+      `, comisionista.id);
+
+      let ventas = pendientes;
+      if (data.salesIds && data.salesIds.length > 0) {
+        const porId = new Map(pendientes.map(v => [v.id, v]));
+        const ajenas = data.salesIds.filter(id => !porId.has(id));
+        if (ajenas.length) {
+          throw new BadRequestError(
+            `Estas ventas no tienen comisión pendiente para este comisionista: ${ajenas.join(', ')}`
+          );
+        }
+        ventas = [...new Set(data.salesIds)].map(id => porId.get(id));
+      }
+      if (!ventas.length) throw new BadRequestError('El comisionista no tiene comisiones pendientes');
+
+      const monto = aCentimos(ventas.reduce((s, v) => s + Number(v.neto || 0), 0));
+      if (data.amount !== undefined && data.amount !== null && aCentimos(data.amount) !== monto) {
+        throw new ConflictError(
+          `El monto a liquidar cambió: ahora es ${monto}, no ${aCentimos(data.amount)}. Recargue y vuelva a intentarlo`
+        );
+      }
+
+      const ventasIds = ventas.map(v => v.id);
       const settlement = await tx.liquidaciones_comision.create({
         data: {
-          comisionista_id: data.agentId,
+          comisionista_id: comisionista.id,
           fecha: data.date ? new Date(data.date) : new Date(),
-          monto: data.amount,
-          metodo_pago_id: metodo_pago_id,
+          monto,
+          metodo_pago_id,
           referencia: data.reference || null,
           notas: data.notes || null
         }
       });
 
-      if (data.salesIds && data.salesIds.length > 0) {
-        for (const venta_id of data.salesIds) {
-          await tx.liquidacion_ventas.create({
-            data: { liquidacion_id: settlement.id, venta_id: venta_id }
-          });
-          await tx.ventas.update({
-            where: { id: venta_id },
-            data: { comision_liquidada: true }
-          });
-        }
-      }
+      await tx.liquidacion_ventas.createMany({
+        data: ventasIds.map(venta_id => ({ liquidacion_id: settlement.id, venta_id })),
+      });
+      await tx.ventas.updateMany({
+        where: { id: { in: ventasIds } },
+        data: { comision_liquidada: true },
+      });
 
       const fullSettlement = await tx.liquidaciones_comision.findUnique({
         where: { id: settlement.id },
@@ -393,7 +466,7 @@ class CommissionsService {
         paymentMethod: fullSettlement.metodos_pago?.nombre || null,
         reference: fullSettlement.referencia,
         notes: fullSettlement.notas,
-        salesIds: data.salesIds || [],
+        salesIds: ventasIds,
       };
     });
   }

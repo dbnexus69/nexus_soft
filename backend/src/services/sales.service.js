@@ -2,7 +2,7 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { enHoraColombia } = require('../utils/fechas');
-const { recalcularVenta, aCentimos, precioProducto } = require('./saleTotals');
+const { recalcularVenta, aCentimos, precioProducto, bloquearVenta } = require('./saleTotals');
 const { empresaActual } = require('../config/tenant');
 const emailService = require('../utils/emailService');
 
@@ -574,15 +574,17 @@ class SalesService {
           costo_proveedor_total: Number(supplierCost) || 0,
           ta_total: Number(ta) || 0,
           comisionista_id: commissionAgentId ? Number(commissionAgentId) : null,
-          monto_comision_bruto: Number(commissionAgentAmount) || 0,
+          // Con `aCentimos`, igual que `updateSale`: `Number(x) || 0` guardaba
+          // decimales de coma flotante que luego no cuadran al sumar comisiones.
+          monto_comision_bruto: aCentimos(commissionAgentAmount),
           porcentaje_retencion_comision: Number(commissionAgentRetentionPercentage) || 0,
-          monto_comision_neto: Number(commissionAgentNetPayment) || 0,
+          monto_comision_neto: aCentimos(commissionAgentNetPayment),
           comision_liquidada: false,
           metodo_pago_principal_id,
           status,
           es_credito: Boolean(isCredit),
           fecha_vence_credito: creditDueDate ? new Date(creditDueDate) : null,
-          monto_pagado_credito: payments.reduce((s, p) => s + Number(p.amount || 0), 0),
+          monto_pagado_credito: aCentimos(payments.reduce((s, p) => s + Number(p.amount || 0), 0)),
           observaciones: observations || null,
           responsable_id: responsableId ? Number(responsableId) : null,
         }
@@ -1099,7 +1101,7 @@ class SalesService {
         await tx.pagos_venta.create({
           data: {
             id: uuidv4(), venta_id: ventaId,
-            monto: Number(p.amount),
+            monto: aCentimos(p.amount),
             metodo_pago_id: mpId,
             referencia: p.reference || null,
           }
@@ -1109,7 +1111,15 @@ class SalesService {
       // Con los productos y los pagos ya escritos, la cabecera se deriva de
       // ellos. El `total` del cuerpo de la petición deja de decidir cuánto
       // debe el cliente: solo lo dice la suma de lo que se le vendió.
-      return recalcularVenta(tx, ventaId);
+      const cabecera = await recalcularVenta(tx, ventaId);
+      // El mismo tope que `registerPayment`, contra el total que acaba de
+      // calcular la base. Lanzar aquí deshace la venta entera.
+      if (cabecera.monto_pagado_credito > cabecera.monto_total) {
+        throw new BadRequestError(
+          `Los abonos (${cabecera.monto_pagado_credito}) superan el total de la venta (${cabecera.monto_total})`
+        );
+      }
+      return cabecera;
     }, {
       // Con los catálogos ya resueltos, una venta grande cabe de sobra en este
       // margen. Se deja explícito porque el defecto de Prisma son 5 s y una
@@ -1779,7 +1789,15 @@ class SalesService {
   async voidSale(id, reason, alcance = {}) {
     if (!reason) throw new BadRequestError('Debe proporcionar un motivo para anular la venta');
     const venta = await ventaVisible(id, alcance, { paraEscribir: true });
+    // Anular otra vez solo añadiría un segundo "[ANULADA]" a las observaciones.
+    if (venta.status === 'anulado') throw new BadRequestError('La venta ya está anulada');
 
+    // Los importes no se tocan: el estado basta. La comisión pendiente deja de
+    // contar porque el acumulado y la liquidación excluyen las anuladas
+    // (`commissions.service.js`), y una sola regla ahí no puede desincronizarse
+    // de un borrado aquí. Los pagos se conservan: registran dinero que entró, y
+    // devolverlo es otra operación. Una comisión ya liquidada tampoco se revierte:
+    // se pagó, y la liquidación que la incluye tiene que seguir cuadrando.
     const newObservaciones = venta.observaciones ? `${venta.observaciones}\n[ANULADA] Motivo: ${reason}` : `[ANULADA] Motivo: ${reason}`;
     await prisma.ventas.update({
       where: { id },
@@ -1818,6 +1836,9 @@ class SalesService {
     // `saleTotal: 1` dejaba una venta de 3.000.000 en `pagado`. Ningún cliente
     // los enviaba —eran superficie de ataque y nada más—, así que se van.
     const resultado = await prisma.transaccion(async (tx) => {
+      // Primero el cerrojo, después la lectura: si no, dos cobros a la vez leen
+      // el mismo pendiente y los dos caben.
+      await bloquearVenta(tx, id);
       const venta = await tx.ventas.findFirst({
         where: { id, deleted_at: null },
         select: { monto_total: true, monto_pagado_credito: true, status: true },
@@ -1829,9 +1850,15 @@ class SalesService {
 
       // `isTotal` significa "salda lo que queda", y cuánto queda lo sabe la base.
       const pendiente = aCentimos(venta.monto_total - (venta.monto_pagado_credito || 0));
+      if (!(pendiente > 0)) throw new BadRequestError('La venta ya está pagada');
       const monto = isTotal ? pendiente : aCentimos(amount);
       if (!(monto > 0)) {
         throw new BadRequestError('El monto del pago debe ser mayor que cero');
+      }
+      // El tope valía solo para `isTotal`: un pago manual mayor que la deuda se
+      // aceptaba y dejaba lo pagado por encima del total.
+      if (monto > pendiente) {
+        throw new BadRequestError(`El pago (${monto}) supera el saldo pendiente de la venta (${pendiente})`);
       }
 
       const pago = await tx.pagos_venta.create({

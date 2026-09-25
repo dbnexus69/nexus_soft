@@ -26,7 +26,9 @@ const updateAgentSchema = z.object({
 
 const createSettlementSchema = z.object({
   agentId: z.number({ required_error: 'ID de agente es requerido' }),
-  amount: z.number({ required_error: 'Monto es requerido' }),
+  // Lo calcula el servidor con las ventas pendientes. Si llega, es la cifra que
+  // vio el operador y debe coincidir (si no, 409).
+  amount: z.number().optional(),
   date: z.string().optional(),
   paymentMethod: z.union([z.number(), z.string()]).optional(),
   reference: z.string().nullable().optional(),

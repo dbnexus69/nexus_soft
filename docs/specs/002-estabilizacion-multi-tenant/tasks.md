@@ -204,24 +204,61 @@ antes de tocar la base: una migración aplicada desde una rama que la otra no ti
 
 ## Pendientes
 
-## T7 · El dinero de una venta `[ ]`
+## T7 · El dinero de una venta `[x]`
 
-Cuatro fallos de la auditoría de ventas, anteriores al multi-tenant. Ninguno tiene nada que ver con
-la RLS.
+Cuatro fallos de la auditoría de ventas, anteriores al multi-tenant, y un quinto, peor, que salió al
+leer el código. Ninguno tiene nada que ver con la RLS.
 
-- **Sobrepago sin control.** `registerPayment` solo limita el monto en la rama `isTotal`; un pago
-  manual mayor que la deuda se acepta y `recalcularVenta` deja el pagado por encima del total.
-- **Carrera en "saldar todo".** El pendiente se lee sin bloqueo (`SELECT … FOR UPDATE`) y sin nivel
-  de aislamiento serializable: dos pagos simultáneos con `isTotal` leen el mismo pendiente y se
-  insertan los dos.
-- **Anular no toca la comisión ni los pagos.** `voidSale` solo cambia `status` y `observaciones`. El
-  listado de comisionistas suma `monto_comision_neto` de todas las ventas con `comision_liquidada =
-  false` sin excluir las anuladas, y `createSettlement` no comprueba el estado antes de liquidar: se
-  puede pagar a un comisionista por una venta anulada.
-- **La comisión al crear no se redondea.** `createSale` guarda `monto_comision_bruto` y `neto` con
-  `Number(x) || 0`; `updateSale` sí pasa por `aCentimos`.
+- **Sobrepago sin control.** `registerPayment` solo limitaba el monto en la rama `isTotal`: un pago
+  manual mayor que la deuda se aceptaba y dejaba lo pagado por encima del total. Lo mismo en el alta:
+  los abonos de `createSale` no se comparaban con el total.
+- **Carrera en "saldar todo".** El pendiente se leía sin bloqueo: dos pagos simultáneos con `isTotal`
+  leían el mismo pendiente y se insertaban los dos.
+- **Anular no liberaba la comisión.** El acumulado de comisionistas sumaba `monto_comision_neto` de
+  todas las ventas con `comision_liquidada = false`, sin excluir anuladas ni borradas, y
+  `createSettlement` no miraba el estado. En la base había una venta borrada sumando al acumulado.
+- **La comisión al crear no se redondeaba.** `createSale` guardaba `Number(x) || 0`; `updateSale` sí
+  pasaba por `aCentimos`.
+- **Liquidar no liquidaba nada** (encontrado aquí). La pantalla manda `amount` y nunca `salesIds`, y
+  el servicio solo marcaba las ventas de `salesIds`: la liquidación se guardaba sin ventas, ninguna
+  pasaba a liquidada y el mismo acumulado se podía volver a pagar. El monto era el que llegara en el
+  cuerpo. En la base no hay ninguna liquidación todavía, así que no hay datos que reparar.
 
-**Comprobación de cierre:** B12.
+**Lo hecho:**
+- `bloquearVenta` (`saleTotals.js`): `SELECT … FOR UPDATE` sobre la venta antes de leer importes.
+  `registerPayment` lo usa y rechaza con 400 un pago mayor que el pendiente, o sobre una venta ya
+  pagada.
+- `createSale` redondea la comisión y los abonos con `aCentimos`, y tras `recalcularVenta` rechaza
+  (y deshace la venta) si los abonos superan el total.
+- `voidSale` rechaza anular dos veces. No toca importes ni pagos: los pagos registran dinero que
+  entró (devolverlo es otra operación) y una comisión ya liquidada se pagó y no se revierte.
+- `commissions.service.js`: una sola definición, `VENTA_CON_COMISION_PENDIENTE` (no liquidada, no
+  borrada, no anulada), compartida por el acumulado y la liquidación.
+- `createSettlement` decide qué se paga: sin `salesIds`, todo lo pendiente; con `salesIds`, solo
+  esas y todas pendientes (400 si no). Bloquea las ventas antes de sumar, calcula el monto, y si el
+  `amount` recibido no coincide con esa suma responde 409. Comprueba el comisionista y el método de
+  pago. `amount` pasa a ser opcional en el esquema.
+
+**Comprobado** con el servidor real, `app_nexus` y una agencia `verif-t7-*` montada y desmontada
+(27 comprobaciones, 0 fallos): la comisión se guarda en céntimos (100,456 → 100,46) · abonos por
+encima del total: 400 y la venta no se crea · pago manual mayor que la deuda: 400 · **dos "saldar
+todo" simultáneos: uno 200 y el otro 400 "La venta ya está pagada"**, con lo pagado igual al total y
+dos pagos · pagar una venta pagada: 400 · anular dos veces: 400 · el acumulado excluye la anulada y
+la borrada · liquidar con monto distinto: 409, con una venta anulada: 400, con un método de pago
+inexistente: 400, y ningún rechazo deja liquidación · liquidar como la pantalla: 201, el monto lo
+pone el servidor, marca A, B y C (no la anulada) y el acumulado vuelve a 0 · liquidar sin
+pendientes: 400 · **dos liquidaciones simultáneas: una 201 y otra 400**, la venta se paga una vez.
+`check:prisma` limpio. **B12 cumplido.**
+
+El verificador vive en el scratchpad de la sesión, fuera del repo: pasarlo a `backend/tests/` es
+parte de T11.
+
+*Anotado sin arreglar:*
+- Editar o borrar un producto puede dejar el total por debajo de lo ya pagado (una venta sobrepagada
+  por el otro lado). Hace falta decidir si se rechaza la edición o se permite un saldo a favor.
+- La pantalla de comisionistas no enseña el motivo de un rechazo: `useCommissions` relanza con
+  `new Error(err.message)` y la página lee `err.response.data.message`, que ya no existe. Un 409 o
+  un 400 salen como "Error al procesar la liquidación".
 
 ## T8 · Los tramos de un tiquete no se pueden editar `[ ]`
 
@@ -282,6 +319,8 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T7 | Cerrada, 27 comprobaciones por la API sin fallos. Tope y cerrojo en los cobros, comisiones sin anuladas ni borradas, liquidación decidida por el servidor. De paso: liquidar no marcaba ninguna venta, y el acumulado se podía pagar dos veces. |
+| 2026-09-25 | Entorno | **La contraseña de `app_nexus` se restableció otra vez** (desde `feat-bayrol`, con el hash SCRAM generado en local: la contraseña no pasó por el MCP). La del 2026-09-24 deja de valer: el `.env` de `feat-dbmoon` y el hosting, si ya la usan, necesitan la nueva. |
 | 2026-09-25 | T6, docs | T6 cerrada: el commit y el push estaban hechos en `e697576`. La prueba de aislamiento pasa de `backend/pruebas/` a `backend/tests/` (script y documentación al día). Las dos ramas de trabajo quedan anotadas. La spec 001 pasa a completada y el rediseño de la cartera, a terminado. |
 | 2026-09-24 | T3 (T3a, T3b) | Verificación por la API: 80 comprobaciones sin fallos. Destapó dos fallos que solo existen con la barrera puesta: las subidas de archivos y los 500 intermitentes. |
 | 2026-09-24 | T6 | Merge de `origin/main`. Las migraciones de seguridad que ya estaban en la base pasan a estar en la rama. `CLAUDE.md` fusionado. |

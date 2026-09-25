@@ -101,4 +101,17 @@ async function recalcularVenta(tx, ventaId) {
   return tx.ventas.update({ where: { id }, data });
 }
 
-module.exports = { recalcularVenta, estadoSegunPago, aCentimos, precioProducto };
+/**
+ * Bloquea la fila de la venta hasta que termine la transacción.
+ *
+ * Sin esto, dos cobros simultáneos leen el mismo pendiente y los dos pasan el
+ * tope: con "saldar todo" se insertaban dos pagos por el saldo entero. Con el
+ * cerrojo, el segundo espera a que el primero confirme y lee lo que dejó. Tiene
+ * que ir ANTES de leer los importes, y dentro de `transaccion`: fuera de ella el
+ * cerrojo se soltaría al terminar esta misma sentencia.
+ */
+async function bloquearVenta(tx, ventaId) {
+  await tx.$queryRaw`SELECT id FROM ventas WHERE id = ${Number(ventaId)} FOR UPDATE`;
+}
+
+module.exports = { recalcularVenta, estadoSegunPago, aCentimos, precioProducto, bloquearVenta };

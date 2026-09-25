@@ -11,9 +11,9 @@ interface SalesTableProps {
   sales: Sale[];
   onViewDetail: (sale: Sale) => void;
   onDownloadVoucher: (sale: Sale) => void;
-  onEdit: (sale: Sale) => void;
+  onManagePayments: (sale: Sale) => void;
   onDelete: (sale: Sale) => void;
-  canEditThis: (sale: Sale) => boolean;
+  canManagePayments: (sale: Sale) => boolean;
   isAdmin: boolean;
   onReviewStatusChange?: (saleId: number, isReviewed: boolean) => void;
   /** Filas fantasma mientras llegan los datos. */
@@ -25,9 +25,9 @@ export default function SalesTable({
   sales,
   onViewDetail,
   onDownloadVoucher,
-  onEdit,
+  onManagePayments,
   onDelete,
-  canEditThis,
+  canManagePayments,
   isAdmin,
   onReviewStatusChange,
 }: SalesTableProps) {
@@ -166,11 +166,11 @@ export default function SalesTable({
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => onEdit(sale)}
-                  disabled={!canEditThis(sale)}
-                  title={canEditThis(sale) ? "Actualizar abonos" : "No editable"}
+                  onClick={() => onManagePayments(sale)}
+                  disabled={!canManagePayments(sale)}
+                  title={canManagePayments(sale) ? "Gestionar abonos" : "Sin abonos que gestionar"}
                 >
-                  <RxUpdate size={14} className={canEditThis(sale) ? "text-primary" : "text-gray-300"} />
+                  <RxUpdate size={14} className={canManagePayments(sale) ? "text-primary" : "text-gray-300"} />
                 </Button>
                 {isAdmin && (
                   <Button

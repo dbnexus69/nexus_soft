@@ -11,7 +11,7 @@ import { Badge } from "../ui/Badge";
 import { Input, Select, FormField, CurrencyInput } from "../ui/Form";
 import * as api from "../../api";
 import { formatSaleId, formatCurrency, formatDate } from "../../utils/formatters";
-import { Sale, Client, User, PaymentRecord } from "../../types";
+import { Sale, Client, PaymentRecord } from "../../types";
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   pagado: "Finalizada",
@@ -19,14 +19,18 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   credito: "Crédito",
 };
 
-interface SaleEditModalProps {
+/**
+ * Los abonos de una venta: registrarlos, borrarlos y ajustar la fecha de
+ * vencimiento del crédito. Se llamaba `SaleEditModal`, pero una venta no se
+ * edita desde ninguna pantalla —sus productos tampoco—: esto es lo único que
+ * se le cambia después de crearla.
+ */
+interface SalePaymentsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editingSale: Sale | null;
-  user: User | null;
+  sale: Sale | null;
   isAdmin: boolean;
   onUpdateSale?: (id: number, data: any) => void;
-  onAddSale?: (data: any) => void;
   onRegisterPayment: (saleId: number, amount: number, method?: string, reference?: string) => Promise<any>;
   onDeletePayment: (saleId: number, paymentId: string) => Promise<void>;
   onDownloadVoucher: (sale: Sale) => void;
@@ -97,17 +101,16 @@ function ServicesList({ sale }: { sale: Sale }) {
   );
 }
 
-export default function SaleEditModal({
+export default function SalePaymentsModal({
   isOpen,
   onClose,
-  editingSale,
-  user,
+  sale: saleProp,
   isAdmin,
   onUpdateSale,
   onRegisterPayment,
   onDeletePayment,
   onDownloadVoucher,
-}: SaleEditModalProps) {
+}: SalePaymentsModalProps) {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [newPayment, setNewPayment] = useState({
     amount: "",
@@ -118,24 +121,24 @@ export default function SaleEditModal({
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const saleId = editingSale?.id ?? null;
+  const saleId = saleProp?.id ?? null;
 
   // Sync payments, status and credit limits from pre-loaded sale data
   useEffect(() => {
-    if (editingSale) {
-      setPayments((editingSale.payments as PaymentRecord[]) || []);
+    if (saleProp) {
+      setPayments((saleProp.payments as PaymentRecord[]) || []);
       setLocalCreditDueDate(
-        editingSale.creditDueDate
-          ? new Date(editingSale.creditDueDate).toISOString().split("T")[0]
+        saleProp.creditDueDate
+          ? new Date(saleProp.creditDueDate).toISOString().split("T")[0]
           : ""
       );
       setLocalErrors({});
     }
-  }, [editingSale]);
+  }, [saleProp]);
 
   // Los abonos se releen del servidor al abrir.
   //
-  // `editingSale` es la fila del listado tal como estaba cuando se pulsó, y ese
+  // `saleProp` es la fila del listado tal como estaba cuando se pulsó, y ese
   // listado puede llevar minutos en memoria. Un cobro registrado desde la
   // pantalla de cartera —o por otra persona— quedaba guardado en la base pero
   // no aparecía aquí, así que la gestión de abonos mostraba menos de lo que el
@@ -154,7 +157,7 @@ export default function SaleEditModal({
       .catch(() => { /* se conserva lo que trajera el listado */ });
   }, [isOpen, saleId]);
 
-  const totalSaleAmount = editingSale?.total || 0;
+  const totalSaleAmount = saleProp?.total || 0;
   const totalPaidAmount = payments.reduce((acc, p) => acc + p.amount, 0);
   const remainingBalance = totalSaleAmount - totalPaidAmount;
 
@@ -171,9 +174,9 @@ export default function SaleEditModal({
   const estado =
     totalPaidAmount >= totalSaleAmount ? "pagado" : totalPaidAmount > 0 ? "abonado" : "credito";
 
-  if (!isOpen || !editingSale) return null;
+  if (!isOpen || !saleProp) return null;
 
-  const sale = editingSale;
+  const sale = saleProp;
 
   const handleAddPayment = () => {
     const amount = Number(newPayment.amount);

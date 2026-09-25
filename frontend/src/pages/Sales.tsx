@@ -31,7 +31,7 @@ import { Sale } from "../types";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import NewSaleWizard from "../components/sales/NewSaleWizard";
 import SaleDetailModal from "../components/sales/SaleDetailModal";
-import SaleEditModal from "../components/sales/SaleEditModal";
+import SalePaymentsModal from "../components/sales/SalePaymentsModal";
 import SalesTable from "../components/sales/SalesTable";
 import { Pagination } from "../components/ui/Pagination";
 import StatCard from "../components/ui/StatCard";
@@ -56,7 +56,6 @@ export default function Sales() {
     setEndDate,
     page,
     setPage,
-    handleCreateSale: addSale,
     handleUpdateSale: updateSale,
     handleVoidSale: voidSale,
     handleRegisterPayment: registerCreditPayment,
@@ -66,10 +65,10 @@ export default function Sales() {
   const { fetchClients } = useClientsContext();
   const { user, isAdmin, marca } = useAuth();
   const { canCreate, canEdit } = usePermissions();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSiigoModalOpen, setIsSiigoModalOpen] = useState(false);
-  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [paymentsSale, setPaymentsSale] = useState<Sale | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [salesDetails, setSalesDetails] = useState<Record<number, Sale>>({});
@@ -116,9 +115,11 @@ export default function Sales() {
   // Sin prefetch: la tabla no pide detalle. El modal carga la cabecera al abrirse
   // y cada categoría de producto cuando el usuario la despliega.
 
-  const canEditThis = (sale: Sale): boolean => {
+  const canManagePayments = (sale: Sale): boolean => {
+    // El permiso se llama `sales.edit` porque así está guardado en
+    // `permisos_rol`, y es el que el backend exige para cobrar; lo que se
+    // gestiona aquí son abonos, y solo si queda algo por cobrar.
     if (!canEdit("sales")) return false;
-    // Solo permitir edición si NO está pagada ni anulada
     if (sale.status === "pagado" || sale.status === "anulado") return false;
     if (isAdmin) return true;
     return sale.asesorId === user?.id;
@@ -128,10 +129,10 @@ export default function Sales() {
     setIsWizardOpen(true);
   };
 
-  const handleOpenModal = (sale?: Sale) => {
-    if (sale && !canEditThis(sale)) return;
-    setEditingSale(sale || null);
-    setIsModalOpen(true);
+  const handleOpenPayments = (sale: Sale) => {
+    if (!canManagePayments(sale)) return;
+    setPaymentsSale(sale);
+    setIsPaymentsOpen(true);
   };
 
   const handleViewDetail = (sale: Sale) => {
@@ -533,9 +534,9 @@ export default function Sales() {
                 sales={filteredSales}
                 onViewDetail={handleViewDetail}
                 onDownloadVoucher={handleDownloadVoucher}
-                onEdit={handleOpenModal}
+                onManagePayments={handleOpenPayments}
                 onDelete={(sale) => setVoidConfirm(sale)}
-                canEditThis={canEditThis}
+                canManagePayments={canManagePayments}
                 isAdmin={isAdmin}
                 onReviewStatusChange={(saleId, isReviewed) => {
                   updateReviewStatus(saleId, isReviewed)
@@ -626,15 +627,13 @@ export default function Sales() {
         </div>
       </Modal>
 
-      {/* ===== EDIT MODAL (Editar Venta) ===== */}
-      <SaleEditModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        editingSale={editingSale}
-        user={user}
+      {/* ===== ABONOS ===== */}
+      <SalePaymentsModal
+        isOpen={isPaymentsOpen}
+        onClose={() => setIsPaymentsOpen(false)}
+        sale={paymentsSale}
         isAdmin={isAdmin}
         onUpdateSale={updateSale}
-        onAddSale={addSale}
         onRegisterPayment={(saleId, amount, method, reference) => registerCreditPayment(Number(saleId), { amount, method, reference })}
         onDeletePayment={(saleId, paymentId) => deleteSalePayment(saleId, paymentId)}
         onDownloadVoucher={handleDownloadVoucher}

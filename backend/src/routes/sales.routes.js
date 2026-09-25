@@ -3,11 +3,11 @@ const { paramsNumericos, paramsUuid } = require('../middleware/numericParams');
 const router = Router();
 
 // Un id no numérico es un 400, no el 500 que salía de `parseInt` -> NaN -> Prisma.
-// `paymentId` y `productId` quedan fuera a propósito: son uuid.
+// `paymentId` y `detalleId` quedan fuera a propósito: son uuid.
 paramsNumericos(router, 'id', 'saleId', 'clientId');
 // Los productos y los pagos tienen id uuid. Con nombres distintos de `id`, que
 // es lo que hace que las dos comprobaciones puedan convivir en un router.
-paramsUuid(router, 'productId', 'paymentId');
+paramsUuid(router, 'detalleId', 'paymentId');
 const salesController = require('../controllers/sales.controller');
 const productsController = require('../controllers/products.controller');
 const auth = require('../middleware/auth');
@@ -41,66 +41,18 @@ router.delete('/:saleId/payments/:paymentId', authorize('sales', 'edit'), salesC
 router.get('/:id/payments', authorize('sales', 'view'), salesController.listPayments);
 
 // Lectura de productos: la colección completa (la usa el voucher) y una categoría suelta.
-// Simétricos con los POST/PUT/DELETE de producto de más abajo.
 router.get('/:id/products', authorize('sales', 'view'), salesController.getProducts);
 router.get('/:id/products/:category', authorize('sales', 'view'), salesController.getProductsByCategory);
 router.post('/:id/send-voucher', authorize('sales', 'view'), salesController.sendVoucher);
 
-// 15 endpoints de productos.
+// Los productos se crean con la venta (POST /sales) y no se editan ni se borran
+// sueltos: los POST, PUT, PATCH y DELETE de producto no los usaba ninguna
+// pantalla y se retiraron (T8, spec 002).
 //
-// El id del producto es `:productId`, no `:id`, y no es cosmético: los
-// productos tienen id uuid y `paramsNumericos` de arriba se aplica a TODO el
-// router, así que con `:id` el uuid se rechazaba con un 400 y el DELETE de
-// ninguna categoría funcionaba. Igual que en la ruta del voucher.
-router.post('/:saleId/products/ticket', authorize('sales', 'create'), productsController.createTicket);
-router.delete('/:saleId/products/ticket/:productId', authorize('sales', 'delete'), productsController.deleteTicket);
-
-router.post('/:saleId/products/hotel', authorize('sales', 'create'), productsController.createHotel);
-router.delete('/:saleId/products/hotel/:productId', authorize('sales', 'delete'), productsController.deleteHotel);
-
-router.post('/:saleId/products/insurance', authorize('sales', 'create'), productsController.createInsurance);
-router.delete('/:saleId/products/insurance/:productId', authorize('sales', 'delete'), productsController.deleteInsurance);
-
-router.post('/:saleId/products/plan', authorize('sales', 'create'), productsController.createPlan);
-router.delete('/:saleId/products/plan/:productId', authorize('sales', 'delete'), productsController.deletePlan);
-
-router.post('/:saleId/products/checkin', authorize('sales', 'create'), productsController.createCheckin);
-router.delete('/:saleId/products/checkin/:productId', authorize('sales', 'delete'), productsController.deleteCheckin);
-
-router.post('/:saleId/products/migration', authorize('sales', 'create'), productsController.createMigration);
-router.delete('/:saleId/products/migration/:productId', authorize('sales', 'delete'), productsController.deleteMigration);
-
-router.post('/:saleId/products/simcard', authorize('sales', 'create'), productsController.createSimcard);
-router.delete('/:saleId/products/simcard/:productId', authorize('sales', 'delete'), productsController.deleteSimcard);
-
-router.post('/:saleId/products/car', authorize('sales', 'create'), productsController.createCarRental);
-router.delete('/:saleId/products/car/:productId', authorize('sales', 'delete'), productsController.deleteCarRental);
-
-router.post('/:saleId/products/finca', authorize('sales', 'create'), productsController.createFinca);
-router.delete('/:saleId/products/finca/:productId', authorize('sales', 'delete'), productsController.deleteFinca);
-
-router.post('/:saleId/products/tour', authorize('sales', 'create'), productsController.createTour);
-router.delete('/:saleId/products/tour/:productId', authorize('sales', 'delete'), productsController.deleteTour);
-
-router.post('/:saleId/products/convention', authorize('sales', 'create'), productsController.createConvention);
-router.delete('/:saleId/products/convention/:productId', authorize('sales', 'delete'), productsController.deleteConvention);
-
-router.post('/:saleId/products/restaurant', authorize('sales', 'create'), productsController.createRestaurant);
-router.delete('/:saleId/products/restaurant/:productId', authorize('sales', 'delete'), productsController.deleteRestaurant);
-
-router.post('/:saleId/products/visa', authorize('sales', 'create'), productsController.createVisa);
-router.delete('/:saleId/products/visa/:productId', authorize('sales', 'delete'), productsController.deleteVisa);
-
-router.post('/:saleId/products/passport', authorize('sales', 'create'), productsController.createPassport);
-router.delete('/:saleId/products/passport/:productId', authorize('sales', 'delete'), productsController.deletePassport);
-
-router.post('/:saleId/products/pet', authorize('sales', 'create'), productsController.createPetService);
-router.delete('/:saleId/products/pet/:productId', authorize('sales', 'delete'), productsController.deletePetService);
-
-// Los productos de una venta no se editan: sin PUT ni PATCH. Ninguna pantalla
-// los usaba y el PUT de un tiquete ignoraba sus tramos (T8, spec 002).
-
-// Voucher upload
-router.post('/:saleId/products/:category/:productId/voucher', authorize('sales', 'edit'), upload.single('file'), productsController.uploadVoucher);
+// El voucher de un producto es un archivo y no viaja en el JSON de la venta: el
+// navegador lo sube tras el 201, a la línea (`detalleId`) que devuelve POST
+// /sales. Pide `create`, no `edit`: completa el alta, y hay agencias donde el
+// freelancer puede crear ventas pero no editarlas.
+router.put('/:saleId/products/:detalleId/voucher', authorize('sales', 'create'), upload.single('file'), productsController.uploadVoucher);
 
 module.exports = router;

@@ -521,22 +521,9 @@ class SalesService {
       if (mp) metodo_pago_principal_id = mp.id;
     }
 
-        // Inject UUID for all items to enable linking
-    const allDataFields = [
-      'ticketData', 'hotelData', 'insuranceData', 'planData',
-      'checkInData', 'migrationData', 'simCardData', 'carRentalData',
-      'fincaData', 'tourData', 'conventionData', 'restaurantData',
-      'visaData', 'passportData', 'petServiceData'
-    ];
-    for (const field of allDataFields) {
-      if (Array.isArray(body[field])) {
-        for (let item of body[field]) {
-          if (item && Object.keys(item).length > 0) {
-            item._generatedId = require('crypto').randomUUID();
-          }
-        }
-      }
-    }
+    // Cada producto recibe en `_generatedId` el id de su línea (`detalle_venta`)
+    // al crearse, dentro de la transacción: los hijos de un plan lo usan para
+    // colgarse de él, y la respuesta lo devuelve para subir los vouchers.
 
     // Los métodos de pago de los abonos, también de la agencia.
     //
@@ -715,6 +702,7 @@ class SalesService {
       for (const t of ticketData) {
         const parentDetalleId = getParentDetalleId(t);
         const detalleId = uuidv4();
+        t._generatedId = detalleId;
         const proveedorId = await findProveedorId(t.supplier);
         await tx.detalle_venta.create({
           data: { id: detalleId, venta_id: ventaId, categoria: 'ticket', parentDetalleId: parentDetalleId,
@@ -819,6 +807,7 @@ class SalesService {
       for (const h of hotelData) {
         const parentDetalleId = getParentDetalleId(h);
         const detalleId = uuidv4();
+        h._generatedId = detalleId;
         const proveedorId = await findProveedorId(h.supplier);
         await tx.detalle_venta.create({
           data: { id: detalleId, venta_id: ventaId, categoria: 'hotel', parentDetalleId: parentDetalleId,
@@ -831,7 +820,7 @@ class SalesService {
         await tx.prod_hoteleria.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
-            hotel_nombre: h.hotelName || null, tipo_hotel: h.hotelType || 'hotel',
+            hotel_nombre: h.hotelName || null, tipo_hotel: h.hotelType === 'finca' ? 'fincas' : (h.hotelType || 'hotel'),
             destino: h.destination || null, nro_reserva: h.reservationNumber || null,
             fecha_entrada: h.startDate ? new Date(h.startDate) : null,
             fecha_salida: h.endDate ? new Date(h.endDate) : null,
@@ -848,6 +837,7 @@ class SalesService {
       for (const s of insuranceData) {
         const parentDetalleId = getParentDetalleId(s);
         const detalleId = uuidv4();
+        s._generatedId = detalleId;
         const proveedorId = await findProveedorId(s.supplier);
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'insurance', parentDetalleId: parentDetalleId, subtotal: precioProducto(s), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0), proveedor_id: proveedorId } });
         await tx.prod_seguros.create({
@@ -871,6 +861,7 @@ class SalesService {
       for (const c of checkInData) {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
+        c._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', parentDetalleId: parentDetalleId, subtotal: precioProducto(c), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_checkins.create({
           data: {
@@ -893,6 +884,7 @@ class SalesService {
       for (const m of migrationData) {
         const parentDetalleId = getParentDetalleId(m);
         const detalleId = uuidv4();
+        m._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'migration', parentDetalleId: parentDetalleId, subtotal: precioProducto(m), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
         await tx.prod_migracion.create({
           data: {
@@ -909,6 +901,7 @@ class SalesService {
       for (const s of simCardData) {
         const parentDetalleId = getParentDetalleId(s);
         const detalleId = uuidv4();
+        s._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', parentDetalleId: parentDetalleId, subtotal: precioProducto(s), ta: Number(s.ta || 0), costo_proveedor: Number(s.supplierCost || 0) } });
         await tx.prod_simcards.create({
           data: {
@@ -926,6 +919,7 @@ class SalesService {
       for (const c of carRentalData) {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
+        c._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'car', parentDetalleId: parentDetalleId, subtotal: precioProducto(c), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_autos.create({
           data: {
@@ -944,6 +938,7 @@ class SalesService {
       for (const f of fincaData) {
         const parentDetalleId = getParentDetalleId(f);
         const detalleId = uuidv4();
+        f._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'finca', parentDetalleId: parentDetalleId, subtotal: precioProducto(f), ta: Number(f.ta || 0), costo_proveedor: Number(f.supplierCost || 0) } });
         await tx.prod_fincas.create({
           data: {
@@ -965,6 +960,7 @@ class SalesService {
       for (const t of tourData) {
         const parentDetalleId = getParentDetalleId(t);
         const detalleId = uuidv4();
+        t._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tour', parentDetalleId: parentDetalleId, subtotal: precioProducto(t), ta: Number(t.ta || 0), costo_proveedor: Number(t.supplierCost || 0) } });
         await tx.prod_tours.create({
           data: {
@@ -992,6 +988,7 @@ class SalesService {
       for (const c of conventionData) {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
+        c._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'convention', parentDetalleId: parentDetalleId, subtotal: precioProducto(c), ta: Number(c.ta || 0), costo_proveedor: Number(c.supplierCost || 0) } });
         await tx.prod_eventos.create({
           data: {
@@ -1014,6 +1011,7 @@ class SalesService {
       for (const r of restaurantData) {
         const parentDetalleId = getParentDetalleId(r);
         const detalleId = uuidv4();
+        r._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurant', parentDetalleId: parentDetalleId, subtotal: precioProducto(r), ta: Number(r.ta || 0), costo_proveedor: Number(r.supplierCost || 0) } });
         await tx.prod_restaurantes.create({
           data: {
@@ -1034,6 +1032,7 @@ class SalesService {
       for (const v of visaData) {
         const parentDetalleId = getParentDetalleId(v);
         const detalleId = uuidv4();
+        v._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', parentDetalleId: parentDetalleId, subtotal: precioProducto(v), ta: Number(v.ta || 0), costo_proveedor: Number(v.supplierCost || 0) } });
         await tx.prod_visas.create({
           data: {
@@ -1052,6 +1051,7 @@ class SalesService {
       for (const p of passportData) {
         const parentDetalleId = getParentDetalleId(p);
         const detalleId = uuidv4();
+        p._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'passport', parentDetalleId: parentDetalleId, subtotal: precioProducto(p), ta: Number(p.ta || 0), costo_proveedor: Number(p.supplierCost || 0) } });
         await tx.prod_pasaportes.create({
           data: {
@@ -1072,6 +1072,7 @@ class SalesService {
       for (const m of petServiceData) {
         const parentDetalleId = getParentDetalleId(m);
         const detalleId = uuidv4();
+        m._generatedId = detalleId;
         await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pet', parentDetalleId: parentDetalleId, subtotal: precioProducto(m), ta: Number(m.ta || 0), costo_proveedor: Number(m.supplierCost || 0) } });
         await tx.prod_mascotas.create({
           data: {
@@ -1144,6 +1145,13 @@ class SalesService {
       isCredit: created.es_credito,
       payments: [],
       servicesSummary: [],
+      // Las líneas creadas, en el orden de cada lista del cuerpo. El navegador
+      // sube a cada una su voucher, que no viaja en este JSON:
+      // PUT /sales/:id/products/:detalleId/voucher.
+      products: SLUGS.flatMap(slug =>
+        (Array.isArray(body[CATALOG[slug].responseKey]) ? body[CATALOG[slug].responseKey] : [])
+          .map((item, index) => ({ category: slug, index, detalleId: item?._generatedId ?? null }))
+      ),
     };
   }
 

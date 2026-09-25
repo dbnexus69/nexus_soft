@@ -111,7 +111,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
                 { value: "boutique", label: "Hotel Boutique" },
                 { value: "apartamento", label: "Apartamento / AirBnB" },
                 { value: "hostal", label: "Hostal / Albergue" },
-                { value: "finca", label: "Finca / Casa Rural" },
+                { value: "fincas", label: "Finca / Casa Rural" },
               ]}
               placeholder="Seleccionar tipo..."
             />

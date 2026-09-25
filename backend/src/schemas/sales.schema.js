@@ -3,6 +3,7 @@ const { SLUGS, CATALOG } = require('../catalog/products');
 // La misma regla de precio que usa la venta al guardar: si aquí se calculara
 // aparte, la validación podría discrepar de lo que acaba en la base.
 const { precioProducto } = require('../services/saleTotals');
+const { esquemaDeCategoria } = require('./products.schema');
 
 // Los ids llegan del frontend como string o número según el formulario.
 const id = z.union([z.string(), z.number()]).nullable().optional();
@@ -25,11 +26,17 @@ const paymentSchema = z.object({
   date: fecha,
 }).passthrough();
 
-// El detalle de cada producto lo valida su transform del catálogo; aquí solo
-// se comprueba que sea una lista. Las claves aceptadas salen del catálogo,
-// así que añadir una categoría no obliga a tocar este archivo.
+// Cada producto se valida con el esquema de su categoría (dinero no negativo,
+// forma de pasajeros y tramos, enums). Antes solo se comprobaba que fuese una
+// lista: `z.array(z.any())` dejaba pasar un `ta` negativo y un tipo de hotel
+// fuera del enum, que tumbaba el alta con un 500. Un error nombra el producto:
+// `hotelData.0.hotelType`. Las claves salen del catálogo, así que añadir una
+// categoría no obliga a tocar este archivo.
 const productArrays = Object.fromEntries(
-  SLUGS.map(slug => [CATALOG[slug].responseKey, z.array(z.any()).optional()])
+  SLUGS.map(slug => [
+    CATALOG[slug].responseKey,
+    z.array(esquemaDeCategoria(slug)).max(50, 'Demasiados productos de este tipo en una venta').optional(),
+  ])
 );
 
 const baseSale = {

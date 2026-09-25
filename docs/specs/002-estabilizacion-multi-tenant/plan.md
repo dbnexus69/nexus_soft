@@ -65,6 +65,9 @@ decisión que ya se tomó para la lista de ventas, aplicada aquí.
 | Rutas con subida (`PUT /users/:id/avatar`, `PUT /clients/:id/avatar`, `POST /sales/:saleId/products/:category/:productId/voucher`, `PUT /flights/:id/checkin`, `PUT /companies/:id/logo`) | Mismo contrato; ahora funcionan con la RLS activa. |
 
 | `PUT` y `PATCH /sales/:saleId/products/:categoria/:productId` | **Retirados** (T8). Ninguna pantalla editaba productos, y el `PUT` de un tiquete ignoraba sus tramos. Responden 404. |
+| `POST` y `DELETE /sales/:saleId/products/...` (productos sueltos) | **Retirados** (T15). Los productos se crean con la venta; ninguna pantalla añadía ni quitaba productos de una venta ya creada. |
+| `POST /sales/:saleId/products/:category/:productId/voucher` | **Sustituido** por `PUT /sales/:saleId/products/:detalleId/voucher` (multipart `file`, permiso `sales.create`). Reemplaza el voucher anterior y exige que la línea sea de la venta de la URL. |
+| `POST /sales` | Valida cada producto (422 con el campo, p. ej. `hotelData.0.hotelType`) y la respuesta añade `products: [{ category, index, detalleId }]`. |
 | Cualquier ruta inexistente bajo `/api` | 404 en el formato de la API (`ROUTE_NOT_FOUND`), no la página HTML de Express. |
 | `POST /commissions/settlements` | El monto lo calcula el servidor (`amount` opcional; si llega y no coincide, 409). Errores con código propio. |
 

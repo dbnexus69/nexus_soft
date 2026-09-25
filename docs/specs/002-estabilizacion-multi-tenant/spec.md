@@ -51,6 +51,8 @@ Los de la 001 (A1–A12) siguen vigentes. Estos se añaden, y la columna dice si
 | B11 | La pantalla de gestión interna y el asistente de venta leen los mismos catálogos | Crear una aerolínea y verla en el selector del tiquete sin recargar | hecho, falta confirmar en pantalla |
 | B12 | El dinero de una venta es coherente | Sin sobrepago; dos abonos simultáneos no superan el total; anular libera la comisión | cumplido |
 | B13 | Ningún camino edita un producto a medias (los tramos de un tiquete se ignoraban) | Los productos no se editan: `PUT` y `PATCH` de producto responden 404 `ROUTE_NOT_FOUND` y el producto queda intacto | cumplido (se retiró la edición) |
+| B15 | Una venta se crea entera y se valida en su única puerta | `POST /sales` con un `ta` negativo o un tipo de hotel inexistente: 422 que nombra el campo, y no se crea nada. Con "Hotel Turístico": 201 | cumplido |
+| B16 | Un voucher adjuntado en el asistente se guarda en su producto | Tras el 201, `PUT /sales/:id/products/:detalleId/voucher` lo guarda; con la línea de otra venta, 404 y sin huérfano en disco | cumplido |
 | B14 | La aplicación no puede escribir el historial de migraciones | `app_nexus` sin `INSERT`/`UPDATE`/`DELETE` sobre `_prisma_migrations` | pendiente |
 
 ## Fuera de alcance

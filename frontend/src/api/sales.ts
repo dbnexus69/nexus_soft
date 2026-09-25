@@ -77,14 +77,16 @@ export async function getSalePayments(saleId: number) {
   return res.data.data;
 }
 
-// Productos (15 tipos)
-export async function createProduct(saleId: number, category: string, data: Record<string, unknown>) {
-  const res = await api.post(`/sales/${saleId}/products/${category}`, data);
-  return res.data.data;
-}
-
-export async function deleteProduct(saleId: number, category: string, id: string) {
-  await api.delete(`/sales/${saleId}/products/${category}/${id}`);
+// Los productos se crean con la venta, en `createSale`; no hay alta ni baja de
+// productos sueltos. El voucher de cada uno es un archivo y se sube aparte, tras
+// crear la venta, a la línea (`detalleId`) que devuelve `createSale`.
+export async function uploadProductVoucher(saleId: number, detalleId: string, file: Blob, nombre: string) {
+  const cuerpo = new FormData();
+  cuerpo.append('file', file, nombre);
+  const res = await api.put(`/sales/${saleId}/products/${detalleId}/voucher`, cuerpo, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data as { detalleId: string; voucher_url: string };
 }
 
 export async function sendVoucher(saleId: number, pdfBase64: string) {

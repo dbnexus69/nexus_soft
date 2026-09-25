@@ -42,7 +42,7 @@ const PRODUCT_ICONS: Record<SaleProductId, any> = {
   pet: PawPrint,
 };
 
-const PRODUCT_MAP: Record<SaleProductId, { key: keyof WizardFormData; labelSingular: string; initialFn: any }> = {
+export const PRODUCT_MAP: Record<SaleProductId, { key: keyof WizardFormData; labelSingular: string; initialFn: any }> = {
   ticket: { key: "tickets", labelSingular: "Tiquete", initialFn: INITIAL_TICKET },
   hotel: { key: "hotels", labelSingular: "Hotel", initialFn: INITIAL_HOTEL },
   insurance: { key: "insurances", labelSingular: "Seguro", initialFn: INITIAL_INSURANCE },

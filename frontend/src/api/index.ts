@@ -12,7 +12,7 @@ export {
 } from './responsables';
 export {
   listSales, getSale, getCreditPortfolio, getClientCredits, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, deleteSale, voidSale,
-  registerPayment, deletePayment, getSalePayments, createProduct, deleteProduct,
+  registerPayment, deletePayment, getSalePayments, uploadProductVoucher,
   sendVoucher, updateReviewStatus,
 } from './sales';
 export {

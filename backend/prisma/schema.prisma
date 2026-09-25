@@ -1176,6 +1176,7 @@ enum TamanoMascota {
 
 enum TipoHotel {
   hotel
+  hotel_turistico
   resort
   boutique
   apartamento

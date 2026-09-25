@@ -62,9 +62,10 @@ import {
 import { Step1Client } from "./steps/Step1Client";
 import { Step2Products } from "./steps/Step2Products";
 import { Step3Payment } from "./steps/Step3Payment";
-import { ProductFormsModal } from "./wizard";
+import { ProductFormsModal, PRODUCT_MAP } from "./wizard";
 import { ticketSchema } from "../../validations/sales/ticketSchema";
-import { todayStr } from "../../utils/formatters";
+import { todayStr, formatSaleId } from "../../utils/formatters";
+import * as api from "../../api";
 
 interface Props {
   onClose: () => void;
@@ -76,6 +77,19 @@ const STEPS = [
   { id: 2, label: "Productos", icon: Package },
   { id: 3, label: "Pago", icon: CreditCard },
 ] as const;
+
+/**
+ * Un voucher adjunto llega del formulario como data URL (`VoucherField` lo lee
+ * con FileReader). Para subirlo como archivo hay que devolverlo a binario.
+ */
+function dataUrlABlob(dataUrl: string): Blob {
+  const [cabecera, datos = ""] = dataUrl.split(",");
+  const tipo = /data:([^;]+)/.exec(cabecera)?.[1] || "application/octet-stream";
+  const binario = atob(datos);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return new Blob([bytes], { type: tipo });
+}
 
 export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   const { data, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig, invalidateDashboard } = useData();
@@ -1147,6 +1161,33 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
 
 
+  /**
+   * Sube el voucher de cada producto que lo tenga, a la línea que devolvió el
+   * alta. `creada.products` viene en el mismo orden que cada lista del
+   * formulario, así que el producto se encuentra por categoría y posición.
+   */
+  const subirVouchers = async (creada: any) => {
+    let subidos = 0;
+    const fallidos: string[] = [];
+    for (const [categoria, config] of Object.entries(PRODUCT_MAP)) {
+      const items = (form[config.key] as any[]) || [];
+      for (const [indice, item] of items.entries()) {
+        const archivo = item?.voucher || item?.vouchers?.[0];
+        if (!archivo?.base64) continue;
+        const nombre = `${config.labelSingular} ${indice + 1}`;
+        const linea = creada?.products?.find((p: any) => p.category === categoria && p.index === indice);
+        try {
+          if (!linea?.detalleId) throw new Error("la venta no devolvió el producto");
+          await api.uploadProductVoucher(creada.id, linea.detalleId, dataUrlABlob(archivo.base64), archivo.name || "voucher");
+          subidos++;
+        } catch (err: any) {
+          fallidos.push(`${nombre} (${archivo.name}): ${err?.response?.data?.error?.message || err?.message || "error desconocido"}`);
+        }
+      }
+    }
+    return { subidos, fallidos };
+  };
+
   const handleSubmit = async () => {
     if (!validateStep(1)) {
       setStep(1);
@@ -1238,24 +1279,38 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       supplierCost: Number(form.supplierCost) || 0,
     };
 
+    // Los archivos no viajan en el JSON de la venta. Antes iban dentro, en
+    // base64, y el backend los ignoraba: ningún voucher adjunto llegaba a
+    // guardarse. Se suben después, uno por producto (ver `subirVouchers`).
+    for (const clave of Object.keys(saleData)) {
+      if (clave.endsWith("Data") && Array.isArray(saleData[clave])) {
+        saleData[clave] = saleData[clave].map(({ voucher, vouchers, ...resto }: any) => resto);
+      }
+    }
+
     try {
       // handleCreateSale ya refresca el listado; el dashboard se invalida aparte
       // porque sus cifras cambian con cada venta nueva.
-      await handleCreateSale(saleData as any);
+      const creada = await handleCreateSale(saleData as any);
       invalidateDashboard();
       localStorage.removeItem(draftKey);
 
-      const hasVouchersToSend = [
-        ...form.plans, ...form.checkIns, ...form.migrations, ...form.simCards, ...form.carRentals,
-        ...form.fincas, ...form.tours, ...form.conventions, ...form.restaurants,
-        ...form.visas, ...form.passports, ...form.petServices
-      ].some(item => item.sendVoucher);
-
-      if (hasVouchersToSend) {
-        onSuccess("Venta registrada y vouchers enviados al cliente");
-      } else {
-        onSuccess("Venta registrada exitosamente");
+      const { subidos, fallidos } = await subirVouchers(creada);
+      const venta = `Venta N.º ${formatSaleId(creada.numero)}`;
+      if (fallidos.length) {
+        // La venta ya existe: el aviso dice qué archivo falta, para que no se
+        // dé por adjuntado un voucher que no llegó.
+        alert(
+          `${venta} registrada, pero no se pudo subir el voucher de:\n\n` +
+          fallidos.map((f) => `• ${f}`).join("\n") +
+          `\n\nConserva esos archivos: habrá que adjuntarlos otra vez.`
+        );
       }
+      onSuccess(
+        subidos > 0
+          ? `${venta} registrada con ${subidos} ${subidos === 1 ? "voucher" : "vouchers"}`
+          : `${venta} registrada`
+      );
       onClose();
     } catch (err: any) {
       console.error("Error al registrar venta:", err);

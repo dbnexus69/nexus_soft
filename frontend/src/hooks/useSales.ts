@@ -66,67 +66,40 @@ export function useSales() {
     return await getSale(id);
   };
 
+  // Los errores se dejan pasar tal cual. Antes cada manejador los envolvía en
+  // `new Error(err.message)`, que descarta la respuesta de la API: el asistente
+  // enseñaba "error interno" en vez del campo que la validación señalaba.
   const handleCreateSale = async (sale: any) => {
-    try {
-      const created = await createSale(sale);
-      await fetchSales();
-      return created;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear venta';
-      throw new Error(msg);
-    }
+    const created = await createSale(sale);
+    await fetchSales();
+    return created;
   };
 
   const handleUpdateSale = async (id: number, saleUpdate: any) => {
-    try {
-      await updateSale(id, saleUpdate);
-      await fetchSales();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar venta';
-      throw new Error(msg);
-    }
+    await updateSale(id, saleUpdate);
+    await fetchSales();
   };
 
   const handleVoidSale = async (id: number, reason: string) => {
-    try {
-      await voidSale(id, reason);
-      await fetchSales();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al anular venta';
-      throw new Error(msg);
-    }
+    await voidSale(id, reason);
+    await fetchSales();
   };
 
   const handleDeleteSale = async (id: number) => {
-    try {
-      await deleteSale(id);
-      await fetchSales();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar venta';
-      throw new Error(msg);
-    }
+    await deleteSale(id);
+    await fetchSales();
   };
 
   const handleRegisterPayment = async (saleId: number, data: Record<string, unknown>) => {
-    try {
-      const res = await registerPayment(saleId, data);
-      await fetchSales();
-      return res;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar pago';
-      throw new Error(msg);
-    }
+    const res = await registerPayment(saleId, data);
+    await fetchSales();
+    return res;
   };
 
   const handleDeletePayment = async (saleId: number, paymentId: string, body?: Record<string, unknown>) => {
-    try {
-      const res = await deletePayment(saleId, paymentId, body);
-      await fetchSales();
-      return res;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar pago';
-      throw new Error(msg);
-    }
+    const res = await deletePayment(saleId, paymentId, body);
+    await fetchSales();
+    return res;
   };
 
   const handleSendVoucher = async (saleId: number, pdfBase64: string) => {
@@ -134,13 +107,8 @@ export function useSales() {
   };
 
   const handleToggleReviewStatus = async (id: number, isReviewed: boolean) => {
-    try {
-      await updateReviewStatus(id, isReviewed);
-      await fetchSales();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar estado de revisión';
-      throw new Error(msg);
-    }
+    await updateReviewStatus(id, isReviewed);
+    await fetchSales();
   };
 
   return {

@@ -312,16 +312,18 @@ un producto responden 404 `ROUTE_NOT_FOUND` y el producto queda intacto · añad
 (201, el total pasa de 1000 a 1500) y borrarlo también (204). En pantalla, "Gestionar abonos" abre
 `SalePaymentsModal`. `tsc` y `check:prisma` limpios. **B13 cumplido, por retirada.**
 
-*Anotado:* `createProduct` y `deleteProduct` tampoco los usa ninguna pantalla: añadir y quitar
-productos de una venta ya creada también es solo API. Borrar un producto puede dejar el total por
-debajo de lo ya pagado. Si tampoco se van a usar, merecen la misma decisión.
+*Después:* `createProduct` y `deleteProduct` tampoco los usaba ninguna pantalla, y se retiraron en T15.
 
-## T9 · El producto y la venta no se validan entre sí `[ ]`
+## T9 · El producto y la venta no se validan entre sí `[x]`
 
 `delete` comprueba que la línea pertenezca a la venta de la URL; `uploadVoucher` no (`update` ya no
 existe, T8). Con la RLS activa no es explotable entre agencias (verificado en T3: 404), pero dentro de
 una agencia se puede subir el voucher de un producto de otra venta pasando el `saleId` propio.
 Igualarlo con `delete`.
+
+**Cerrada en T15:** la subida de voucher busca la línea por `id` **y** `venta_id` de la URL. Comprobado:
+con la línea de otra venta de la misma agencia responde 404, la otra venta queda sin voucher y el
+archivo rechazado no queda en disco.
 
 ## T10 · La aplicación no debe poder escribir el historial de migraciones `[ ]`
 
@@ -364,12 +366,73 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
   número llega a Prisma como `NaN` y responde 500 en vez de 400. Lo anotó el rediseño de la
   cartera; el arreglo es un middleware de validación en los routers, no 24 parches.
 
+
+## T15 · La venta se crea entera: validación en su única puerta y vouchers `[x]`
+
+**Decisión, con las skills de diseño de API y de arquitectura backend** (esta última auditada antes de
+usarla: un solo `SKILL.md` de texto, sin ejecutables, scripts, URLs, texto codificado ni caracteres
+invisibles). La venta y sus productos son un **agregado**: el navegador arma el borrador (ya lo guarda
+en `localStorage` por agencia y usuario) y el backend lo escribe entero en un `POST /sales`, en una
+transacción. Hacerlo con una petición por producto no compensa aquí: cada ida y vuelta al pooler
+cuesta 0,8–1,2 s (T3b), un fallo a mitad deja una venta a medias, una venta abandonada gastaría un
+`numero` visible que no se reutiliza, y habría que añadir un estado de borrador y su limpieza.
+
+La consecuencia es que `POST /sales` es la única puerta, y al mirarla aparecieron tres fallos,
+**reproducidos por la API** antes de tocar nada:
+
+| Fallo | Antes |
+|---|---|
+| "Hotel Turístico" y "Finca / Casa Rural" | 500 y la venta no se registraba: el formulario mandaba `hotel_turistico` y `finca`; el enum tenía `fincas` y no `hotel_turistico` |
+| Voucher adjuntado en el asistente | Viajaba en base64 dentro de `POST /sales` y el backend lo ignoraba: 0 de 37 productos con voucher en la base. El asistente decía "vouchers enviados al cliente" |
+| `ta` negativo | Se aceptaba: una venta de 1000 con `ta = -500` quedaba en 400. La validación estaba solo en los POST de productos sueltos, que nadie usaba |
+
+**Lo hecho:**
+- Migración `20260925120000_tipo_hotel_turistico`: `hotel_turistico` entra en `TipoHotel` (decisión
+  del equipo). Una sola línea: el `migrate diff` traía ~290 más que borrarían las claves compuestas.
+  El formulario manda `fincas`; `createSale` traduce el `finca` de los borradores guardados antes.
+- `POST /sales` valida cada producto con `products.schema.js` (dinero no negativo, forma de pasajeros
+  y tramos, enums), que pasa a ser su único uso. Sin las comprobaciones de id de proveedor: el
+  asistente manda proveedor y tarjeta por nombre, y exigir un id habría rechazado esas ventas.
+- Retirados `POST` y `DELETE` de productos sueltos, con sus 15 transforms duplicados y
+  `comprobarColumnas`. `products.controller.js` queda con la subida del voucher.
+- El voucher: `PUT /sales/:saleId/products/:detalleId/voucher` (multipart), permiso `sales.create`
+  (completa el alta; en `db-nexus` el freelancer crea pero no edita). Reemplaza el anterior y lo
+  borra del disco, exige que la línea sea de la venta (T9) y borra el archivo si rechaza.
+- `POST /sales` devuelve `products: [{ category, index, detalleId }]`; cada producto guarda en
+  `_generatedId` el id de su línea (antes solo los planes).
+- El asistente quita los archivos del JSON, sube cada voucher tras el 201 y lo dice: "Venta N.º 0003
+  registrada con 1 voucher". Si uno falla, avisa cuál y con qué error. Desaparece el mensaje falso.
+- `useSales` deja pasar el error original, como `useCommissions`: el 422 llega al asistente con su
+  campo en vez de "error interno".
+
+**Comprobado** con el servidor real y una agencia de prueba montada y desmontada (21 comprobaciones,
+0 fallos): los tres tipos de hotel dan 201 y se guardan bien · tipo inventado y `ta` negativo, 422
+con su campo y sin venta · la respuesta trae las líneas en orden y cada `detalleId` es la línea real ·
+subir, servir con sesión y reemplazar (el anterior sale del disco) · línea de otra venta 404 ·
+`detalleId` no uuid 400 · sin archivo 400 · `.exe` 400 · en disco solo queda el voucher vigente ·
+`POST`/`DELETE` de producto suelto y la ruta vieja de voucher, 404 · leer productos sigue. Desde el
+navegador, con el cliente real del frontend: venta con "Hotel Turístico" y voucher, JSON de 287 bytes,
+voucher subido y leído igual. El verificador de T7 sigue en verde, `tsc` y `check:prisma` limpios, y
+el aviso de seguridad de Supabase vacío tras la migración.
+
+*No probado:* el recorrido completo del asistente en pantalla con un archivo, porque el navegador de
+pruebas no puede adjuntar ficheros a un `<input type="file">`.
+
+*Anotado sin arreglar:*
+- `createSale` **ignora `supplierPaymentMethod`**: la tarjeta con la que se paga al proveedor no se
+  guarda (`detalle_venta.metodo_pago_proveedor_id` queda vacío). Mismo patrón que T4.
+- La casilla `sendVoucher` ("enviar al cliente") no hace nada en el backend.
+- Si falla la subida de un voucher no hay pantalla para adjuntarlo después: el aviso pide conservar
+  el archivo.
+- `feat-dbmoon` tiene que traer la migración nueva: la base ya la tiene aplicada.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-25 | T15, T9 | La venta se crea entera. Validación de productos en `POST /sales`, fuera los productos sueltos, y los vouchers del asistente por fin se guardan. "Hotel Turístico" entra en la base (migración). T9 cerrada con la nueva subida. |
 | 2026-09-25 | T8 | Cerrada retirando la edición de productos: el `PUT` y el `PATCH` no los usaba ninguna pantalla. Las rutas que no existen responden 404 en JSON. El modal de "editar venta" pasa a `SalePaymentsModal`. La fecha de las liquidaciones deja de salir un día antes, y `DataContext` pierde su copia muerta de liquidaciones. |
 | 2026-09-25 | T7 (mensajes) | Ningún error de comisionistas llegaba a la pantalla. Los rechazos de liquidar llevan código y un mensaje claro, se enseñan en el modal y el historial deja de leer una copia que no se refrescaba. Probado en pantalla. T8 queda a replantear: los productos no se editan desde ninguna pantalla. |
 | 2026-09-25 | T7 | Cerrada, 27 comprobaciones por la API sin fallos. Tope y cerrojo en los cobros, comisiones sin anuladas ni borradas, liquidación decidida por el servidor. De paso: liquidar no marcaba ninguna venta, y el acumulado se podía pagar dos veces. |

@@ -6,6 +6,13 @@ import { DatePicker } from "../sales/forms/TicketForm";
 import AvatarPicker, { AVATARS } from "../ui/AvatarPicker";
 import { Client } from "../../types";
 import { capitalizeName, todayStr } from "../../utils/formatters";
+import {
+  documentoSoloNumeros, limpiarDocumento, limpiarNombre, limpiarTelefono,
+  mensajeDocumento, mensajeEmail, mensajeNacimiento, mensajeNombre, mensajeTelefono,
+  normalizarDocumento, normalizarNombre,
+} from "../../utils/datosPersona";
+
+const CAMPOS_DEL_FORMULARIO = ["firstName", "lastName", "docType", "docNumber", "email", "phone", "birthDate"];
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -66,30 +73,30 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     setErrors({});
   }, [editingClient, isOpen]);
 
-  const validateField = (name: string, value: string) => {
+  // El número de documento se juzga según el tipo: al cambiar el tipo se pasa el nuevo, porque el estado aún no lo tiene.
+  const validateField = (name: string, value: string, tipoDoc: string = formData.docType || "") => {
     let errorMsg = "";
     switch (name) {
       case "firstName":
       case "lastName":
-        if (!value.trim()) errorMsg = "Obligatorio";
-        else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) errorMsg = "Solo letras";
-        else if (value.length > 40) errorMsg = "Máx 40 caracteres";
+        errorMsg = mensajeNombre(normalizarNombre(value)) || "";
         break;
       case "docType":
         if (!value) errorMsg = "Seleccione tipo";
         break;
       case "docNumber":
-        if (!value.trim()) errorMsg = "Obligatorio";
-        else if (!/^[a-zA-Z0-9]+$/.test(value)) errorMsg = "Alfanumérico";
-        else if (value.length < 5 || value.length > 20) errorMsg = "5-20 caracteres";
+        errorMsg = mensajeDocumento(tipoDoc, normalizarDocumento(value)) || "";
         break;
       case "email":
         if (!value.trim()) errorMsg = "Obligatorio";
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errorMsg = "Email inválido";
+        else errorMsg = mensajeEmail(value.trim()) || "";
         break;
       case "phone":
         if (!value.trim()) errorMsg = "Obligatorio";
-        else if (!/^[0-9+\s-]{7,15}$/.test(value)) errorMsg = "7-15 dígitos";
+        else errorMsg = mensajeTelefono(value.trim()) || "";
+        break;
+      case "birthDate":
+        errorMsg = mensajeNacimiento(value) || "";
         break;
     }
     setErrors((prev) => ({ ...prev, [name]: errorMsg }));
@@ -98,7 +105,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fieldsToValidate = ["firstName", "lastName", "docType", "docNumber", "email", "phone"];
+    const fieldsToValidate = CAMPOS_DEL_FORMULARIO;
     let isValid = true;
     fieldsToValidate.forEach((field) => {
       if (!validateField(field, (formData as any)[field] || "")) {
@@ -110,17 +117,31 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const firstName = capitalizeName(normalizarNombre(formData.firstName || ""));
+      const lastName = capitalizeName(normalizarNombre(formData.lastName || ""));
       const dataToSave = {
         ...formData,
-        firstName: capitalizeName(formData.firstName || ""),
-        lastName: capitalizeName(formData.lastName || ""),
-        name: `${capitalizeName(formData.firstName || "")} ${capitalizeName(formData.lastName || "")}`.trim(),
-        email: formData.email?.toLowerCase(),
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`.trim(),
+        docNumber: normalizarDocumento(formData.docNumber || ""),
+        email: formData.email?.trim().toLowerCase(),
+        phone: formData.phone?.trim(),
       };
       await onSave(dataToSave);
       onClose();
     } catch (err: any) {
-      setErrors({ submit: err.message || "Error al guardar" });
+      // El servidor manda cada error con su campo (`error.details`): se pinta junto al input, no en un aviso general.
+      const respuesta = err?.response?.data?.error;
+      const detalles: Array<{ field: string; message: string }> = Array.isArray(respuesta?.details) ? respuesta.details : [];
+      const porCampo: Record<string, string> = {};
+      const sueltos: string[] = [];
+      for (const d of detalles) {
+        if (CAMPOS_DEL_FORMULARIO.includes(d.field)) porCampo[d.field] = d.message;
+        else sueltos.push(d.message);
+      }
+      const general = detalles.length === 0 ? respuesta?.message || err?.message || "Error al guardar" : sueltos.join(". ");
+      setErrors({ ...porCampo, ...(general ? { submit: general } : {}) });
     } finally {
       setIsSubmitting(false);
     }
@@ -168,18 +189,20 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <FormField label="Nombres" required error={errors.firstName}>
                   <Input
                     value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, firstName: limpiarNombre(e.target.value) })}
                     onBlur={(e) => validateField("firstName", e.target.value)}
                     placeholder="Ej: Juan Pablo"
+                    maxLength={40}
                     className="bg-gray-50/50"
                   />
                 </FormField>
                 <FormField label="Apellidos" required error={errors.lastName}>
                   <Input
                     value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, lastName: limpiarNombre(e.target.value) })}
                     onBlur={(e) => validateField("lastName", e.target.value)}
                     placeholder="Ej: Pérez Gómez"
+                    maxLength={40}
                     className="bg-gray-50/50"
                   />
                 </FormField>
@@ -187,7 +210,13 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <FormField label="Tipo Doc" required error={errors.docType}>
                   <Select
                     value={formData.docType}
-                    onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
+                    onChange={(e) => {
+                      const tipo = e.target.value;
+                      setFormData({ ...formData, docType: tipo });
+                      // Un número ya escrito puede dejar de valer con el tipo nuevo (letras en una cédula): se avisa, no se borra.
+                      if (formData.docNumber) validateField("docNumber", formData.docNumber, tipo);
+                      else setErrors((prev) => ({ ...prev, docNumber: "" }));
+                    }}
                     onBlur={(e) => validateField("docType", e.target.value)}
                     className="bg-gray-50/50"
                   >
@@ -202,15 +231,21 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <FormField label="No. Documento" required error={errors.docNumber}>
                   <Input
                     value={formData.docNumber}
-                    onChange={(e) => setFormData({ ...formData, docNumber: e.target.value.toUpperCase() })}
+                    onChange={(e) => setFormData({ ...formData, docNumber: limpiarDocumento(formData.docType, e.target.value) })}
                     onBlur={(e) => validateField("docNumber", e.target.value)}
+                    inputMode={documentoSoloNumeros(formData.docType) ? "numeric" : "text"}
+                    maxLength={20}
+                    placeholder={!formData.docType ? "Elija primero el tipo" : documentoSoloNumeros(formData.docType) ? "Solo números" : "Letras y números"}
                     className="bg-gray-50/50"
                   />
                 </FormField>
-                <FormField label="Fecha Nacimiento">
+                <FormField label="Fecha Nacimiento" error={errors.birthDate}>
                   <DatePicker
                     value={formData.birthDate || ""}
-                    onChange={(date) => setFormData({ ...formData, birthDate: date })}
+                    onChange={(date) => {
+                      setFormData({ ...formData, birthDate: date });
+                      validateField("birthDate", date || "");
+                    }}
                     max={todayStr()}
                     popoverDirection="up"
                     fieldName="birthDate"
@@ -240,8 +275,10 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <FormField label="Teléfono" required error={errors.phone}>
                   <Input
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: limpiarTelefono(e.target.value) })}
                     onBlur={(e) => validateField("phone", e.target.value)}
+                    inputMode="tel"
+                    maxLength={20}
                     className="bg-gray-50/50"
                   />
                 </FormField>

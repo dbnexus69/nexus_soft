@@ -31,7 +31,7 @@ exports.getById = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const data = await clientsService.createClient(req.body, req.user.id);
+    const data = await clientsService.createClient(req.validatedBody, req.user.id);
     success(res, data, null, 201);
   } catch (err) {
     next(err);
@@ -41,7 +41,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await clientsService.updateClient(id, req.body);
+    const result = await clientsService.updateClient(id, req.validatedBody);
     success(res, result);
   } catch (err) {
     next(err);

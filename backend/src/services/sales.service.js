@@ -1,5 +1,5 @@
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
+const { AppError, NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { enHoraColombia } = require('../utils/fechas');
 const { recalcularVenta, aCentimos, precioProducto, bloquearVenta } = require('./saleTotals');
@@ -460,13 +460,15 @@ class SalesService {
       }
       if (it.docNumber) documentos.add(String(it.docNumber));
     }
-    codigosIata.add('UNK'); // el comodín para tramos sin aeropuerto conocido
+    // Los códigos se buscan en mayúsculas: el catálogo los guarda así y un
+    // "bog" tecleado a mano es el mismo aeropuerto.
+    const codigosBuscados = [...codigosIata].map(c => String(c).trim().toUpperCase());
 
-    const [proveedores, aerolineas, aeropuertos, personas, tarjetas] = await Promise.all([
+    const [proveedores, aerolineas, aeropuertos, personas, tarjetas, politicasEquipaje] = await Promise.all([
       prisma.proveedores.findMany({ select: { id: true, nombre: true } }),
       prisma.aerolineas.findMany({ select: { id: true, nombre: true } }),
       prisma.aeropuertos.findMany({
-        where: { codigo_iata: { in: [...codigosIata] } },
+        where: { codigo_iata: { in: codigosBuscados } },
         select: { id: true, codigo_iata: true },
       }),
       documentos.size
@@ -476,16 +478,84 @@ class SalesService {
           })
         : [],
       prisma.tarjetas_agencia.findMany({ select: { id: true, nombre: true } }),
+      prisma.politicas_equipaje.findMany({
+        select: { id: true, tipo_tarifa: true, aerolineas: { select: { nombre: true } } },
+      }),
     ]);
 
     return {
       proveedores,
       aerolineas,
       tarjetas,
+      // Cada plan de equipaje por el texto que muestra el formulario, "<aerolínea> - <tarifa>".
+      politicasEquipaje: new Map(politicasEquipaje.map(p => [
+        `${p.aerolineas.nombre} - ${p.tipo_tarifa}`.toLowerCase(), p.id,
+      ])),
+      idsPoliticasEquipaje: new Set(politicasEquipaje.map(p => p.id)),
       // Se indexan para que la búsqueda dentro de la transacción sea O(1).
       aeropuertos: new Map(aeropuertos.map(a => [a.codigo_iata, a.id])),
       personas: new Map(personas.map(p => [p.documento, p.id])),
     };
+  }
+
+  // Los aeropuertos y los planes de equipaje de los tiquetes se comprueban ANTES
+  // de abrir la transacción. Antes un aeropuerto que no existía se guardaba como
+  // "UNK" (y se creaba en el catálogo compartido), y un plan de equipaje que el
+  // formulario manda como texto ("Avianca - Light") se perdía: el vuelo salía
+  // sin aeropuerto ni equipaje y nadie se enteraba.
+  _validarTiquetes(ticketData, catalogos) {
+    const detalles = [];
+    ticketData.forEach((t, i) => {
+      const tramos = [
+        ...(t.legs || []).map((l, j) => [`legs.${j}`, l]),
+        ...(t.outboundStops || []).map((l, j) => [`outboundStops.${j}`, l]),
+        ...(t.returnLeg ? [['returnLeg', t.returnLeg]] : []),
+        ...(t.returnStops || []).map((l, j) => [`returnStops.${j}`, l]),
+      ];
+      for (const [ruta, leg] of tramos) {
+        if (!leg || !leg.origin || !leg.destination) continue;
+        for (const campo of ['origin', 'destination']) {
+          const codigo = String(leg[campo]).trim().toUpperCase();
+          if (!catalogos.aeropuertos.has(codigo)) {
+            detalles.push({
+              field: `ticketData.${i}.${ruta}.${campo}`,
+              message: `El aeropuerto "${leg[campo]}" no existe en el catálogo`,
+            });
+          }
+        }
+        if (this._planEquipajeId(leg.baggagePlan, catalogos) === undefined) {
+          detalles.push({
+            field: `ticketData.${i}.${ruta}.baggagePlan`,
+            message: `El plan de equipaje "${leg.baggagePlan}" no existe en el catálogo`,
+          });
+        }
+      }
+      if (this._planEquipajeId(t.baggagePlan, catalogos) === undefined) {
+        detalles.push({
+          field: `ticketData.${i}.baggagePlan`,
+          message: `El plan de equipaje "${t.baggagePlan}" no existe en el catálogo`,
+        });
+      }
+    });
+    if (detalles.length) {
+      throw new AppError(
+        `Datos de vuelo inválidos: ${detalles.map(d => d.message).join('; ')}`,
+        422, 'VALIDATION_ERROR', detalles,
+      );
+    }
+  }
+
+  // El id del plan de equipaje a partir de lo que manda el formulario: el texto
+  // "<aerolínea> - <tarifa>" o el id. `null` si no se eligió ninguno,
+  // `undefined` si se eligió uno que no existe.
+  _planEquipajeId(valor, catalogos) {
+    if (valor === undefined || valor === null || String(valor).trim() === '') return null;
+    const texto = String(valor).trim();
+    if (/^\d+$/.test(texto)) {
+      const id = Number(texto);
+      return catalogos.idsPoliticasEquipaje.has(id) ? id : undefined;
+    }
+    return catalogos.politicasEquipaje.get(texto.toLowerCase());
   }
 
   async createSale(body, alcance = {}) {
@@ -546,6 +616,7 @@ class SalesService {
 
     // Los catálogos se resuelven fuera: dentro de la transacción solo escrituras.
     const catalogos = await this._precargarCatalogos(body);
+    this._validarTiquetes(ticketData, catalogos);
 
     // La tarjeta con la que se le paga al proveedor de cada producto. Antes no
     // se leía: el asistente la pedía (en los paquetes, obligatoria) y se perdía.
@@ -752,7 +823,7 @@ class SalesService {
             nro_tiquete: t.passengers?.[0]?.nroTiquete || null,
             modo_vuelo: t.flightMode || 'one_way',
             checkin_status: 'pendiente',
-            planEquipajeId: t.baggagePlan ? Number(t.baggagePlan) : null,
+            planEquipajeId: this._planEquipajeId(t.baggagePlan, catalogos),
           }
         });
         // Tramos de vuelo
@@ -766,19 +837,10 @@ class SalesService {
           const leg = allLegs[i];
           if (!leg || !leg.origin || !leg.destination) continue;
 
-          // Del mapa precargado. Si el aeropuerto no existe se usa el comodín
-          // UNK, que solo se crea la primera vez que hace falta.
-          const idComodin = async () => {
-            if (catalogos.aeropuertos.has('UNK')) return catalogos.aeropuertos.get('UNK');
-            const creado = await tx.aeropuertos.create({
-              data: { codigo_iata: 'UNK', nombre: 'Desconocido', ciudad: '' }
-            });
-            catalogos.aeropuertos.set('UNK', creado.id);
-            return creado.id;
-          };
-          const origAirport = { id: catalogos.aeropuertos.get(leg.origin) ?? await idComodin() };
-          const destAirport = { id: catalogos.aeropuertos.get(leg.destination) ?? await idComodin() };
-          
+          // Del mapa precargado; que existan ya se comprobó en `_validarTiquetes`.
+          const origAirport = { id: catalogos.aeropuertos.get(String(leg.origin).trim().toUpperCase()) };
+          const destAirport = { id: catalogos.aeropuertos.get(String(leg.destination).trim().toUpperCase()) };
+
           // `enHoraColombia` en vez de `new Date('...T06:40:00')`: esa forma,
           // sin designador de zona, se interpreta como hora LOCAL DEL PROCESO,
           // así que el instante guardado dependía de dónde corriera el servidor.
@@ -806,7 +868,7 @@ class SalesService {
               orden: i + 1,
               nro_tiquete: leg.ticketNumber || null,
               aerolinea_id: legAirlineId,
-              plan_equipaje_id: leg.baggagePlan ? Number(leg.baggagePlan) : null,
+              plan_equipaje_id: this._planEquipajeId(leg.baggagePlan, catalogos) ?? this._planEquipajeId(t.baggagePlan, catalogos),
             }
           });
         }

@@ -25,6 +25,10 @@ const guion = "—";
 const unir = (partes: (string | number | null | undefined)[], sep = " · ") =>
   partes.filter(p => p !== null && p !== undefined && p !== "" && p !== 0).join(sep);
 
+const ESTADO_CHECKIN: Record<string, string> = {
+  pendiente: "Check-in pendiente", realizado: "Check-in realizado", cancelado: "Check-in cancelado",
+};
+
 const fecha = (v?: string | null) => (v ? formatDate(v) : null);
 
 /** Rango de fechas legible; si son iguales o falta una, no inventa el rango. */
@@ -109,6 +113,12 @@ const Tramos = memo(function Tramos({ legs }: { legs?: any[] }) {
               {unir([l.date ? formatDate(l.date) : null, l.flightNumber, l.airline,
                      l.seat ? `asiento ${l.seat}` : null, l.ticketNumber])}
             </span>
+            {l.checkinStatus && (
+              <span className="text-[11px] text-accent dark:text-slate-400">
+                {ESTADO_CHECKIN[l.checkinStatus] || l.checkinStatus}
+                {l.checkinStatus === "cancelado" && l.checkinReason ? `: ${l.checkinReason}` : ""}
+              </span>
+            )}
           </div>
         </li>
       ))}
@@ -168,9 +178,14 @@ export const FORMAS: Record<string, Forma> = {
     resumen: (t) => {
       const legs: any[] = t.legs || [];
       // La ruta completa, no solo el origen: es lo que identifica un vuelo.
-      const escalas = legs.map(l => l.origin).filter(Boolean);
-      const ultimo = legs[legs.length - 1]?.destination;
-      const ruta = [...escalas, ultimo].filter(Boolean).join(" → ");
+      // Solo se repite el origen si no es donde terminó el tramo anterior: en un
+      // multidestino (A→B, C→D) B no puede perderse.
+      const paradas: string[] = [];
+      for (const l of legs) {
+        if (l.origin && paradas[paradas.length - 1] !== l.origin) paradas.push(l.origin);
+        if (l.destination) paradas.push(l.destination);
+      }
+      const ruta = paradas.join(" → ");
       const pax = (t.passengers || []).map((p: any) => p.name).filter(Boolean);
       return {
         titulo: ruta || t.flightNumber || "Vuelo",
@@ -187,7 +202,7 @@ export const FORMAS: Record<string, Forma> = {
           ["Tiquete", t.ticketNumber],
           ["Equipaje", t.baggagePlanName],
           ["Modo", MODO_VUELO[t.flightMode] || t.flightMode],
-          ["Check-in", t.checkinStatus],
+          ["Check-in", ESTADO_CHECKIN[t.checkinStatus] || t.checkinStatus],
         ]} />
         <Personas titulo="Pasajeros" gente={t.passengers} />
       </Bloque>
@@ -249,31 +264,48 @@ export const FORMAS: Record<string, Forma> = {
       meta: unir([p.destination, p.travelersCount ? `${p.travelersCount} viajeros` : null]),
       cuando: rango(p.startDate, p.endDate),
     }),
-    Detalle: ({ item: p }) => (
-      <Bloque>
-        <Datos items={[
-          ["Destino", p.destination],
-          ["Fechas", rango(p.startDate, p.endDate)],
-          ["Viajeros", p.travelersCount],
-          ["Hotel", p.hotelName],
-          ["Régimen", p.mealPlan],
-          ["Aerolínea", p.airline],
-        ]} />
-        {/* Lo incluido es una lista de sí/no: se muestra solo lo que sí entra. */}
-        <div className="flex flex-wrap gap-1.5">
-          {([["Vuelo", p.includesFlight], ["Hotel", p.includesHotel],
-             ["Traslados", p.includesTransfers], ["Tours", p.includesTours],
-             ["Asistencia", p.includesAssistance]] as [string, boolean][])
-            .filter(([, si]) => si)
-            .map(([q]) => (
-              <span key={q} className="text-xs bg-highlight-soft text-highlight-ink dark:text-highlight border border-highlight/20 rounded-full px-2.5 py-1">
-                incluye {q}
-              </span>
-            ))}
-        </div>
-        <Personas titulo="Viajeros" gente={p.travelers} />
-      </Bloque>
-    ),
+    Detalle: ({ item: p }) => {
+      // Los hijos del paquete (tiquetes, hoteles, seguros…) se muestran dentro de él.
+      const incluidos = Object.entries(p.includedProducts || {}) as [string, any[]][];
+      return (
+        <Bloque>
+          <Datos items={[
+            ["Destino", p.destination],
+            ["Fechas", rango(p.startDate, p.endDate)],
+            ["Viajeros", p.travelersCount],
+            ["Hotel", p.hotelName],
+            ["Transporte", p.transportType],
+            ["Aerolínea", p.airline],
+            ["Vuelo", p.flightNumber],
+            ["Reserva", p.reservationNumber],
+            ["Tiquete", p.ticketNumber],
+            ["Confirmación", p.confirmationNumber],
+          ]} />
+          {(p.flightDepartureDate || p.flightReturnDate) && (
+            <Datos items={[
+              ["Salida", p.flightDepartureDate ? formatDateTime(p.flightDepartureDate) : null],
+              ["Llegada de la ida", p.flightDepartureArrivalDate ? formatDateTime(p.flightDepartureArrivalDate) : null],
+              ["Regreso", p.flightReturnDate ? formatDateTime(p.flightReturnDate) : null],
+              ["Llegada del regreso", p.flightReturnArrivalDate ? formatDateTime(p.flightReturnArrivalDate) : null],
+              ["Check-in de la ida", ESTADO_CHECKIN[p.checkinStatusOutbound] || null],
+              ["Check-in del regreso", ESTADO_CHECKIN[p.checkinStatusReturn] || null],
+            ]} />
+          )}
+          <Personas titulo="Viajeros" gente={p.travelers} />
+          {incluidos.map(([slug, items]) => {
+            const forma = FORMAS[slug];
+            if (!forma) return null;
+            return items.map((item, i) => (
+              <div key={`${slug}-${item.id || i}`} className="border-l-2 border-highlight/40 pl-3 space-y-2">
+                <p className="text-[11px] text-accent dark:text-slate-400">Incluye: {forma.label}</p>
+                <p className="text-sm font-medium text-primary dark:text-white">{forma.resumen(item).titulo}</p>
+                <forma.Detalle item={item} />
+              </div>
+            ));
+          })}
+        </Bloque>
+      );
+    },
   },
 
   checkin: {

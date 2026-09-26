@@ -229,9 +229,10 @@ export default function Itineraries() {
     if (flight.checkin === 'realizado') {
       return { isCancelado: false, isRealizado: true, isVencido: false, isUrgente: false };
     }
-    const [yr, mo, dy] = flight.date.split('-').map(Number);
-    const [hr, mn] = (flight.time || '00:00').split(':').map(Number);
-    const flightDateTime = new Date(yr, mo - 1, dy, hr, mn, 0);
+    // La fecha y la hora del vuelo son de Bogotá (UTC-5, sin horario de verano):
+    // con la hora local del navegador, quien mira desde otra zona ve vencido o
+    // urgente un vuelo que aún no lo es (y al revés).
+    const flightDateTime = new Date(`${flight.date}T${flight.time || '00:00'}:00-05:00`);
     const now = new Date();
     const isVencido = flightDateTime < now;
     const isUrgente = !isVencido && (flightDateTime.getTime() <= now.getTime() + (48 * 60 * 60 * 1000));
@@ -241,22 +242,38 @@ export default function Itineraries() {
   // ── Datos del calendario: solo los vuelos del mes visible ────────────────
   // Antes se traían todos los vuelos y se filtraba el mes en el navegador.
   const [monthFlights, setMonthFlights] = useState<Flight[]>([]);
+  // Mes al que corresponden `monthFlights` y fallo de la última carga: sin ellos,
+  // cambiar de mes dejaba los días vacíos "como si no hubiera vuelos" mientras
+  // llegaba la respuesta, y un error de red se veía igual que un mes sin vuelos.
+  const [mesCargado, setMesCargado] = useState<string | null>(null);
+  const [errorCalendario, setErrorCalendario] = useState<string | null>(null);
+  const claveMes = `${currentYear}-${currentMonth}`;
 
   useEffect(() => {
-    const desde = new Date(currentYear, currentMonth, 1);
-    const hasta = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+    // El rango se manda como días (AAAA-MM-DD): el servidor los toma como días de
+    // Bogotá. Con `toISOString()` de fechas locales del navegador el mes se
+    // corría según la zona de quien lo mira.
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ultimoDia = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const desde = `${currentYear}-${pad(currentMonth + 1)}-01`;
+    const hasta = `${currentYear}-${pad(currentMonth + 1)}-${pad(ultimoDia)}`;
     let vivo = true;
+    setErrorCalendario(null);
     // `fetchAllPages`, no `perPage: 100` a pelo: el backend topa perPage en 100
     // y aquí no se leía `meta.totalPages`, así que un mes con más de cien
     // tramos perdía el resto sin decir nada — los días afectados salían vacíos
     // en el calendario como si no hubiera vuelos. El rango es un mes, así que
     // recorrer sus páginas está acotado por construcción.
     fetchAllPages<Flight>(api.listFlights, {
-      dateFrom: desde.toISOString(),
-      dateTo: hasta.toISOString(),
+      dateFrom: desde,
+      dateTo: hasta,
     })
-      .then((res) => { if (vivo) setMonthFlights(res.data); })
-      .catch(() => { if (vivo) setMonthFlights([]); })
+      .then((res) => { if (vivo) { setMonthFlights(res.data); setMesCargado(claveMes); } })
+      .catch((err: any) => {
+        if (!vivo) return;
+        setMonthFlights([]);
+        setErrorCalendario(err?.response?.data?.error?.message || 'No se pudieron cargar los vuelos del mes.');
+      })
       .finally(() => { if (vivo) setIsLoading(false); });
     return () => { vivo = false; };
     // flightsRefreshToken: el botón de refrescar de la cabecera y del menú.
@@ -283,6 +300,7 @@ export default function Itineraries() {
    */
   const [prediccionValida, setPrediccionValida] = useState(false);
   const [checkinStatus, setCheckinStatus] = useState<CheckinStatusFilter>('pendiente');
+  const [errorLista, setErrorLista] = useState<string | null>(null);
 
   // El reseteo de página va en los manejadores, NO en un efecto.
   //
@@ -308,6 +326,7 @@ export default function Itineraries() {
   useEffect(() => {
     let vivo = true;
     setPendingLoading(true);
+    setErrorLista(null);
     const t = setTimeout(() => {
       api.listCheckins({
         status: checkinStatus,
@@ -317,12 +336,25 @@ export default function Itineraries() {
       })
         .then((res: any) => {
           if (!vivo) return;
+          const totalPaginas = res?.meta?.totalPages || 0;
+          // Tras cambiar un estado (o cancelar el último de la página) la página
+          // pedida puede haber dejado de existir: se vuelve a la última en vez de
+          // mostrar una lista vacía con contadores que dicen lo contrario.
+          if (totalPaginas > 0 && pendingPage > totalPaginas) {
+            setPendingPage(totalPaginas);
+            return;
+          }
           setPending(res?.data || []);
-          setPendingMeta({ total: res?.meta?.total || 0, totalPages: res?.meta?.totalPages || 0 });
+          setPendingMeta({ total: res?.meta?.total || 0, totalPages: totalPaginas });
           setCounts(res?.meta?.counts || COUNTS_VACIOS);
           setPrediccionValida(true);
         })
-        .catch(() => { if (vivo) { setPending([]); setCounts(COUNTS_VACIOS); setPrediccionValida(true); } })
+        .catch((err: any) => {
+          if (!vivo) return;
+          // Un fallo no es una lista vacía: se avisa y se deja reintentar.
+          setPending([]);
+          setErrorLista(err?.response?.data?.error?.message || 'No se pudo cargar la lista de check-in.');
+        })
         .finally(() => { if (vivo) setPendingLoading(false); });
     }, checkinSearch ? 300 : 0);
     return () => { vivo = false; clearTimeout(t); };
@@ -424,12 +456,34 @@ export default function Itineraries() {
       setRefreshToken(t => t + 1);
       setSuccessMessage(`Check-in cancelado para ${flightToCancel.passenger}`);
       setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
     } catch (err: any) {
       const detalle = err?.response?.data?.error;
       setErrorMessage(detalle?.details?.[0]?.message || detalle?.message || 'Error al cancelar el check-in');
       setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
     } finally {
       setIsCanceling(false);
+    }
+  };
+
+  const [revirtiendoId, setRevirtiendoId] = useState<string | null>(null);
+
+  const handleRevertCheckin = async (flight: Flight) => {
+    if (!canEditItinerary('itineraries')) return;
+    setRevirtiendoId(flight.id);
+    try {
+      await updateFlight(flight.id, { checkin: 'pendiente' });
+      setRefreshToken(t => t + 1);
+      setSuccessMessage(`Check-in de ${flight.passenger} marcado como pendiente`);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.error?.message || 'No se pudo marcar el check-in como pendiente');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+    } finally {
+      setRevirtiendoId(null);
     }
   };
 
@@ -438,22 +492,35 @@ export default function Itineraries() {
 
     setIsSending(true);
     try {
+      let resultado: any;
       if (checkinFiles.length > 0) {
         const formData = new FormData();
         formData.append('checkin', 'realizado');
         checkinFiles.forEach(file => {
           formData.append('files', file);
         });
-        await updateFlight(selectedFlightForCheckin.id, formData);
+        resultado = await updateFlight(selectedFlightForCheckin.id, formData);
       } else {
-        await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
+        resultado = await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
       }
       setIsCheckinModalOpen(false);
       // Las listas viven en el servidor: se releen en vez de parchearse aquí.
       setRefreshToken(t => t + 1);
-      setSuccessMessage(`Check-in realizado para ${selectedFlightForCheckin.passenger}`);
+      // El check-in ya está guardado; lo que puede fallar es el aviso al
+      // cliente, y eso no puede darse por enviado en silencio.
+      const AVISO_CORREO: Record<string, string> = {
+        sin_correo: 'El cliente no tiene correo: no se le envió el aviso.',
+        error_adjunto: 'No se pudo adjuntar el archivo al correo: el cliente no recibió el aviso.',
+        error_envio: 'No se pudo enviar el correo al cliente.',
+      };
+      const avisoCorreo = AVISO_CORREO[resultado?.emailStatus as string];
+      const correoFallo = !!avisoCorreo;
+      setSuccessMessage(
+        `Check-in realizado para ${selectedFlightForCheckin.passenger}` +
+        (avisoCorreo ? `. ${avisoCorreo}` : ''),
+      );
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setTimeout(() => setShowSuccess(false), correoFallo ? 6000 : 3000);
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message || 'Error al realizar check-in';
       setErrorMessage(msg);
@@ -507,8 +574,10 @@ export default function Itineraries() {
   const getDayKey = (day: number, month: number, year: number) => 
     `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  // "Hoy" según Bogotá, como las fechas de los vuelos.
+  const todayStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
 
   if (!canView('itineraries')) {
     return (
@@ -526,7 +595,8 @@ export default function Itineraries() {
   // esqueletos de la lista de check-in —FilaEsqueleto y EsqueletoVacio— no se
   // veían nunca al entrar, solo al cambiar de filtro. Ahora la pantalla se
   // pinta y cada parte trae el suyo.
-  const calendarioCargando = isLoading && monthFlights.length === 0;
+  const calendarioCargando = !errorCalendario && (isLoading || mesCargado !== claveMes);
+  const reintentar = () => setRefreshToken(t => t + 1);
 
   return (
     <div className="space-y-6 relative">
@@ -602,6 +672,13 @@ export default function Itineraries() {
               <PlaneLanding size={15} /> Vuelos de Regreso ({flightsRegreso.length})
             </button>
           </div>
+
+          {errorCalendario && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <span className="flex items-center gap-2"><AlertCircle size={16} /> {errorCalendario}</span>
+              <button onClick={reintentar} className="font-bold underline underline-offset-2 hover:text-red-900">Reintentar</button>
+            </div>
+          )}
 
           {/* Controles del Calendario */}
           <Card className="overflow-hidden border-none shadow-lg">
@@ -711,7 +788,7 @@ export default function Itineraries() {
                               {isPlan ? <Package size={10} className="shrink-0" /> : flight.type === 'ida' ? <PlaneTakeoff size={10} className="shrink-0" /> : <PlaneLanding size={10} className="shrink-0" />}
                               <span className="truncate flex-1">{flight.passenger}</span>
                               <span className="opacity-60 shrink-0">{flight.time}</span>
-                              {!isPlan && (() => {
+                              {(() => {
                                  const { isCancelado, isRealizado, isVencido } = getFlightStatus(flight);
                                  return (
                                    <span title={ESTADO_TITULO(isCancelado, isRealizado, isVencido)}
@@ -774,15 +851,11 @@ export default function Itineraries() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
-                            {flight.source === 'plan' ? (
-                              <>
-                                <Package size={14} className="text-emerald-500" />
-                                <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Paquete</span>
-                              </>
-                            ) : (() => {
+                            {(() => {
                               const { isCancelado, isRealizado, isVencido } = getFlightStatus(flight);
                               return (
                                 <>
+                                  {flight.source === 'plan' && <Package size={14} className="text-emerald-500" />}
                                   <span title={ESTADO_TITULO(isCancelado, isRealizado, isVencido)}
                                     className={`w-2 h-2 rounded-full ${ESTADO_PUNTO(isCancelado, isRealizado, isVencido)}`}
                                   />
@@ -835,7 +908,7 @@ export default function Itineraries() {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="text"
-                        placeholder="Buscar pasajero o ruta..."
+                        placeholder="Buscar pasajero, reserva o vuelo..."
                         className="pl-9 pr-10 py-1.5 text-sm bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
                         value={checkinSearch}
                         onChange={e => cambiarBusqueda(e.target.value)}
@@ -863,6 +936,12 @@ export default function Itineraries() {
                       ) : (
                         <EsqueletoVacio />
                       )}
+                    </div>
+                  ) : errorLista ? (
+                    <div role="alert" className="flex flex-col items-center gap-3 py-10 px-4 text-center text-sm text-red-700">
+                      <AlertCircle size={28} className="opacity-60" />
+                      <p>{errorLista}</p>
+                      <Button size="sm" onClick={reintentar}>Reintentar</Button>
                     </div>
                   ) : filteredPending.length > 0 ? (
                     <div className="divide-y divide-gray-border">
@@ -939,10 +1018,22 @@ export default function Itineraries() {
                             ) : (
                               <div className="flex items-center gap-2 w-full sm:w-auto">
                                 {flight.checkin === 'realizado' ? (
-                                  <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                                    <CheckCircle2 size={14} />
-                                    {flight.checkinAt ? formatDateTime(flight.checkinAt) : 'Realizado'}
-                                  </span>
+                                  <>
+                                    <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                                      <CheckCircle2 size={14} />
+                                      {flight.checkinAt ? formatDateTime(flight.checkinAt) : 'Realizado'}
+                                    </span>
+                                    {/* Deshacer un check-in marcado por error. */}
+                                    {canEditItinerary('itineraries') ? (
+                                      <button
+                                        onClick={() => handleRevertCheckin(flight)}
+                                        disabled={revirtiendoId === flight.id}
+                                        className="text-xs font-semibold text-gray-500 hover:text-primary underline underline-offset-2 disabled:opacity-50"
+                                      >
+                                        Marcar pendiente
+                                      </button>
+                                    ) : null}
+                                  </>
                                 ) : canEditItinerary('itineraries') ? (
                                   <Button
                                     size="sm"

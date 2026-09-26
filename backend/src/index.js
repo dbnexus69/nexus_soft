@@ -127,19 +127,26 @@ app.use(errorHandler);
 
 // Sin este chequeo, un rol con BYPASSRLS arranca sin error y ninguna política filtra.
 async function comprobarAislamiento() {
-  try {
-    const [rol] = await prisma.$queryRaw`
-      SELECT current_user AS usuario, (rolbypassrls OR rolsuper) AS salta
-      FROM pg_roles WHERE rolname = current_user`;
-    if (rol?.salta === false) return;
-    console.error(
-      `\nNo arranco: DATABASE_URL conecta con el rol "${rol?.usuario ?? '?'}", que se salta la RLS.\n` +
-      'Con ese rol las políticas de aislamiento no filtran nada y todas las agencias se ven entre sí.\n' +
-      'Usa el rol app_nexus (ver backend/.env.example).\n'
-    );
-  } catch (err) {
-    console.error(`\nNo arranco: no pude comprobar con qué rol conecta la base (${err.message}).\n`);
+  // Reintenta solo si no llega a la base (un corte de red de un segundo no debe tumbar el arranque); un rol que salta la RLS aborta a la primera.
+  let ultimoError;
+  for (let intento = 1; intento <= 3; intento++) {
+    try {
+      const [rol] = await prisma.$queryRaw`
+        SELECT current_user AS usuario, (rolbypassrls OR rolsuper) AS salta
+        FROM pg_roles WHERE rolname = current_user`;
+      if (rol?.salta === false) return;
+      console.error(
+        `\nNo arranco: DATABASE_URL conecta con el rol "${rol?.usuario ?? '?'}", que se salta la RLS.\n` +
+        'Con ese rol las políticas de aislamiento no filtran nada y todas las agencias se ven entre sí.\n' +
+        'Usa el rol app_nexus (ver backend/.env.example).\n'
+      );
+      process.exit(1);
+    } catch (err) {
+      ultimoError = err;
+      if (intento < 3) await new Promise(r => setTimeout(r, 2000));
+    }
   }
+  console.error(`\nNo arranco: no pude comprobar con qué rol conecta la base (${ultimoError.message}).\n`);
   process.exit(1);
 }
 

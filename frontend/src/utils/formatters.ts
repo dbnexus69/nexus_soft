@@ -101,11 +101,11 @@ export function getCurrentMonth(): { start: string; end: string } {
 
 export function capitalizeName(str: string): string {
   if (!str) return "";
+  // Mayúscula tras espacio, guion y apóstrofe: "García-Márquez", "O'Brien".
   return str
     .toLowerCase()
-    .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .replace(/\s+/g, " ")
+    .replace(/(^|[\s'’-])(\p{L})/gu, (_, sep: string, letra: string) => sep + letra.toUpperCase());
 }
 
 export function formatSaleId(id: number | string): string {

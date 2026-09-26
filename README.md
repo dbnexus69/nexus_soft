@@ -251,6 +251,31 @@ En el calendario el **rojo es cancelado**. Antes lo usaba "vencido", que pasó a
 los dos en rojo el color no distinguiría "el check-in se pasó de fecha" de "el vuelo se
 canceló".
 
+**Las fechas son días de Bogotá.** `dateFrom` y `dateTo` de `GET /flights` y
+`GET /flights/checkins` son `AAAA-MM-DD` (o un instante, del que se toma su día de Bogotá) y
+**ambos días entran**: por dentro es `salida >= desde AND salida < día siguiente`. El navegador
+manda el mes como dos cadenas, no con `toISOString()`, que lo corría según su zona. Los vuelos
+de paquete reciben el mismo rango en SQL.
+
+**Ida o regreso se deduce al leer,** no se guarda. En un `round_trip` los tramos se ordenan por
+salida y se corta en el mayor hueco entre uno y el siguiente. Falla solo si una escala dura más
+que la estancia. Ver `docs/designs/vuelos-fechas-de-bogota-y-direccion.md`.
+
+**Cada tramo lleva su aerolínea** (la del producto es la reserva) y su estado de check-in.
+
+**El alta de un tiquete solo acepta aeropuertos y planes de equipaje que existen.** Un
+aeropuerto desconocido o un plan inexistente dan 422 con el campo (`ticketData.0.legs.1.origin`);
+ya no hay aeropuerto comodín `UNK`. El plan de equipaje llega como el texto del selector,
+`"<aerolínea> - <tarifa>"`, o como id.
+
+**El resumen del producto se recalcula bajo bloqueo de fila** (`SELECT … FOR UPDATE` en
+`recalcularProducto`): sin él, dos check-ins simultáneos en tramos distintos dejaban el producto
+pendiente con todos los tramos hechos.
+
+**Los vuelos de un paquete** se leen de `prod_planes` (ida y regreso, con
+`checkin_status_ida/regreso`), salvo los de transporte terrestre. **No se pueden cancelar:**
+no hay dónde guardar el motivo, y el servidor lo rechaza con un mensaje claro.
+
 ### Otras reglas
 
 - `POST` devuelve **201**; `DELETE` devuelve **204** sin cuerpo. La excepción es
@@ -379,7 +404,10 @@ que los guardaba nunca llegó a funcionar.
 
 - `docs/designs/` — decisiones de diseño, con el problema, las alternativas descartadas
   y el resultado medido.
-- `docs/specs/` — especificaciones de pantallas.
+- `docs/specs/` — trabajo dirigido por especificación, una carpeta por spec con `spec.md`
+  (qué y cómo se comprueba), `plan.md` (cómo) y `tasks.md` (hecho y pendiente, con lo verificado):
+  `001-multi-tenant`, `002-estabilizacion-multi-tenant`, `003-validacion-de-datos-de-personas` y
+  `004-vuelos-y-checkin`.
 
 ## Herramientas de agentes
 

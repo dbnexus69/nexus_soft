@@ -1,6 +1,13 @@
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError } = require('../errors/AppError');
+const { AppError, NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
+
+// Errores que la pantalla pinta junto a su campo (`error.details`).
+const tipoDocumentoInexistente = () => new AppError(
+  'Datos inválidos: docType: No existe ese tipo de documento', 422, 'VALIDATION_ERROR',
+  [{ field: 'docType', message: 'No existe ese tipo de documento' }],
+);
+const documentoRepetido = (mensaje) => new BadRequestError(mensaje, 'DUPLICATE_DOCUMENT', [{ field: 'docNumber', message: mensaje }]);
 
 class ClientsService {
   /**
@@ -161,7 +168,8 @@ class ClientsService {
       const tipoDoc = await prisma.tipos_documento.findUnique({
         where: { abreviatura: data.docType }
       });
-      if (tipoDoc) tipo_documento_id = tipoDoc.id;
+      if (!tipoDoc) throw tipoDocumentoInexistente();
+      tipo_documento_id = tipoDoc.id;
     }
 
     if (data.docNumber) {
@@ -170,7 +178,7 @@ class ClientsService {
         include: { personas: true }
       });
       if (existingClient && !existingClient.personas.deleted_at) {
-        throw new BadRequestError('Este número de documento ya está registrado como cliente activo');
+        throw documentoRepetido('Este número de documento ya está registrado como cliente activo');
       }
     }
 
@@ -259,7 +267,8 @@ class ClientsService {
       const tipoDoc = await prisma.tipos_documento.findUnique({
         where: { abreviatura: data.docType }
       });
-      if (tipoDoc) personaData.tipo_documento_id = tipoDoc.id;
+      if (!tipoDoc) throw tipoDocumentoInexistente();
+      personaData.tipo_documento_id = tipoDoc.id;
     }
 
     if (data.docNumber) {
@@ -267,7 +276,7 @@ class ClientsService {
         where: { documento: data.docNumber }
       });
       if (existingDoc && existingDoc.id !== cliente.persona_id) {
-        throw new BadRequestError('Este número de documento ya está asignado a otra persona en el sistema');
+        throw documentoRepetido('Este número de documento ya está asignado a otra persona de la agencia');
       }
       personaData.documento = data.docNumber;
     }

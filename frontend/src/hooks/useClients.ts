@@ -40,8 +40,8 @@ export function useClients() {
       await fetchClients();
       return newClient;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear cliente';
-      throw new Error(msg);
+      // El error original: envolverlo en un `new Error(msg)` descartaba la respuesta y con ella `error.details`.
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -54,8 +54,7 @@ export function useClients() {
       await fetchClients();
       return updated;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar cliente';
-      throw new Error(msg);
+      throw err;
     } finally {
       setLoading(false);
     }

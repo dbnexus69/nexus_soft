@@ -4,6 +4,7 @@ const prisma = require('../config/db');
 const { buildMeta } = require('../utils/paginationHelper');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const emailService = require('../utils/emailService');
+const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
 
 // Los formateadores se crean una vez, no en cada petición: construir un
 // Intl.DateTimeFormat es caro y antes se hacían dos por llamada.
@@ -28,6 +29,32 @@ const formatLocalTime = (dt) => (dt ? FMT_HORA.format(dt) : null);
  */
 const soloLasSuyas = ({ viewScope, permissionScope, user } = {}) =>
   (viewScope || permissionScope) === 'own' && Boolean(user);
+
+/**
+ * El rango del filtro son DÍAS de Colombia: de las 00:00 del primero a las 00:00
+ * del día siguiente al último (el final es exclusivo).
+ *
+ * Con `new Date('2026-10-15')` el límite es medianoche UTC, que en Bogotá es la
+ * tarde del 14: filtrar un solo día daba un rango vacío, el último día de cada
+ * mes desaparecía del calendario, y un vuelo de las 23:30 caía en el día
+ * siguiente. Acepta 'YYYY-MM-DD' o un instante ISO (se pasa a su día de Bogotá).
+ */
+function diaDeColombia(valor) {
+  if (!valor) return null;
+  const texto = String(valor).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+  return fechaEnColombia(new Date(texto));
+}
+
+function rangoDeDias(dateFrom, dateTo) {
+  const primero = diaDeColombia(dateFrom);
+  const ultimo = diaDeColombia(dateTo);
+  const [a, m, d] = ultimo ? ultimo.split('-').map(Number) : [];
+  return {
+    desde: primero ? enHoraColombia(primero, '00:00') : null,
+    hasta: ultimo ? enHoraColombia(new Date(Date.UTC(a, m - 1, d + 1)).toISOString().slice(0, 10), '00:00') : null,
+  };
+}
 
 /** Una venta anulada o borrada no aparece en itinerarios ni acepta check-in. */
 const VENTA_VIGENTE = { deleted_at: null, status: { not: 'anulado' } };
@@ -89,9 +116,10 @@ function construirWhereBase({ dateFrom, dateTo, search, permissionScope, viewSco
   const where = { prod_tiqueteria: { detalle_venta: { ventas } } };
 
   if (dateFrom || dateTo) {
+    const { desde, hasta } = rangoDeDias(dateFrom, dateTo);
     where.salida = {};
-    if (dateFrom) where.salida.gte = new Date(dateFrom);
-    if (dateTo) where.salida.lte = new Date(dateTo);
+    if (desde) where.salida.gte = desde;
+    if (hasta) where.salida.lt = hasta;
   }
 
   // Búsqueda por pasajero, titular, localizador o número de vuelo.
@@ -143,7 +171,7 @@ async function resolverTipos(tramos) {
 
   const hermanos = await prisma.tramos_vuelo.findMany({
     where: { prod_tiqueteria_id: { in: productos } },
-    select: { id: true, orden: true, prod_tiqueteria_id: true },
+    select: { id: true, orden: true, salida: true, llegada: true, prod_tiqueteria_id: true },
     orderBy: [{ prod_tiqueteria_id: 'asc' }, { orden: 'asc' }],
   });
 
@@ -156,12 +184,39 @@ async function resolverTipos(tramos) {
   const tipos = {};
   for (const [pid, grupo] of porProducto) {
     if (modos.get(pid) === 'round_trip') {
-      const mitad = Math.ceil(grupo.length / 2);
-      grupo.forEach((h, i) => { tipos[h.id] = i < mitad ? 'ida' : 'regreso'; });
+      Object.assign(tipos, direccionesDeUnIdaYVuelta(grupo));
     } else {
       grupo.forEach(h => { tipos[h.id] = 'ida'; });
     }
   }
+  return tipos;
+}
+
+/**
+ * Dónde termina la ida de un ida y vuelta.
+ *
+ * La base no guarda la dirección de un tramo, así que se deduce: la ida acaba en
+ * el MAYOR hueco entre el final de un tramo y la salida del siguiente, que es la
+ * estadía en el destino (días) frente a las horas de una escala. Partir los
+ * tramos por la mitad, como se hacía, falla en cuanto la ida y la vuelta no
+ * tienen el mismo número de tramos: con 3 de ida y 1 de vuelta, el tercero de la
+ * ida salía como regreso.
+ *
+ * Límite conocido: si una escala de la ida dura más que la estadía en destino,
+ * la deducción se equivoca. Guardar la dirección en `tramos_vuelo` lo resolvería.
+ */
+function direccionesDeUnIdaYVuelta(tramos) {
+  const t = [...tramos].sort((a, b) => a.salida - b.salida || a.orden - b.orden);
+  const tipos = {};
+  if (t.length < 2) { t.forEach(h => { tipos[h.id] = 'ida'; }); return tipos; }
+
+  let corte = 1;
+  let mayor = -Infinity;
+  for (let i = 1; i < t.length; i++) {
+    const hueco = t[i].salida - (t[i - 1].llegada || t[i - 1].salida);
+    if (hueco > mayor) { mayor = hueco; corte = i; }
+  }
+  t.forEach((h, i) => { tipos[h.id] = i < corte ? 'ida' : 'regreso'; });
   return tipos;
 }
 
@@ -205,8 +260,10 @@ function mapearTramo(t, tipo) {
     saleId: venta?.id || null,
     pnr: t.prod_tiqueteria?.nro_reserva || '',
     reservationNumber: t.prod_tiqueteria?.nro_reserva || '',
-    airline: t.prod_tiqueteria?.aerolineas?.nombre || '',
-    airlineCode: t.prod_tiqueteria?.aerolineas?.codigo_iata || '',
+    // La aerolínea del TRAMO manda: un itinerario puede mezclar aerolíneas y el
+    // producto solo guarda la principal.
+    airline: t.aerolineas?.nombre || t.prod_tiqueteria?.aerolineas?.nombre || '',
+    airlineCode: t.aerolineas?.codigo_iata || t.prod_tiqueteria?.aerolineas?.codigo_iata || '',
     flightNumber: t.nro_vuelo_tramo || t.prod_tiqueteria?.nro_vuelo || '',
     origin: origen?.codigo_iata || dv?.origen || '',
     originCity: origen?.ciudad || dv?.origen || '',
@@ -271,6 +328,7 @@ function buscarTramos(where, skip, take) {
       },
       aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos: true,
       aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos: true,
+      aerolineas: true,
     },
     // Ascendente y con desempate: el vuelo más próximo primero, que es lo
     // operativo. El desempate por id evita que dos tramos con la misma salida
@@ -326,14 +384,29 @@ function descomponerIdPlan(id) {
  * expandido —si no, pedir un mes traería el regreso de otro mes o descartaría
  * la ida que sí entra—.
  */
-function construirWherePlanes({ search, permissionScope, viewScope, user }) {
+function construirWherePlanes({ search, permissionScope, viewScope, user, rango }) {
   const ventas = { ...VENTA_VIGENTE };
   if (soloLasSuyas({ permissionScope, viewScope, user })) ventas.usuario_id = user.id;
 
+  // Con un rango, al menos uno de los dos vuelos tiene que caer dentro. Sin esto
+  // el tope de planes se llenaba con los más antiguos y los futuros desaparecían.
+  const fechaDentro = (columna) => {
+    const c = {};
+    if (rango?.desde) c.gte = rango.desde;
+    if (rango?.hasta) c.lt = rango.hasta;
+    return { [columna]: Object.keys(c).length ? c : { not: null } };
+  };
+
   const where = {
     detalle_venta: { ventas },
-    // Sin fecha de vuelo no hay vuelo que mostrar: es un plan sin transporte.
-    OR: [{ fecha_salida_vuelo: { not: null } }, { fecha_regreso_vuelo: { not: null } }],
+    AND: [
+      // Sin fecha de vuelo no hay vuelo que mostrar: es un plan sin transporte.
+      { OR: [fechaDentro('fecha_salida_vuelo'), fechaDentro('fecha_regreso_vuelo')] },
+      // Un plan en bus (`Terrestre`) reutiliza los campos de vuelo del formulario,
+      // pero no es un vuelo ni tiene check-in aéreo. NULL cuenta como aéreo: así
+      // se guardó siempre antes de existir la opción.
+      { OR: [{ tipo_transporte: null }, { tipo_transporte: { not: 'Terrestre' } }] },
+    ],
   };
 
   if (search) {
@@ -473,9 +546,9 @@ function expandirPlan(plan) {
 }
 
 /** ¿Cae este vuelo de plan en el rango pedido? */
-function enRango(vuelo, dateFrom, dateTo) {
-  if (dateFrom && vuelo._salida < new Date(dateFrom)) return false;
-  if (dateTo && vuelo._salida > new Date(dateTo)) return false;
+function enRango(vuelo, { desde, hasta }) {
+  if (desde && vuelo._salida < desde) return false;
+  if (hasta && vuelo._salida >= hasta) return false;
   return true;
 }
 
@@ -513,11 +586,12 @@ const cuboDe = (vuelo) => (vuelo._estado === 'realizado' ? 'realizado'
 const TOPE_PLANES = 500;
 
 async function vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, viewScope, user }, ahora) {
-  const planes = await buscarPlanes(construirWherePlanes({ search, permissionScope, user }), TOPE_PLANES);
+  const rango = rangoDeDias(dateFrom, dateTo);
+  const planes = await buscarPlanes(construirWherePlanes({ search, permissionScope, viewScope, user, rango }), TOPE_PLANES);
 
   const todos = planes
     .flatMap(expandirPlan)
-    .filter(v => enRango(v, dateFrom, dateTo));
+    .filter(v => enRango(v, rango));
 
   // Los contadores se calculan ANTES del filtro de estado, igual que los de
   // tramos se calculan sobre `whereBase`: al filtrar por un estado, los demás
@@ -569,6 +643,13 @@ function paginarMezcla(deTramos, dePlanes, skip, perPage) {
  * para siempre. Y si TODOS están cancelados, el producto es cancelado.
  */
 async function recalcularProducto(tx, prodTiqueteriaId) {
+  // Se bloquea el producto antes de leer a los hermanos. Sin el cerrojo, dos
+  // check-in a la vez en tramos distintos del mismo tiquete se veían el uno al
+  // otro como pendiente (cada transacción solo ve lo confirmado) y el producto
+  // quedaba `pendiente` con todos los tramos realizados. Con él, el segundo
+  // espera al primero y ve su resultado.
+  await tx.$queryRaw`SELECT id FROM prod_tiqueteria WHERE id = ${prodTiqueteriaId} FOR UPDATE`;
+
   const hermanos = await tx.tramos_vuelo.findMany({
     where: { prod_tiqueteria_id: prodTiqueteriaId },
     select: { checkin_status: true },
@@ -632,7 +713,7 @@ class FlightsService {
     const [total, tramos, planes] = await Promise.all([
       prisma.tramos_vuelo.count({ where }),
       buscarTramos(where, 0, skip + perPage),
-      vuelosDePlan({ status: checkinStatus, dateFrom, dateTo, search, permissionScope, user }, ahora),
+      vuelosDePlan({ status: checkinStatus, dateFrom, dateTo, search, permissionScope, viewScope, user }, ahora),
     ]);
 
     const tipos = await resolverTipos(tramos);

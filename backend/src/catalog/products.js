@@ -89,7 +89,9 @@ function mapLegs(legs) {
     arrivalTime: formatColombiaTime(l.llegada),
     airline: l.aerolineas?.nombre || null,
     baggagePlan: l.politicas_equipaje ? `${l.politicas_equipaje.aerolineas?.nombre || l.aerolineas?.nombre || ''} - ${l.politicas_equipaje.tipo_tarifa}` : null,
-    orden: l.orden
+    orden: l.orden,
+    checkinStatus: l.checkin_status || 'pendiente',
+    checkinReason: l.reason_canceled || null
   }));
 }
 
@@ -179,19 +181,29 @@ const PRODUCT_TRANSFORMS = {
     if (!p) return;
     target.push({
       id: p.id,
-      packageName: p.paquetes?.nombre || p.nombre_paquete_personalizado,
-      destination: p.destino,
+      packageName: p.paquetes?.nombre || p.nombre_plan,
+      planName: p.nombre_plan,
+      destination: d.destino || null,
       startDate: p.fecha_viaje_inicio?.toISOString() || null,
       endDate: p.fecha_viaje_fin?.toISOString() || null,
       travelersCount: p.adultos_count ? (p.adultos_count + (p.menores_count || 0)) : null,
-      includesFlight: p.incluye_vuelo,
+      adultsCount: p.adultos_count,
+      childrenCount: p.menores_count,
+      transportType: p.tipo_transporte,
+      packageType: p.tipo_paquete,
       airline: p.aerolineas?.nombre || null,
-      includesHotel: p.incluye_hotel,
+      flightNumber: p.nro_vuelo,
+      reservationNumber: p.nro_reserva,
+      ticketNumber: p.nro_tiquete,
+      confirmationNumber: p.numero_confirmacion,
       hotelName: p.nombre_hotel,
-      mealPlan: p.regimen_alimenticio,
-      includesTransfers: p.incluye_traslados,
-      includesTours: p.incluye_tours,
-      includesAssistance: p.incluye_asistencia,
+      // Los cuatro vuelos del paquete y el estado de check-in de cada sentido.
+      flightDepartureDate: p.fecha_salida_vuelo?.toISOString() || null,
+      flightDepartureArrivalDate: p.fecha_llegada_vuelo?.toISOString() || null,
+      flightReturnDate: p.fecha_regreso_vuelo?.toISOString() || null,
+      flightReturnArrivalDate: p.fecha_llegada_regreso_vuelo?.toISOString() || null,
+      checkinStatusOutbound: p.checkin_status_ida,
+      checkinStatusReturn: p.checkin_status_regreso,
       packageId: p.paqueteId,
       travelers: passengers.map(pax => ({
         name: pax.nombreCompleto,

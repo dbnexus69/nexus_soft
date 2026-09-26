@@ -115,7 +115,8 @@ export default function Clients() {
       }
       setIsModalOpen(false);
     } catch (error: any) {
-      throw new Error(error.message || 'Error al guardar cliente');
+      // Sin envolver: el modal lee `response.data.error.details` para pintar cada error junto a su campo.
+      throw error;
     }
   };
 

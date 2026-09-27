@@ -4,7 +4,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-09-25).** Hechas T0, T1, T3, T6–T10 y T15–T17. Por confirmar en pantalla T2, T4 y T5.
+**Estado (2026-09-27).** Hechas T0–T3, T6–T10, T15–T18. Por confirmar en pantalla T4 y T5.
 Pendientes T11 (verificadores al repo), T12 (despliegue), T13 (`moon-travel`) y T14 (deuda menor).
 
 ---
@@ -42,7 +42,7 @@ sale con código 1 si salta la RLS o si no puede comprobarlo. Detalle de la deci
 `/api/health` da 200. Forzando `postgres` por variable de entorno: sale con código 1, con el mensaje
 que dice qué rol usó y qué hacer, y no llega a abrir el puerto.
 
-## T2 · Suplantación: entrar, salir, cerrar sesión y suspender `[~]`
+## T2 · Suplantación: entrar, salir, cerrar sesión y suspender `[x]`
 
 Cuatro fallos, todos en el mismo punto ciego: **al suplantar, la empresa del usuario y la empresa en la
 que trabaja dejan de ser la misma**, y cada sitio que asumía que lo eran fallaba en silencio.
@@ -73,9 +73,22 @@ original no se pisa y se borra al cerrar sesión, junto con las cachés.
 `empresaSlug` · el verificador de T3 confirma que un admin de agencia recibe 403 al intentar suplantar
 o suspender otra.
 
-**Por confirmar:** el flujo de pantalla completo (entrar, ver el aviso, pulsar *Salir*, volver a la
-sesión de superadmin) y `logout` durante una suplantación **no se han probado** con un superadmin real:
-requieren sus credenciales. Sin prueba automática de que suspender expulsa al instante.
+**Cerrado el 2026-09-27, con un superadmin real (`admin@nexus.com`) contra `Test-agency`:**
+- **Entrar:** token de suplantación real inyectado en `localStorage` igual que hace `suplantar()`; al
+  recargar, la marca cambia a la agencia visitada y sale el aviso rojo "Estás operando en nombre de
+  Test-agency" con el botón *Salir*.
+- **Salir:** vuelve a "DB Nexus" sin el aviso; en la base, `suplantaciones.terminada_at` queda puesto.
+- **Cerrar sesión durante una suplantación:** `POST /auth/logout` con el token de suplantación borra
+  la fila real de `sesiones` (la de la empresa de origen) — comprobado en la base antes (existe) y
+  después (no existe).
+- **Suspender expulsa al instante:** probado con una sesión normal (no superadmin) de una agencia
+  desechable — el mismo token que daba 200 antes de suspender da 401 `SESSION_REVOKED` inmediatamente
+  después, sin esperar el TTL de la caché. Con el superadmin suplantando la agencia suspendida, el
+  mismo token **sigue funcionando**: no es un fallo, es la regla que ya documenta `authCache.js`
+  (`olvidarEmpresa` compara contra la empresa del usuario, no la que visita, justo para no cortarle el
+  soporte al superadmin en el momento en que más hace falta).
+
+**B7 y B8 cumplidos.**
 
 ## T3 · Verificación del aislamiento por la API `[x]`
 
@@ -511,12 +524,39 @@ limpios, aviso de seguridad de Supabase vacío.
 uso**: `usos` solo informa en el modal y lo que apuntaba queda en `NULL`. Es el contrato actual de
 todos; bloquearlo es una decisión para los ocho a la vez. `feat-dbmoon` tiene que traer esta migración.
 
+## T18 · `POST /sales` sin `asesorId` tumbaba la venta, y logs sin convención `[x]`
+
+`createSale` guardaba `usuario_id: Number(asesorId)` a secas. El asistente real siempre manda
+`asesorId` (cae al usuario logueado si el formulario no lo trae), así que nunca se vio por pantalla,
+pero cualquier otro llamador de la API que omitiera el campo recibía `NaN` y un 500 crudo de Prisma
+en vez de un rechazo con sentido.
+
+De paso, revisando los logs sueltos del backend y del frontend: cinco `console.error`/`console.warn`
+fuera de `errorHandler.js` mezclaban español e inglés sin criterio, y uno de ellos (`users.service.js`)
+reusaba el tag `[ERROR]` que `errorHandler.js` reserva para los 500 no previstos con su `referencia` —
+mezclar los dos bajo el mismo tag hace imposible distinguirlos al buscar en el log.
+
+**Lo hecho:**
+- `usuario_id: asesorPedido ?? alcance.user.id` en vez de `Number(asesorId)`.
+- Convención fijada en `CLAUDE.md`: comentarios en español, pero cualquier log fuera de
+  `errorHandler.js` en inglés con un tag `SCREAMING_SNAKE_CASE` que nombra el fallo, al estilo de los
+  `code` de `AppError` (`NOT_FOUND`, `VALIDATION_ERROR`...). Aplicada en los cinco sitios que la
+  incumplían: `[WELCOME_EMAIL_FAILED]`, `[RECOVERY_EMAIL_FAILED]`, `[EMAIL_SEND_FAILED]` /
+  `[EMAIL_SEND_ERROR]`, y en el frontend `[fetchAllPages]` (traducido) y `[DRAFT_SAVE_FAILED]`.
+
+**Comprobado** con el servidor real y una agencia de prueba montada y desmontada: `POST /sales` sin
+`asesorId` da 201 con el usuario autenticado como asesor, en vez de 500. `check:prisma` limpio y
+`test:aislamiento` 15/15 tras el cambio.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-09-27 | `feat-bayrol` | La rama se puso al día con las 3 migraciones y el schema que tenía `feat-dbmoon` y ella no (`tipo_hotel_turistico`, `tarjeta_de_pago_al_proveedor`, la que le quita a `app_nexus` el acceso a `_prisma_migrations`). El resto del diff de `schema.prisma` era solo reformateo de `prisma format`. `migrate status` al día (17 migraciones), `test:aislamiento` pasa a esperar 54 claves compuestas. |
+| 2026-09-27 | T18 | `createSale` sin `asesorId` daba 500 crudo en vez de caer al usuario autenticado. De paso, convención de logs fijada en `CLAUDE.md` (español en comentarios, inglés con tag de error en los logs) y aplicada en los cinco sitios que la incumplían. |
+| 2026-09-27 | T2 | Cerrada de verdad: con un superadmin real se confirmaron los cuatro puntos que quedaban sueltos — entrar, salir, cerrar sesión durante una suplantación y que suspender expulse al instante a los usuarios reales (al superadmin suplantando, no, y es a propósito). B7 y B8 pasan a cumplidos. |
 | 2026-09-25 | T10 | `app_nexus` pierde todo acceso a `_prisma_migrations`. |
 | 2026-09-25 | T17 | La tarjeta de pago al proveedor se guarda (columna nueva con su clave compuesta) y los formularios mandan su id. |
 | 2026-09-25 | T16 | La sesión pasa a caducar por inactividad (30 min) y, al caducar, la pantalla vuelve al login con el motivo. De paso: cerrar sesión no la cerraba en el servidor (el token no viajaba). El error de `useData` en consola era la recarga en caliente de Vite. |

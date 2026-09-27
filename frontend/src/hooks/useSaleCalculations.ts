@@ -1,9 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { WizardFormData } from "../components/sales/wizardData";
+import { calcularIva } from "../utils/iva";
 
 export interface SaleCalculationsResult {
   calcSupplierCost: number;
   calcTa: number;
+  calcIva: number;
   calcTotal: number;
   totalItemsCount: number;
 }
@@ -43,11 +45,13 @@ export function useSaleCalculations(
     addProductTotals(form.passports);
     addProductTotals(form.petServices);
 
-    const calcTotal = calcSupplierCost + calcTa;
+    const calcIva = calcularIva(calcTa);
+    const calcTotal = calcSupplierCost + calcTa + calcIva;
 
     return {
       calcSupplierCost,
       calcTa,
+      calcIva,
       calcTotal,
       totalItemsCount,
     };
@@ -59,14 +63,17 @@ export function useSaleCalculations(
 
   // Sync state if calculated totals differ from stored form state
   useEffect(() => {
-    const { calcSupplierCost, calcTa, calcTotal } = totals;
+    const { calcSupplierCost, calcTa, calcIva, calcTotal } = totals;
 
     if (
       form.supplierCost !== calcSupplierCost.toString() ||
       form.ta !== calcTa.toString() ||
+      form.iva !== calcIva.toString() ||
       form.total !== calcTotal.toString()
     ) {
       setForm((prev) => {
+        // La comisión se calcula sobre la TA neta, nunca sobre TA+IVA: el IVA
+        // no es ingreso de la agencia, es dinero que se traslada al Estado.
         const commPercentage = parseFloat(prev.commissionAgentPercentage || "0");
         const newCommAmount = calcTa * (commPercentage / 100);
         const retention = parseFloat(prev.commissionAgentRetentionPercentage || "0");
@@ -76,13 +83,14 @@ export function useSaleCalculations(
           ...prev,
           supplierCost: calcSupplierCost.toString(),
           ta: calcTa.toString(),
+          iva: calcIva.toString(),
           total: calcTotal.toString(),
           commissionAgentAmount: newCommAmount.toString(),
           commissionAgentNetPayment: newCommNet.toString(),
         };
       });
     }
-  }, [totals, form.supplierCost, form.ta, form.total, setForm]);
+  }, [totals, form.supplierCost, form.ta, form.iva, form.total, setForm]);
 
   return totals;
 }

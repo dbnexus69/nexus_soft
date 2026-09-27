@@ -114,6 +114,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -144,6 +145,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -167,6 +169,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -202,6 +205,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -226,6 +230,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -249,6 +254,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -272,6 +278,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -298,6 +305,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -328,6 +336,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -359,6 +368,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -390,6 +400,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -415,6 +426,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -442,6 +454,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -469,6 +482,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.
@@ -500,6 +514,7 @@ const PRODUCT_TRANSFORMS = {
       supplierCost: d.costo_proveedor || 0,
       supplierPaymentCard: tarjetaDelProveedor(d),
       ta: d.ta || 0,
+      iva: d.iva || 0,
       // Precio del producto. Se expone porque `ta + costo` no siempre lo
       // reconstruye: hay productos guardados con un total explícito y sin
       // desglose de costo, donde esa suma da cero.

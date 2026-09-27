@@ -102,6 +102,11 @@ model detalle_venta {
   nombre_servicio          String?
   subtotal                 Float?              @default(0)
   ta                       Float?              @default(0)
+  /// El IVA sobre la TA (el margen de la agencia), no sobre el costo del
+  /// proveedor. Aparte de `ta`: si se sumaran, `ta_total` dejaría de ser el
+  /// ingreso real de la agencia en el dashboard, el ranking de asesores y la
+  /// cartera.
+  iva                      Float?              @default(0)
   costo_proveedor          Float?              @default(0)
   proveedor_id             Int?
   metodo_pago_proveedor_id Int?
@@ -1052,6 +1057,9 @@ model ventas {
   monto_total                   Float                @default(0)
   costo_proveedor_total         Float?               @default(0)
   ta_total                      Float?               @default(0)
+  /// Suma del `iva` de sus líneas. Aparte de `ta_total` a propósito — ver el
+  /// comentario en `detalle_venta.iva`.
+  iva_total                     Float?               @default(0)
   comisionista_id               Int?
   responsable_id                Int?
   monto_comision_bruto          Float?               @default(0)

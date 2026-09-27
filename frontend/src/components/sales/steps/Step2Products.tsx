@@ -300,7 +300,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                 <p className="text-[11px] text-slate-400">Total acumulado de los servicios seleccionados</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-white/5 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+            <div className="grid grid-cols-4 gap-2 sm:gap-4 bg-white/5 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
               <div className="text-center sm:text-right px-2">
                 <span className="text-[9px] uppercase font-bold text-slate-400 block">Costo Prov.</span>
                 <span className="text-xs sm:text-sm font-bold text-slate-100">
@@ -311,6 +311,12 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                 <span className="text-[9px] uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
                 <span className="text-xs sm:text-sm font-bold text-emerald-300">
                   ${(Number(form.ta) || 0).toLocaleString("es-CO")}
+                </span>
+              </div>
+              <div className="text-center sm:text-right px-2 border-r border-white/10">
+                <span className="text-[9px] uppercase font-bold text-amber-300 block">IVA</span>
+                <span className="text-xs sm:text-sm font-bold text-amber-300">
+                  ${(Number(form.iva) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2">

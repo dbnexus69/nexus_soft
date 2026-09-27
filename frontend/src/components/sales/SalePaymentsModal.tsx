@@ -361,9 +361,9 @@ export default function SalePaymentsModal({
               </p>
               <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(
-                  sale.total -
-                    (sale.supplierCost || 0) -
-                    (sale.commissionAgentNetPayment || 0),
+                  // TA neta menos comisión, nunca TA+IVA: el IVA no es
+                  // ingreso de la agencia, se traslada al Estado.
+                  (sale.ta || 0) - (sale.commissionAgentNetPayment || 0),
                 )}
               </p>
             </div>

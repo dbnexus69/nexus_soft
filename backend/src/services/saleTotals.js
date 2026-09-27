@@ -20,23 +20,50 @@ function aCentimos(valor) {
   return Math.round((Number(valor) || 0) * 100) / 100;
 }
 
+// El IVA se cobra sobre la TA (el margen de la agencia), no sobre el costo
+// del proveedor. Fija para toda la app, no configurable por agencia ni por
+// producto. Si cambia la tasa nacional, se cambia aquí Y en
+// frontend/src/utils/iva.ts (spec 003).
+const TASA_IVA = 0.19;
+
+function calcularIva(ta) {
+  return aCentimos(Number(ta || 0) * TASA_IVA);
+}
+
 /**
  * Precio de un producto dentro de la venta.
  *
  * El asistente NO manda un `total` por producto: pide el costo de proveedor y
- * la TA (el margen), y el precio es su suma. Como `subtotal` solo se rellenaba
- * con `x.total`, quedaba en 0 en todas las ventas reales — y `stats.service.js`
- * calcula los ingresos por categoría con `SUM(d.subtotal)`.
+ * la TA (el margen), y el precio es su suma más el IVA sobre esa TA. Como
+ * `subtotal` solo se rellenaba con `x.total`, quedaba en 0 en todas las
+ * ventas reales — y `stats.service.js` calcula los ingresos por categoría con
+ * `SUM(d.subtotal)`.
  *
  * Medido antes del arreglo: la métrica mostraba 15.580.000 cuando lo real eran
  * 20.488.000, y categorías con ventas aparecían en cero.
  *
- * Si el payload trae un `total` explícito manda ese; si no, se deriva.
+ * Si el payload trae un `total` explícito manda ese (sin recalcular IVA
+ * encima: nadie lo usa hoy desde el asistente); si no, se deriva.
  */
 function precioProducto(x) {
   const explicito = Number(x.total ?? x.subtotal ?? NaN);
   if (Number.isFinite(explicito) && explicito > 0) return explicito;
-  return Number(x.ta || 0) + Number(x.supplierCost || 0);
+  const ta = Number(x.ta || 0);
+  return ta + Number(x.supplierCost || 0) + calcularIva(ta);
+}
+
+/**
+ * Las cuatro cifras de dinero de una línea de producto, juntas.
+ *
+ * Sin esto, el IVA habría que calcularlo a mano en los 15 sitios de
+ * `sales.service.js` que insertan una línea de `detalle_venta` — la misma
+ * clase de copia que ya causó bugs de dinero en este repo. El IVA nunca lo
+ * manda el cliente: siempre sale de recalcularlo desde `ta`.
+ */
+function datosFinancieros(x) {
+  const ta = Number(x.ta || 0);
+  const costo_proveedor = Number(x.supplierCost || 0);
+  return { subtotal: precioProducto(x), ta, costo_proveedor, iva: calcularIva(ta) };
 }
 
 /**
@@ -76,7 +103,7 @@ async function recalcularVenta(tx, ventaId) {
   const [productos, pagos] = await Promise.all([
     tx.detalle_venta.aggregate({
       where: { venta_id: id },
-      _sum: { subtotal: true, ta: true, costo_proveedor: true },
+      _sum: { subtotal: true, ta: true, costo_proveedor: true, iva: true },
     }),
     tx.pagos_venta.aggregate({
       where: { venta_id: id },
@@ -91,6 +118,7 @@ async function recalcularVenta(tx, ventaId) {
     monto_total,
     ta_total: aCentimos(productos._sum.ta),
     costo_proveedor_total: aCentimos(productos._sum.costo_proveedor),
+    iva_total: aCentimos(productos._sum.iva),
     monto_pagado_credito,
   };
 
@@ -114,4 +142,7 @@ async function bloquearVenta(tx, ventaId) {
   await tx.$queryRaw`SELECT id FROM ventas WHERE id = ${Number(ventaId)} FOR UPDATE`;
 }
 
-module.exports = { recalcularVenta, estadoSegunPago, aCentimos, precioProducto, bloquearVenta };
+module.exports = {
+  recalcularVenta, estadoSegunPago, aCentimos, precioProducto, bloquearVenta,
+  calcularIva, datosFinancieros, TASA_IVA,
+};

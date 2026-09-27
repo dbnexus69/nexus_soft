@@ -73,13 +73,13 @@ const sendEmail = async ({ to, subject, html, attachments = [], remitente }) => 
     });
 
     if (data.error) {
-      console.error('Error de Resend:', data.error);
+      console.error('[EMAIL_SEND_FAILED]', data.error);
       return { success: false, error: data.error };
     }
 
     return { success: true, data };
   } catch (error) {
-    console.error('Error al enviar correo:', error);
+    console.error('[EMAIL_SEND_ERROR]', error);
     return { success: false, error };
   }
 };

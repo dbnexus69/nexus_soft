@@ -259,7 +259,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       // Intentar guardar el draft en localStorage
       localStorage.setItem(draftKey, JSON.stringify(form));
     } catch (error) {
-      console.warn("No se pudo guardar el borrador en localStorage (probablemente los archivos adjuntos son muy grandes):", error);
+      console.warn("[DRAFT_SAVE_FAILED]", "likely oversized file attachments:", error);
     }
   }, [form]);
 

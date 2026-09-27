@@ -578,7 +578,11 @@ class SalesService {
       const venta = await tx.ventas.create({
         data: {
           cliente_id: Number(clientId),
-          usuario_id: Number(asesorId),
+          // Sin `asesorId` en el cuerpo, la venta queda a nombre de quien la crea.
+          // `Number(asesorId)` a secas daba `NaN` (500 crudo de Prisma) en vez de
+          // esto: el asistente real siempre lo manda, pero cualquier otro
+          // llamador de la API no debería poder tumbar el alta por omitirlo.
+          usuario_id: asesorPedido ?? alcance.user.id,
           monto_total: Number(total) || 0,
           costo_proveedor_total: Number(supplierCost) || 0,
           ta_total: Number(ta) || 0,

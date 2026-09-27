@@ -299,7 +299,7 @@ class UsersService {
         `
       });
     } catch (emailErr) {
-      console.error('[ERROR] Sending welcome email:', emailErr.message);
+      console.error('[WELCOME_EMAIL_FAILED]', emailErr.message);
     }
 
     return {

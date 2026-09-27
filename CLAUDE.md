@@ -2,9 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Skills de uso OBLIGATORIO
+
+| Skill | Cuándo activar | Instalar si no existe |
+|---|---|---|
+| `ponytail` | SIEMPRE en cualquier corrección, creación de código o cumplimiento de tarea. Favorece la solución más simple y mínima que funciona. | `npx skills add https://github.com/dietrichgebert/ponytail --skill ponytail` |
+
 ## Project overview
 
-Nexus Soft is a **multi-tenant** travel-agency management system: sales/bookings, clients, commissions, itineraries, users/roles, stats. Each agency is an `empresa` with isolated data. Two independent pnpm packages with no shared workspace: `backend/` (Express 5 + Prisma 6, CommonJS, no TypeScript, PostgreSQL on Supabase → Render) and `frontend/` (React 19 + Vite + TypeScript + Tailwind → Vercel). Code comments, docs and UI are in Spanish.
+Nexus Soft is a **multi-tenant** travel-agency management system: sales/bookings, clients, commissions, itineraries, users/roles, stats. Each agency is an `empresa` with isolated data. Two independent pnpm packages with no shared workspace: `backend/` (Express 5 + Prisma 6, CommonJS, no TypeScript, PostgreSQL on Supabase) and `frontend/` (React 19 + Vite + TypeScript + Tailwind). Code comments, docs and UI are in Spanish. **Not deployed anywhere yet** — everything is built and verified locally; do not assume or introduce a hosting target (Render, Vercel or otherwise) until the project actually has one.
 
 `README.md` documents conventions in depth, with measured before/after timings (DB connection strings, pagination, typed SQL, objects-vs-raw-SQL, never computing totals in the browser). `docs/specs/001-multi-tenant/{spec,plan,tasks}.md` is the multi-tenant spec and its task log; `docs/decisions/` and `docs/designs/` hold rationale. Read those before touching tenancy, pagination or the sales list.
 
@@ -40,6 +46,8 @@ No lint config and no test framework. Run `pnpm check:prisma` after touching Pri
 ## Backend architecture
 
 `src/index.js` → helmet, CORS explicit allowlist (`FRONTEND_URL` + localhost; no wildcard), rate limits, `/api` and `/api/v1` (same router; the frontend targets `/api/v1`). Each feature is **route → middleware (`auth`, `authorize`, `validate` against `schemas/*.schema.js` Zod schemas) → controller → service → Prisma**; `routes/index.js` mounts each resource. Responses use `utils/apiResponse.js` (`{ success, data, meta }` / `{ success:false, error:{ message, code } }`), errors flow to `middleware/errorHandler.js` (maps Prisma codes, Zod, multer, `errors/AppError.js`).
+
+**Logging convention.** Comments, docs and UI text are Spanish, but any ad-hoc `console.error`/`console.warn` outside `errorHandler.js` (a swallowed failure that doesn't reach the client, e.g. a background email send) is written in **English**, tagged with a short `SCREAMING_SNAKE_CASE` code naming the failure — e.g. `[WELCOME_EMAIL_FAILED]`, `[RECOVERY_EMAIL_FAILED]`, `[EMAIL_SEND_FAILED]` — mirroring how `AppError`'s own `code` field is named (`NOT_FOUND`, `VALIDATION_ERROR`, `DUPLICATE`...). This is deliberately a different tag style from `errorHandler.js`'s own `[ERROR]`/`[ERROR META]`/`[ERROR STACK]` + `referencia`, which is reserved for truly unexpected 500s; reusing `[ERROR]` for a routine, already-handled failure makes the two impossible to tell apart when grepping logs. The same applies in the frontend: comments and UI stay Spanish, but `console.error`/`console.warn` messages are English.
 
 Flights/check-in is the one naming split worth knowing: the screen and API are `/flights` (was `/itineraries`, which redirects), but the permissions module key is still `itineraries` because that is what is stored in `permisos_rol`.
 

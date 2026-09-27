@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nexus-backend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "backend", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "nexus-frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "frontend", "dev"],
+      "port": 5173
+    }
+  ]
+}

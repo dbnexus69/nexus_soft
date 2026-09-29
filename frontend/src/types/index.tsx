@@ -689,6 +689,7 @@ export interface Sale {
   isSettled?: boolean;
   settlementDate?: string;
   ta?: number;
+  iva?: number;
   supplierCost?: number;
   payments?: PaymentRecord[];
   servicesSummary?: Array<{ tipo: string; label: string; detail: string | null }>;

@@ -206,7 +206,7 @@ class AuthService {
     // `sendEmail` no lanza, devuelve { success }. Si el correo falla se anota
     // en el log del servidor, pero la respuesta al cliente no cambia: decirle
     // "no se pudo enviar" también le confirmaría que el correo existe.
-    if (!envio.success) console.error('No se pudo enviar el código de recuperación al usuario', usuario.id);
+    if (!envio.success) console.error('[RECOVERY_EMAIL_FAILED]', 'usuario', usuario.id);
 
     return generico;
   }

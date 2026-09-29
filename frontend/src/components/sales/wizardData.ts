@@ -58,6 +58,7 @@ export interface WizardFormData {
   payments?: PaymentData[];
   total: string;
   ta: string;
+  iva: string;
   supplierCost: string;
   status: string;
   isCredit: boolean;
@@ -420,6 +421,7 @@ export const INITIAL_FORM: WizardFormData = {
   payments: [],
   total: "",
   ta: "",
+  iva: "",
   supplierCost: "",
   status: "",
   isCredit: false,

@@ -60,8 +60,8 @@ Los de la 001 (A1–A12) siguen vigentes. Estos se añaden, y la columna dice si
 | B4 | Un alta con ids de otra agencia responde 400 y no crea nada | Cliente, asesor, responsable, comisionista y método de pago de un abono ajenos | cumplido |
 | B5 | Lo propio funciona (control positivo de B2–B4) | GET/PUT sobre cada recurso propio: 200 | cumplido |
 | B6 | Las subidas funcionan y respetan al dueño | Voucher y avatares propios: 200. Sin sesión: 401. Con la sesión de otra agencia: 404 | cumplido |
-| B7 | Se sale de una suplantación desde la pantalla, y cerrar sesión durante ella cierra la sesión | `/auth/me` trae `empresaId`; tras salir, el token suplantado da 401 | hecho, falta probarlo en pantalla |
-| B8 | Suspender una agencia corta el acceso al momento | 401 en la siguiente petición, sin esperar la caché de 5 minutos | hecho, sin prueba automática |
+| B7 | Se sale de una suplantación desde la pantalla, y cerrar sesión durante ella cierra la sesión | `/auth/me` trae `empresaId`; tras salir, el token suplantado da 401 | cumplido |
+| B8 | Suspender una agencia corta el acceso al momento | 401 en la siguiente petición, sin esperar la caché de 5 minutos | cumplido |
 | B9 | Ningún listado da 500 con la latencia normal del pooler | 100 llamadas seguidas a los endpoints con transacción: 0 errores | cumplido |
 | B10 | El asistente de venta guarda todos los campos que se rellenan | Crear una venta con cada categoría y leer el detalle | 5 categorías corregidas, sin prueba automática |
 | B11 | La pantalla de gestión interna y el asistente de venta leen los mismos catálogos | Crear una aerolínea y verla en el selector del tiquete sin recargar | hecho, falta confirmar en pantalla |

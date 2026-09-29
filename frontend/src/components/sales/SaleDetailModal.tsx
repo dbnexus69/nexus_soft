@@ -108,12 +108,16 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
       : Number(sale.creditPaidAmount) || 0;
     const total = Number(sale.total) || 0;
     const costo = Number(sale.supplierCost) || 0;
+    const ta = Number(sale.ta) || 0;
+    const iva = Number(sale.iva) || 0;
     const comision = Number(sale.commissionAgentNetPayment) || 0;
     return {
       total, pagado,
       pendiente: Math.max(0, total - pagado),
-      costo, comision,
-      ganancia: total - costo - comision,
+      costo, iva, comision,
+      // TA neta menos comisión, nunca TA+IVA: el IVA no es ingreso de la
+      // agencia, se traslada al Estado.
+      ganancia: ta - comision,
     };
   }, [sale]);
 
@@ -265,6 +269,7 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
               <Meta etiqueta="Fecha" valor={sale.date ? formatDate(sale.date) : null} />
               <Meta etiqueta="Costo proveedor" valor={cifras.costo ? formatCurrency(cifras.costo) : null} />
               <Meta etiqueta="TA" valor={sale.ta ? formatCurrency(sale.ta) : null} />
+              <Meta etiqueta="IVA" valor={cifras.iva ? formatCurrency(cifras.iva) : null} />
               <Meta etiqueta="Ganancia neta" valor={formatCurrency(cifras.ganancia)} />
               <Meta etiqueta="Comisionista" valor={sale.commissionAgentName} />
               <Meta etiqueta="Comisión neta" valor={cifras.comision ? formatCurrency(cifras.comision) : null} />

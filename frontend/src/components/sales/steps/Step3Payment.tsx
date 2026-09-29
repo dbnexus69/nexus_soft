@@ -462,8 +462,9 @@ export function Step3Payment({ form, set, data, errors }: any) {
               <p className="font-black text-emerald-600">
                 $
                 {(
-                  Number(form.total) -
-                  (Number(form.supplierCost) || 0) -
+                  // TA neta menos comisión, nunca TA+IVA: el IVA no es
+                  // ingreso de la agencia, se traslada al Estado.
+                  (Number(form.ta) || 0) -
                   (Number(form.commissionAgentNetPayment) || 0)
                 ).toLocaleString("es-CO")}
               </p>

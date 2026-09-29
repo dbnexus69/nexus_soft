@@ -11,7 +11,7 @@
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/brainstorming/SKILL.md",
-      "computedHash": "b58d55b64742ecd37923985ec7bdfbe678ffbcb9895562abd28c0a32dcacd7fb"
+      "computedHash": "fef7f05d17a88e6b498f24d1b2081880a4666a664cc49881f56527808f26fbd6"
     },
     "find-skills": {
       "source": "vercel-labs/skills",
@@ -24,6 +24,12 @@
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+    },
+    "ponytail": {
+      "source": "dietrichgebert/ponytail",
+      "sourceType": "github",
+      "skillPath": "skills/ponytail/SKILL.md",
+      "computedHash": "9e8d05cbbaf6dc38f0cffc924c09b3cbe76d94ba4ba0d09bde803da2f8c6b5a0"
     },
     "prisma-client-api": {
       "source": "prisma/skills",

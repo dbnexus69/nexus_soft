@@ -64,9 +64,9 @@ export async function fetchAllPages<T>(
   const truncado = totalPaginas > MAX_PAGINAS;
   if (truncado && import.meta.env.DEV) {
     console.warn(
-      `[fetchAllPages] La colección tiene ${total} registros (${totalPaginas} páginas) ` +
-      `y se cortó en ${MAX_PAGINAS}. Esta lista no debería cargarse entera: ` +
-      `usa búsqueda en servidor o una consulta agregada.`,
+      `[fetchAllPages] Collection has ${total} records (${totalPaginas} pages) ` +
+      `and was truncated at ${MAX_PAGINAS}. This list should not be loaded whole: ` +
+      `use server-side search or an aggregate query instead.`,
     );
   }
 

@@ -12,7 +12,7 @@ import { formaDe } from "./serviceShapes";
  * salía sin importe.
  */
 const precioProducto = (it: any) =>
-  Number(it.subtotal) || (Number(it.ta) || 0) + (Number(it.supplierCost) || 0);
+  Number(it.subtotal) || (Number(it.ta) || 0) + (Number(it.supplierCost) || 0) + (Number(it.iva) || 0);
 
 interface ServiceRowProps {
   /** Slug de la categoría: ticket, hotel, insurance… */

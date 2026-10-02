@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-09-25).** Servidor y pantalla hechos; la pantalla sin probar en el navegador.
+**Estado (2026-10-01).** Servidor y pantalla hechos; la pantalla sin probar en el navegador.
 
 ## T1 · Servidor de vuelos `[x]`
 Rango en días de Bogotá, dirección deducida, aerolínea por tramo, planes terrestres fuera, `viewScope`, bloqueo de fila en el resumen, `search` normalizado. **Comprobado** con la API real: 63 comprobaciones, 0 fallos (la carrera de 4 check-ins simultáneos dio producto `realizado` 3 de 3 veces; antes 0 de 3).
@@ -18,6 +18,23 @@ Ver decisión 9 del plan. `tsc` limpio. **Por confirmar en el navegador:** cambi
 
 ## T5 · Catálogo compartido `[x]`
 Tarifas 6, 7 y 15 de `politicas_equipaje` corregidas (antes `BÃƒÂ¡sica`, `Ãƒâ€œptima`, `EconÃƒÂ³mica`). Se buscó el mismo daño en aeropuertos, aerolíneas y el resto de columnas de tarifas: no hay más. El aeropuerto DXB, que se sospechaba, está bien.
+
+## T10 · Check-in realizado por otro medio `[~]`
+
+Pedido: dejar constancia de un check-in hecho por WhatsApp u otro canal ajeno a la aerolínea, sin
+pasar por el modal de adjuntar comprobante que ya existía (`handleMarkCheckin`).
+
+`handleQuickCheckin` (`Itineraries.tsx`): un botón nuevo, "Check-in realizado", junto a "Realizar
+Check-in" en cada fila pendiente de la lista de check-in. Llama a `PUT /flights/:id/checkin` con
+`{ checkin: 'realizado' }` directo —el mismo endpoint y el mismo cuerpo mínimo que ya aceptaba el
+modal cuando se confirmaba sin adjuntar archivo—, sin modal ni adjunto. Mismo patrón que ya usa
+"Marcar pendiente" (acción directa, con su propio aviso de éxito o error).
+
+**Comprobado:** `tsc --noEmit` limpio; el backend no necesitó ningún cambio, porque el camino que
+usa (`checkin: 'realizado'` sin adjuntos) ya era válido desde antes.
+
+**Por confirmar en navegador:** pulsar el botón en un vuelo pendiente y verificar que pasa a
+"Realizado" sin pedir ningún archivo.
 
 ## Pendientes
 
@@ -45,6 +62,7 @@ Resultado de la última corrida: **63 correctas, 0 fallos.** Antes de los arregl
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-01 | T10 | Botón "Check-in realizado" para dejar constancia de un check-in hecho por WhatsApp u otro medio, sin pasar por el modal de adjuntar comprobante. |
 | 2026-09-25 | T5 | Corregidas 3 tarifas corruptas del catálogo compartido. |
 | 2026-09-25 | T4 | Pantalla: errores visibles, Bogotá, correo, deshacer check-in. |
 | 2026-09-25 | T3 | Detalle: plan con datos reales, estado por tramo. |

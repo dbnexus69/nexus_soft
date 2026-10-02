@@ -4,7 +4,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-09-27).** Hechas T0–T3, T6–T10, T15–T18. Por confirmar en pantalla T4 y T5.
+**Estado (2026-10-01).** Hechas T0–T3, T6–T10, T15–T19. Por confirmar en pantalla T4 y T5.
 Pendientes T11 (verificadores al repo), T12 (despliegue), T13 (`moon-travel`) y T14 (deuda menor).
 
 ---
@@ -548,12 +548,67 @@ mezclar los dos bajo el mismo tag hace imposible distinguirlos al buscar en el l
 `asesorId` da 201 con el usuario autenticado como asesor, en vez de 500. `check:prisma` limpio y
 `test:aislamiento` 15/15 tras el cambio.
 
+## T19 · Suplantando, crear un cliente (o un paquete) daba un 400 de clave ajena `[x]`
+
+Reportado: entrando como una agencia (suplantación), crear un cliente o un usuario no se dejaba.
+Reproducido por la API real con una agencia y un superadministrador de prueba, ambos desechables:
+crear un cliente sí fallaba, con un 400 que no decía nada útil
+(`FOREIGN_KEY_ERROR` sobre `clientes_creado_por_id_empresa_fkey`); crear un usuario, no.
+
+**La causa:** `clientes.creado_por_id` es una clave ajena **compuesta**,
+`(creado_por_id, empresa_id) → usuarios(id, empresa_id)` (T3b, spec 001), para que una fila de una
+agencia no pueda apuntar a un usuario de otra. `clients.controller.js` escribía
+`creado_por_id: req.user.id` sin excepción — correcto para cualquier usuario normal, cuyo id vive en
+la misma agencia en la que trabaja, pero no para el superadministrador suplantando: su fila vive en
+su propia agencia, no en la visitada, así que esa pareja `(id, empresa)` no existe. Ningún permiso
+fallaba — el atajo de permisos del superadministrador es completo — fallaba una capa más abajo, la
+integridad referencial.
+
+**El mismo patrón, en dos sitios más**, el segundo sin que el usuario lo reportara:
+- Crear un paquete de viaje desde Configuración (`config.service.js`) escribía
+  `creado_por_id: d.creado_por_id || 1` — el id fijo `1` ni siquiera pertenece a todas las agencias,
+  un bug propio anterior a este.
+- `ventas.usuario_id` (el asesor) es la misma clave compuesta, pero **no admite nulo**. Sin un
+  `asesorId` explícito, `createSale` ya caía en `alcance.user.id`: suplantando, el mismo 400 sin
+  sentido. El asistente real siempre manda un asesor explícito, así que no es lo que se reportó, pero
+  es el mismo riesgo.
+
+**Crear un usuario no falló en la prueba** porque `usuarios` no tiene columna "creado por": lo único
+que depende de quien actúa es el rol, que se busca por **nombre** y la RLS ya lo filtra a la agencia
+correcta sin ningún id cruzado de por medio.
+
+**Lo hecho:** `middleware/auth.js` ya marca `req.suplantacion` cuando se está suplantando — no hizo
+falta ningún estado nuevo.
+- `clients.controller.js`: `creado_por_id: req.suplantacion ? null : req.user.id`. Un cliente creado
+  durante soporte queda sin "creado por" de esa agencia (la columna es nulable), que es lo correcto:
+  nadie de su equipo lo creó. Quién lo hizo de verdad sigue constando en `suplantaciones`.
+- `config.controller.js` / `config.service.js`: `createItem` recibe un tercer argumento, el mismo
+  `req.suplantacion ? null : req.user.id`, y el `reverseTransform` de `paquetes` lo usa en vez del
+  `|| 1`. Al **editar** un paquete no se manda ese argumento (queda `undefined`, que Prisma omite):
+  editar ya no reescribe quién lo creó, que era otro efecto colateral del `|| 1`.
+- `sales.service.js`, `createSale`: si no hay `asesorId` y se está suplantando, 400 con un mensaje
+  claro — "Elige un asesor: quien suplanta no puede quedar como el asesor de la venta" — antes de
+  llegar al insert.
+
+**Comprobado** con el servidor real y una agencia de prueba desechable (suplantada de verdad, por
+`POST /companies/:id/impersonations`, no simulada): crear un cliente suplantando, 201 con
+`creado_por_id = null`; crear un paquete suplantando, 201, igual; crear una venta suplantando sin
+asesor, 400 con el mensaje nuevo; con un asesor de la agencia visitada, 201; editar y desactivar el
+cliente, y editar y borrar el paquete, suplantando: sin cambios, seguían funcionando (no tocan
+`creado_por_id`) y el paquete editado conserva su `creado_por_id = null`. Sin suplantar, un admin
+real creando su propio cliente sigue guardando su propio id, no `null`. `check:prisma` limpio,
+`test:aislamiento` 54/54.
+
+*No resuelto, porque no se pudo reproducir:* el fallo al crear un usuario suplantando que se
+reportó. Queda para revisar si vuelve a pasar, con el mensaje exacto que dé la pantalla.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-01 | T19 | Suplantando, crear un cliente o un paquete de viaje daba un 400 de clave ajena sin explicación: la columna "creado por" exige que quien crea pertenezca a esa agencia, y el superadministrador suplantando no pertenece a ninguna de las que visita. Se deja sin creador (la auditoría de la suplantación ya dice quién fue) en vez de escribir un id ajeno. |
 | 2026-09-27 | `feat-bayrol` | La rama se puso al día con las 3 migraciones y el schema que tenía `feat-dbmoon` y ella no (`tipo_hotel_turistico`, `tarjeta_de_pago_al_proveedor`, la que le quita a `app_nexus` el acceso a `_prisma_migrations`). El resto del diff de `schema.prisma` era solo reformateo de `prisma format`. `migrate status` al día (17 migraciones), `test:aislamiento` pasa a esperar 54 claves compuestas. |
 | 2026-09-27 | T18 | `createSale` sin `asesorId` daba 500 crudo en vez de caer al usuario autenticado. De paso, convención de logs fijada en `CLAUDE.md` (español en comentarios, inglés con tag de error en los logs) y aplicada en los cinco sitios que la incumplían. |
 | 2026-09-27 | T2 | Cerrada de verdad: con un superadmin real se confirmaron los cuatro puntos que quedaban sueltos — entrar, salir, cerrar sesión durante una suplantación y que suspender expulse al instante a los usuarios reales (al superadmin suplantando, no, y es a propósito). B7 y B8 pasan a cumplidos. |

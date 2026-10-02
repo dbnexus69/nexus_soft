@@ -407,7 +407,7 @@ que los guardaba nunca llegó a funcionar.
 - `docs/specs/` — trabajo dirigido por especificación, una carpeta por spec con `spec.md`
   (qué y cómo se comprueba), `plan.md` (cómo) y `tasks.md` (hecho y pendiente, con lo verificado):
   `001-multi-tenant`, `002-estabilizacion-multi-tenant`, `003-validacion-de-datos-de-personas`,
-  `004-vuelos-y-checkin` y `005-iva-sobre-ta`.
+  `004-vuelos-y-checkin`, `005-iva-sobre-ta` y `006-calendario-y-modales`.
 
 ## Herramientas de agentes
 

@@ -196,7 +196,7 @@ const SECTION_MAP = {
         coverageDays: r.paquete_asistencia_medica.dias_cobertura
       } : undefined
     }),
-    reverseTransform: async (d) => {
+    reverseTransform: async (d, actorId) => {
       let airlineId = null;
       if (d.flight?.airline) {
         const a = await prisma.aerolineas.findFirst({ where: { nombre: d.flight.airline } });
@@ -213,7 +213,14 @@ const SECTION_MAP = {
         destino: d.destination || 'N/A',
         servicios_incluidos: d.includedServices || '',
         no_incluido: d.notIncluded || '',
-        creado_por_id: d.creado_por_id || 1,
+        // Solo al crear: `createItem` manda `actorId` (el id de quien actúa, o
+        // `null` si está suplantando — su id no pertenece a esta agencia, y
+        // la columna es una clave ajena compuesta). Al editar, `updateItem`
+        // no lo manda, `actorId` queda `undefined` y Prisma omite el campo:
+        // editar un paquete no debe cambiar quién lo creó. Antes era
+        // `d.creado_por_id || 1`, que ni leía el id real ni distinguía crear
+        // de editar — un id fijo que además no pertenece a todas las agencias.
+        creado_por_id: actorId,
         paquete_hotel: d.accommodation?.hotel ? {
           create: [{
             hotel_nombre: d.accommodation.hotel,
@@ -376,13 +383,13 @@ class ConfigService {
     return Object.fromEntries(pedidas.map((s, i) => [s, rows[i].data]));
   }
 
-  async createItem(section, data) {
+  async createItem(section, data, actorId) {
     const config = SECTION_MAP[section];
     if (!config) throw new NotFoundError('Sección no encontrada');
 
     let createData;
     if (config.reverseTransform) {
-      createData = await config.reverseTransform(data);
+      createData = await config.reverseTransform(data, actorId);
     } else {
       createData = { ...data };
       delete createData.id;

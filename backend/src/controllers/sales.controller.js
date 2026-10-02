@@ -9,7 +9,9 @@ const { success, noContent } = require('../utils/apiResponse');
  * Antes solo lo recibían `list`, la cartera y los créditos por cliente, así
  * que la lista ocultaba lo que la URL directa enseñaba.
  */
-const alcanceDe = (req) => ({ permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user });
+// `suplantando`: si está suplantando, `user.id` no pertenece a esta agencia
+// (ver `createSale`, el asesor de una venta sin asesor explícito).
+const alcanceDe = (req) => ({ permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user, suplantando: !!req.suplantacion });
 
 exports.list = async (req, res, next) => {
   try {

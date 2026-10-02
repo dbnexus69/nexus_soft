@@ -581,6 +581,15 @@ class SalesService {
     if (soloLasSuyas(alcance) && asesorPedido !== null && asesorPedido !== alcance.user.id) {
       throw new ForbiddenError('No puede crear una venta a nombre de otro asesor');
     }
+    // Sin asesor explícito, `usuario_id` cae más abajo en `alcance.user.id`
+    // (quien crea la venta). Suplantando, ese id es el del superadministrador,
+    // que no pertenece a esta agencia — `ventas.usuario_id` es una clave ajena
+    // compuesta (id, empresa_id) y, a diferencia de `clientes.creado_por_id`,
+    // no admite nulo. Se rechaza aquí, con un mensaje que dice qué pasó, en
+    // vez de dejar que la base lo haga con un 400 de clave ajena sin sentido.
+    if (asesorPedido === null && alcance.suplantando) {
+      throw new BadRequestError('Elige un asesor: quien suplanta no puede quedar como el asesor de la venta');
+    }
 
     // Los cuatro ids del cuerpo, comprobados contra la empresa activa.
     await comprobarReferencias(REFERENCIAS_NUEVA_VENTA, {

@@ -37,7 +37,11 @@ exports.getItem = async (req, res, next) => {
 
 exports.createItem = async (req, res, next) => {
   try {
-    const data = await configService.createItem(req.params.section, req.body);
+    // Solo lo usa la sección `paquetes` (es quien tiene `creado_por_id`), pero
+    // viaja siempre: más simple que decidir aquí qué sección lo necesita.
+    // Mismo motivo que en clientes: suplantando, el id de quien actúa no
+    // pertenece a esta agencia, y esa columna es una clave ajena compuesta.
+    const data = await configService.createItem(req.params.section, req.body, req.suplantacion ? null : req.user.id);
     success(res, data, null, 201);
   } catch (err) { next(err); }
 };

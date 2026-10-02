@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, memo } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plane, X, Calendar as CalendarIcon, 
   UserCheck, PlaneTakeoff, PlaneLanding, Search, Filter, AlertCircle,
-  Clock, CheckCircle2, XCircle, UploadCloud, ExternalLink, Package
+  Clock, CheckCircle2, XCircle, UploadCloud, ExternalLink, Package, MessageCircle
 } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -484,6 +484,30 @@ export default function Itineraries() {
       setTimeout(() => setShowError(false), 5000);
     } finally {
       setRevirtiendoId(null);
+    }
+  };
+
+  const [marcandoId, setMarcandoId] = useState<string | null>(null);
+
+  // El check-in "a mano", sin modal ni adjunto: el pasajero lo hizo por WhatsApp
+  // u otro canal ajeno a la aerolínea, y aquí solo queda dejar constancia. El
+  // flujo con el modal (`handleMarkCheckin`) sigue para cuando sí hay un
+  // comprobante que adjuntar.
+  const handleQuickCheckin = async (flight: Flight) => {
+    if (!canEditItinerary('itineraries')) return;
+    setMarcandoId(flight.id);
+    try {
+      await updateFlight(flight.id, { checkin: 'realizado' });
+      setRefreshToken(t => t + 1);
+      setSuccessMessage(`Check-in de ${flight.passenger} registrado (realizado por otro medio)`);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.error?.message || 'No se pudo registrar el check-in');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+    } finally {
+      setMarcandoId(null);
     }
   };
 
@@ -1035,13 +1059,27 @@ export default function Itineraries() {
                                     ) : null}
                                   </>
                                 ) : canEditItinerary('itineraries') ? (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleMarkCheckin(flight.id, flight.passenger)}
-                                    className="shadow-md shadow-primary/10 flex-1 sm:flex-initial justify-center"
-                                  >
-                                    <UserCheck size={16} /> Realizar Check-in
-                                  </Button>
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleMarkCheckin(flight.id, flight.passenger)}
+                                      className="shadow-md shadow-primary/10 flex-1 sm:flex-initial justify-center"
+                                    >
+                                      <UserCheck size={16} /> Realizar Check-in
+                                    </Button>
+                                    {/* Para cuando el check-in se hizo por WhatsApp u otro
+                                        medio ajeno a la aerolínea: deja constancia sin pasar
+                                        por el modal de adjuntar comprobante. */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickCheckin(flight)}
+                                      disabled={marcandoId === flight.id}
+                                      title="El pasajero ya hizo el check-in por WhatsApp u otro medio"
+                                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/50 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors whitespace-nowrap disabled:opacity-50"
+                                    >
+                                      <MessageCircle size={14} /> {marcandoId === flight.id ? 'Marcando…' : 'Check-in realizado'}
+                                    </button>
+                                  </>
                                 ) : null}
                                 {/* Un vuelo vendido dentro de un plan no se
                                     puede cancelar: `prod_planes` no tiene

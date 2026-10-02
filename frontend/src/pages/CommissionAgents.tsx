@@ -19,6 +19,7 @@ import {
   Users,
   Loader2,
   X,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -836,87 +837,122 @@ export default function CommissionAgents() {
         title="Validación de Liquidación"
         size="md"
       >
-        <div className="space-y-6">
-          <div className="relative p-6 bg-gradient-to-br from-amber-500 to-amber-600 rounded-[2rem] text-white shadow-xl shadow-amber-200 overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 opacity-20 transform rotate-12">
-               <BadgeDollarSign size={140} />
+        <div className="space-y-4">
+          {/* A quién y cuánto: lo primero que hay que confirmar antes de ver
+              un solo campo del formulario. Mismo lenguaje que el resto de la
+              app para tarjetas de resumen (SalePaymentsModal, AgentDetailsModal):
+              tarjeta neutra con una franja de color, no una tarjeta "publicitaria". */}
+          <div className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/80 p-4 shadow-sm">
+            <div className="absolute top-0 left-0 h-full w-1 bg-amber-500" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-base font-bold text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                {(selectedAgent?.name || "C").charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] text-gray-500 dark:text-slate-400">Orden de pago para</p>
+                <h3 className="truncate font-bold text-gray-900 dark:text-white">{selectedAgent?.name}</h3>
+              </div>
+              <span className="shrink-0 rounded-lg border border-gray-200 bg-white px-2 py-1 font-mono text-[10px] font-semibold text-gray-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+                REF {new Date().getFullYear()}-{String(selectedAgent?.id ?? 0).padStart(3, "0")}
+              </span>
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-80 mb-2">Orden de Pago para</p>
-            <h3 className="text-2xl font-black mb-4 truncate">{selectedAgent?.name}</h3>
-            <div className="flex items-end justify-between">
-               <div>
-                  <p className="text-[10px] font-bold uppercase opacity-80">Monto Total</p>
-                  <p className="text-4xl font-black">{formatCurrency(selectedAgent?.accumulated || 0)}</p>
-               </div>
-               <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-bold border border-white/20">
-                  REF: {new Date().getFullYear()}-00{selectedAgent?.id}
-               </div>
+            <div className="mt-3 flex items-baseline justify-between border-t border-gray-200 pt-3 dark:border-slate-700">
+              <span className="text-xs text-gray-500 dark:text-slate-400">Monto a liquidar</span>
+              <span className="text-2xl font-black tabular-nums text-amber-600 dark:text-amber-400">
+                {formatCurrency(selectedAgent?.accumulated || 0)}
+              </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Fecha de Ejecución">
-              <DatePicker
-                value={settleData.date}
-                onChange={(val) => { setSettleData({ ...settleData, date: val }); setSettleError(null); }}
-                fieldName="ejecución"
-                className="h-12 rounded-xl"
-              />
+          {/* El formulario, agrupado en una sola tarjeta en vez de repartido
+              en secciones con su propia franja de color cada una. */}
+          <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+              <Wallet size={13} /> Detalles del pago
+            </h4>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Fecha de ejecución" className="mb-0">
+                <DatePicker
+                  value={settleData.date}
+                  onChange={(val) => { setSettleData({ ...settleData, date: val }); setSettleError(null); }}
+                  fieldName="ejecución"
+                />
+              </FormField>
+              <FormField label="Canal de pago" error={settleFieldErrors.paymentMethod} className="mb-0">
+                <div className="relative">
+                  <CreditCard className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                  <Select
+                    className="pl-9"
+                    value={settleData.paymentMethod?.toString() || ""}
+                    onChange={(e) => {
+                      setSettleData({ ...settleData, paymentMethod: e.target.value });
+                      setSettleError(null);
+                      setSettleFieldErrors({});
+                    }}
+                    options={[
+                      { value: "", label: "Seleccione un canal" },
+                      ...(data.config.paymentMethods || []).map((pm: any) => ({
+                        value: pm.id.toString(),
+                        label: pm.name,
+                      })),
+                    ]}
+                  />
+                </div>
+              </FormField>
+            </div>
+            <FormField label="Referencia de transacción (opcional)" className="mb-0">
+              <div className="relative">
+                <FileText className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                <Input
+                  className="pl-9"
+                  placeholder="Ej. N° de comprobante o PIN"
+                  value={settleData.reference}
+                  onChange={(e) => setSettleData({ ...settleData, reference: e.target.value })}
+                />
+              </div>
             </FormField>
-            <FormField label="Canal de Pago" error={settleFieldErrors.paymentMethod}>
-              <Select
-                className="h-12 rounded-xl"
-                value={settleData.paymentMethod?.toString() || ""}
-                onChange={(e) => {
-                  setSettleData({ ...settleData, paymentMethod: e.target.value });
-                  setSettleError(null);
-                  setSettleFieldErrors({});
-                }}
-                options={[
-                  { value: "", label: "Seleccione un canal" },
-                  ...(data.config.paymentMethods || []).map((pm: any) => ({
-                    value: pm.id.toString(),
-                    label: pm.name,
-                  })),
-                ]}
+            <FormField label="Notas del proceso" className="mb-0">
+              <textarea
+                className="w-full min-h-[80px] rounded-lg border border-gray-border bg-white p-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900"
+                placeholder="Añade detalles adicionales..."
+                value={settleData.notes}
+                onChange={(e) => setSettleData({ ...settleData, notes: e.target.value })}
               />
             </FormField>
           </div>
 
-          <FormField label="Referencia de Transacción (Opcional)">
-            <Input
-              className="h-12 rounded-xl"
-              placeholder="Ej. N° de comprobante o PIN"
-              value={settleData.reference}
-              onChange={(e) => setSettleData({ ...settleData, reference: e.target.value })}
-            />
-          </FormField>
-
-          <FormField label="Notas del Proceso">
-            <textarea
-              className="w-full p-4 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none bg-white text-sm min-h-[100px]"
-              placeholder="Añade detalles adicionales..."
-              value={settleData.notes}
-              onChange={(e) => setSettleData({ ...settleData, notes: e.target.value })}
-            />
-          </FormField>
+          {/* Recapitula la operación antes de confirmar: es dinero saliendo de
+              la agencia, y el formulario de arriba no deja verlo de un vistazo. */}
+          {selectedAgent?.accumulated > 0 && settleData.paymentMethod && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 px-3.5 py-3 text-xs text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <p>
+                Vas a liquidar <strong>{formatCurrency(selectedAgent.accumulated)}</strong> a{" "}
+                <strong>{selectedAgent.name}</strong> por{" "}
+                <strong>
+                  {(data.config.paymentMethods || []).find((pm: any) => pm.id.toString() === settleData.paymentMethod?.toString())?.name || "el canal elegido"}
+                </strong>
+                .
+              </p>
+            </div>
+          )}
 
           {settleError && (
             <div
               role="alert"
-              className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200"
+              className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200"
             >
-              <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
               <p>{settleError}</p>
             </div>
           )}
 
-          <div className="flex flex-col gap-3 pt-4">
-            <Button onClick={handleSettle} className="bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 transition-all hover:scale-[1.02] active:scale-95" disabled={isSaving || !(selectedAgent?.accumulated > 0)}>
-              {isSaving ? "Procesando..." : "Confirmar y Saldar Cuentas"}
+          <div className="flex gap-3 pt-1">
+            <Button variant="outline" onClick={() => setIsSettleModalOpen(false)} className="flex-1" disabled={isSaving}>
+              Cancelar
             </Button>
-            <Button variant="outline" onClick={() => setIsSettleModalOpen(false)} className="h-12 rounded-xl border-gray-200 text-gray-400 font-bold" disabled={isSaving}>
-              Cancelar Operación
+            <Button variant="success" onClick={handleSettle} className="flex-1" disabled={isSaving || !(selectedAgent?.accumulated > 0)}>
+              {isSaving ? "Procesando..." : "Confirmar liquidación"}
             </Button>
           </div>
         </div>

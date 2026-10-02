@@ -354,8 +354,18 @@
   animation: confetti-fall 2s ease-out forwards;
 }
 
+/*
+ * Sin `forwards`: al terminar, el elemento vuelve a su estilo SIN animar, que
+ * aquí es idéntico al 100% (`scale(1)`, `opacity: 1`) — nada cambia a la
+ * vista. Lo que sí cambia es que deja de tener un `transform` aplicado para
+ * siempre: con `forwards`, un `transform` cualquiera —aunque sea `scale(1)`,
+ * visualmente un no-operación— convierte al elemento en el "contenedor" de
+ * cualquier `position: fixed` de dentro, y ese hijo deja de poder escapar del
+ * recorte de un `overflow` ancestro (el cuerpo con scroll de la Modal). Es lo
+ * que dejaba el calendario de una fecha a medio ver dentro de un modal.
+ */
 .animate-scale-in {
-  animation: scale-in 0.3s ease-out forwards;
+  animation: scale-in 0.3s ease-out;
 }
 
 .animate-shake {

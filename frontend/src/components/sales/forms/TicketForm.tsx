@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Datepicker from "react-tailwindcss-datepicker";
 import dayjs from "dayjs";
 import { Plane, MapPin, User, Briefcase, Trash2, PlusCircle, ArrowRight, ArrowLeftRight, ArrowLeft, Calendar } from "lucide-react";
@@ -62,6 +63,10 @@ interface DatePickerProps {
   popoverDirection?: "up" | "down";
 }
 
+// Alto aproximado del calendario de un mes (cabecera + días + margen), para
+// decidir de qué lado abrirlo cuando nadie fija `popoverDirection`.
+const ALTO_CALENDARIO = 340;
+
 export function DatePicker({
   value,
   onChange,
@@ -73,6 +78,56 @@ export function DatePicker({
   popoverDirection,
 }: DatePickerProps) {
   const [displayValue, setDisplayValue] = useState("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  // Cuando nadie fija `popoverDirection`, la librería decide con
+  // `window.screen.height` —el alto FÍSICO de la pantalla, no el de la
+  // ventana del navegador— así que en una ventana no maximizada cree que
+  // sobra espacio abajo y nunca voltea el calendario hacia arriba. Dentro de
+  // un modal con scroll (`overflow-y-auto`) eso deja el calendario medio
+  // tapado: "por debajo de la modal y no se ve completo". Se mide aquí con
+  // `getBoundingClientRect`, que sí es el viewport real, y se fuerza SIEMPRE
+  // una dirección explícita (nunca `undefined`) para que la librería no
+  // vuelva a aplicar su propia cuenta.
+  const [direccionAuto, setDireccionAuto] = useState<"up" | "down">("down");
+  // Dónde pintar, en coordenadas de ventana, la zona activa de 32×32 que abre
+  // el calendario (el icono visible se queda donde está; ver más abajo).
+  const [posicionActiva, setPosicionActiva] = useState<{ top: number; left: number } | null>(null);
+
+  // Se mide al montar, al cambiar el tamaño de la ventana y al hacer scroll
+  // (en captura, para enterarse también del scroll del cuerpo de una modal,
+  // que no burbujea hasta `window`) — nunca al abrir el calendario: la
+  // librería lee `popoverDirection` para decidir sus clases de posición en el
+  // mismo instante síncrono en que el foco lo abre, así que calcularla justo
+  // ahí llegaría tarde (el estado de React no se aplica hasta el siguiente
+  // render). Midiendo antes, cuando el usuario por fin hace clic ya está
+  // resuelta.
+  useLayoutEffect(() => {
+    const medir = () => {
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      // 32×32, igual que el icono que se ve: 4px del borde derecho y
+      // centrado en el alto del campo.
+      setPosicionActiva({ top: rect.top + (rect.height - 32) / 2, left: rect.right - 36 });
+      if (popoverDirection) return; // quien lo use ya decidió la dirección
+      const espacioAbajo = window.innerHeight - rect.bottom;
+      const espacioArriba = rect.top;
+      setDireccionAuto(espacioAbajo < ALTO_CALENDARIO && espacioArriba > espacioAbajo ? "up" : "down");
+    };
+    medir();
+    // El campo suele montar dentro de la animación de entrada del modal
+    // (`animate-scale-in`, 0.3s): mientras escala desde 0, su posición real
+    // en la ventana no es la que tendrá en reposo. Una segunda medición tras
+    // la animación corrige esa primera lectura, sin que se note: el
+    // calendario todavía no está abierto.
+    const corregir = setTimeout(medir, 350);
+    window.addEventListener("resize", medir);
+    window.addEventListener("scroll", medir, true);
+    return () => {
+      clearTimeout(corregir);
+      window.removeEventListener("resize", medir);
+      window.removeEventListener("scroll", medir, true);
+    };
+  }, [popoverDirection]);
 
   const isoToDisplay = (iso: string): string => {
     if (!iso) return "";
@@ -157,7 +212,7 @@ export function DatePicker({
   };
 
   return (
-    <div className={`relative flex items-center ${className}`}>
+    <div ref={wrapperRef} className={`relative flex items-center ${className}`}>
       <input
         type="text"
         value={displayValue}
@@ -169,29 +224,47 @@ export function DatePicker({
       <div className="absolute right-2 text-gray-400 p-1 pointer-events-none z-10">
         <Calendar size={15} />
       </div>
-      <div className="absolute right-1 w-8 h-8 z-20 cursor-pointer [&>div]:w-full [&>div]:h-full [&_input]:w-full [&_input]:h-full [&_input]:cursor-pointer [&_input]:opacity-0 [&_input]:absolute [&_input]:inset-0 [&_div.absolute]:right-0 [&_div.absolute]:left-auto">
-        <Datepicker
-          popoverDirection={popoverDirection}
-          asSingle={true}
-          useRange={false}
-          value={{
-            startDate: value || null,
-            endDate: value || null,
-          } as any}
-          onChange={(newValue: any) => {
-            if (newValue && newValue.startDate) {
-              const formattedDate = dayjs(newValue.startDate).format("YYYY-MM-DD");
-              if (validateAndTrigger(formattedDate)) {
-                onChange(formattedDate);
-              } else {
-                onChange(min || max || "");
+      {/*
+        La zona activa (y el calendario que abre) vive en un portal a
+        `document.body`, no aquí dentro.
+        El icono de arriba se queda donde está —no es lo que falla—; lo que
+        sí cuelga es el calendario de la librería, que se pinta como hijo
+        DIRECTO de esta zona. Dentro de una modal con scroll
+        (`overflow-y-auto`), ese hijo quedaba recortado por el borde del
+        contenedor sin importar qué dirección (arriba/abajo) se le pidiera:
+        "por debajo de la modal y no se ve completo". Sacándolo del árbol de
+        la modal escapa del recorte; `posicionActiva` lo deja pintado en el
+        mismo sitio exacto de siempre, con coordenadas de ventana.
+      */}
+      {posicionActiva && createPortal(
+        <div
+          style={{ position: "fixed", top: posicionActiva.top, left: posicionActiva.left, width: 32, height: 32 }}
+          className="z-[300] cursor-pointer [&>div]:w-full [&>div]:h-full [&_input]:w-full [&_input]:h-full [&_input]:cursor-pointer [&_input]:opacity-0 [&_input]:absolute [&_input]:inset-0 [&_div.absolute]:right-0 [&_div.absolute]:left-auto"
+        >
+          <Datepicker
+            popoverDirection={popoverDirection ?? direccionAuto}
+            asSingle={true}
+            useRange={false}
+            value={{
+              startDate: value || null,
+              endDate: value || null,
+            } as any}
+            onChange={(newValue: any) => {
+              if (newValue && newValue.startDate) {
+                const formattedDate = dayjs(newValue.startDate).format("YYYY-MM-DD");
+                if (validateAndTrigger(formattedDate)) {
+                  onChange(formattedDate);
+                } else {
+                  onChange(min || max || "");
+                }
               }
-            }
-          }}
-          inputClassName="w-full h-full cursor-pointer"
-          toggleClassName="hidden"
-        />
-      </div>
+            }}
+            inputClassName="w-full h-full cursor-pointer"
+            toggleClassName="hidden"
+          />
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

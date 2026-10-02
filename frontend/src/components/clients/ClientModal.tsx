@@ -247,7 +247,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                       validateField("birthDate", date || "");
                     }}
                     max={todayStr()}
-                    popoverDirection="up"
                     fieldName="birthDate"
                   />
                 </FormField>

@@ -120,7 +120,13 @@ export function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white border-t border-gray-border flex justify-end gap-2 sm:gap-3 flex-shrink-0 rounded-b-2xl">
+          /*
+            `flex-wrap`: con pocos botones nunca llega a usarse (caben en una
+            línea), pero una modal angosta con varios —como la ficha de una
+            agencia (suspender, entrar, cancelar, guardar)— los empujaba fuera
+            del ancho de la modal en vez de bajarlos a una segunda línea.
+          */
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white border-t border-gray-border flex flex-wrap justify-end gap-2 sm:gap-3 flex-shrink-0 rounded-b-2xl">
             {footer}
           </div>
         )}

@@ -5,7 +5,8 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
 **Estado (2026-10-01).** Hechas T0–T3, T6–T10, T15–T19. Por confirmar en pantalla T4 y T5.
-Pendientes T11 (verificadores al repo), T12 (despliegue), T13 (`moon-travel`) y T14 (deuda menor).
+Pendientes T11 (verificadores al repo), T12 (despliegue, cuando haya hosting) y T14 (deuda menor).
+T13 fuera de alcance: `moon-travel` es de otro proyecto.
 
 ---
 
@@ -364,12 +365,16 @@ liquidaciones de comisiones, y la suplantación con un superadmin de prueba.
 
 ## T12 · Despliegue `[ ]`
 
-`DATABASE_URL` del hosting tiene que usar `app_nexus`; con la comprobación de T1, un despliegue que
+**El proyecto aún no está desplegado en ningún lado** (todo se prueba en local, ver `CLAUDE.md`);
+esto aplica cuando haya un hosting. `DATABASE_URL` del hosting tiene que usar `app_nexus`; con la comprobación de T1, un despliegue que
 siga con `postgres` **no arrancará**. Además, `backend/.env.production` apunta a otro proyecto de
 Supabase, ajeno a `nexus-bd` y que ese acceso no lista: comprobar que ese entorno tiene el esquema
 multi-tenant antes de desplegar esta rama.
 
-## T13 · Un proyecto de Supabase sin el multi-tenant `[ ]`
+## T13 · Un proyecto de Supabase sin el multi-tenant — fuera de alcance
+
+**Cerrada el 2026-10-01 sin cambios:** `moon-travel` es la base de otro proyecto, no un entorno de
+Nexus Soft. No se toca. Lo de abajo queda como contexto de por qué se anotó.
 
 `moon-travel`, creado el 2026-09-24, tiene las 47 tablas del esquema anterior con la RLS activada y
 **cero políticas**, sin migraciones y sin rol `app_nexus`. El código actual no funciona contra él (le
@@ -384,11 +389,16 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
   casa parpadea mientras carga `/branding`, y el `<title>` es fijo.
 - **Ruido en el registro:** el manejador de errores escribe con traza cada 404 de negocio (54 líneas
   por corrida del verificador).
-- **`.env.example`:** tiene erratas de una edición a mano (`FRONTEND_URL` con el puerto cortado y una
-  línea final corrupta: `L_FROM=""FROM=""`).
+- ~~**`.env.example`:** tiene erratas de una edición a mano (`FRONTEND_URL` con el puerto cortado y
+  una línea final corrupta: `L_FROM=""FROM=""`).~~ Resuelto (commit `de9c1d8`): puerto `5173`,
+  línea corrupta fuera, y el `.env.example` del frontend apunta a `/api/v1`.
 - **Ids no numéricos dan 500:** 24 `parseInt(req.params…)` en 6 controladores. Un id que no es un
   número llega a Prisma como `NaN` y responde 500 en vez de 400. Lo anotó el rediseño de la
   cartera; el arreglo es un middleware de validación en los routers, no 24 parches.
+  *Avance (2026-10-01):* el middleware ya existe (`middleware/numericParams.js`, `paramsNumericos`)
+  y está puesto en 7 routers (clients, commissions, companies, config, responsables, sales, users).
+  Falta revisar si `roles`, `stats` y `uploads` reciben ids numéricos por la URL y, si sí,
+  ponérselo; `flights` usa ids de tramo no numéricos (spec 004 ya los valida con 400).
 
 
 ## T15 · La venta se crea entera: validación en su única puerta y vouchers `[x]`
@@ -608,6 +618,7 @@ reportó. Queda para revisar si vuelve a pasar, con el mensaje exacto que dé la
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-01 | T12, T13, T14 | Doc al día con lo ya decidido o hecho: T13 fuera de alcance (`moon-travel` es de otro proyecto); T12 aplica cuando haya hosting (no hay despliegue todavía); en T14, el `.env.example` ya estaba corregido y los ids no numéricos ya tienen middleware en 7 routers. |
 | 2026-10-01 | T19 | Suplantando, crear un cliente o un paquete de viaje daba un 400 de clave ajena sin explicación: la columna "creado por" exige que quien crea pertenezca a esa agencia, y el superadministrador suplantando no pertenece a ninguna de las que visita. Se deja sin creador (la auditoría de la suplantación ya dice quién fue) en vez de escribir un id ajeno. |
 | 2026-09-27 | `feat-bayrol` | La rama se puso al día con las 3 migraciones y el schema que tenía `feat-dbmoon` y ella no (`tipo_hotel_turistico`, `tarjeta_de_pago_al_proveedor`, la que le quita a `app_nexus` el acceso a `_prisma_migrations`). El resto del diff de `schema.prisma` era solo reformateo de `prisma format`. `migrate status` al día (17 migraciones), `test:aislamiento` pasa a esperar 54 claves compuestas. |
 | 2026-09-27 | T18 | `createSale` sin `asesorId` daba 500 crudo en vez de caer al usuario autenticado. De paso, convención de logs fijada en `CLAUDE.md` (español en comentarios, inglés con tag de error en los logs) y aplicada en los cinco sitios que la incumplían. |

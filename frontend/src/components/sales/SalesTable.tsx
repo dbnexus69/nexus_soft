@@ -62,7 +62,7 @@ export default function SalesTable({
                   <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
                     {sale.clientName}
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
                     {sale.clientEmail || "Sin correo"}
                   </span>
                 </div>
@@ -97,7 +97,7 @@ export default function SalesTable({
             <TableCell>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1">
-                  <Badge variant={sale.status} className="uppercase text-[10px] font-black">
+                  <Badge variant={sale.status} className="uppercase text-[11px] font-black">
                     {sale.status === "pagado"
                       ? "Finalizado"
                       : sale.status === "abonado"
@@ -114,7 +114,7 @@ export default function SalesTable({
                         </span>
                       ) : (
                         <div
-                          className="relative flex items-center justify-center w-5 h-5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-primary transition-colors border border-transparent hover:border-gray-200"
+                          className="relative flex items-center justify-center w-5 h-5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors border border-transparent hover:border-gray-200"
                           title="Marcar como revisado"
                         >
                           <select
@@ -136,7 +136,7 @@ export default function SalesTable({
                   )}
                 </div>
                 {sale.status === "credito" && sale.creditDueDate && (
-                  <span className="text-[10px] text-rose-500 font-medium whitespace-nowrap">
+                  <span className="text-[11px] text-rose-500 font-medium whitespace-nowrap">
                     Vence: {formatDate(sale.creditDueDate)}
                   </span>
                 )}
@@ -170,7 +170,7 @@ export default function SalesTable({
                   disabled={!canManagePayments(sale)}
                   title={canManagePayments(sale) ? "Gestionar abonos" : "Sin abonos que gestionar"}
                 >
-                  <RxUpdate size={14} className={canManagePayments(sale) ? "text-primary" : "text-gray-300"} />
+                  <RxUpdate size={14} className={canManagePayments(sale) ? "text-primary" : "text-gray-500"} />
                 </Button>
                 {isAdmin && (
                   <Button

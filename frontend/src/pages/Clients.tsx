@@ -59,8 +59,8 @@ export default function Clients() {
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
 
-      if (aVal === undefined) aVal = '';
-      if (bVal === undefined) bVal = '';
+      if (aVal === undefined || aVal === null) aVal = '';
+      if (bVal === undefined || bVal === null) bVal = '';
 
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -144,7 +144,7 @@ export default function Clients() {
         <CardHeader actions={
           <div className="flex gap-3 items-center flex-wrap">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
               <Input 
                 placeholder="Buscar por nombre o doc..." 
                 className="pl-10 pr-9 w-72"
@@ -152,7 +152,7 @@ export default function Clients() {
                 onChange={e => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600 p-0.5 rounded">
                   <X size={14} />
                 </button>
               )}

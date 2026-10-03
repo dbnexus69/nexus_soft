@@ -72,7 +72,7 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
             <h3 className="font-bold text-xl text-gray-900 dark:text-white">{agent.name}</h3>
             <p className="text-sm text-gray-500 dark:text-slate-400">{agent.docType} {agent.docNumber}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
+              <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
             </div>
           </div>
           <div className="ml-auto text-right">
@@ -93,19 +93,19 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
           <div>
             <dt className="text-xs text-gray-500 dark:text-slate-400">Banco</dt>
             <dd className="text-sm font-semibold text-gray-800 dark:text-slate-100">
-              {agent.banco || <span className="text-gray-300 dark:text-slate-600">—</span>}
+              {agent.banco || <span className="text-gray-500 dark:text-slate-600">—</span>}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-gray-500 dark:text-slate-400">Tipo de cuenta</dt>
             <dd className="text-sm font-semibold text-gray-800 dark:text-slate-100">
-              {agent.tipoCuenta || <span className="text-gray-300 dark:text-slate-600">—</span>}
+              {agent.tipoCuenta || <span className="text-gray-500 dark:text-slate-600">—</span>}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-gray-500 dark:text-slate-400">Número de cuenta</dt>
             <dd className="text-sm font-semibold tabular-nums text-gray-800 dark:text-slate-100">
-              {agent.numeroCuenta || <span className="text-gray-300 dark:text-slate-600">—</span>}
+              {agent.numeroCuenta || <span className="text-gray-500 dark:text-slate-600">—</span>}
             </dd>
           </div>
         </dl>
@@ -125,8 +125,8 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
           </div>
         ) : sales.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-10 bg-gray-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-gray-200 dark:border-slate-700">
-            <Wallet className="text-gray-300 dark:text-slate-600 mb-3" size={32} />
-            <p className="text-gray-400 font-bold text-sm">No hay ventas asociadas</p>
+            <Wallet className="text-gray-500 dark:text-slate-600 mb-3" size={32} />
+            <p className="text-gray-500 font-bold text-sm">No hay ventas asociadas</p>
           </div>
         ) : (
           <div className="flex-1 overflow-x-auto">
@@ -152,7 +152,7 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${sale.isSettled ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${sale.isSettled ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
                         {sale.isSettled ? 'Liquidada' : 'Pendiente'}
                       </span>
                     </td>

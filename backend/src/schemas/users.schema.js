@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { contrasena } = require('./contrasena');
 const {
   nombre, numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, telefono, nacimiento, tipoYNumeroJuntos,
 } = require('./personaCampos');
@@ -8,7 +9,7 @@ const createUserSchema = z.object({
   firstName: nombre.optional(),
   lastName: nombre.optional(),
   email: z.string({ required_error: 'Email es requerido' }).email('Email inválido'),
-  password: z.string({ required_error: 'Contraseña es requerida' }).min(6, 'Mínimo 6 caracteres'),
+  password: contrasena,
   role: z.string({ required_error: 'Rol es requerido' }),
   phone: telefono,
   docTypeId: idTipoDocumento,
@@ -25,7 +26,7 @@ const updateUserSchema = z.object({
   firstName: nombre.optional(),
   lastName: nombre.optional(),
   email: z.string().email('Email inválido').optional(),
-  password: z.string().min(6, 'Mínimo 6 caracteres').optional(),
+  password: contrasena.optional(),
   role: z.string().optional(),
   phone: telefono,
   docTypeId: idTipoDocumento,

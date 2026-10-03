@@ -20,26 +20,8 @@ const correo = z.string({ required_error: 'El correo es obligatorio' })
   .email('No parece un correo válido')
   .toLowerCase();
 
-/**
- * La contraseña nueva, con la política que la propia pantalla anuncia.
- *
- * `Login.tsx` pinta cinco requisitos —ocho caracteres, minúscula, mayúscula,
- * número y símbolo— y desactiva el botón hasta que se cumplen todos. Esa lista
- * era decorativa: el servidor no comprobaba nada, así que la misma petición
- * hecha fuera del formulario aceptaba "123456". Si la interfaz promete una
- * regla, el servidor es quien tiene que cumplirla.
- *
- * Queda una incoherencia a propósito: crear un usuario sigue pidiendo seis
- * caracteres sin más (users.schema). Endurecerlo cambia quién puede dar de
- * alta a quién y con qué, y eso no es cosa de este trabajo.
- */
-const contrasena = z.string({ required_error: 'La contraseña es obligatoria' })
-  .min(8, 'Mínimo 8 caracteres')
-  .max(200, 'Contraseña demasiado larga')
-  .regex(/[a-z]/, 'Debe llevar una minúscula')
-  .regex(/[A-Z]/, 'Debe llevar una mayúscula')
-  .regex(/\d/, 'Debe llevar un número')
-  .regex(/[^A-Za-z0-9]/, 'Debe llevar un carácter especial');
+// La contraseña nueva: la política es única para todos los caminos (schemas/contrasena.js).
+const { contrasena } = require('./contrasena');
 
 // Seis cifras. Se acepta con espacios alrededor porque se copia de un correo.
 const codigo = z.string({ required_error: 'El código es obligatorio' })

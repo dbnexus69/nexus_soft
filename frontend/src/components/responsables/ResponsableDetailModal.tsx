@@ -111,7 +111,8 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
               </div>
             ) : sales.length > 0 ? (
               <>
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[28rem] text-sm">
                   <thead>
                     <tr className="text-left bg-gray-50 dark:bg-slate-800 text-xs text-gray-500 dark:text-slate-400 uppercase">
                       <th className="p-2 font-semibold">ID</th>
@@ -131,6 +132,7 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
                     ))}
                   </tbody>
                 </table>
+                </div>
                 {totalPages > 1 && (
                   <div className="mt-4 flex justify-center">
                     <Pagination 

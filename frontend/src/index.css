@@ -63,7 +63,8 @@
     
     --color-text-main: #F8F9FA;
     --color-text-muted: #8D99AE;
-    --color-text-light: #5d6675;
+    /* Sobre la tarjeta oscura (#1a1b22) el anterior #5d6675 daba 2,96:1; este da 5,55:1 (mínimo 4,5). */
+    --color-text-light: #8993a6;
     
     --border-main-rgb: 37 39 50;
     --color-border-main: rgb(var(--border-main-rgb));

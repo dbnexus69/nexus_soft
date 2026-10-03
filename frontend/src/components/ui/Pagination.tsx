@@ -101,7 +101,7 @@ export const Pagination = memo(function Pagination({
             <button type="button" onClick={() => onPageChange(1)} disabled={loading} className={estiloNumero(false)}>
               1
             </button>
-            {primera > 2 ? <span className="text-gray-400">…</span> : null}
+            {primera > 2 ? <span className="text-gray-500">…</span> : null}
           </>
         ) : null}
 
@@ -120,7 +120,7 @@ export const Pagination = memo(function Pagination({
 
         {ultima < totalPages ? (
           <>
-            {ultima < totalPages - 1 ? <span className="text-gray-400">…</span> : null}
+            {ultima < totalPages - 1 ? <span className="text-gray-500">…</span> : null}
             <button type="button" onClick={() => onPageChange(totalPages)} disabled={loading} className={estiloNumero(false)}>
               {totalPages}
             </button>

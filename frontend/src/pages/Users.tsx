@@ -15,7 +15,7 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import UserDetailModal from "../components/users/UserDetailModal";
 import { UserTable } from "../components/users/UserTable";
 import { UserModal } from "../components/users/UserModal";
-import { User } from "../types";
+import { User, RolePermissions } from "../types";
 
 export default function Users() {
   const { data, fetchConfig } = useData(); // Dejamos data para referencias a config que no hemos migrado aun si las hubiera
@@ -223,7 +223,7 @@ export default function Users() {
             actions={
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-end flex-wrap">
                 <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   <Input
                     placeholder="Buscar usuario..."
                     className="pl-10 pr-9 w-full"
@@ -231,7 +231,7 @@ export default function Users() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                   {searchTerm && (
-                    <button onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">
+                    <button onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
                       <X size={14} />
                     </button>
                   )}
@@ -295,7 +295,7 @@ export default function Users() {
                   key={role.id}
                   onClick={() => {
                     setEditingRole(role.id);
-                    setEditingUserPermissions(data.config.rolePermissions[role.id]);
+                    setEditingUserPermissions((data.config.rolePermissions as Record<string, RolePermissions>)[role.id]);
                   }}
                   aria-current={activo ? 'page' : undefined}
                   className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${

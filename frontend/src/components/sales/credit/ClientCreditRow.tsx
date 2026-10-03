@@ -86,7 +86,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
           >
             <ChevronRight
               size={14}
-              className={`shrink-0 text-slate-400 transition-transform ${abierta ? 'rotate-90' : ''}`}
+              className={`shrink-0 text-slate-500 transition-transform ${abierta ? 'rotate-90' : ''}`}
               aria-hidden
             />
             <span className="min-w-0">
@@ -112,7 +112,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
               {formatCurrency(fila.overdueAmount)}
             </span>
           ) : (
-            <span className="text-slate-300 dark:text-slate-600">—</span>
+            <span className="text-slate-500 dark:text-slate-600">—</span>
           )}
         </td>
 
@@ -169,7 +169,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
 
                       <span className="flex-1 min-w-[10rem] text-right tabular-nums text-slate-500 dark:text-slate-400">
                         {formatCurrency(c.pendingAmount)}
-                        <span className="text-slate-400 dark:text-slate-500">
+                        <span className="text-slate-500 dark:text-slate-500">
                           {' '}de {formatCurrency(c.total)}
                         </span>
                       </span>

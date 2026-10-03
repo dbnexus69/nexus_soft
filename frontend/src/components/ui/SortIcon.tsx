@@ -8,7 +8,7 @@ interface SortIconProps {
 
 export default function SortIcon({ field, currentSort, sortOrder }: SortIconProps) {
   const active = field === currentSort;
-  if (!active) return <ArrowUpDown size={12} className="text-gray-300" />;
+  if (!active) return <ArrowUpDown size={12} className="text-gray-500" />;
   return sortOrder === 'asc' 
     ? <ArrowUp size={12} className="text-white bg-primary rounded-full p-0.5" /> 
     : <ArrowDown size={12} className="text-white bg-primary rounded-full p-0.5" />;

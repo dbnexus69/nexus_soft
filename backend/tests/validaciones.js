@@ -99,5 +99,23 @@ comprobar('editar tipo y número juntos valida el número contra el tipo nuevo',
 comprobar('editar un nombre a algo con números falla', camposConError({ lastName: 'G0mez' }, updateClientSchema).join() === 'lastName');
 comprobar('editar sin campos pasa (no hay nada que validar)', camposConError({}, updateClientSchema).length === 0);
 
+// ── Contraseñas: una sola política (schemas/contrasena.js)
+const { contrasena } = require('../src/schemas/contrasena');
+const clave = (v) => contrasena.safeParse(v).success;
+comprobar('una contraseña fuerte pasa', clave('Prueba-api-1!'));
+comprobar('"123456" se rechaza', !clave('123456'));
+comprobar('sin mayúscula se rechaza', !clave('prueba-api-1!'));
+comprobar('sin símbolo se rechaza', !clave('PruebaApi12'));
+comprobar('más de 72 caracteres se rechaza (tope de bcrypt)', !clave('Aa1!' + 'x'.repeat(70)));
+
+// ── Productos: el costo del proveedor es obligatorio en ticket, hotel, seguro y plan
+const { esquemaDeCategoria } = require('../src/schemas/products.schema');
+const conCosto = (slug, supplierCost) => esquemaDeCategoria(slug).safeParse({ ta: 1000, supplierCost, flightMode: 'one_way', hotelType: 'hotel', travelers: 1 });
+for (const slug of ['ticket', 'hotel', 'insurance', 'plan']) {
+  comprobar(`${slug} sin costo del proveedor se rechaza`, !conCosto(slug, undefined).success);
+  comprobar(`${slug} con costo 0 se rechaza`, !conCosto(slug, 0).success);
+  comprobar(`${slug} con costo en texto "1500" pasa`, !(conCosto(slug, '1500').error?.issues || []).some(i => i.path[0] === 'supplierCost'));
+}
+
 console.log(fallos === 0 ? `\nTodo en orden (${total} comprobaciones).\n` : `\n${fallos} de ${total} comprobación(es) en rojo.\n`);
 process.exit(fallos === 0 ? 0 : 1);

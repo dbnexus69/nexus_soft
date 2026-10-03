@@ -142,8 +142,8 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
               </div>
               
               {clientSales.length > 0 ? (
-                <div className="border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
-                  <table className="w-full text-sm text-left">
+                <div className="border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-x-auto shadow-sm">
+                  <table className="w-full min-w-[28rem] text-sm text-left">
                     <thead className="bg-gray-50/80 dark:bg-slate-800/80 text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                       <tr>
                         <th className="px-5 py-4 font-semibold">Fecha</th>

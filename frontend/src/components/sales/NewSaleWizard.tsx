@@ -282,7 +282,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
   const getCurrentItemLinkedPlanIndex = () => {
     if (!activeForm || activeIdx === null || activeForm === 'plan') return '';
-    let targetKey = null;
+    let targetKey: keyof WizardFormData | null = null;
     switch (activeForm) {
       case "ticket": targetKey = "tickets"; break;
       case "hotel": targetKey = "hotels"; break;
@@ -310,7 +310,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
   const setCurrentItemLinkedPlanIndex = (val: string) => {
     if (!activeForm || activeIdx === null || activeForm === 'plan') return;
-    let targetKey = null;
+    let targetKey: keyof WizardFormData | null = null;
     switch (activeForm) {
       case "ticket": targetKey = "tickets"; break;
       case "hotel": targetKey = "hotels"; break;
@@ -1360,7 +1360,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             </div>
             <div>
               <p className="text-white font-bold text-sm tracking-wider">DB NEXUS</p>
-              <p className="text-white/40 text-[10px] tracking-widest uppercase">Nueva Venta</p>
+              <p className="text-white/40 text-[11px] tracking-widest uppercase">Nueva Venta</p>
             </div>
           </div>
         </div>
@@ -1393,7 +1393,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                     <p className={`text-xs font-semibold tracking-wide transition-colors ${
                       isActive ? "text-white" : isCompleted ? "text-emerald-400" : "text-white/35"
                     }`}>{s.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${
+                    <p className={`text-[11px] mt-0.5 ${
                       isActive ? "text-white/50" : "text-white/20"
                     }`}>
                       {s.id === 1 ? "Datos del cliente" : s.id === 2 ? "Selección de productos" : "Método de pago"}
@@ -1407,7 +1407,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
         {/* Progress bar */}
         <div className="px-5 pb-6 border-t border-white/10 pt-4 flex-shrink-0">
-          <p className="text-white/30 text-[10px] uppercase tracking-widest mb-2">Progreso</p>
+          <p className="text-white/30 text-[11px] uppercase tracking-widest mb-2">Progreso</p>
           <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700"
@@ -1417,7 +1417,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }}
             />
           </div>
-          <p className="text-white/40 text-[10px] mt-1.5">Paso {step} de {STEPS.length}</p>
+          <p className="text-white/40 text-[11px] mt-1.5">Paso {step} de {STEPS.length}</p>
         </div>
       </div>
 
@@ -1447,7 +1447,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 ))}
               </div>
               <div className="hidden sm:block">
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
+                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">
                   Paso {step} - {STEPS[step - 1].label}
                 </p>
                 <h2 className="text-base font-bold text-primary mt-0.5">
@@ -1457,7 +1457,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               <button
                 onClick={handleCancel}
                 aria-label="Cerrar el asistente de venta"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                className="p-1.5 rounded-lg text-gray-500 hover:text-gray-600 hover:bg-gray-100 transition-all"
               >
                 <X size={18} />
               </button>

@@ -150,7 +150,7 @@ export function DateTimePicker({
         className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-xs bg-white text-gray-700"
       />
       
-      <div className="absolute right-2 text-gray-400 p-1 pointer-events-none z-10">
+      <div className="absolute right-2 text-gray-500 p-1 pointer-events-none z-10">
         <Calendar size={15} />
       </div>
 
@@ -192,7 +192,7 @@ export function DateTimePicker({
         }`}>
           <div className="font-bold text-gray-800 border-b border-gray-100 pb-2 mb-3 flex items-center justify-between">
             <span>Ajustar Hora</span>
-            <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">12 horas</span>
+            <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">12 horas</span>
           </div>
 
           <div className="flex items-center justify-between gap-1 mb-3">
@@ -206,7 +206,7 @@ export function DateTimePicker({
                 return <option key={val} value={val}>{val}</option>;
               })}
             </select>
-            <span className="font-bold text-gray-400">:</span>
+            <span className="font-bold text-gray-500">:</span>
             <select
               value={tempMin}
               onChange={(e) => setTempMin(e.target.value)}
@@ -222,7 +222,7 @@ export function DateTimePicker({
                   key={p}
                   type="button"
                   onClick={() => setTempPeriod(p)}
-                  className={`px-1.5 py-1 text-[10px] font-bold rounded ${
+                  className={`px-1.5 py-1 text-[11px] font-bold rounded ${
                     tempPeriod === p ? "bg-white text-primary shadow-sm" : "text-gray-500"
                   }`}
                 >

@@ -66,7 +66,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             clients.map((client) => (
               <TableRow key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <TableCell className="py-3 px-4">
-                  <span className="text-xs font-mono font-bold text-slate-400">#{client.numero ?? client.id}</span>
+                  <span className="text-xs font-mono font-bold text-slate-500">#{client.numero ?? client.id}</span>
                 </TableCell>
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                  {client.docType || <span className="text-slate-400 italic">N/A</span>}
+                  {client.docType || <span className="text-slate-500 italic">N/A</span>}
                 </TableCell>
                 <TableCell className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
                   {client.docNumber}
@@ -95,7 +95,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => onViewDetail(client)}
-                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                      className="p-1 text-slate-500 hover:text-blue-600 transition-colors"
                       title="Ver perfil"
                     >
                       <Eye size={16} />
@@ -103,7 +103,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     {canEdit && (
                       <button
                         onClick={() => onEdit(client)}
-                        className="p-1 text-slate-400 hover:text-amber-600 transition-colors"
+                        className="p-1 text-slate-500 hover:text-amber-600 transition-colors"
                         title="Editar"
                       >
                         <Pencil size={16} />
@@ -114,8 +114,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                         onClick={() => onToggleStatus(client)}
                         className={`p-1 transition-colors ${
                           client.status === 'active'
-                            ? 'text-slate-400 hover:text-red-600'
-                            : 'text-slate-400 hover:text-emerald-600'
+                            ? 'text-slate-500 hover:text-red-600'
+                            : 'text-slate-500 hover:text-emerald-600'
                         }`}
                         title={client.status === 'active' ? 'Desactivar' : 'Activar'}
                       >

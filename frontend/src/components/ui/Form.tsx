@@ -227,7 +227,7 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
           }}
           placeholder={placeholder}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" aria-hidden="true">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" aria-hidden="true">
           {isOpen ? <Search size={16} /> : <ChevronDown size={16} />}
         </div>
       </div>

@@ -97,7 +97,7 @@ export function PlanForm({
       {/* Selector de Catálogo */}
       {packages.length > 0 && (
         <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-4">
-          <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+          <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
             <Package size={14} className="text-accent" /> Importar desde Catálogo de Paquetes
           </h4>
           <Combobox
@@ -106,7 +106,7 @@ export function PlanForm({
             options={packages.map((p: any) => ({ value: p.name, label: `${p.name} - ${p.destination} (${p.nights} noches)` }))}
             placeholder="Busca un paquete registrado..."
           />
-          <p className="text-[10px] text-gray-500 mt-2 italic">
+          <p className="text-[11px] text-gray-500 mt-2 italic">
             {loadingPackage
               ? 'Cargando datos del paquete...'
               : '* Al seleccionar un paquete se autocompletarán los datos base (Hotel, Aerolínea, Vuelo).'}
@@ -501,7 +501,7 @@ export function PlanForm({
                   <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
                     {item.label} #{item.idx + 1}
                   </span>
-                  <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-[11px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
                     Vinculado
                   </span>
                 </div>
@@ -526,7 +526,7 @@ export function PlanForm({
         {/* Botones de acción rápida para añadir servicios directamente al paquete */}
         {onAddLinkedService && (
           <div className="pt-2 border-t border-purple-100 dark:border-purple-900/30">
-            <label className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-widest block mb-2">
+            <label className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-widest block mb-2">
               + Añadir servicio adicional a este paquete:
             </label>
             <div className="flex flex-wrap gap-2">

@@ -32,6 +32,15 @@ const dinero = z.union([z.string(), z.number()]).nullable().optional()
   .refine(v => vacio(v) || (Number.isFinite(Number(v)) && Number(v) >= 0),
     'debe ser un número no negativo');
 
+/**
+ * Costo del proveedor obligatorio y mayor que cero. El asistente ya lo exige en tiquetes, hoteles,
+ * seguros y paquetes (`NewSaleWizard`); el servidor no lo comprobaba, así que la misma venta hecha por la
+ * API entraba con costo 0 y un margen inventado. En el resto de categorías (visas, tours…) puede ser 0.
+ */
+const costoObligatorio = z.union([z.string(), z.number()], {
+  errorMap: () => ({ message: 'el costo del proveedor es obligatorio' }),
+}).refine(v => !vacio(v) && Number.isFinite(Number(v)) && Number(v) > 0, 'el costo del proveedor debe ser mayor que 0');
+
 /** Cantidad libre (peso, noches, personas): número, y no negativo. */
 const cantidad = dinero;
 
@@ -121,14 +130,15 @@ const SOBRE = {
  * fecha y los cubre `comprobarColumnas`.
  */
 const EXTRAS = {
-  ticket: { flightMode: valorEnum('FlightMode') },
+  ticket: { flightMode: valorEnum('FlightMode'), supplierCost: costoObligatorio },
   // `finca` era el valor que mandaba el formulario (el enum dice `fincas`); se
   // acepta por los borradores guardados antes de corregirlo, y `createSale` lo
   // traduce.
-  hotel: { hotelType: valorEnum('TipoHotel', ['finca']), nights: cantidad, guestCount: cantidad },
+  hotel: { hotelType: valorEnum('TipoHotel', ['finca']), nights: cantidad, guestCount: cantidad, supplierCost: costoObligatorio },
   // El transform traduce "pequeño" con eñe al `pequeno` del enum.
   pet: { size: valorEnum('TamanoMascota', ['pequeño']), weight: cantidad },
-  insurance: { travelers: cantidad },
+  insurance: { travelers: cantidad, supplierCost: costoObligatorio },
+  plan: { supplierCost: costoObligatorio },
   simcard: { dataAmount: cantidad, days: cantidad },
   car: { days: cantidad },
   finca: { nights: cantidad, guestCount: cantidad },

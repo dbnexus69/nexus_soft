@@ -7,6 +7,7 @@ import AvatarPicker, { AVATARS } from "../ui/AvatarPicker";
 import Datepicker from "react-tailwindcss-datepicker";
 import { User } from "../../types";
 import { capitalizeName } from "../../utils/formatters";
+import { AYUDA_CONTRASENA, mensajeContrasena } from "../../utils/contrasena";
 import {
   limpiarDocumento, limpiarNombre, limpiarTelefono,
   mensajeDocumento, mensajeNacimiento, mensajeNombre, mensajeTelefono,
@@ -106,6 +107,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     else if (mensajeNombre(apellidos)) newErrors.lastName = mensajeNombre(apellidos)!;
     if (!formData.email.trim()) newErrors.email = "El correo es obligatorio";
     if (!editingUser && !formData.password.trim()) newErrors.password = "La contraseña es obligatoria";
+    else if (formData.password && mensajeContrasena(formData.password)) newErrors.password = mensajeContrasena(formData.password)!;
     if (!formData.docTypeId) newErrors.docTypeId = "Seleccione el tipo de documento";
     if (!docNumber) newErrors.docNumber = "El número de documento es obligatorio";
     else if (formData.docTypeId && mensajeDocumento(abreviatura, docNumber)) newErrors.docNumber = mensajeDocumento(abreviatura, docNumber)!;
@@ -232,12 +234,15 @@ export const UserModal: React.FC<UserModalProps> = ({
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-3.5 text-slate-400 hover:text-primary transition-colors"
+                    className="absolute right-3 top-3.5 text-slate-500 hover:text-primary transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Ocultar la contraseña" : "Mostrar la contraseña"}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">{AYUDA_CONTRASENA}</p>
               </FormField>
             )}
 
@@ -310,7 +315,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                   popoverDirection="up"
                   containerClassName="relative"
                   inputClassName="w-full h-12 text-sm font-medium text-gray-800 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder-gray-400"
-                  toggleClassName="absolute right-3 top-3.5 text-gray-400 hover:text-primary transition-colors"
+                  toggleClassName="absolute right-3 top-3.5 text-gray-500 hover:text-primary transition-colors"
                 />
               </FormField>
             </div>

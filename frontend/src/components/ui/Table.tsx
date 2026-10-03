@@ -45,7 +45,7 @@ export function Table({ headers, children, className = '', loading = false, skel
   if (!headers) {
     return (
       <div className={`overflow-x-auto ${className}`}>
-        <table className="w-full">
+        <table className="w-full min-w-[36rem]">
           {children}
         </table>
       </div>
@@ -54,7 +54,7 @@ export function Table({ headers, children, className = '', loading = false, skel
 
   return (
     <div className={`overflow-x-auto ${className}`}>
-      <table className="w-full">
+      <table className="w-full min-w-[36rem]">
         <thead>
           <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
             {headers.map((header, i) => (

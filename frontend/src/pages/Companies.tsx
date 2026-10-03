@@ -6,6 +6,7 @@ import { Input, FormField } from '../components/ui/Form';
 import { SKELETON } from '../components/ui/Skeleton';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import * as api from '../api';
+import { AYUDA_CONTRASENA, mensajeContrasena } from '../utils/contrasena';
 import type { Empresa } from '../api';
 
 /**
@@ -286,7 +287,7 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button onClick={guardar} disabled={guardando || !nombre.trim() || !admin.email || !admin.firstName || !admin.password}>
+          <Button onClick={guardar} disabled={guardando || !nombre.trim() || !admin.email || !admin.firstName || !admin.password || Boolean(mensajeContrasena(admin.password))}>
             {guardando ? 'Creando…' : 'Crear la agencia'}
           </Button>
         </>
@@ -349,6 +350,7 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
             </FormField>
             <FormField label="Contraseña" className="mb-0">
               <Input type="password" value={admin.password} onChange={e => setAdmin(a => ({ ...a, password: e.target.value }))} />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{AYUDA_CONTRASENA}</p>
             </FormField>
           </div>
         </div>

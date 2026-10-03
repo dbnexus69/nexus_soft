@@ -88,9 +88,9 @@ function TopClients() {
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       ) : data.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-gray-400">
+        <div className="h-full flex flex-col items-center justify-center text-gray-500">
           <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-full mb-3">
-            <Users className="w-6 h-6 text-gray-300 dark:text-slate-600" />
+            <Users className="w-6 h-6 text-gray-500 dark:text-slate-600" />
           </div>
           <span className="text-sm font-semibold">No hay clientes suficientes</span>
         </div>
@@ -168,9 +168,9 @@ function TopAsesores() {
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       ) : data.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-gray-400">
+        <div className="h-full flex flex-col items-center justify-center text-gray-500">
           <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-full mb-3">
-            <Award className="w-6 h-6 text-gray-300 dark:text-slate-600" />
+            <Award className="w-6 h-6 text-gray-500 dark:text-slate-600" />
           </div>
           <span className="text-sm font-semibold">No hay ventas de asesores registradas</span>
         </div>
@@ -228,9 +228,9 @@ function CategoryDistribution() {
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       ) : data.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-gray-400">
+        <div className="h-full flex flex-col items-center justify-center text-gray-500">
           <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-full mb-3">
-            <PieChartIcon className="w-6 h-6 text-gray-300 dark:text-slate-600" />
+            <PieChartIcon className="w-6 h-6 text-gray-500 dark:text-slate-600" />
           </div>
           <span className="text-sm font-semibold">No hay categorías registradas</span>
         </div>
@@ -275,7 +275,7 @@ export default function StatsView() {
           </div>
           <div>
             <h3 className="text-xl font-black text-gray-800 dark:text-slate-100">Líderes de Ventas</h3>
-            <span className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Ingresos vs Volumen Comercial</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest">Ingresos vs Volumen Comercial</span>
           </div>
         </div>
         <div className="p-8 pt-4">
@@ -292,7 +292,7 @@ export default function StatsView() {
             </div>
             <div>
               <h3 className="text-xl font-black text-gray-800 dark:text-slate-100">Top Clientes</h3>
-              <span className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Mayor Inversión Acumulada</span>
+              <span className="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest">Mayor Inversión Acumulada</span>
             </div>
           </div>
           <div className="p-8 pt-4">
@@ -308,7 +308,7 @@ export default function StatsView() {
             </div>
             <div>
               <h3 className="text-xl font-black text-gray-800 dark:text-slate-100">Distribución</h3>
-              <span className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Participación por Categoría</span>
+              <span className="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest">Participación por Categoría</span>
             </div>
           </div>
           <div className="p-8 pt-4">

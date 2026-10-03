@@ -46,13 +46,13 @@ export const AgentTable: React.FC<AgentTableProps> = ({
               <TableRow key={agent.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <TableCell className="py-3 px-4 font-medium text-slate-900 dark:text-white">
                   <div>{agent.name}</div>
-                  <div className="text-xs text-slate-400">{agent.email || agent.phone}</div>
+                  <div className="text-xs text-slate-500">{agent.email || agent.phone}</div>
                 </TableCell>
                 <TableCell className="py-3 px-4">
                   <Badge variant="blue">{agent.type || "Interno"}</Badge>
                 </TableCell>
                 <TableCell className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                  {agent.docType || <span className="text-slate-400 italic">N/A</span>}
+                  {agent.docType || <span className="text-slate-500 italic">N/A</span>}
                 </TableCell>
                 <TableCell className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
                   {agent.docNumber}
@@ -74,7 +74,7 @@ export const AgentTable: React.FC<AgentTableProps> = ({
                     {canEdit && (
                       <button
                         onClick={() => onEdit(agent)}
-                        className="p-1 text-slate-400 hover:text-amber-600 transition-colors"
+                        className="p-1 text-slate-500 hover:text-amber-600 transition-colors"
                         title="Editar"
                       >
                         <Pencil size={16} />
@@ -83,7 +83,7 @@ export const AgentTable: React.FC<AgentTableProps> = ({
                     {canDelete && (
                       <button
                         onClick={() => onDelete(agent)}
-                        className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                        className="p-1 text-slate-500 hover:text-red-600 transition-colors"
                         title="Eliminar"
                       >
                         <Trash2 size={16} />

@@ -32,7 +32,7 @@ export interface User {
   role: UserRole;
   status: "active" | "inactive";
   createdAt?: string;
-  lastLogin?: string;
+  lastLogin?: string | null;
   avatar?: string | null;
   permisos?: { modulo: string; accion: string }[];
 }

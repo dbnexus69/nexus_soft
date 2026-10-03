@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { REQUISITOS_CONTRASENA } from '../utils/contrasena';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, ChevronRight, Info, ArrowLeft, Check, X, Mail, Lock, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -43,13 +44,7 @@ export default function Login() {
   const [errorToastMessage, setErrorToastMessage] = useState('');
 
   // Live Password Validation Criteria
-  const passwordCriteria = [
-    { label: 'Mínimo 8 caracteres', met: newPassword.length >= 8 },
-    { label: 'Una letra minúscula', met: /[a-z]/.test(newPassword) },
-    { label: 'Una letra mayúscula', met: /[A-Z]/.test(newPassword) },
-    { label: 'Un número', met: /\d/.test(newPassword) },
-    { label: 'Un carácter especial (ej: @, $, !, %, *, ?)', met: /[^A-Za-z0-9]/.test(newPassword) },
-  ];
+  const passwordCriteria = REQUISITOS_CONTRASENA.map((r) => ({ label: r.etiqueta, met: r.cumple(newPassword) }));
   const allCriteriaMet = passwordCriteria.every(c => c.met);
 
   // Email Validation (valid format and max 40 characters)
@@ -531,12 +526,12 @@ export default function Login() {
             <div className="pt-4">
               <div className="inline-flex items-center gap-6 p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl">
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Disponibilidad</p>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Disponibilidad</p>
                   <p className="text-lg font-bold text-emerald-400">99.98%</p>
                 </div>
                 <div className="w-px h-8 bg-white/10" />
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Soporte</p>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Soporte</p>
                   <p className="text-lg font-bold text-amber-400">24/7 Premium</p>
                 </div>
               </div>

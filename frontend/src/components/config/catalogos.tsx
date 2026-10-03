@@ -86,7 +86,7 @@ export interface DefinicionCatalogo {
 // repetían columna abajo diciendo nada.
 
 /** Un hueco vacío se ve mejor que la palabra "No especificado" repetida. */
-const Vacio = () => <span className="text-slate-300 dark:text-slate-600">—</span>;
+const Vacio = () => <span className="text-slate-500 dark:text-slate-600">—</span>;
 
 const texto = (v: unknown): ReactNode =>
   v === null || v === undefined || v === '' ? <Vacio /> : String(v);
@@ -106,7 +106,7 @@ const Estado = ({ valor }: { valor?: string | null }) => {
   return (
     <span
       className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-        activo ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
+        activo ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-500'
       }`}
     >
       <span
@@ -147,7 +147,7 @@ const Enlace = ({ url }: { url?: string | null }) => {
 const COL_ID: ColumnaCatalogo = {
   clave: 'numero', rotulo: '#', orden: 'id', derecha: true,
   render: item => (
-    <span className="tabular-nums text-xs text-slate-400 dark:text-slate-500">{item.numero ?? item.id}</span>
+    <span className="tabular-nums text-xs text-slate-500 dark:text-slate-500">{item.numero ?? item.id}</span>
   ),
 };
 
@@ -258,7 +258,7 @@ export const CATALOGOS: DefinicionCatalogo[] = [
         render: i => (i.email || i.phone ? (
           <div className="min-w-0 text-xs">
             {i.email && <div className="truncate text-slate-600 dark:text-slate-300">{i.email}</div>}
-            {i.phone && <div className="tabular-nums text-slate-400 dark:text-slate-500">{i.phone}</div>}
+            {i.phone && <div className="tabular-nums text-slate-500 dark:text-slate-500">{i.phone}</div>}
           </div>
         ) : <Vacio />),
       },

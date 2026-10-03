@@ -132,7 +132,7 @@ function claveEstadoFila(checkin: string | undefined, vencido: boolean, urgente:
 const InsigniaEstado = memo(function InsigniaEstado({ clave }: { clave: ClaveEstadoFila }) {
   const e = ESTADO_FILA[clave];
   return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide ${e.insignia}`}>
+    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded tracking-wide ${e.insignia}`}>
       {e.label}
     </span>
   );
@@ -671,7 +671,7 @@ export default function Itineraries() {
             {/* Siempre los pendientes: pendingMeta.total depende del filtro
                 activo, así que en "Realizados" mostraría el número equivocado. */}
             {counts.pendiente > 0 ? (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                 {counts.pendiente}
               </span>
             ) : null}
@@ -753,7 +753,7 @@ export default function Itineraries() {
               <div className="hidden sm:block">
                 <div className="grid grid-cols-7 bg-gray-50/50 dark:bg-slate-900/50">
                   {DAYS.map(day => (
-                    <div key={day} className="py-3 text-center text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest border-r border-gray-border/50 dark:border-slate-700 last:border-r-0">
+                    <div key={day} className="py-3 text-center text-[11px] font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest border-r border-gray-border/50 dark:border-slate-700 last:border-r-0">
                       {day}
                     </div>
                   ))}
@@ -801,7 +801,7 @@ export default function Itineraries() {
                             <div
                               key={flight.id}
                               title={`${isPlan ? 'Paquete: ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}${isPlan && flight.additionalPassengers ? `\nAcompañantes: ${flight.additionalPassengers}` : ''}`}
-                              className={`px-2 py-1 rounded-md text-[10px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
+                              className={`px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
                                  isPlan
                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
                                    : flight.type === 'ida' 
@@ -828,7 +828,7 @@ export default function Itineraries() {
                         {dayFlights.length > 3 && (
                           <button
                             onClick={() => toggleDay(dayKey)}
-                            className="mt-2 w-full py-1 text-[10px] font-bold text-accent uppercase tracking-tighter hover:bg-accent/5 rounded transition-colors border border-accent/10"
+                            className="mt-2 w-full py-1 text-[11px] font-bold text-accent uppercase tracking-tighter hover:bg-accent/5 rounded transition-colors border border-accent/10"
                           >
                             {isExpanded ? 'Ver menos' : `+${dayFlights.length - 3} más vuelos`}
                           </button>
@@ -859,19 +859,19 @@ export default function Itineraries() {
                         <div key={flight.id} className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="flex flex-col items-center justify-center bg-primary/5 text-primary rounded-lg w-10 h-10 shrink-0 font-bold">
-                              <span className="text-[10px] uppercase font-semibold text-gray-400 leading-none">{dayOfWeek}</span>
+                              <span className="text-[11px] uppercase font-semibold text-gray-500 leading-none">{dayOfWeek}</span>
                               <span className="text-sm font-heading leading-tight mt-0.5">{Number(dayStr) || dayStr}</span>
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-gray-800 truncate">{flight.passenger}</span>
                                 {flight.passengerDocs && (
-                                  <span className="text-[10px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-200">
+                                  <span className="text-[11px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-200">
                                     {flight.passengerDocs}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[10px] text-gray-500 truncate mt-0.5">{flight.route} · {flight.time} · {flight.airline}</p>
+                              <p className="text-[11px] text-gray-500 truncate mt-0.5">{flight.route} · {flight.time} · {flight.airline}</p>
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -883,7 +883,7 @@ export default function Itineraries() {
                                   <span title={ESTADO_TITULO(isCancelado, isRealizado, isVencido)}
                                     className={`w-2 h-2 rounded-full ${ESTADO_PUNTO(isCancelado, isRealizado, isVencido)}`}
                                   />
-                                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${isCancelado ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
+                                  <span className={`text-[11px] font-semibold uppercase tracking-wider ${isCancelado ? 'text-red-500 dark:text-red-400' : 'text-gray-500'}`}>
                                     {isCancelado ? 'Cancelado' : isRealizado ? 'Listo' : isVencido ? 'Vencido' : 'Pendiente'}
                                   </span>
                                 </>
@@ -895,7 +895,7 @@ export default function Itineraries() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-400">
+                  <div className="text-center py-8 text-gray-500">
                     <p className="text-xs">No hay vuelos programados para este mes.</p>
                   </div>
                 )}
@@ -929,7 +929,7 @@ export default function Itineraries() {
                       ))}
                     </div>
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                       <input
                         type="text"
                         placeholder="Buscar pasajero, reserva o vuelo..."
@@ -938,7 +938,7 @@ export default function Itineraries() {
                         onChange={e => cambiarBusqueda(e.target.value)}
                       />
                       {checkinSearch ? (
-                        <button onClick={() => cambiarBusqueda('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                        <button onClick={() => cambiarBusqueda('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600 p-0.5 rounded">
                           <X size={14} />
                         </button>
                       ) : null}
@@ -1001,13 +1001,13 @@ export default function Itineraries() {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="font-bold text-primary dark:text-white truncate">{flight.passenger}</span>
                                   {flight.passengerDocs && (
-                                    <span className="text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-700">
+                                    <span className="text-[11px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-700">
                                       {flight.passengerDocs}
                                     </span>
                                   )}
                                   <InsigniaEstado clave={claveEstado} />
                                   {flight.source === 'plan' && flight.additionalPassengers && flight.additionalPassengers > 0 ? (
-                                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/50">
+                                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/50">
                                       +{flight.additionalPassengers} acompañantes
                                     </span>
                                   ) : null}
@@ -1017,7 +1017,7 @@ export default function Itineraries() {
                                   <span className="flex items-center gap-1"><Clock size={12} /> {formatDate(flight.date)} - {flight.time}</span>
                                   <span className="font-medium text-primary/60 dark:text-slate-500">{flight.airline}</span>
                                   {flight.reservationNumber ? (
-                                    <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[10px] border border-blue-200 dark:border-blue-900/50 font-semibold">
+                                    <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[11px] border border-blue-200 dark:border-blue-900/50 font-semibold">
                                       Reserva: {flight.reservationNumber}
                                     </span>
                                   ) : null}
@@ -1098,7 +1098,7 @@ export default function Itineraries() {
                       })}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-slate-500">
+                    <div className="flex flex-col items-center justify-center p-12 text-gray-500 dark:text-slate-500">
                       <div className="w-16 h-16 bg-green-50 dark:bg-green-950/40 text-green-500 dark:text-green-400 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle2 size={32} />
                       </div>
@@ -1224,7 +1224,7 @@ export default function Itineraries() {
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff]">{selectedFlightForCheckin?.passenger}</p>
               {modalClient && (
-                <span className="text-[10px] bg-white/50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800/50 font-bold">
+                <span className="text-[11px] bg-white/50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800/50 font-bold">
                   {modalClient.docType}: {modalClient.docNumber}
                 </span>
               )}
@@ -1255,7 +1255,7 @@ export default function Itineraries() {
                         href={url} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-[10px] text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 hover:underline bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/40 flex items-center gap-1 font-bold transition-colors"
+                        className="text-[11px] text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 hover:underline bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/40 flex items-center gap-1 font-bold transition-colors"
                         title="Ir al sitio web de la aerolínea para Check-in"
                       >
                         <ExternalLink size={10} /> Link Check-in
@@ -1268,7 +1268,7 @@ export default function Itineraries() {
             </div>
             <div className="p-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-border dark:border-slate-700 rounded-lg">
               <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">Enviar a:</p>
-              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff] truncate" title={selectedFlightForCheckin?.email || modalClient?.email}>
+              <p className="text-sm font-bold text-gray-900 dark:!text-[#ffffff] truncate" title={selectedFlightForCheckin?.email || modalClient?.email || undefined}>
                 {selectedFlightForCheckin?.email || modalClient?.email || 'Sin correo registrado'}
               </p>
             </div>
@@ -1303,21 +1303,21 @@ export default function Itineraries() {
                 accept=".pdf,.jpg,.jpeg,.png"
               />
               <div className="p-6 border-2 border-dashed border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800/50 rounded-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:border-primary group-hover:bg-primary/5">
-                <UploadCloud size={28} className="text-gray-300 group-hover:text-primary transition-colors" />
+                <UploadCloud size={28} className="text-gray-500 group-hover:text-primary transition-colors" />
                 <p className="text-xs font-bold text-gray-500 uppercase">Seleccionar PDF o Imagen</p>
-                <p className="text-[10px] text-gray-400">Haz clic o arrastra aquí (Soporta múltiples archivos)</p>
+                <p className="text-[11px] text-gray-500">Haz clic o arrastra aquí (Soporta múltiples archivos)</p>
               </div>
             </div>
 
             {checkinFiles.length > 0 && (
               <div className="space-y-2 border border-gray-border rounded-xl p-3 bg-gray-50/50 max-h-[160px] overflow-y-auto">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Archivos seleccionados ({checkinFiles.length}):</p>
+                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Archivos seleccionados ({checkinFiles.length}):</p>
                 {checkinFiles.map((file, idx) => (
                   <div key={`${file.name}-${idx}`} className="flex items-center justify-between gap-3 p-2 bg-white border border-gray-200 rounded-lg text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <CheckCircle2 size={16} className="text-green-500 shrink-0" />
                       <span className="font-medium text-gray-700 truncate" title={file.name}>{file.name}</span>
-                      <span className="text-[10px] text-gray-400 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
+                      <span className="text-[11px] text-gray-500 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
                     </div>
                     <button 
                       type="button" 
@@ -1334,7 +1334,7 @@ export default function Itineraries() {
           </FormField>
           )}
 
-          <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-700">
+          <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[11px] text-amber-700">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <p>Al confirmar, el documento se enviará automáticamente al correo registrado del cliente.</p>
           </div>
@@ -1381,16 +1381,16 @@ export default function Itineraries() {
               className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-border dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:text-white resize-none"
             />
             <div className="flex justify-between items-center mt-1">
-              <span className={`text-[11px] ${cancelReasonValido ? 'text-gray-400 dark:text-slate-500' : 'text-red-500'}`}>
+              <span className={`text-[11px] ${cancelReasonValido ? 'text-gray-500 dark:text-slate-500' : 'text-red-500'}`}>
                 {cancelReasonValido ? 'Queda registrado junto a la cancelación.' : `Faltan ${MOTIVO_MIN - cancelReason.trim().length} caracteres.`}
               </span>
-              <span className="text-[11px] text-gray-400 dark:text-slate-500">
+              <span className="text-[11px] text-gray-500 dark:text-slate-500">
                 {cancelReason.length}/{MOTIVO_MAX}
               </span>
             </div>
           </FormField>
 
-          <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-lg text-[10px] text-amber-700 dark:text-amber-400">
+          <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-lg text-[11px] text-amber-700 dark:text-amber-400">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <p>El vuelo pasará a estado cancelado y se mostrará en rojo en el calendario. No se enviará ningún correo al cliente.</p>
           </div>

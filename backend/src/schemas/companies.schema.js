@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { contrasena } = require('./contrasena');
 
 /**
  * Alta y edición de una agencia cliente.
@@ -63,13 +64,7 @@ const createCompanySchema = z.object({
     firstName: z.string().trim().min(2).max(60),
     lastName: z.string().trim().min(2).max(60),
     email: z.string().trim().toLowerCase().email('No parece un correo válido').max(180),
-    password: z.string()
-      .min(8, 'Mínimo 8 caracteres')
-      .max(200)
-      .regex(/[a-z]/, 'Debe llevar una minúscula')
-      .regex(/[A-Z]/, 'Debe llevar una mayúscula')
-      .regex(/\d/, 'Debe llevar un número')
-      .regex(/[^A-Za-z0-9]/, 'Debe llevar un carácter especial'),
+    password: contrasena,
   }),
 }).strict();
 

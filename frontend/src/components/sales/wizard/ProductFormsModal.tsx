@@ -78,7 +78,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
 
   const getCurrentItemLinkedPlanIndex = () => {
     if (!activeForm || activeIdx === null || activeForm === 'plan') return '';
-    let targetKey = null;
+    let targetKey: keyof WizardFormData | null = null;
     switch (activeForm) {
       case "ticket": targetKey = "tickets"; break;
       case "hotel": targetKey = "hotels"; break;
@@ -106,7 +106,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
 
   const setCurrentItemLinkedPlanIndex = (val: string) => {
     if (!activeForm || activeIdx === null || activeForm === 'plan') return;
-    let targetKey = null;
+    let targetKey: keyof WizardFormData | null = null;
     switch (activeForm) {
       case "ticket": targetKey = "tickets"; break;
       case "hotel": targetKey = "hotels"; break;
@@ -277,7 +277,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                           if (onSwitchForm) onSwitchForm(activeForm, nextItems.length - 1);
                         }
                       }}
-                      className={`p-0.5 rounded-full hover:bg-black/20 ${isActive ? 'text-white' : 'text-slate-400 hover:text-red-500'}`}
+                      className={`p-0.5 rounded-full hover:bg-black/20 ${isActive ? 'text-white' : 'text-slate-500 hover:text-red-500'}`}
                       title={`Eliminar ${currentConfig.labelSingular} #${idx + 1}`}
                     >
                       <X size={13} />

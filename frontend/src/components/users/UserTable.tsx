@@ -83,7 +83,7 @@ export const UserTable: React.FC<UserTableProps> = ({
             users.map((user) => (
               <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <TableCell className="py-3 px-4">
-                  <span className="text-xs font-mono font-bold text-slate-400">#{user.numero ?? user.id}</span>
+                  <span className="text-xs font-mono font-bold text-slate-500">#{user.numero ?? user.id}</span>
                 </TableCell>
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center gap-3">
@@ -100,7 +100,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   </Badge>
                 </TableCell>
                 <TableCell className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                  {user.docType || <span className="text-slate-400 italic">N/A</span>}
+                  {user.docType || <span className="text-slate-500 italic">N/A</span>}
                 </TableCell>
                 <TableCell className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
                   {user.docNumber}
@@ -117,7 +117,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => onViewDetail(user)}
-                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                      className="p-1 text-slate-500 hover:text-blue-600 transition-colors"
                       title="Ver detalle"
                     >
                       <Eye size={16} />
@@ -125,7 +125,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                     {canEdit && (
                       <button
                         onClick={() => onEdit(user)}
-                        className="p-1 text-slate-400 hover:text-amber-600 transition-colors"
+                        className="p-1 text-slate-500 hover:text-amber-600 transition-colors"
                         title="Editar"
                       >
                         <Pencil size={16} />
@@ -134,7 +134,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                     {canDelete && (
                       <button
                         onClick={() => onDelete(user)}
-                        className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                        className="p-1 text-slate-500 hover:text-red-600 transition-colors"
                         title="Eliminar"
                       >
                         <Trash2 size={16} />

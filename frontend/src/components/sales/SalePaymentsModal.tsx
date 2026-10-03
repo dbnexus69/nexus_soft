@@ -97,7 +97,7 @@ function ServicesList({ sale }: { sale: Sale }) {
   }
 
   return (
-    <p className="text-gray-400 italic text-sm mt-1">Sin servicios registrados</p>
+    <p className="text-gray-500 italic text-sm mt-1">Sin servicios registrados</p>
   );
 }
 
@@ -340,7 +340,7 @@ export default function SalePaymentsModal({
           {/* Fila de Finanzas */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white dark:bg-slate-800/80 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
             <div>
-              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Valor Final
               </p>
               <p className="text-lg font-black text-gray-800 dark:text-white">
@@ -348,7 +348,7 @@ export default function SalePaymentsModal({
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Pago Proveedores
               </p>
               <p className="text-lg font-black text-rose-600 dark:text-rose-400">
@@ -356,7 +356,7 @@ export default function SalePaymentsModal({
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Ganancias Oficina
               </p>
               <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
@@ -368,7 +368,7 @@ export default function SalePaymentsModal({
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                 Pagado por Cliente
               </p>
               <p className="text-lg font-black text-blue-600 dark:text-blue-400">
@@ -386,7 +386,7 @@ export default function SalePaymentsModal({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-gray-50 dark:bg-slate-800/80 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
+                <p className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest">
                   Valor a Pagar
                 </p>
                 <p className="text-xl font-black text-gray-800 dark:text-white mt-1">
@@ -394,7 +394,7 @@ export default function SalePaymentsModal({
                 </p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-100 dark:border-blue-900/40 shadow-sm">
-                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
                   Total Pagado
                 </p>
                 <p className="text-xl font-black text-blue-700 dark:text-blue-300 mt-1">
@@ -404,7 +404,7 @@ export default function SalePaymentsModal({
               <div
                 className={`p-4 rounded-xl border shadow-sm ${remainingBalance > 0 ? "bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/40" : "bg-green-50 dark:bg-green-950/30 border-green-100 dark:border-green-900/40"}`}
               >
-                <p className={`text-[10px] font-bold uppercase tracking-widest ${remainingBalance > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                <p className={`text-[11px] font-bold uppercase tracking-widest ${remainingBalance > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
                   {remainingBalance > 0 ? "Pendiente por Pagar" : "Estado de Cobro"}
                 </p>
                 <p className={`text-xl font-black mt-1 ${remainingBalance > 0 ? "text-red-700 dark:text-red-300" : "text-green-700 dark:text-green-300"}`}>
@@ -460,7 +460,7 @@ export default function SalePaymentsModal({
                   </div>
                   <div className="flex-1 w-full">
                     <label className="text-xs font-bold text-gray-600 mb-1 block">
-                      Ref. / Comprobante <span className="font-normal text-[10px] text-gray-400">(Opcional)</span>
+                      Ref. / Comprobante <span className="font-normal text-[11px] text-gray-500">(Opcional)</span>
                     </label>
                     <Input
                       value={newPayment.reference}
@@ -487,7 +487,7 @@ export default function SalePaymentsModal({
                   </Button>
                 </div>
                 {Number(newPayment.amount) > remainingBalance && (
-                  <p className="text-[10px] text-red-500 font-bold mt-2">
+                  <p className="text-[11px] text-red-500 font-bold mt-2">
                     El abono supera el saldo restante de{" "}
                     {formatCurrency(remainingBalance)}.
                   </p>
@@ -508,7 +508,7 @@ export default function SalePaymentsModal({
                       className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors rounded-xl border border-gray-200"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-white p-2 rounded-lg border border-gray-200 text-gray-400">
+                        <div className="bg-white p-2 rounded-lg border border-gray-200 text-gray-500">
                           <Receipt size={16} />
                         </div>
                         <div className="flex flex-col">
@@ -517,9 +517,9 @@ export default function SalePaymentsModal({
                           </span>
                           <p className="text-[11px] font-bold text-gray-800">{p.method}</p>
                           {p.reference && (
-                            <p className="text-[10px] text-gray-500">Ref: {p.reference}</p>
+                            <p className="text-[11px] text-gray-500">Ref: {p.reference}</p>
                           )}
-                          <p className="text-[10px] text-gray-400">
+                          <p className="text-[11px] text-gray-500">
                             {formatDate(p.date)}
                           </p>
                         </div>
@@ -597,7 +597,7 @@ export default function SalePaymentsModal({
                   : 0;
               return (
                 <div className="mt-5 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
+                  <div className="flex justify-between text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
                     <span>Progreso de Pago</span>
                     <span
                       className={

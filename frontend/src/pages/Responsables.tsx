@@ -459,7 +459,7 @@ export default function Responsables() {
         <CardHeader actions={
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-wrap w-full sm:w-auto">
             <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
               <Input 
                 placeholder="Buscar por nombre, doc o correo..." 
                 className="pl-10 pr-9 w-full"
@@ -467,7 +467,7 @@ export default function Responsables() {
                 onChange={e => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded">
+                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600 p-0.5 rounded">
                   <X size={14} />
                 </button>
               )}
@@ -523,7 +523,7 @@ export default function Responsables() {
                   <span className="text-xs text-gray-500">{responsable.email}</span>
                 </div>
               </TableCell>
-              <TableCell>{responsable.docType || <span className="text-slate-400 italic">N/A</span>}</TableCell>
+              <TableCell>{responsable.docType || <span className="text-slate-500 italic">N/A</span>}</TableCell>
               <TableCell>{responsable.docNumber}</TableCell>
               <TableCell>{responsable.phone}</TableCell>
               <TableCell>

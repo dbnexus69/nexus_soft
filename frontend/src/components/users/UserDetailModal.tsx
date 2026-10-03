@@ -26,7 +26,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 /** Un hueco vacío dice "no hay dato" mejor que la palabra "N/A". */
-const Vacio = () => <span className="text-slate-300 dark:text-slate-600">—</span>;
+const Vacio = () => <span className="text-slate-500 dark:text-slate-600">—</span>;
 
 const Dato = memo(function Dato({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
@@ -201,7 +201,7 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
             </p>
           ) : (
             <div className="mt-2 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[28rem] text-sm">
                 <thead>
                   <tr className="text-xs font-medium text-accent">
                     <th scope="col" className="px-3 pb-2 text-left">Fecha</th>

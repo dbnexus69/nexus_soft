@@ -198,7 +198,7 @@ export default function CreditDashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <div className="relative w-full sm:w-72">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
               size={15}
               aria-hidden
             />
@@ -212,7 +212,7 @@ export default function CreditDashboard() {
               <button
                 onClick={() => setBusqueda('')}
                 aria-label="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-500 hover:text-slate-600"
               >
                 <X size={14} />
               </button>

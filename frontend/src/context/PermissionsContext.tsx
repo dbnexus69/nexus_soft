@@ -34,7 +34,7 @@ export function PermissionsProvider({
   const permissions = useMemo(() => {
     if (!user) return DEFAULT_ASESOR_PERMISSIONS;
 
-    const deLaBase = data.config.rolePermissions?.[user.role];
+    const deLaBase = (data.config.rolePermissions as Record<string, RolePermissions | undefined> | undefined)?.[user.role];
     if (deLaBase) return deLaBase;
 
     if (user.role === 'superadmin') return SUPERADMIN_PERMISSIONS;

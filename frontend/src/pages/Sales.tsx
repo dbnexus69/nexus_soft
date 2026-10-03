@@ -432,7 +432,7 @@ export default function Sales() {
               actions={
                 <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center flex-wrap w-full lg:w-auto font-body">
                   <div className="relative w-full lg:w-72">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <input 
                       placeholder="Buscar por cliente, asesor, comisionista..." 
                       className="text-sm border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full transition-all"
@@ -440,7 +440,7 @@ export default function Sales() {
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                     {searchTerm && (
-                      <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded">
+                      <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 p-0.5 rounded">
                         <X size={14} />
                       </button>
                     )}
@@ -458,7 +458,7 @@ export default function Sales() {
                   </select>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto">
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Desde:</span>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Desde:</span>
                       <div className="w-full sm:w-36">
                         <DatePicker
                           value={startDate}
@@ -469,7 +469,7 @@ export default function Sales() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Hasta:</span>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Hasta:</span>
                       <div className="w-full sm:w-36">
                         <DatePicker
                           value={endDate}
@@ -526,7 +526,7 @@ export default function Sales() {
               <div className="flex flex-col items-center justify-center p-12 text-gray-500 bg-white rounded-b-2xl border-t border-gray-100">
                 <Ban size={48} className="text-gray-200 mb-4 animate-bounce" />
                 <p className="text-lg font-bold text-gray-700">Venta no encontrada</p>
-                <p className="text-sm text-gray-400 mt-1">Prueba ajustando los términos de búsqueda o los filtros de fecha.</p>
+                <p className="text-sm text-gray-500 mt-1">Prueba ajustando los términos de búsqueda o los filtros de fecha.</p>
               </div>
             ) : (
               <SalesTable

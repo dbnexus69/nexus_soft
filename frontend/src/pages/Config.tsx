@@ -290,7 +290,7 @@ export default function Config() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} aria-hidden />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={15} aria-hidden />
             <input
               placeholder={`Buscar en ${def.etiqueta.toLowerCase()}`}
               className="w-full rounded-lg border border-slate-300 bg-white py-1.5 pl-9 pr-8 text-sm text-slate-700 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
@@ -301,7 +301,7 @@ export default function Config() {
               <button
                 onClick={() => setSearchTerm('')}
                 aria-label="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-500 hover:text-slate-600"
               >
                 <X size={14} />
               </button>
@@ -385,7 +385,7 @@ export default function Config() {
                             del sistema son los mismos para todas, así que su id
                             no dice nada que le sirva a nadie. */}
                         {def.propio && (
-                          <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
+                          <span className="text-xs tabular-nums text-slate-500 dark:text-slate-500">
                             #{item.numero ?? item.id}
                           </span>
                         )}
@@ -434,7 +434,7 @@ export default function Config() {
           </div>
         ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[28rem] text-sm">
             <thead>
               <tr className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {def.columnas.map(col => {
@@ -682,16 +682,16 @@ export default function Config() {
                     </h4>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-[10px] text-blue-400 uppercase font-bold">Aerolínea / Ruta</p>
+                        <p className="text-[11px] text-blue-400 uppercase font-bold">Aerolínea / Ruta</p>
                         <p className="text-xs font-semibold text-blue-800">{viewingPackage.flight?.airline || '-'} | {viewingPackage.flight?.route || '-'}</p>
                       </div>
                       <div className="flex justify-between">
                         <div>
-                          <p className="text-[10px] text-blue-400 uppercase font-bold">Cabina</p>
+                          <p className="text-[11px] text-blue-400 uppercase font-bold">Cabina</p>
                           <p className="text-xs font-semibold text-blue-800">{viewingPackage.flight?.cabinBaggage || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-blue-400 uppercase font-bold">Bodega</p>
+                          <p className="text-[11px] text-blue-400 uppercase font-bold">Bodega</p>
                           <p className="text-xs font-semibold text-blue-800">{viewingPackage.flight?.checkedBaggage || '-'}</p>
                         </div>
                       </div>
@@ -704,11 +704,11 @@ export default function Config() {
                     </h4>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-[10px] text-emerald-400 uppercase font-bold">Hotel / Tipo</p>
+                        <p className="text-[11px] text-emerald-400 uppercase font-bold">Hotel / Tipo</p>
                         <p className="text-xs font-semibold text-emerald-800">{viewingPackage.accommodation?.hotel || '-'} | {viewingPackage.accommodation?.hotelType || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-emerald-400 uppercase font-bold">Régimen</p>
+                        <p className="text-[11px] text-emerald-400 uppercase font-bold">Régimen</p>
                         <p className="text-xs font-semibold text-emerald-800">{formatMealPlan(viewingPackage.accommodation?.mealPlan)}</p>
                       </div>
                     </div>
@@ -749,11 +749,11 @@ export default function Config() {
                   </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-[10px] text-amber-600 font-bold uppercase">Monto</span>
+                      <span className="text-[11px] text-amber-600 font-bold uppercase">Monto</span>
                       <span className="text-xs font-bold text-amber-900">{viewingPackage.medicalAssistance?.amountUsd ? `${viewingPackage.medicalAssistance.amountUsd} USD` : '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[10px] text-amber-600 font-bold uppercase">Cobertura</span>
+                      <span className="text-[11px] text-amber-600 font-bold uppercase">Cobertura</span>
                       <span className="text-xs font-bold text-amber-900">{viewingPackage.medicalAssistance?.coverageDays ? `${viewingPackage.medicalAssistance.coverageDays} Días` : '-'}</span>
                     </div>
                   </div>

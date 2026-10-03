@@ -4,6 +4,10 @@ const prisma = require('../config/db');
 // columna mal escrita rompe el build en vez de la petición.
 const { dashboardAggregates } = require('@prisma/client/sql');
 
+// `limit` llega de la URL. Sin el piso de 1, `?limit=-5` acababa en un
+// `LIMIT -5` que Postgres rechaza con un 500.
+const topeDe = (limit, max = 50) => Math.min(Math.max(Number(limit) || 6, 1), max);
+
 class StatsService {
   async getDashboardStats({ dateFrom, dateTo, permissionScope, user }) {
     const currentYear = new Date().getFullYear();
@@ -169,7 +173,7 @@ class StatsService {
    * desglosar. Esconderlo dejaría un cuadro que no cuadra.
    */
   async getCreditBreakdown({ dateFrom, dateTo, permissionScope, user, limit = 6 } = {}) {
-    const tope = Math.min(Math.max(Number(limit) || 6, 1), 20);
+    const tope = topeDe(limit, 20);
     const scopeUserId = permissionScope === 'own' ? user.id : null;
 
     const filtros = [];
@@ -311,7 +315,7 @@ class StatsService {
         AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY c.id, p.nombres, p.apellidos
       ORDER BY total DESC
-      LIMIT ${Math.min(Number(limit) || 6, 50)}
+      LIMIT ${topeDe(limit)}
     `);
   }
 
@@ -328,7 +332,7 @@ class StatsService {
         AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY u.id, p.nombres, p.apellidos
       ORDER BY "totalIngresos" DESC
-      LIMIT ${Math.min(Number(limit) || 6, 50)}
+      LIMIT ${topeDe(limit)}
     `);
   }
 
@@ -342,7 +346,7 @@ class StatsService {
         AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY mp.id, mp.nombre
       ORDER BY value DESC
-      LIMIT ${Math.min(Number(limit) || 6, 50)}
+      LIMIT ${topeDe(limit)}
     `);
   }
 

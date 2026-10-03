@@ -8,6 +8,9 @@ import { invalidateDashboardCache } from '../utils/dashboardCache';
 import type { LoginResponse } from '../api/auth';
 import { SESION_CADUCADA } from '../api/client';
 
+// El título de `index.html`, leído antes de que ninguna agencia lo cambie.
+const TITULO_POR_DEFECTO = document.title;
+
 interface AuthContextType {
   user: LoginResponse['user'] | null;
   login: (email: string, password: string, remember?: boolean) => Promise<{ success: boolean; error?: string }>;
@@ -30,7 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [marca, setMarca] = useState<Marca | null>(null);
 
   /** La marca se guarda para pintarla y se aplica sobre el tema, a la vez. */
-  const ponerMarca = (m: Marca | null) => { setMarca(m); aplicarMarca(m); };
+  const ponerMarca = (m: Marca | null) => {
+    setMarca(m);
+    aplicarMarca(m);
+    // La pestaña lleva el nombre de la agencia; sin marca, el de `index.html`.
+    document.title = m ? `${m.nombre} | Software de Agencias de Viajes` : TITULO_POR_DEFECTO;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('nexus_token');
@@ -57,11 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await apiLogin(email, password, remember);
 
-      setUser(data.user);
-      getBranding().then(ponerMarca).catch(() => {});
-
+      // El token primero, porque la marca se pide con él; y la marca antes de
+      // `setUser`, para que la primera pantalla ya lleve la de la agencia en vez
+      // de pintar la de la casa y cambiarla un instante después.
       localStorage.setItem('nexus_token', data.token);
       localStorage.setItem('nexus_remember', String(remember));
+      await getBranding().then(ponerMarca).catch(() => {});
+      setUser(data.user);
 
       return { success: true };
     } catch (err: any) {

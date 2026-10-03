@@ -141,6 +141,9 @@ function FlightBlock({ ticket, idx, airportMap }: { ticket: TicketData; idx: num
 export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, airportMap }, ref) => {
   const { marca } = useAuth();
 
+  // El texto legal habla en nombre de la agencia que emite el voucher.
+  const agencia = marca?.nombre || 'DB Nexus';
+
   if (!sale) {
     return <div className="nexus-voucher"><div ref={ref} /></div>;
   }
@@ -547,11 +550,11 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
         {/* ══ LEGAL TERMS (Improved) ══ */}
         <div className="v-legal">
           <h4 className="v-terms-title">Condiciones de Servicio & Políticas Legales</h4>
-          DB Nexus Platform actúa estrictamente como intermediario tecnológico entre el cliente y los prestadores finales de servicios (aerolíneas, hoteles, operadores terrestres).<br /><br />
+          {agencia} actúa estrictamente como intermediario tecnológico entre el cliente y los prestadores finales de servicios (aerolíneas, hoteles, operadores terrestres).<br /><br />
           <ul className="v-legal-list">
             <li><strong>Presentación:</strong> Es obligatorio presentarse con 2 horas de anticipación para vuelos nacionales y 4 horas para vuelos internacionales.</li>
             <li><strong>Documentación:</strong> El pasajero es el único responsable de portar documentos de identidad vigentes, visas, permisos de menores y certificaciones sanitarias exigidas por su destino.</li>
-            <li><strong>Check-in:</strong> DB Nexus podrá brindar asistencia con el pase de abordar sujeto a la disponibilidad y tiempos de la aerolínea (típicamente 24 horas antes del vuelo). DB Nexus no asume responsabilidad si el pasajero no realiza este trámite a tiempo.</li>
+            <li><strong>Check-in:</strong> {agencia} podrá brindar asistencia con el pase de abordar sujeto a la disponibilidad y tiempos de la aerolínea (típicamente 24 horas antes del vuelo). {agencia} no asume responsabilidad si el pasajero no realiza este trámite a tiempo.</li>
             <li><strong>Responsabilidad Limitada:</strong> Todo cambio, demora, cancelación o penalidad está sujeta única y exclusivamente a las políticas comerciales de la aerolínea o proveedor final.</li>
           </ul>
           <div className="v-company">

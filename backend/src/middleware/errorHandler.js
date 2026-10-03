@@ -24,10 +24,23 @@ function errorHandler(err, req, res, _next) {
   // literal en el log del servidor.
   const referencia = randomUUID().slice(0, 8);
 
-  console.error('[ERROR]', referencia, req.method, req.originalUrl,
-    req.user ? `usuario=${req.user.id}` : 'sin sesión', '|', err.message || err);
-  if (err.meta) console.error('[ERROR META]', referencia, JSON.stringify(err.meta));
-  if (err.stack) console.error('[ERROR STACK]', referencia, err.stack);
+  const quien = req.user ? `usuario=${req.user.id}` : 'sin sesión';
+
+  // Un rechazo previsto (4xx nuestro, o un error de Prisma/Zod/multer que se
+  // traduce abajo) es el funcionamiento normal: un 404 de negocio no necesita
+  // traza. `[ERROR]` con traza queda para lo inesperado, que es lo que se busca
+  // al leer el log.
+  const previsto = (err.statusCode && err.statusCode < 500)
+    || err.name === 'ZodError'
+    || ['P2002', 'P2025', 'P2003', 'P2011', 'LIMIT_FILE_SIZE', 'LIMIT_FILE_COUNT'].includes(err.code);
+
+  if (previsto) {
+    console.warn('[REQUEST_REJECTED]', referencia, req.method, req.originalUrl, quien, '|', err.code || err.name, err.message);
+  } else {
+    console.error('[ERROR]', referencia, req.method, req.originalUrl, quien, '|', err.message || err);
+    if (err.meta) console.error('[ERROR META]', referencia, JSON.stringify(err.meta));
+    if (err.stack) console.error('[ERROR STACK]', referencia, err.stack);
+  }
 
   // ── Errores de Prisma que sí conviene traducir ──────────────────────────
   // Su mensaje describe qué hizo mal quien llamó, no cómo está hecho esto.

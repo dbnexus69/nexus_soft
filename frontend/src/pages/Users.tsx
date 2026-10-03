@@ -108,7 +108,8 @@ export default function Users() {
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      toastError(err.message || "Error al guardar usuario");
+      // Sin aviso general: el modal pinta cada error del servidor junto a su campo (spec 003).
+      throw err;
     }
   };
 

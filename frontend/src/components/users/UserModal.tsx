@@ -7,15 +7,26 @@ import AvatarPicker, { AVATARS } from "../ui/AvatarPicker";
 import Datepicker from "react-tailwindcss-datepicker";
 import { User } from "../../types";
 import { capitalizeName } from "../../utils/formatters";
+import {
+  limpiarDocumento, limpiarNombre, limpiarTelefono,
+  mensajeDocumento, mensajeNacimiento, mensajeNombre, mensajeTelefono,
+  normalizarDocumento, normalizarNombre,
+} from "../../utils/datosPersona";
 
 interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingUser: User | null;
-  documentTypes: Array<{ id: number; nombre: string; abreviatura: string }>;
+  documentTypes: Array<{ id: number; name?: string; nombre?: string; abbreviation?: string; abreviatura?: string }>;
   existingUsers: User[];
   onSave: (user: Partial<User>) => Promise<void>;
 }
+
+const CAMPOS = ["firstName", "lastName", "email", "password", "docTypeId", "docNumber", "phone", "birth_date"];
+
+// Los tipos vienen de la base (id, nombre, abreviatura); las dos formas de escribirlos conviven en el contexto.
+const abreviaturaDe = (dt?: { abbreviation?: string; abreviatura?: string; name?: string }) => dt?.abbreviation || dt?.abreviatura || dt?.name || "";
+const nombreDe = (dt: { name?: string; nombre?: string; abbreviation?: string; abreviatura?: string }) => dt.name || dt.nombre || abreviaturaDe(dt);
 
 export const UserModal: React.FC<UserModalProps> = ({
   isOpen,
@@ -31,13 +42,17 @@ export const UserModal: React.FC<UserModalProps> = ({
     email: "",
     password: "",
     role: "asesor",
-    docType: documentTypes?.[0]?.abreviatura || "",
+    docTypeId: String(documentTypes?.[0]?.id ?? ""),
     docNumber: "",
     phone: "",
     birthDate: "",
     status: "active",
     avatar: AVATARS[0]
   });
+
+  // La regla del número depende del tipo, y el tipo es un id: aquí se busca su abreviatura.
+  const tipoElegido = documentTypes.find(dt => String(dt.id) === String(formData.docTypeId));
+  const abreviatura = abreviaturaDe(tipoElegido);
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,7 +66,11 @@ export const UserModal: React.FC<UserModalProps> = ({
         email: editingUser.email || "",
         password: "",
         role: editingUser.role || "asesor",
-        docType: editingUser.docType || documentTypes?.[0]?.abreviatura || "",
+        docTypeId: String(
+          editingUser.docTypeId
+            ?? documentTypes.find(dt => abreviaturaDe(dt) === editingUser.docType)?.id
+            ?? documentTypes?.[0]?.id ?? ""
+        ),
         docNumber: editingUser.docNumber || "",
         phone: editingUser.phone || "",
         birthDate: editingUser.birthDate ? String(editingUser.birthDate).split("T")[0] : "",
@@ -65,7 +84,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         email: "",
         password: "",
         role: "asesor",
-        docType: documentTypes?.[0]?.abreviatura || "",
+        docTypeId: String(documentTypes?.[0]?.id ?? ""),
         docNumber: "",
         phone: "",
         birthDate: "",
@@ -78,11 +97,20 @@ export const UserModal: React.FC<UserModalProps> = ({
 
   const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "El nombre es obligatorio";
-    if (!formData.lastName.trim()) newErrors.lastName = "El apellido es obligatorio";
+    const nombres = normalizarNombre(formData.firstName);
+    const apellidos = normalizarNombre(formData.lastName);
+    const docNumber = normalizarDocumento(formData.docNumber);
+    if (!nombres) newErrors.firstName = "El nombre es obligatorio";
+    else if (mensajeNombre(nombres)) newErrors.firstName = mensajeNombre(nombres)!;
+    if (!apellidos) newErrors.lastName = "El apellido es obligatorio";
+    else if (mensajeNombre(apellidos)) newErrors.lastName = mensajeNombre(apellidos)!;
     if (!formData.email.trim()) newErrors.email = "El correo es obligatorio";
     if (!editingUser && !formData.password.trim()) newErrors.password = "La contraseña es obligatoria";
-    if (!formData.docNumber.trim()) newErrors.docNumber = "El número de documento es obligatorio";
+    if (!formData.docTypeId) newErrors.docTypeId = "Seleccione el tipo de documento";
+    if (!docNumber) newErrors.docNumber = "El número de documento es obligatorio";
+    else if (formData.docTypeId && mensajeDocumento(abreviatura, docNumber)) newErrors.docNumber = mensajeDocumento(abreviatura, docNumber)!;
+    if (mensajeTelefono(formData.phone.trim())) newErrors.phone = mensajeTelefono(formData.phone.trim())!;
+    if (mensajeNacimiento(formData.birthDate)) newErrors.birthDate = mensajeNacimiento(formData.birthDate)!;
 
     const isDuplicateEmail = existingUsers.some(
       u => u.email.toLowerCase() === formData.email.toLowerCase() && (!editingUser || u.id !== editingUser.id)
@@ -96,15 +124,33 @@ export const UserModal: React.FC<UserModalProps> = ({
 
     setIsSaving(true);
     try {
+      const firstName = capitalizeName(normalizarNombre(formData.firstName));
+      const lastName = capitalizeName(normalizarNombre(formData.lastName));
+      const { docTypeId, ...resto } = formData;
       const payload: any = {
-        ...formData,
-        name: `${capitalizeName(formData.firstName)} ${capitalizeName(formData.lastName)}`.trim()
+        ...resto,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`.trim(),
+        docTypeId: Number(docTypeId),
+        docNumber,
+        phone: formData.phone.trim(),
       };
       if (!payload.password) delete payload.password;
       await onSave(payload);
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      // El servidor manda cada error con su campo (`error.details`): se pinta junto al input, no en un aviso general.
+      const respuesta = err?.response?.data?.error;
+      const detalles: Array<{ field: string; message: string }> = Array.isArray(respuesta?.details) ? respuesta.details : [];
+      const porCampo: Record<string, string> = {};
+      const sueltos: string[] = [];
+      for (const d of detalles) {
+        if (CAMPOS.includes(d.field)) porCampo[d.field] = d.message;
+        else sueltos.push(d.message);
+      }
+      const general = detalles.length === 0 ? respuesta?.message || err?.message || "Error al guardar" : sueltos.join(". ");
+      setErrors({ ...porCampo, ...(general ? { submit: general } : {}) });
     } finally {
       setIsSaving(false);
     }
@@ -149,7 +195,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                 <Input
                   className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
                   value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, firstName: limpiarNombre(e.target.value) })}
                   placeholder="Ej: Juan"
                 />
               </FormField>
@@ -158,7 +204,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                 <Input
                   className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
                   value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, lastName: limpiarNombre(e.target.value) })}
                   placeholder="Ej: Pérez"
                 />
               </FormField>
@@ -208,20 +254,24 @@ export const UserModal: React.FC<UserModalProps> = ({
                 </Select>
               </FormField>
 
-              <FormField label="Tipo de Documento">
+              <FormField label="Tipo de Documento" error={errors.docTypeId}>
                 <Select
                   className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
-                  value={formData.docType}
-                  onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
+                  value={formData.docTypeId}
+                  onChange={(e) => {
+                    const docTypeId = e.target.value;
+                    setFormData({ ...formData, docTypeId });
+                    // Al cambiar el tipo se revalida el número ya escrito, sin borrarlo.
+                    const nuevo = abreviaturaDe(documentTypes.find(dt => String(dt.id) === docTypeId));
+                    const numero = normalizarDocumento(formData.docNumber);
+                    setErrors((prev) => ({ ...prev, docNumber: numero ? mensajeDocumento(nuevo, numero) || "" : "" }));
+                  }}
                 >
-                  {documentTypes.map((dt: any) => {
-                    const code = dt.abbreviation || dt.abreviatura || dt.name;
-                    return (
-                      <option key={dt.id} value={code}>
-                        {code}
-                      </option>
-                    );
-                  })}
+                  {documentTypes.map((dt) => (
+                    <option key={dt.id} value={dt.id}>
+                      {nombreDe(dt)}
+                    </option>
+                  ))}
                 </Select>
               </FormField>
             </div>
@@ -231,23 +281,23 @@ export const UserModal: React.FC<UserModalProps> = ({
                 <Input
                   className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
                   value={formData.docNumber}
-                  onChange={(e) => setFormData({ ...formData, docNumber: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, docNumber: limpiarDocumento(abreviatura, e.target.value) })}
                   placeholder="Ej: 1098765432"
                 />
               </FormField>
 
-              <FormField label="Teléfono / WhatsApp">
+              <FormField label="Teléfono / WhatsApp" error={errors.phone}>
                 <Input
                   className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, phone: limpiarTelefono(e.target.value) })}
                   placeholder="300 123 4567"
                 />
               </FormField>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField label="Fecha de Nacimiento">
+              <FormField label="Fecha de Nacimiento" error={errors.birthDate || errors.birth_date}>
                 <Datepicker
                   useRange={false}
                   asSingle={true}
@@ -266,6 +316,11 @@ export const UserModal: React.FC<UserModalProps> = ({
             </div>
           </div>
 
+          {errors.submit && (
+            <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+              {errors.submit}
+            </p>
+          )}
           <div className="flex gap-4 justify-end pt-8 mt-4 border-t border-gray-100 dark:border-slate-800">
             <Button variant="outline" onClick={onClose} disabled={isSaving} className="h-12 px-8 rounded-xl font-bold border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800">
               Cancelar

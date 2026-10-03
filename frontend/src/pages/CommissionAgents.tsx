@@ -28,6 +28,7 @@ import { FormField, Input, Select } from "../components/ui/Form";
 import AvatarPicker, { AVATARS } from "../components/ui/AvatarPicker";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import { useData } from "../context/DataContext";
+import { limpiarDocumento, mensajeDocumento, normalizarDocumento } from "../utils/datosPersona";
 import { useCommissionsContext } from "../context/CommissionsContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { formatCurrency, capitalizeName, todayStr } from "../utils/formatters";
@@ -62,6 +63,11 @@ export default function CommissionAgents() {
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"agents" | "settlements" | "history">("agents");
   const [formData, setFormData] = useState<any>({});
+
+  // Los tipos de documento vienen de la base (id, nombre, abreviatura); la regla del número usa la abreviatura.
+  const tiposDocumento: any[] = data.config.documentTypes || [];
+  const abreviaturaDe = (dt?: any): string => dt?.abbreviation || dt?.abreviatura || dt?.name || "";
+  const abreviatura = abreviaturaDe(tiposDocumento.find((dt) => String(dt.id) === String(formData.docTypeId)));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -134,32 +140,26 @@ export default function CommissionAgents() {
     setErrors({});
     if (agent) {
       setEditingAgent(agent);
-      setFormData({ ...agent });
+      setFormData({
+        ...agent,
+        docTypeId: String(agent.docTypeId ?? tiposDocumento.find((dt: any) => abreviaturaDe(dt) === agent.docType)?.id ?? ""),
+      });
     } else {
       setEditingAgent(null);
-      setFormData({ status: "Activo", type: "Comisionista", avatar: AVATARS[0], docType: data.config.documentTypes?.[0]?.abreviatura || "" });
+      setFormData({ status: "Activo", type: "Comisionista", avatar: AVATARS[0], docTypeId: String(tiposDocumento[0]?.id ?? "") });
     }
     setIsModalOpen(true);
   };
 
-  const validateDocNumber = (value: string, docType: string): string => {
-    if (!value.trim()) return "El número de documento es obligatorio";
-    const typeUpper = docType ? docType.toUpperCase() : "";
-    if (typeUpper === "PASAPORTE" || typeUpper === "PP" || typeUpper === "PAS") {
-      if (value.length < 9 || value.length > 12) return "El pasaporte debe tener entre 9 y 12 caracteres";
-      if (!/^[a-zA-Z0-9]+$/.test(value)) return "El pasaporte solo debe contener caracteres alfanuméricos";
-    } else if (typeUpper === "NIT" || typeUpper === "RUT") {
-      if (value.length !== 11) return "El NIT/RUT debe tener exactamente 11 caracteres (9 dígitos + guion + 1 dígito)";
-      if (!/^\d{9}-\d{1}$/.test(value)) return "El NIT/RUT debe tener formato 9 dígitos - guion - 1 dígito de verificación (ej: 123456789-0)";
-    } else if (typeUpper === "CC") {
-      if (value.length < 8 || value.length > 10) return "La cédula de ciudadanía debe tener entre 8 y 10 dígitos";
-      if (!/^\d+$/.test(value)) return "La cédula de ciudadanía solo debe contener números";
-    } else if (value.length > 15) {
-      return "El documento no puede exceder 15 caracteres";
-    }
+  // Las reglas del número son las de las personas (utils/datosPersona), según la abreviatura del tipo elegido.
+  const validateDocNumber = (value: string, abreviatura: string): string => {
+    const numero = normalizarDocumento(value);
+    if (!numero) return "El número de documento es obligatorio";
+    const regla = mensajeDocumento(abreviatura, numero);
+    if (regla) return regla;
     // Duplicate check against existing agents
     const isDuplicate = (commissionAgents || []).some(
-      (a: any) => a.docNumber === value && (!editingAgent || a.id !== editingAgent.id)
+      (a: any) => a.docNumber === numero && (!editingAgent || a.id !== editingAgent.id)
     );
     if (isDuplicate) return "Este número de documento ya está registrado";
     return "";
@@ -168,16 +168,19 @@ export default function CommissionAgents() {
   const handleSave = async () => {
     const errs: Record<string, string> = {};
     if (!formData.name) errs.name = "El nombre es obligatorio";
-    if (!formData.docType) errs.docType = "Seleccione un tipo de documento";
-    const docErr = validateDocNumber(formData.docNumber || "", formData.docType || "");
+    if (!formData.docTypeId) errs.docTypeId = "Seleccione un tipo de documento";
+    const docErr = validateDocNumber(formData.docNumber || "", abreviatura);
     if (docErr) errs.docNumber = docErr;
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setIsSaving(true);
     try {
+      const { docTypeId, ...resto } = formData;
       const sanitizedData = {
-        ...formData,
+        ...resto,
         name: capitalizeName(formData.name),
+        docTypeId: Number(docTypeId),
+        docNumber: normalizarDocumento(formData.docNumber || ""),
       };
 
       if (editingAgent) {
@@ -189,7 +192,12 @@ export default function CommissionAgents() {
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      notifyError(mensajeDeApi(err, "No se pudo guardar el comisionista. Revisa la conexión e inténtalo de nuevo."));
+      // Un error con campo (`error.details`) se pinta junto a su input; el resto, en el aviso.
+      const detalles: Array<{ field: string; message: string }> = err?.response?.data?.error?.details || [];
+      const porCampo: Record<string, string> = {};
+      for (const d of detalles) if (["name", "docTypeId", "docNumber", "phone", "email"].includes(d.field)) porCampo[d.field] = d.message;
+      if (Object.keys(porCampo).length > 0) setErrors(porCampo);
+      else notifyError(mensajeDeApi(err, "No se pudo guardar el comisionista. Revisa la conexión e inténtalo de nuevo."));
     } finally {
       setIsSaving(false);
     }
@@ -712,24 +720,20 @@ export default function CommissionAgents() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField label="Tipo de Documento" error={errors.docType}>
+                <FormField label="Tipo de Documento" error={errors.docTypeId}>
                   <Select
                     className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
-                    value={formData.docType || ""}
+                    value={formData.docTypeId || ""}
                     onChange={(e) => {
-                      setFormData({ ...formData, docType: e.target.value, docNumber: "" });
-                      if (errors.docType) setErrors({ ...errors, docType: "" });
+                      setFormData({ ...formData, docTypeId: e.target.value, docNumber: "" });
+                      if (errors.docTypeId) setErrors({ ...errors, docTypeId: "" });
                       if (errors.docNumber) setErrors((p) => ({ ...p, docNumber: "" }));
                     }}
                     options={[
                       { value: "", label: "Seleccione" },
-                      ...(data.config.documentTypes || []).map((dt: any) => {
-                        const code = dt.abbreviation || dt.abreviatura || dt.name || '';
-                        const labelStr = code;
-                        return { value: code, label: labelStr };
-                      }),
+                      ...tiposDocumento.map((dt: any) => ({ value: String(dt.id), label: dt.name || dt.nombre || abreviaturaDe(dt) })),
                     ]}
-                    error={errors.docType}
+                    error={errors.docTypeId}
                   />
                 </FormField>
                 <FormField label="Número de Identificación" error={errors.docNumber}>
@@ -737,35 +741,17 @@ export default function CommissionAgents() {
                     className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
                     value={formData.docNumber || ""}
                     onChange={(e) => {
-                      let val = e.target.value;
-                      const typeUpper = formData.docType ? formData.docType.toUpperCase() : "";
-                      if (typeUpper === "CC") {
-                        val = val.replace(/\D/g, "");
-                      } else if (typeUpper === "PASAPORTE" || typeUpper === "PP" || typeUpper === "PAS") {
-                        val = val.replace(/[^a-zA-Z0-9]/g, "");
-                      } else if (typeUpper === "NIT" || typeUpper === "RUT") {
-                        val = val.replace(/[^0-9-]/g, "");
-                      } else {
-                        val = val.replace(/[^\w-]/gi, "");
-                      }
-                      setFormData({ ...formData, docNumber: val });
+                      setFormData({ ...formData, docNumber: limpiarDocumento(abreviatura, e.target.value) });
                       if (errors.docNumber) setErrors((p) => ({ ...p, docNumber: "" }));
                     }}
                     onBlur={(e) => {
-                      const err = validateDocNumber(e.target.value, formData.docType || "");
+                      const err = validateDocNumber(e.target.value, abreviatura);
                       if (err) setErrors((p) => ({ ...p, docNumber: err }));
                     }}
-                    maxLength={
-                      formData.docType ? (
-                        formData.docType.toUpperCase() === "CC" ? 10 :
-                        ["PASAPORTE", "PP", "PAS"].includes(formData.docType.toUpperCase()) ? 12 :
-                        ["NIT", "RUT"].includes(formData.docType.toUpperCase()) ? 11 : 15
-                      ) : 15
-                    }
+                    maxLength={20}
                     placeholder={
-                      formData.docType?.toUpperCase() === "CC" ? "Ej. 1234567890" :
-                      ["NIT", "RUT"].includes(formData.docType?.toUpperCase() || "") ? "Ej. 123456789-0" :
-                      ["PASAPORTE", "PP", "PAS"].includes(formData.docType?.toUpperCase() || "") ? "Ej. AB1234567" :
+                      abreviatura.toUpperCase() === "NIT" ? "Ej. 900123456-8" :
+                      abreviatura.toUpperCase() === "PA" ? "Ej. AB1234567" :
                       "Ej. 1234567890"
                     }
                     error={errors.docNumber}

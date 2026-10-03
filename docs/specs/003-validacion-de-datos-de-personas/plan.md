@@ -38,6 +38,13 @@ espacios repetidos, como antes.
 (`pnpm test:validaciones`): 110 comprobaciones sobre las funciones y el esquema, sin marco de pruebas,
 como `aislamiento.js`.
 
+**9. El tipo de documento viaja por id (T4).** Para usuarios, comisionistas y responsables el contrato es
+`docTypeId`, el id de `tipos_documento`, que la pantalla toma de la lista que trae la base. El servidor
+resuelve la abreviatura con ese id para elegir la regla del número (`utils/tipoDocumento.js`); `docType`
+—abreviatura o, para Responsables, el nombre— se sigue aceptando. Se descartó dejar a Responsables
+buscando por nombre y a los demás por abreviatura: tres contratos para el mismo dato. Los campos de
+persona que comparten esos esquemas viven en `schemas/personaCampos.js`.
+
 ## Superficie de API
 
 | Cambio | Detalle |

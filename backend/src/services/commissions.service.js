@@ -2,6 +2,7 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError, ConflictError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { formatName } = require('../utils/stringUtils');
+const { validarDocumento } = require('../utils/tipoDocumento');
 const { aCentimos } = require('./saleTotals');
 const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
 
@@ -106,6 +107,7 @@ class CommissionsService {
             p.email,
             p.documento as "docNumber",
             p.avatar_url as "avatar",
+            td.id as "docTypeId",
             td.abreviatura as "docType"
           FROM comisionistas c
           JOIN personas p ON c.persona_id = p.id
@@ -121,6 +123,7 @@ class CommissionsService {
       id: a.id,
       name: `${a.firstName} ${a.lastName}`.trim(),
       type: a.type,
+      docTypeId: a.docTypeId ?? null,
       docType: a.docType || '',
       docNumber: a.docNumber || '',
       status: a.status,
@@ -141,11 +144,8 @@ class CommissionsService {
   }
 
   async createAgent(data) {
-    let tipo_documento_id = null;
-    if (data.docType) {
-      const dt = await prisma.tipos_documento.findUnique({ where: { abreviatura: data.docType } });
-      if (dt) tipo_documento_id = dt.id;
-    }
+    const tipo = await validarDocumento(data);
+    const tipo_documento_id = tipo ? tipo.id : null;
 
     if (data.docNumber) {
       const existingAgent = await prisma.comisionistas.findFirst({
@@ -213,6 +213,7 @@ class CommissionsService {
       id: agent.id,
       name: `${agent.personas.nombres} ${agent.personas.apellidos}`.trim(),
       type: agent.tipo,
+      docTypeId: agent.personas.tipos_documento?.id ?? null,
       docType: agent.personas.tipos_documento?.abreviatura || '',
       docNumber: agent.personas.documento || '',
       status: agent.status,
@@ -259,10 +260,8 @@ class CommissionsService {
     if (data.email !== undefined) personaUpdate.email = data.email;
     if (data.avatar !== undefined) personaUpdate.avatar_url = data.avatar;
 
-    if (data.docType) {
-      const dt = await prisma.tipos_documento.findUnique({ where: { abreviatura: data.docType } });
-      if (dt) personaUpdate.tipo_documento_id = dt.id;
-    }
+    const tipo = await validarDocumento(data);
+    if (tipo) personaUpdate.tipo_documento_id = tipo.id;
 
     if (Object.keys(personaUpdate).length > 0) {
       personaUpdate.updated_at = new Date();

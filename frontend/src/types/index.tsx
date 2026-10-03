@@ -22,6 +22,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   name: string;
+  docTypeId?: number | null;
   docType: string | null;
   docNumber: string;
   phone: string;

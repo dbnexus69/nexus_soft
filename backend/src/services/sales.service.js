@@ -5,6 +5,7 @@ const { enHoraColombia } = require('../utils/fechas');
 const { recalcularVenta, aCentimos, precioProducto, bloquearVenta, datosFinancieros } = require('./saleTotals');
 const { empresaActual } = require('../config/tenant');
 const emailService = require('../utils/emailService');
+const { normalizarDocumento, mensajeDocumento } = require('../utils/datosPersona');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
 // una sola fuente de verdad para las 15 categorías.
@@ -425,6 +426,13 @@ function mapearResumenCliente(f) {
   };
 }
 
+// Las quince listas de productos que trae el cuerpo de una venta.
+const CAMPOS_DE_PRODUCTO = [
+  'ticketData', 'hotelData', 'insuranceData', 'planData', 'checkInData',
+  'migrationData', 'simCardData', 'carRentalData', 'fincaData', 'tourData',
+  'conventionData', 'restaurantData', 'visaData', 'passportData', 'petServiceData',
+];
+
 class SalesService {
   // Resuelve de una vez todos los catálogos que la venta va a necesitar
   // (proveedores, aerolíneas, aeropuertos y personas por documento).
@@ -437,12 +445,7 @@ class SalesService {
   //
   // Sacarlas fuera deja dentro de la transacción solo las escrituras.
   async _precargarCatalogos(body) {
-    const CAMPOS = [
-      'ticketData', 'hotelData', 'insuranceData', 'planData', 'checkInData',
-      'migrationData', 'simCardData', 'carRentalData', 'fincaData', 'tourData',
-      'conventionData', 'restaurantData', 'visaData', 'passportData', 'petServiceData',
-    ];
-    const items = CAMPOS.flatMap(c => Array.isArray(body[c]) ? body[c] : []);
+    const items = CAMPOS_DE_PRODUCTO.flatMap(c => Array.isArray(body[c]) ? body[c] : []);
 
     const codigosIata = new Set();
     const documentos = new Set();
@@ -457,15 +460,15 @@ class SalesService {
       // persona con un documento que ya existía -> P2002 -> 409 al registrar.
       for (const p of [...(it.passengers || []), ...(it.guests || []),
                        ...(it.travelers || []), ...(it.members || [])]) {
-        if (p?.docNumber) documentos.add(String(p.docNumber));
+        if (p?.docNumber) documentos.add(normalizarDocumento(p.docNumber));
       }
-      if (it.docNumber) documentos.add(String(it.docNumber));
+      if (it.docNumber) documentos.add(normalizarDocumento(it.docNumber));
     }
     // Los códigos se buscan en mayúsculas: el catálogo los guarda así y un
     // "bog" tecleado a mano es el mismo aeropuerto.
     const codigosBuscados = [...codigosIata].map(c => String(c).trim().toUpperCase());
 
-    const [proveedores, aerolineas, aeropuertos, personas, tarjetas, politicasEquipaje] = await Promise.all([
+    const [proveedores, aerolineas, aeropuertos, personas, tarjetas, politicasEquipaje, tiposDocumento] = await Promise.all([
       prisma.proveedores.findMany({ select: { id: true, nombre: true } }),
       prisma.aerolineas.findMany({ select: { id: true, nombre: true } }),
       prisma.aeropuertos.findMany({
@@ -482,6 +485,7 @@ class SalesService {
       prisma.politicas_equipaje.findMany({
         select: { id: true, tipo_tarifa: true, aerolineas: { select: { nombre: true } } },
       }),
+      prisma.tipos_documento.findMany({ select: { id: true, nombre: true, abreviatura: true } }),
     ]);
 
     return {
@@ -496,7 +500,50 @@ class SalesService {
       // Se indexan para que la búsqueda dentro de la transacción sea O(1).
       aeropuertos: new Map(aeropuertos.map(a => [a.codigo_iata, a.id])),
       personas: new Map(personas.map(p => [p.documento, p.id])),
+      // El tipo de documento por abreviatura ("CC") o por nombre, que es lo que mandan los formularios.
+      tiposDocumento: new Map(tiposDocumento.flatMap(t => [
+        [t.abreviatura.toUpperCase(), t], [t.nombre.trim().toLowerCase(), t],
+      ])),
     };
+  }
+
+  _tipoDocumento(valor, catalogos) {
+    const texto = String(valor ?? '').trim();
+    if (!texto) return null;
+    return catalogos.tiposDocumento.get(texto.toUpperCase()) || catalogos.tiposDocumento.get(texto.toLowerCase()) || undefined;
+  }
+
+  // El documento de cada persona de la venta (pasajeros, huéspedes, asegurados y el titular de los productos de
+  // un solo titular) se comprueba ANTES de abrir la transacción, con las mismas reglas que un cliente (spec 003,
+  // T4). Antes `findOrCreatePersona` lo guardaba sin mirar el formato y sin el tipo: una cédula con letras
+  // entraba, y la persona quedaba con `tipo_documento_id` nulo. Un tipo que no existe es un 422 con su campo; un
+  // documento sin tipo se juzga con la regla genérica, como hasta ahora los formularios que no lo piden.
+  _validarPersonas(body, catalogos) {
+    const detalles = [];
+    const revisar = (ruta, p) => {
+      if (!p || p.docNumber === undefined || p.docNumber === null || String(p.docNumber).trim() === '') return;
+      const tipo = this._tipoDocumento(p.docType, catalogos);
+      if (tipo === undefined) {
+        detalles.push({ field: `${ruta}.docType`, message: `El tipo de documento "${p.docType}" no existe` });
+        return;
+      }
+      const mensaje = mensajeDocumento(tipo?.abreviatura, normalizarDocumento(p.docNumber));
+      if (mensaje) detalles.push({ field: `${ruta}.docNumber`, message: mensaje });
+    };
+    for (const campo of CAMPOS_DE_PRODUCTO) {
+      (Array.isArray(body[campo]) ? body[campo] : []).forEach((it, i) => {
+        revisar(`${campo}.${i}`, it);
+        for (const lista of ['passengers', 'guests', 'travelers', 'members']) {
+          (Array.isArray(it?.[lista]) ? it[lista] : []).forEach((p, j) => revisar(`${campo}.${i}.${lista}.${j}`, p));
+        }
+      });
+    }
+    if (detalles.length) {
+      throw new AppError(
+        `Datos de personas inválidos: ${detalles.map(d => `${d.field}: ${d.message}`).join('; ')}`,
+        422, 'VALIDATION_ERROR', detalles,
+      );
+    }
   }
 
   // Los aeropuertos y los planes de equipaje de los tiquetes se comprueban ANTES
@@ -599,7 +646,7 @@ class SalesService {
     // Resolve payment method principal id
     let metodo_pago_principal_id = null;
     if (paymentMethod) {
-      const mp = await prisma.metodos_pago.findFirst({ where: { nombre: { contains: paymentMethod, mode: 'insensitive' } } });
+      const mp = await prisma.metodos_pago.findFirst({ where: { nombre: { equals: String(paymentMethod).trim(), mode: 'insensitive' } } });
       if (mp) metodo_pago_principal_id = mp.id;
     }
 
@@ -627,6 +674,7 @@ class SalesService {
     // Los catálogos se resuelven fuera: dentro de la transacción solo escrituras.
     const catalogos = await this._precargarCatalogos(body);
     this._validarTiquetes(ticketData, catalogos);
+    this._validarPersonas(body, catalogos);
 
     // La tarjeta con la que se le paga al proveedor de cada producto. Antes no
     // se leía: el asistente la pedía (en los paquetes, obligatoria) y se perdía.
@@ -693,7 +741,8 @@ class SalesService {
       // documento en la misma venta reutilicen la persona en vez de duplicarla.
       const findOrCreatePersona = async (name, docType, docNumber) => {
         if (!name && !docNumber) return null;
-        const doc = docNumber ? String(docNumber) : null;
+        const doc = docNumber ? normalizarDocumento(docNumber) : null;
+        const tipo_documento_id = this._tipoDocumento(docType, catalogos)?.id ?? null;
         if (doc && catalogos.personas.has(doc)) return catalogos.personas.get(doc);
 
         const parts = (name || '').trim().split(' ');
@@ -720,11 +769,11 @@ class SalesService {
           ? await tx.personas.upsert({
               where: { empresa_id_documento: { empresa_id: empresaActual(), documento: doc } },
               update: {},
-              create: { nombres, apellidos, documento: doc, tipo_documento_id: null },
+              create: { nombres, apellidos, documento: doc, tipo_documento_id },
               select: { id: true },
             })
           : await tx.personas.create({
-              data: { nombres, apellidos, documento: null, tipo_documento_id: null },
+              data: { nombres, apellidos, documento: null, tipo_documento_id },
               select: { id: true },
             });
 

@@ -14,7 +14,9 @@
     "db:reset": "npx prisma db push --force-reset && node prisma/seed.js",
     "check:prisma": "node scripts/check-prisma-fields.js",
     "test:aislamiento": "node tests/aislamiento.js",
-    "test:validaciones": "node tests/validaciones.js"
+    "test:aislamiento-api": "node tests/aislamiento-api.js",
+    "test:validaciones": "node tests/validaciones.js",
+    "test:reglas-espejo": "node tests/reglas-espejo.js"
   },
   "keywords": [
     "nexus",

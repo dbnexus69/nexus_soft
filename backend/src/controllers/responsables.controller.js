@@ -29,7 +29,7 @@ exports.getById = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await responsablesService.createResponsable(req.body);
+    const result = await responsablesService.createResponsable(req.validatedBody);
     success(res, result, null, 201);
   } catch (err) {
     next(err);
@@ -39,7 +39,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await responsablesService.updateResponsable(id, req.body);
+    const result = await responsablesService.updateResponsable(id, req.validatedBody);
     success(res, result);
   } catch (err) {
     next(err);

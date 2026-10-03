@@ -16,7 +16,7 @@ exports.listAgents = async (req, res, next) => {
 
 exports.createAgent = async (req, res, next) => {
   try {
-    const data = await commissionsService.createAgent(req.body);
+    const data = await commissionsService.createAgent(req.validatedBody);
     success(res, data, null, 201);
   } catch (err) {
     next(err);
@@ -26,7 +26,7 @@ exports.createAgent = async (req, res, next) => {
 exports.updateAgent = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await commissionsService.updateAgent(id, req.body);
+    const result = await commissionsService.updateAgent(id, req.validatedBody);
     success(res, result);
   } catch (err) {
     next(err);

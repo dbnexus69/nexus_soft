@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { documentoDePersonaInvalido } from "./documentosDeLaVenta";
 import {
   User,
   Package,
@@ -1113,6 +1114,11 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         }
       }
 
+      // El documento de cada persona, con las reglas del servidor: un 422 al final del asistente es tarde.
+      if (!errs.products) {
+        const malo = documentoDePersonaInvalido(form, (data.config.documentTypes as any[]) || []);
+        if (malo) { errs.products = malo; triggerError(malo); }
+      }
     }
     if (s === 3) {
       if (!form.total || Number(form.total) <= 0) errs.total = "El valor total debe ser mayor a $0";

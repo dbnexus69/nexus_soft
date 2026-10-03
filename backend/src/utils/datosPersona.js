@@ -7,10 +7,29 @@ const REGLAS_DOCUMENTO = {
   CC: { patron: /^\d{6,10}$/, mensaje: 'La cédula de ciudadanía lleva solo números, de 6 a 10 dígitos' },
   TI: { patron: /^\d{10,11}$/, mensaje: 'La tarjeta de identidad lleva solo números, de 10 u 11 dígitos' },
   CE: { patron: /^\d{6,10}$/, mensaje: 'La cédula de extranjería lleva solo números, de 6 a 10 dígitos' },
-  NIT: { patron: /^\d{9,10}(-?\d)?$/, mensaje: 'El NIT lleva de 9 a 11 números, con o sin guion antes del dígito de verificación (900123456-7)' },
+  NIT: { patron: /^\d{9,10}(-?\d)?$/, mensaje: 'El NIT lleva de 9 a 11 números, con o sin guion antes del dígito de verificación (900123456-8)' },
   PA: { patron: /^[A-Z0-9]{5,15}$/, mensaje: 'El pasaporte lleva letras y números, de 5 a 15 caracteres' },
 };
 const REGLA_GENERICA = { patron: /^[A-Z0-9]{4,20}$/, mensaje: 'El documento lleva solo letras y números, de 4 a 20 caracteres' };
+
+// Dígito de verificación del NIT (DIAN): módulo 11 sobre la base, con estos pesos de derecha a izquierda.
+const PESOS_NIT = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+const digitoNit = (base) => {
+  const r = [...base].reverse().reduce((suma, d, i) => suma + Number(d) * PESOS_NIT[i], 0) % 11;
+  return r > 1 ? 11 - r : r;
+};
+
+/**
+ * null si el dígito de un NIT es el que corresponde. Solo se comprueba cuando se sabe cuál es el dígito sin
+ * adivinar: con guion (900123456-8) o con 11 cifras. Un NIT de 10 cifras sin guion puede ser un NIT de
+ * persona natural sin dígito, y no se rechaza.
+ */
+function mensajeDigitoNit(numero) {
+  const m = /^(\d{9,10})-(\d)$/.exec(numero) || /^(\d{10})(\d)$/.exec(numero);
+  if (!m) return null;
+  const esperado = digitoNit(m[1]);
+  return Number(m[2]) === esperado ? null : `El dígito de verificación del NIT no coincide: para ${m[1]} es ${esperado}`;
+}
 
 const reglaDeDocumento = (tipo) => REGLAS_DOCUMENTO[String(tipo || '').trim().toUpperCase()] || REGLA_GENERICA;
 
@@ -20,7 +39,8 @@ const normalizarDocumento = (valor) => String(valor ?? '').trim().toUpperCase();
 function mensajeDocumento(tipo, numero) {
   if (!numero) return 'El número de documento es obligatorio';
   const regla = reglaDeDocumento(tipo);
-  return regla.patron.test(numero) ? null : regla.mensaje;
+  if (!regla.patron.test(numero)) return regla.mensaje;
+  return String(tipo || '').trim().toUpperCase() === 'NIT' ? mensajeDigitoNit(numero) : null;
 }
 
 const PATRON_NOMBRE = /^\p{L}+(?:[ '’-]\p{L}+)*$/u;
@@ -60,7 +80,7 @@ function mensajeNacimiento(valor) {
 }
 
 module.exports = {
-  REGLAS_DOCUMENTO,
+  REGLAS_DOCUMENTO, digitoNit,
   normalizarDocumento, mensajeDocumento,
   normalizarNombre, mensajeNombre,
   mensajeTelefono, mensajeNacimiento,

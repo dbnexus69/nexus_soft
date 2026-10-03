@@ -5,6 +5,7 @@ const { buildMeta } = require('../utils/paginationHelper');
 const emailService = require('../utils/emailService');
 const { olvidarUsuario } = require('../middleware/authCache');
 const { formatName } = require('../utils/stringUtils');
+const { validarDocumento } = require('../utils/tipoDocumento');
 
 class UsersService {
   async listUsers({ pagination, search, role, status }) {
@@ -55,7 +56,7 @@ class UsersService {
             select: {
               nombres: true, apellidos: true, telefono: true, documento: true,
               birth_date: true, avatar_url: true,
-              tipos_documento: { select: { abreviatura: true } },
+              tipos_documento: { select: { id: true, abreviatura: true } },
             },
           },
           roles: { select: { nombre: true } },
@@ -73,6 +74,7 @@ class UsersService {
       email: u.email,
       role: u.roles?.nombre,
       phone: u.personas.telefono,
+      docTypeId: u.personas.tipos_documento?.id ?? null,
       docType: u.personas.tipos_documento?.abreviatura || null,
       docNumber: u.personas.documento,
       status: u.status,
@@ -134,6 +136,7 @@ class UsersService {
       email: usuario.email,
       role: usuario.roles.nombre,
       phone: usuario.personas.telefono,
+      docTypeId: usuario.personas.tipos_documento?.id ?? null,
       docType: usuario.personas.tipos_documento?.abreviatura || null,
       docNumber: usuario.personas.documento,
       status: usuario.status,
@@ -193,11 +196,8 @@ class UsersService {
   async createUser(data) {
     const password_hash = await bcrypt.hash(data.password, 12);
 
-    let tipo_documento_id = null;
-    if (data.docType) {
-      const dt = await prisma.tipos_documento.findUnique({ where: { abreviatura: data.docType } });
-      if (dt) tipo_documento_id = dt.id;
-    }
+    const tipo = await validarDocumento(data);
+    const tipo_documento_id = tipo ? tipo.id : null;
 
     if (data.docNumber) {
       // Solo bloquear si el usuario existente NO fue eliminado lógicamente
@@ -311,6 +311,7 @@ class UsersService {
       email: usuario.email,
       role: usuario.roles.nombre,
       phone: usuario.personas.telefono,
+      docTypeId: usuario.personas.tipos_documento?.id ?? null,
       docType: usuario.personas.tipos_documento?.abreviatura || null,
       docNumber: usuario.personas.documento,
       status: usuario.status,
@@ -356,10 +357,8 @@ class UsersService {
     if (data.avatar !== undefined) personaUpdate.avatar_url = data.avatar;
     if (data.email) personaUpdate.email = data.email;
 
-    if (data.docType) {
-      const dt = await prisma.tipos_documento.findUnique({ where: { abreviatura: data.docType } });
-      if (dt) personaUpdate.tipo_documento_id = dt.id;
-    }
+    const tipo = await validarDocumento(data);
+    if (tipo) personaUpdate.tipo_documento_id = tipo.id;
 
     if (Object.keys(personaUpdate).length > 0) {
       personaUpdate.updated_at = new Date();
@@ -402,6 +401,7 @@ class UsersService {
       email: updated.email,
       role: updated.roles.nombre,
       phone: updated.personas.telefono,
+      docTypeId: updated.personas.tipos_documento?.id ?? null,
       docType: updated.personas.tipos_documento?.abreviatura || null,
       docNumber: updated.personas.documento,
       status: updated.status,

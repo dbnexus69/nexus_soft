@@ -34,7 +34,7 @@ El formulario de clientes validaba en el navegador, con huecos, y el servidor no
 | Cédula de ciudadanía (`CC`) | Solo números, 6 a 10 dígitos |
 | Tarjeta de identidad (`TI`) | Solo números, 10 u 11 dígitos |
 | Cédula de extranjería (`CE`) | Solo números, 6 a 10 dígitos |
-| `NIT` | 9 a 11 números, con o sin guion antes del dígito de verificación (`900123456-7`) |
+| `NIT` | 9 a 11 números, con o sin guion antes del dígito de verificación (`900123456-8`) |
 | Pasaporte (`PA`) | Letras y números, 5 a 15 caracteres |
 | Tipo nuevo, sin regla propia | Letras y números, 4 a 20 caracteres |
 | Todo documento | Sin espacios ni puntos; se guarda en mayúsculas |
@@ -67,7 +67,7 @@ teléfono siguen siendo obligatorios; por la API son opcionales, pero si llegan 
   reglas ya están en un módulo reutilizable; conectarlos es una entrega por módulo.
 - **Reglas configurables por tipo desde gestión interna.** Habría que añadir una columna a
   `tipos_documento`, una tabla compartida de la base que usan las dos ramas. Se descartó por ahora.
-- **El dígito de verificación del NIT** (cálculo módulo 11): hoy solo se comprueba la forma.
+- ~~**El dígito de verificación del NIT** (cálculo módulo 11)~~: hecho después (T5), solo cuando el dígito es inequívoco.
 - **Comprobar que el documento exista** en una fuente oficial.
 
 ## Riesgos

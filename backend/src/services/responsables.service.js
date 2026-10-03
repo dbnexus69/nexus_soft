@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
+const { validarDocumento } = require('../utils/tipoDocumento');
 
 class ResponsablesService {
   /**
@@ -177,13 +178,10 @@ class ResponsablesService {
    * Crear responsable
    */
   async createResponsable(data) {
-    const { firstName, lastName, docType, docTypeId: rawDocTypeId, docNumber, phone, email } = data;
+    const { firstName, lastName, docNumber, phone, email } = data;
 
-    let docTypeId = rawDocTypeId ? parseInt(rawDocTypeId) : null;
-    if (!docTypeId && docType) {
-      const tipoDoc = await prisma.tipos_documento.findFirst({ where: { nombre: docType } });
-      docTypeId = tipoDoc ? tipoDoc.id : null;
-    }
+    const tipo = await validarDocumento(data);
+    const docTypeId = tipo ? tipo.id : null;
 
     const result = await prisma.transaccion(async (tx) => {
       let personas = docNumber ? await tx.personas.findFirst({
@@ -255,13 +253,10 @@ class ResponsablesService {
    * Actualizar responsable
    */
   async updateResponsable(id, data) {
-    const { firstName, lastName, docType, docTypeId: rawDocTypeId, docNumber, phone, email, status } = data;
+    const { firstName, lastName, docNumber, phone, email, status } = data;
 
-    let docTypeId = rawDocTypeId ? parseInt(rawDocTypeId) : null;
-    if (!docTypeId && docType) {
-      const tipoDoc = await prisma.tipos_documento.findFirst({ where: { nombre: docType } });
-      docTypeId = tipoDoc ? tipoDoc.id : null;
-    }
+    const tipo = await validarDocumento(data);
+    const docTypeId = tipo ? tipo.id : null;
 
     const responsable = await prisma.responsables.findUnique({
       where: { id },

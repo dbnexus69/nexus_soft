@@ -4,8 +4,8 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hechas T0–T10, T15–T21 (T4, T5 y T20 confirmadas en el navegador).
-Pendientes T11 (verificadores al repo), T12 (despliegue, cuando haya hosting) y T14 (deuda menor).
+**Estado (2026-10-03).** Hechas T0–T11, T15–T21 (T4, T5 y T20 confirmadas en el navegador).
+Pendientes T12 (despliegue, cuando haya hosting) y T14 (deuda menor; hechas la marca por agencia, el ruido del registro y los ids, queda unificar las búsquedas).
 T13 fuera de alcance: `moon-travel` es de otro proyecto.
 
 ---
@@ -370,12 +370,36 @@ denied` · `migrate status` (con `postgres`) sigue diciendo "up to date" · `/ap
 `test:aislamiento` "Todo aislado" y el verificador de T7 en verde · aviso de seguridad de Supabase
 vacío. **B14 cumplido.**
 
-## T11 · Convertir el verificador en prueba del repo `[ ]`
+## T11 · Convertir el verificador en prueba del repo `[x]`
 
-Hoy vive en una carpeta temporal, fuera del repositorio. Debería quedar como
-`backend/tests/aislamiento-api.js`, con su script en `package.json`, para que A3 y A9 sean
-comprobables en cada despliegue como pide la 001. Y ampliarlo con lo que no cubre: usuarios no admin,
-liquidaciones de comisiones, y la suplantación con un superadmin de prueba.
+El verificador vivía en una carpeta temporal, fuera del repositorio. Ahora es
+`backend/tests/aislamiento-api.js`, con `pnpm test:aislamiento-api`.
+
+Levanta su propio servidor en otro puerto (`TEST_PORT`, 3917 por defecto) con el rol de la aplicación,
+monta dos agencias con el servicio real de altas (`prueba-api-a-…`, `prueba-api-b-…`) más un
+superadministrador de prueba dentro de la primera, y al terminar lo desmonta todo —agencias, usuarios y
+los ficheros subidos— pase lo que pase. Solo toca agencias cuyo slug empieza por `prueba-api-`.
+Tarda ~1–2 min por la latencia del pooler.
+
+**Qué comprueba (58):** sin sesión y con un token inventado (401) · **A3**: un id de otra agencia
+responde 404 sin revelar que existe (ver, editar, borrar, productos, abonar, cliente), los listados no
+cruzan, y cada agencia numera desde 1 · **A9**: un voucher no se lee sin sesión (401) ni con la de otra
+agencia (404), sí con la propia, y no se sube a una venta ajena · **un asesor**: ve a sus compañeros pero
+no crea, edita ni borra usuarios (403, no 404/422), no ve ni reescribe permisos, no administra agencias,
+y su listado de ventas son solo las propias (la ajena: 404; editarla o anularla, rechazado) ·
+**liquidaciones**: B no puede liquidar al comisionista de A ni verlo, A liquida por el neto de la venta
+(60.000), una segunda liquidación sin ventas pendientes no pasa, y cada agencia ve solo las suyas ·
+**suplantación**: un admin corriente no puede (403), suplantar la propia agencia (400), suplantando se
+ve la agencia visitada y nada más, `/auth/me` sigue siendo el superadministrador, crear una venta sin
+asesor da un 400 claro, el rol `admin` no se reescribe (400), y al salir el token deja de valer (401).
+
+**Comprobado:** corre en verde de punta a punta contra la base compartida y la deja limpia (0 agencias
+`prueba-api-` y puerto libre al terminar).
+
+*Dos cosas que la prueba fijó tal como están hoy, para que no se confundan con un fallo:*
+- Salir de la suplantación se hace con el propio token suplantado (es el que se invalida) y responde
+  **200** con un mensaje, no 204.
+- Un fichero ajeno responde **404**, no el 403 que decía la 001 (A9): es lo correcto, no revelar que existe.
 
 ## T12 · Despliegue `[ ]`
 
@@ -395,14 +419,26 @@ Nexus Soft. No se toca. Lo de abajo queda como contexto de por qué se anotó.
 faltan `empresas`, `empresa_id`, `numero` y las funciones `app_*`). Si va a ser un entorno, hay que
 aplicar las migraciones y crear el rol; si no, borrarlo.
 
-## T14 · Deuda menor `[ ]`
+## T14 · Deuda menor `[~]`
 
 - **Coherencia de búsquedas:** unas 16 (persona por documento, rol por nombre, método de pago por
-  nombre). La de método de pago en `createSale` usa `contains` insensible: ni siquiera es exacta.
-- **Marca por agencia:** el texto legal del voucher (`VoucherPDF.tsx`) dice "DB Nexus", la marca de la
-  casa parpadea mientras carga `/branding`, y el `<title>` es fijo.
-- **Ruido en el registro:** el manejador de errores escribe con traza cada 404 de negocio (54 líneas
-  por corrida del verificador).
+  nombre). *Avance (2026-10-03):* la del método de pago principal en `createSale` pasa de `contains` a
+  coincidencia exacta sin distinguir mayúsculas (`equals` + `mode: 'insensitive'`); el frontend manda el
+  nombre del catálogo, o "Mixto" con varios abonos, que no existe y queda en `NULL` como antes. Falta
+  el resto, una por una: unificar el criterio exige decidir cuál es el contrato de cada una (lo mismo
+  que anota la spec 003 T4 para el tipo de documento).
+- ~~**Marca por agencia:** el texto legal del voucher dice "DB Nexus", la marca de la casa parpadea
+  mientras carga `/branding`, y el `<title>` es fijo.~~ Hecho (2026-10-03): el texto legal del voucher
+  usa el nombre de la agencia (`DB Nexus` solo si no hay marca); el `<title>` lleva el de la agencia y
+  vuelve al de `index.html` al salir; y el parpadeo era del login, que pedía la marca sin esperarla y
+  antes de guardar el token, así que la primera pantalla salía con la de la casa — ahora guarda el
+  token, espera la marca y recién entonces fija el usuario (al recargar ya esperaba). `tsc` limpio.
+  **Por ver en pantalla:** entrar con una agencia con marca (sin parpadeo, título de la pestaña) y
+  descargar un voucher (texto legal con el nombre de la agencia).
+- ~~**Ruido en el registro:** el manejador de errores escribe con traza cada 404 de negocio.~~ Hecho
+  (2026-10-03): lo previsto (4xx propios, y los errores de Prisma, Zod y multer que se traducen) escribe
+  una línea `[REQUEST_REJECTED]`; `[ERROR]` con meta y traza queda para lo inesperado. Comprobado
+  llamando al manejador con un `NotFoundError` y con un `Error` cualquiera.
 - ~~**`.env.example`:** tiene erratas de una edición a mano (`FRONTEND_URL` con el puerto cortado y
   una línea final corrupta: `L_FROM=""FROM=""`).~~ Resuelto (commit `de9c1d8`): puerto `5173`,
   línea corrupta fuera, y el `.env.example` del frontend apunta a `/api/v1`.
@@ -411,8 +447,12 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
   cartera; el arreglo es un middleware de validación en los routers, no 24 parches.
   *Avance (2026-10-01):* el middleware ya existe (`middleware/numericParams.js`, `paramsNumericos`)
   y está puesto en 7 routers (clients, commissions, companies, config, responsables, sales, users).
-  Falta revisar si `roles`, `stats` y `uploads` reciben ids numéricos por la URL y, si sí,
-  ponérselo; `flights` usa ids de tramo no numéricos (spec 004 ya los valida con 400).
+  *Revisado (2026-10-03):* `roles` recibe un nombre de rol que ya se valida contra la base (400 si no
+  existe), `uploads` recibe un nombre de fichero (`basename`) y `stats` no tiene parámetros de ruta:
+  ninguno necesita el middleware. `flights` usa ids de tramo no numéricos (spec 004 ya los valida con
+  400). **De paso salió otro 500 de la misma clase:** `?limit=-5` en `top-clients`, `asesor-performance`
+  y `category-distribution` llegaba como `LIMIT -5` y Postgres lo rechazaba; ahora un helper (`topeDe`)
+  fija el piso en 1, como ya hacía `credit-breakdown`.
 
 
 ## T15 · La venta se crea entera: validación en su única puerta y vouchers `[x]`
@@ -735,6 +775,8 @@ devuelto el archivo a su versión anterior, vuelve a fallar; `tsc --noEmit` limp
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T11 | El verificador de la API pasa al repo: `pnpm test:aislamiento-api`, 58 comprobaciones (A3, A9, un asesor, liquidaciones, suplantación), en verde y sin dejar restos. |
+| 2026-10-03 | T14 | Marca por agencia (texto legal del voucher, título de la pestaña, sin parpadeo al entrar), registro sin traza para los rechazos previstos (`[REQUEST_REJECTED]`), ids revisados en roles, stats y uploads (y un `?limit=-5` que daba 500), y la búsqueda del método de pago principal, exacta. Falta unificar el resto de búsquedas. |
 | 2026-10-03 | T21 | El detalle de una venta podía mostrar los servicios de otra si se cambiaba de venta antes de que cargaran. Reproducido y arreglado. |
 | 2026-10-03 | T4, T5, T20 | Confirmadas en el navegador. En T4 salió un sexto campo perdido: el proveedor, en las 11 categorías que usan `FinancialSection`; arreglado. |
 | 2026-10-02 | T20 | Reportado después de la verificación: un permiso recién guardado podía no reflejarse (un `if` ajeno al catálogo lo descartaba en `fetchConfig`), y el botón de guardar no avisaba que estaba trabajando. Los dos arreglados; queda anotado que un asesor con la pantalla ya abierta necesita recargar para ver un permiso nuevo, por diseño. |

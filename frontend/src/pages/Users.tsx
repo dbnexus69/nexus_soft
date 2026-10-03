@@ -31,7 +31,7 @@ export default function Users() {
     fetchUsers
   } = useUsersContext();
   const { success, error: toastError } = useToast();
-  const { canEdit } = usePermissions();
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   // Solo el superadministrador tiene `permissions.edit`. Al admin se le muestra
   // la pantalla en lectura: puede ver qué puede hacer cada rol, no cambiarlo.
@@ -85,6 +85,10 @@ export default function Users() {
   }, [users, filterRole, searchTerm, sortConfig]);
 
   const handleOpenModal = (user?: User) => {
+    // Defensa de más: el botón que llega aquí ya está oculto para quien no
+    // tiene el permiso, pero esta función queda igual de correcta si algo
+    // más la llama alguna vez.
+    if (user ? !canEdit('users') : !canCreate('users')) return;
     if (user) {
       setEditingUser(user);
     } else {
@@ -114,7 +118,10 @@ export default function Users() {
   const [porDarDeBaja, setPorDarDeBaja] = useState<User | null>(null);
   const [dandoDeBaja, setDandoDeBaja] = useState(false);
 
-  const handleDeleteUser = (user: User) => setPorDarDeBaja(user);
+  const handleDeleteUser = (user: User) => {
+    if (!canDelete('users')) return;
+    setPorDarDeBaja(user);
+  };
 
   const confirmarBaja = async () => {
     const user = porDarDeBaja;
@@ -141,7 +148,14 @@ export default function Users() {
     }
   };
 
+  // Sin esto el botón no daba ninguna señal entre el clic y el aviso: la
+  // escritura en la base más el releer de vuelta tardan su medio segundo, y
+  // en ese rato no pasaba nada en pantalla — parecía que el clic no había
+  // hecho nada hasta que, de pronto, salía el aviso.
+  const [guardandoPermisos, setGuardandoPermisos] = useState(false);
+
   const handleSaveRolePermissions = async () => {
+    setGuardandoPermisos(true);
     try {
       await updateRolePermissions(editingRole, editingUserPermissions);
       // Releer de la base: lo que se muestra debe ser lo que quedó guardado,
@@ -150,6 +164,8 @@ export default function Users() {
       success("Permisos actualizados");
     } catch (err: any) {
       toastError(err?.response?.data?.error?.message || "Error al guardar permisos");
+    } finally {
+      setGuardandoPermisos(false);
     }
   };
 
@@ -228,12 +244,14 @@ export default function Users() {
                   <option value="admin">Admins</option>
                   <option value="asesor">Asesores</option>
                 </select>
-                <Button 
-                  onClick={() => handleOpenModal()} 
-                  className="bg-primary hover:bg-primary-dark text-white shadow-md rounded-xl px-6 h-11 transition-colors"
-                >
-                  <Plus size={20} className="mr-1" /> Nuevo Usuario
-                </Button>
+                {canCreate('users') && (
+                  <Button
+                    onClick={() => handleOpenModal()}
+                    className="bg-primary hover:bg-primary-dark text-white shadow-md rounded-xl px-6 h-11 transition-colors"
+                  >
+                    <Plus size={20} className="mr-1" /> Nuevo Usuario
+                  </Button>
+                )}
               </div>
             }
           >
@@ -249,6 +267,8 @@ export default function Users() {
               onViewDetail={(u) => { setEditingUser(u); setIsDetailModalOpen(true); }}
               onEdit={(u) => handleOpenModal(u)}
               onDelete={handleDeleteUser}
+              canEdit={canEdit('users')}
+              canDelete={canDelete('users')}
             />
           </div>
         </Card>
@@ -304,8 +324,8 @@ export default function Users() {
               {/* Solo superadmin: el backend responde 403 a los demás, así que
                   mostrar un botón activo sería prometer algo que no va a pasar. */}
               {puedeEditarPermisos ? (
-                <Button size="sm" onClick={handleSaveRolePermissions}>
-                  Guardar cambios
+                <Button size="sm" onClick={handleSaveRolePermissions} disabled={guardandoPermisos}>
+                  {guardandoPermisos ? "Guardando…" : "Guardar cambios"}
                 </Button>
               ) : (
                 <p className="max-w-xs text-xs text-accent">
@@ -319,7 +339,7 @@ export default function Users() {
               <PermissionsGrid
                 permissions={editingUserPermissions}
                 onChange={setEditingUserPermissions}
-                readOnly={!puedeEditarPermisos}
+                readOnly={!puedeEditarPermisos || guardandoPermisos}
               />
             )}
           </div>

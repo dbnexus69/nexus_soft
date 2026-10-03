@@ -223,28 +223,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ? normalizeRolePermissions(adminPerms, ADMIN_PERMISSIONS)
           : emptyData.config.rolePermissions.admin,
       };
-      if (configAll && Object.keys(configAll).length > 0) {
-        const newConfig = {
-          cards: configAll.cards || [],
-          paymentMethods: configAll['payment-methods'] || [],
-          documentTypes: configAll['document-types'] || [],
-          airlines: configAll.airlines || [],
-          suppliers: configAll.suppliers || [],
-          airports: configAll.airports || [],
-          baggage: configAll.baggage || [],
-          packages: configAll.packages || [],
-        };
-        saveConfigCache(newConfig);
-        
-        setData(prev => ({
-          ...prev,
-          config: {
-            ...prev.config,
-            ...newConfig,
-            rolePermissions: resolvedRolePermissions,
-          }
-        }));
-      }
+      // `newConfig` solo existe si el catálogo vino bien; los permisos se
+      // aplican SIEMPRE, sin importar eso. Antes el `setData` entero —catálogo
+      // Y permisos— dependía de que `configAll` no viniera vacío: un permiso
+      // recién guardado y leído de vuelta con éxito se tiraba igual si
+      // `getAllConfig()` fallaba o tardaba, y la pantalla de Usuarios se
+      // quedaba mostrando la matriz vieja aunque el guardado hubiera
+      // funcionado.
+      const hayCatalogo = configAll && Object.keys(configAll).length > 0;
+      const newConfig = hayCatalogo ? {
+        cards: configAll.cards || [],
+        paymentMethods: configAll['payment-methods'] || [],
+        documentTypes: configAll['document-types'] || [],
+        airlines: configAll.airlines || [],
+        suppliers: configAll.suppliers || [],
+        airports: configAll.airports || [],
+        baggage: configAll.baggage || [],
+        packages: configAll.packages || [],
+      } : null;
+      if (newConfig) saveConfigCache(newConfig);
+
+      setData(prev => ({
+        ...prev,
+        config: { ...prev.config, ...newConfig, rolePermissions: resolvedRolePermissions },
+      }));
     } catch (err) {
       console.error('[DataContext] Error in fetchConfig catch block:', err);
     }

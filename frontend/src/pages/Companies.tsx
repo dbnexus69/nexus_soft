@@ -115,7 +115,7 @@ export default function Companies() {
           </p>
         </div>
         <Button onClick={() => setCreando(true)}>
-          <Plus size={16} /> Dar de alta una agencia
+          <Plus size={16} />Crear Agencia
         </Button>
       </header>
 
@@ -133,7 +133,7 @@ export default function Companies() {
         <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center dark:border-slate-700">
           <Building2 size={28} className="mx-auto text-accent" />
           <p className="mt-3 text-sm text-accent">
-            Todavía no hay ninguna agencia dada de alta. La primera que crees podrá entrar el mismo día.
+            No hay ninguna agencia creada.
           </p>
         </div>
       ) : (

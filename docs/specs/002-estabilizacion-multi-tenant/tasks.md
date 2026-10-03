@@ -4,7 +4,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-01).** Hechas T0–T3, T6–T10, T15–T19. Por confirmar en pantalla T4 y T5.
+**Estado (2026-10-02).** Hechas T0–T3, T6–T10, T15–T20. Por confirmar en pantalla T4 y T5.
 Pendientes T11 (verificadores al repo), T12 (despliegue), T13 (`moon-travel`) y T14 (deuda menor).
 
 ---
@@ -602,12 +602,94 @@ real creando su propio cliente sigue guardando su propio id, no `null`. `check:p
 *No resuelto, porque no se pudo reproducir:* el fallo al crear un usuario suplantando que se
 reportó. Queda para revisar si vuelve a pasar, con el mensaje exacto que dé la pantalla.
 
+## T20 · Verificación del módulo de permisos, sobre Usuarios `[x]`
+
+Pedido: comprobar que los permisos de la pantalla de Usuarios funcionan de verdad.
+
+**El backend, comprobado por la API real** con una agencia de prueba desechable, un asesor y un
+freelancer creados dentro de ella, y un superadministrador de prueba aparte (22 comprobaciones,
+0 fallos):
+
+- La matriz por defecto se cumple al pie de la letra: un asesor ve a **todos** los usuarios de su
+  agencia (`users.view` es un sí/no, no `own`/`all` — no tiene sentido ocultarle a un asesor quiénes
+  son sus compañeros), pero no puede crear, editar ni borrar ninguno (**403**, nunca 404 ni 422, que
+  habría sido la señal de que `authorize` no corrió).
+- El admin de la agencia sí puede todo eso — **pero no puede guardar la matriz de permisos**: solo
+  puede verla (403 al intentar un `PUT /roles/:rol/permissions`). No es un hallazgo, es el diseño: en
+  `authorize.js`, `ADMIN_PERMISSIONS.permissions.edit` es `false` a propósito — "editar los permisos
+  de un rol no es `config.edit`" — y la pantalla ya lo refleja mostrando la rejilla en solo lectura.
+  Reescribir permisos es exclusivo del superadministrador, suplantando la agencia que se quiere
+  ajustar.
+- Suplantando, el superadministrador sí guarda la matriz, y el cambio se nota **al instante** en una
+  sesión de asesor ya abierta, sin volver a entrar (`updatePermissions` llama a `olvidarTodo()`, que
+  vacía la caché de autenticación entera). Revertir el permiso también se nota al instante.
+- `admin` y `superadmin` siguen sin poder editarse ni suplantando (**400**, "no es editable").
+- Sin sesión, `/users` da 401.
+- Comparadas las cuatro copias de la matriz de permisos que debían coincidir
+  (`authorize.js`, `roles.service.js` → `DEFAULT_ROLE_VALUES`, `companies.service.js` → siembra de
+  una agencia nueva, `frontend/src/types/index.tsx`): `companies.service.js` **importa** las plantillas
+  de `authorize.js` en vez de copiarlas (tal como pide su propio comentario), así que esas dos nunca
+  pueden discrepar. `DEFAULT_ROLE_VALUES` y el frontend sí son copias de mano, y hoy coinciden
+  campo por campo con `authorize.js` para `users` — pero es la clase de triple copia que ya ha
+  causado bugs en este repo (ver `CLAUDE.md`, "Adding a module or action touches exactly three
+  places"); conviene recordar que están para no dejarlas desviarse en un cambio futuro.
+
+**El frontend tenía un hallazgo real.** `Users.tsx` nunca llamaba a `canCreate`/`canEdit`/`canDelete`
+para el módulo `users` — a diferencia de **todas** las pantallas comparables (`Clients.tsx`,
+`Responsables.tsx`, `CommissionAgents.tsx`, que sí lo hacen). El botón "Nuevo Usuario" y los íconos
+de editar/borrar de cada fila se mostraban a cualquiera que pudiera entrar a la pantalla —cualquier
+asesor o freelancer, porque `users.view` es `true` por defecto—, así que una persona sin el permiso
+veía los tres controles, los usaba, y el backend se lo rechazaba con un 403 que no tenía por qué
+llegar a verse.
+
+**Lo hecho:** `Users.tsx` desestructura `canCreate`/`canDelete` además de `canEdit`; el botón "Nuevo
+Usuario" queda dentro de `{canCreate('users') && …}`, igual que en las otras pantallas; `UserTable`
+gana dos props, `canEdit` y `canDelete`, que ocultan el lápiz y la papelera de cada fila cuando
+no corresponde (el ojo de "ver detalle" se queda, porque ver ya lo permite la propia pantalla).
+`handleOpenModal` y `handleDeleteUser` llevan además su propia comprobación por si alguna vez algo
+más los llama saltándose el botón.
+
+**Comprobado:** `tsc --noEmit` limpio. El backend no se tocó —ya estaba bien— y la verificación de
+la API sigue en verde tras el cambio.
+
+**Después (2026-10-02), reportado por el usuario: "puse unos permisos y no se vieron reflejados en
+los asesores" y el botón de guardar no avisaba de que estaba trabajando.** Dos cosas distintas.
+
+1. **Un bug real en `fetchConfig()`** (`DataContext.tsx`). Guardar los permisos hace dos cosas: la
+   escritura (`PUT /roles/:rol/permissions`) y, justo después, un releer de vuelta
+   (`fetchConfig()`) para que la pantalla muestre lo que quedó guardado y no lo que el formulario
+   tenía. Pero `fetchConfig` metía los permisos recién leídos —con éxito— **dentro del mismo `if`
+   que decidía si el resto del catálogo (aerolíneas, proveedores…) había venido bien**. Si
+   `GET /config/all` fallaba o tardaba, por el motivo que fuera, los permisos que SÍ se habían
+   leído bien se tiraban igual, y la pantalla —la del propio superadministrador que acababa de
+   guardar, y la de cualquier asesor que recargara después— seguía mostrando la matriz vieja. Ahora
+   los permisos se aplican siempre que esa petición conteste algo, sin depender de si el resto del
+   catálogo vino bien.
+2. **El botón "Guardar cambios" no tenía ningún estado de carga.** Entre el clic y el aviso hay una
+   escritura más un releer de vuelta — medio segundo, quizás más con el pooler —, y en ese rato no
+   pasaba nada en pantalla: parecía que el clic no había hecho nada. Ahora se deshabilita y dice
+   "Guardando…" mientras tanto, igual que "Creando…"/"Guardando…" en las modales de Agencias; la
+   rejilla de permisos también queda de solo lectura durante ese rato, para no editar sobre un envío
+   en curso.
+
+**Lo que esto NO cambia, y conviene saberlo:** un asesor que ya tenga la pantalla abierta no ve el
+permiso nuevo hasta que recarga o vuelve a entrar — los permisos se leen una sola vez por sesión
+(`fetchConfig` solo corre al montar la aplicación), igual que el resto del catálogo. No es un bug de
+seguridad: la comprobación en el servidor (`authorize()`) ya aplica el cambio al instante incluso con
+el mismo token sin volver a entrar (comprobado arriba, T20); lo único que tarda es que el navegador
+de quien ya estaba dentro se entere de que ahora puede ver un botón nuevo.
+
+**Comprobado:** `tsc --noEmit` limpio. No probado en pantalla — ver spec 006 sobre por qué no hay
+navegador disponible en esta sesión.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-02 | T20 | Reportado después de la verificación: un permiso recién guardado podía no reflejarse (un `if` ajeno al catálogo lo descartaba en `fetchConfig`), y el botón de guardar no avisaba que estaba trabajando. Los dos arreglados; queda anotado que un asesor con la pantalla ya abierta necesita recargar para ver un permiso nuevo, por diseño. |
+| 2026-10-02 | T20 | El backend del módulo de permisos, comprobado de punta a punta sobre Usuarios: 22/22. La pantalla de Usuarios sí tenía un hueco — no ocultaba "Nuevo Usuario" ni editar/borrar a quien no tenía el permiso, a diferencia de toda pantalla comparable. |
 | 2026-10-01 | T19 | Suplantando, crear un cliente o un paquete de viaje daba un 400 de clave ajena sin explicación: la columna "creado por" exige que quien crea pertenezca a esa agencia, y el superadministrador suplantando no pertenece a ninguna de las que visita. Se deja sin creador (la auditoría de la suplantación ya dice quién fue) en vez de escribir un id ajeno. |
 | 2026-09-27 | `feat-bayrol` | La rama se puso al día con las 3 migraciones y el schema que tenía `feat-dbmoon` y ella no (`tipo_hotel_turistico`, `tarjeta_de_pago_al_proveedor`, la que le quita a `app_nexus` el acceso a `_prisma_migrations`). El resto del diff de `schema.prisma` era solo reformateo de `prisma format`. `migrate status` al día (17 migraciones), `test:aislamiento` pasa a esperar 54 claves compuestas. |
 | 2026-09-27 | T18 | `createSale` sin `asesorId` daba 500 crudo en vez de caer al usuario autenticado. De paso, convención de logs fijada en `CLAUDE.md` (español en comentarios, inglés con tag de error en los logs) y aplicada en los cinco sitios que la incumplían. |

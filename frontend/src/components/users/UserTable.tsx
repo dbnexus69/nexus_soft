@@ -22,6 +22,11 @@ interface UserTableProps {
   onDelete: (user: User) => void;
   /** Filas fantasma mientras llegan los datos. */
   loading?: boolean;
+  /** Si el rol de quien mira puede editar/borrar un usuario: mismo patrón que
+   *  ClientTable/ResponsablesTable, para que el botón no se muestre a quien
+   *  el backend de todas formas va a rechazar con un 403. */
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 export const UserTable: React.FC<UserTableProps> = ({
@@ -32,7 +37,9 @@ export const UserTable: React.FC<UserTableProps> = ({
   onSort,
   onViewDetail,
   onEdit,
-  onDelete
+  onDelete,
+  canEdit,
+  canDelete,
 }) => {
   return (
     <div className="overflow-x-auto">
@@ -115,20 +122,24 @@ export const UserTable: React.FC<UserTableProps> = ({
                     >
                       <Eye size={16} />
                     </button>
-                    <button
-                      onClick={() => onEdit(user)}
-                      className="p-1 text-slate-400 hover:text-amber-600 transition-colors"
-                      title="Editar"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => onDelete(user)}
-                      className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => onEdit(user)}
+                        className="p-1 text-slate-400 hover:text-amber-600 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => onDelete(user)}
+                        className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

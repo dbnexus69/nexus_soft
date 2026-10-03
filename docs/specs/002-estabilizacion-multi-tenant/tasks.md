@@ -825,8 +825,16 @@ nuevo conserva el origen del superadmin y trabaja en la tercera agencia. **Compr
 `/auth/me` sigue siendo el superadmin y `/branding` es la de C; dentro de B, suplantar la propia agencia da un
 400 claro (en `pnpm test:aislamiento-api`).
 
-**Sin resolver, necesito el recorrido exacto:** si el síntoma de la recarga es otro (qué pantalla, qué se
-ve y qué se esperaba, y si se había entrado desde dentro de otra agencia o desde el superadmin directo).
+**El síntoma, aclarado después:** dentro de una agencia suplantada el perfil y el menú seguían siendo los
+del superadministrador ("Admin Nexus · SUPERADMIN", con el enlace a Agencias). La sesión tiene que seguir
+siendo la suya —es lo que le da sus permisos, incluido reescribir los de un rol—, pero lo que se ve tiene
+que ser la agencia. Ahora `GET /auth/me` trae también `empresaNombre`; el frontend calcula un
+`perfil` visible (`AuthContext`) que, suplantando, muestra el nombre y el logo de la agencia, el rol "Superadmin
+en la agencia" y una línea "Entraste como <nombre>"; el menú de arriba, el desplegable y el perfil del menú
+móvil lo usan; y el enlace "Agencias" no se ofrece dentro de una agencia (se sale primero con el botón rojo).
+**Comprobado:** `tsc` limpio y, por la API, `/auth/me` suplantando trae el superadmin, la agencia y el id de la
+suplantación. **Por ver en pantalla.** Sigue pendiente, y es aparte: el asistente de venta firma con el
+nombre del usuario (el superadmin) y suplantando el servidor rechaza la venta con un 400 claro (T19).
 
 ---
 

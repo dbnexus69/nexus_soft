@@ -34,7 +34,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
-  const { user, logout, isAdmin, marca } = useAuth();
+  const { user, logout, isAdmin, marca, perfil } = useAuth();
   const { canView } = usePermissions();
   const [isHovered, setIsHovered] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -115,7 +115,8 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
   const filteredMainLinks = mainLinks.filter(link => canView(link.permission));
   const filteredAdminLinks = (adminLinks as any[]).filter(link => {
-    if (link.permission === 'superadmin') return user?.role === 'superadmin';
+    // Agencias es del sistema: dentro de una agencia suplantada no se ofrece (se sale primero con el botón rojo).
+    if (link.permission === 'superadmin') return user?.role === 'superadmin' && !perfil?.suplantando;
     if (link.permission === 'users' || link.permission === 'config' || link.permission === 'responsables') {
       return isAdmin;
     }
@@ -199,7 +200,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
         {/* Mobile User Profile */}
         <SidebarUserProfile
-          user={user}
+          user={perfil}
           isExpanded={true}
           onLogoutClick={() => setIsConfirmOpen(true)}
         />
@@ -315,18 +316,18 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-2 hover:bg-white/5 p-1 px-2.5 rounded-xl transition-all text-slate-300 hover:text-white"
             >
-              {user?.avatar ? (
+              {perfil?.avatar ? (
                 <img
-                  src={user.avatar}
-                  alt={user.name}
+                  src={perfil.avatar}
+                  alt={perfil.nombre}
                   className="w-8 h-8 rounded-full object-cover border border-accent"
                 />
               ) : (
-                <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getAvatarGradient(user?.name || "User")} font-extrabold flex items-center justify-center text-xs shadow-sm border border-white/10`}>
-                  {getInitials(user?.name || "User")}
+                <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getAvatarGradient(perfil?.nombre || "User")} font-extrabold flex items-center justify-center text-xs shadow-sm border border-white/10`}>
+                  {getInitials(perfil?.nombre || "User")}
                 </div>
               )}
-              <span className="text-xs font-semibold hidden lg:inline">{getShortName(user?.name)}</span>
+              <span className="text-xs font-semibold hidden lg:inline">{getShortName(perfil?.nombre)}</span>
               <ChevronDown size={12} className="text-slate-400" />
             </button>
 
@@ -335,8 +336,9 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                 <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
                 <div className="absolute right-0 mt-2 w-52 bg-[#0b0f19] border border-slate-800/80 rounded-2xl shadow-xl shadow-black/50 p-4 z-50 animate-fade-in text-left">
                   <div className="pb-3 border-b border-slate-800/60 mb-2">
-                    <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-                    <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">{user?.role}</p>
+                    <p className="text-sm font-semibold text-white truncate">{perfil?.nombre}</p>
+                    <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">{perfil?.rol}</p>
+                    {perfil?.detalle && <p className="text-[11px] text-slate-400 mt-1 truncate">{perfil.detalle}</p>}
                   </div>
                   <button
                     onClick={() => {

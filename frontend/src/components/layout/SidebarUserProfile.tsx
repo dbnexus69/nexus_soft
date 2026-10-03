@@ -27,22 +27,23 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({
         {user?.avatar ? (
           <img
             src={user.avatar}
-            alt={user.name}
+            alt={user.nombre}
             className="w-10 h-10 rounded-full object-cover border-2 border-accent flex-shrink-0"
           />
         ) : (
-          <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${getAvatarGradient(user?.name || "User")} font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-md border border-white/10`}>
-            {getInitials(user?.name || "User")}
+          <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${getAvatarGradient(user?.nombre || "User")} font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-md border border-white/10`}>
+            {getInitials(user?.nombre || "User")}
           </div>
         )}
         {isExpanded && (
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">
-              {getShortName(user?.name)}
+              {getShortName(user?.nombre)}
             </p>
             <p className="text-[11px] text-amber-400 font-bold uppercase tracking-wider">
-              {user?.role}
+              {user?.rol}
             </p>
+            {user?.detalle && <p className="text-[11px] text-slate-400 truncate">{user.detalle}</p>}
           </div>
         )}
         {isExpanded && (

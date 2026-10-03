@@ -19,6 +19,7 @@ export interface LoginResponse {
     suplantacionId?: string;
     empresaId: number;
     empresaSlug: string;
+    empresaNombre?: string | null;
   };
   token: string;
   expiresAt: string;

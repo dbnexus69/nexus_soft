@@ -281,7 +281,9 @@ async function main() {
     const idsDeB = ((await pedir('GET', '/sales?perPage=100', tokB)).json?.data || []).map(v => v.id).sort();
     comprobar('suplantando B ve las ventas de B y solo esas', JSON.stringify([...idsSup].sort()) === JSON.stringify(idsDeB) && idsSup.includes(ventaB.id), `${idsSup.length} filas, B tiene ${idsDeB.length}`);
     comprobar('suplantando B, la venta de A: 404', (await pedir('GET', `/sales/${ventaA.id}`, tokSup)).status === 404);
-    comprobar('/auth/me sigue siendo el superadmin', (await pedir('GET', '/auth/me', tokSup)).json?.data?.email === correoSuper);
+    const yo = (await pedir('GET', '/auth/me', tokSup)).json?.data;
+    comprobar('/auth/me sigue siendo el superadmin, y trae la agencia en la que opera (para pintar su perfil)',
+      yo?.email === correoSuper && yo?.empresaNombre === 'Agencia b' && Boolean(yo?.suplantacionId), JSON.stringify([yo?.email === correoSuper, yo?.empresaNombre, Boolean(yo?.suplantacionId)]));
     const sinAsesor = await pedir('POST', '/sales', tokSup, ventaMinima(cliB.id));
     comprobar('suplantando, crear una venta sin asesor da 400 claro, no 500', sinAsesor.status === 400, `HTTP ${sinAsesor.status}`);
     comprobar('suplantando, el rol admin no se reescribe: 400',

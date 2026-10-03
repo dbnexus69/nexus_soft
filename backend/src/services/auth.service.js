@@ -335,7 +335,7 @@ class AuthService {
    */
   async empresaActiva(empresaId) {
     if (empresaId == null) return null;
-    return prisma.empresas.findFirst({ where: { id: empresaId }, select: { slug: true } });
+    return prisma.empresas.findFirst({ where: { id: empresaId }, select: { slug: true, nombre: true } });
   }
 }
 

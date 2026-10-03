@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { login as apiLogin, logout as apiLogout, getMe, getBranding } from '../api';
 import { aplicarMarca, type Marca } from '../utils/marca';
 import { invalidateClientsCache } from '../utils/clientsCache';
@@ -11,7 +11,18 @@ import { SESION_CADUCADA } from '../api/client';
 // El título de `index.html`, leído antes de que ninguna agencia lo cambie.
 const TITULO_POR_DEFECTO = document.title;
 
+/** Lo que se muestra como "quién soy" en el menú: el usuario, o la agencia cuando el superadmin la suplanta. */
+export interface PerfilVisible {
+  nombre: string;
+  avatar: string | null;
+  rol: string;
+  /** Una línea de contexto: quién es de verdad quien opera, cuando es una suplantación. */
+  detalle: string | null;
+  suplantando: boolean;
+}
+
 interface AuthContextType {
+  perfil: PerfilVisible | null;
   user: LoginResponse['user'] | null;
   login: (email: string, password: string, remember?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -123,9 +134,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SESION_CADUCADA, alCaducar);
   }, []);
 
+  // Dentro de una agencia suplantada la sesión sigue siendo la del superadministrador (es lo que da sus
+  // permisos), pero lo que se ve es la agencia en la que opera: su nombre y su logo, no el perfil de quien
+  // entra. La línea de abajo dice quién es de verdad.
+  const perfil = useMemo<PerfilVisible | null>(() => {
+    if (!user) return null;
+    if (user.suplantacionId) {
+      return {
+        nombre: marca?.nombre || user.empresaNombre || user.empresaSlug,
+        avatar: marca?.logoUrl ?? null,
+        rol: 'Superadmin en la agencia',
+        detalle: `Entraste como ${user.name}`,
+        suplantando: true,
+      };
+    }
+    return { nombre: user.name, avatar: user.avatar, rol: user.role, detalle: null, suplantando: false };
+  }, [user, marca]);
+
   return (
     <AuthContext.Provider value={{
       user,
+      perfil,
       login,
       logout,
       marca,

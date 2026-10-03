@@ -62,6 +62,7 @@ exports.me = async (req, res, next) => {
     // con `if (user.suplantacionId && user.empresaId)` y se iba sin pedir nada.
     data.user.empresaId = req.empresaId;
     data.user.empresaSlug = empresa?.slug ?? null;
+    data.user.empresaNombre = empresa?.nombre ?? null;
     if (req.suplantacion) {
       data.user.suplantacionId = req.suplantacion;
     }

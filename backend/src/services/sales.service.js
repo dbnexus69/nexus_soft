@@ -1218,10 +1218,13 @@ class SalesService {
       }
       return cabecera;
     }, {
-      // Con los catálogos ya resueltos, una venta grande cabe de sobra en este
-      // margen. Se deja explícito porque el defecto de Prisma son 5 s y una
-      // venta con muchos productos los rozaba.
-      timeout: 30000,
+      // Cada fila (línea, detalle, tramo, pasajero) es una ida y vuelta en serie
+      // al pooler, a ~0,6–1,2 s: la duración crece con el tamaño de la venta.
+      // Con 30 s, una venta de grupo (3 tiquetes de 6 tramos y 8 pasajeros) se
+      // cortaba a mitad con "Transaction not found" (spec 004, T9).
+      // ponytail: tope alto en vez de menos viajes; si las ventas tardan de
+      // verdad, agrupar tramos y pasajeros con createMany.
+      timeout: 120000,
       maxWait: 10000,
     });
 

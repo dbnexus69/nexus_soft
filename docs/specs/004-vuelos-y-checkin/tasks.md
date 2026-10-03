@@ -36,12 +36,45 @@ usa (`checkin: 'realizado'` sin adjuntos) ya era válido desde antes.
 **Por confirmar en navegador:** pulsar el botón en un vuelo pendiente y verificar que pasa a
 "Realizado" sin pedir ningún archivo.
 
+## T9 · Creación de ventas intermitente `[x]`
+
+Reportado: en 2 de 4 corridas una venta dio 500 o timeout, con un mensaje de Prisma distinto cada vez.
+
+**La causa:** `createSale` escribe toda la venta en una transacción interactiva, una fila por ida y
+vuelta en serie (línea, detalle, cada tramo, cada pasajero), a ~0,6–1,2 s cada una contra el pooler.
+La duración crece con el tamaño de la venta, y el tope de la transacción era de 30 s. Al cumplirse,
+Prisma cierra la transacción y falla la consulta que esté corriendo en ese momento —por eso el mensaje
+cambiaba: depende de cuál le toque—. Con la latencia del pooler variando, la misma venta pasaba o no.
+
+**Reproducido** con una agencia desechable (`verif-t9-*`, ping ~650 ms), con payloads iguales a los del
+asistente: S (1 restaurante) 3 s · M (hotel, seguro y tour con 2 personas) 8 s · L (tiquete de 3 tramos
+y 4 pasajeros, hotel) 10 s · XL (2 tiquetes, 6 pasajeros, 4 productos más) 18–20 s. Una venta de grupo
+(3 tiquetes de 6 tramos y 8 pasajeros, hotel, seguro y tour con 8) falló a los 31,5 s con
+`Transaction not found` en el `personas.upsert` que estaba corriendo. La venta fallida se deshizo
+entera (0 filas sueltas): el problema es que falle, no que corrompa.
+
+**Lo hecho:** el tope de la transacción de `createSale` pasa de 30 s a 120 s (`sales.service.js`). Es el
+único caller de `transaccion()` cuyo número de consultas crece con el cuerpo de la petición; los
+demás tienen un número fijo y siguen con los 30 s por defecto. Ni el cliente (`axios`, sin timeout)
+ni Node (5 min) cortan antes.
+
+**Comprobado:** la misma venta de grupo, 201 en 42 s, con sus 6 productos, 18 tramos y 48 pasajeros, y
+TA, IVA (19 %) y total cuadrados. `check:prisma` limpio, `test:aislamiento` en verde. Agencias de prueba
+desmontadas.
+
+*Anotado sin arreglar:* una venta así tarda 40 s, que es mucho para quien espera. Si pasa en la
+práctica, el arreglo de fondo es agrupar tramos y pasajeros con `createMany` (menos idas y vueltas),
+marcado con `ponytail:` en el código. Y, encontrado al armar la prueba: `products.schema.js` valida
+`insuranceData[].travelers` como número, pero `_precargarCatalogos` lo recorre como lista, así que un
+número pasa la validación y da 500. El asistente nunca manda `travelers` (usa `members`), así que solo
+sale con un cuerpo armado a mano.
+
 ## Pendientes
 
 - **T6 · Cancelar vuelos de paquete** `[ ]` — exige columnas nuevas en `prod_planes` (migración; afecta a la otra rama).
 - **T7 · `TOPE_PLANES` y estadísticas** `[ ]` — paginar los vuelos de paquete y contarlos en el panel.
 - **T8 · Pasar la prueba de la API a `backend/tests/`** `[ ]` — hoy vive fuera del repo; montar agencias temporales exige `DIRECT_URL`.
-- **T9 · Creación de ventas intermitente** `[ ]` — en 2 de 4 corridas una venta dio 500 o timeout, distinta cada vez (mensaje de Prisma de varias líneas, sin causa aún); cada venta tarda ~6 s contra esta base. Sin diagnosticar.
+- **T9 · Creación de ventas intermitente** `[x]` — ver la sección T9 abajo.
 
 ## La prueba que se queda
 
@@ -62,6 +95,7 @@ Resultado de la última corrida: **63 correctas, 0 fallos.** Antes de los arregl
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T9 | Las ventas grandes se cortaban al cumplir los 30 s de la transacción (una ida y vuelta por fila, a ~1 s cada una). Reproducido y confirmado; el tope de `createSale` pasa a 120 s. Una venta de grupo que fallaba a los 31,5 s ahora pasa en 42 s, completa. |
 | 2026-10-01 | T10 | Botón "Check-in realizado" para dejar constancia de un check-in hecho por WhatsApp u otro medio, sin pasar por el modal de adjuntar comprobante. |
 | 2026-09-25 | T5 | Corregidas 3 tarifas corruptas del catálogo compartido. |
 | 2026-09-25 | T4 | Pantalla: errores visibles, Bogotá, correo, deshacer check-in. |

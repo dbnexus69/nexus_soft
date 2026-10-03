@@ -96,6 +96,7 @@ export function Modal({
           </h2>
           <button
             onClick={onClose}
+            aria-label="Cerrar"
             className="text-white/60 hover:text-white transition-all p-1.5 rounded-lg hover:bg-white/10 hover:scale-110"
           >
             <X size={18} />

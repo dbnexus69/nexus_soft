@@ -82,6 +82,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             {/* Mobile Menu Toggle */}
             <button 
               onClick={onMenuToggle}
+              aria-label="Abrir el menú"
               className="md:hidden p-1.5 -ml-1.5 text-slate-500 hover:text-primary dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
             >
               <Menu size={20} />
@@ -99,6 +100,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
               onClick={toggleDarkMode}
               className="p-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
               title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-label={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>

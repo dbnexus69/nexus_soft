@@ -50,6 +50,7 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({
             onClick={onLogoutClick}
             className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors flex-shrink-0"
             title="Cerrar sesión"
+            aria-label="Cerrar sesión"
           >
             <LogOut size={18} />
           </button>

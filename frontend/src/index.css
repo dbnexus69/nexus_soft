@@ -476,3 +476,18 @@ body {
   color: #ffffff !important;
   border-color: transparent !important;
 }
+/*
+ * Quien pidió al sistema "reducir el movimiento" no recibe animaciones ni escalados: las entradas de
+ * las modales, los `hover:scale` y las transiciones pasan a ser inmediatos. Una sola regla en vez de
+ * `motion-reduce:` en cada componente (había 9 de muchos más).
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

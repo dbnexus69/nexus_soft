@@ -322,7 +322,7 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
                 value={slugEfectivo}
                 onChange={e => { setSlugTocado(true); setSlug(comoSlug(e.target.value)); }}
                 placeholder="viajes-sol"
-                className="w-full bg-transparent py-2 text-sm text-primary outline-none dark:text-white"
+                className="w-full bg-transparent py-2 text-sm text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary rounded dark:text-white"
               />
             </div>
           </FormField>

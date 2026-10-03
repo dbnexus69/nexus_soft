@@ -1451,6 +1451,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               </div>
               <button
                 onClick={handleCancel}
+                aria-label="Cerrar el asistente de venta"
                 className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
               >
                 <X size={18} />

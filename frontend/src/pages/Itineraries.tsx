@@ -712,7 +712,7 @@ export default function Itineraries() {
                   <select
                     value={currentMonth}
                     onChange={(e) => setCurrentMonth(Number(e.target.value))}
-                    className="text-base sm:text-lg font-bold text-primary dark:text-white bg-transparent outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1"
+                    className="text-base sm:text-lg font-bold text-primary dark:text-white bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1"
                   >
                     {MONTHS.map((m, i) => (
                       <option key={m} value={i}>{m}</option>
@@ -721,7 +721,7 @@ export default function Itineraries() {
                   <select
                     value={currentYear}
                     onChange={(e) => setCurrentYear(Number(e.target.value))}
-                    className="text-base sm:text-lg font-bold text-primary dark:text-white bg-transparent outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1"
+                    className="text-base sm:text-lg font-bold text-primary dark:text-white bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1"
                   >
                     {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 3 + i).map(y => (
                       <option key={y} value={y}>{y}</option>

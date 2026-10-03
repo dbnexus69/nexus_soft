@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect } from 'react';
+import { ReactNode, useState, useRef, useEffect, useId, Children, isValidElement, cloneElement } from 'react';
 import { X, AlertCircle, ChevronDown, Search } from 'lucide-react';
 
 interface FormFieldProps {
@@ -9,15 +9,36 @@ interface FormFieldProps {
   required?: boolean;
 }
 
+/**
+ * Un campo con su etiqueta y su error.
+ *
+ * La etiqueta se conecta con el campo (`htmlFor`/`id`) y el error también (`aria-describedby`,
+ * `aria-invalid`, y `role="alert"` para que se anuncie): sin eso un lector de pantalla no decía qué
+ * era cada campo ni que tenía un error, y pulsar la etiqueta no llevaba al campo. Solo se hace con los
+ * controles que pasan el `id` al elemento nativo (`Input`, `CurrencyInput`, `Select`, `Textarea` y los
+ * nativos); `Combobox` y los envoltorios quedan como estaban.
+ */
+const CONECTABLES: unknown[] = ['input', 'select', 'textarea'];
+
 export function FormField({ label, children, error, className = "" }: FormFieldProps) {
   const hasMb = className.split(' ').some(c => c.startsWith('mb-'));
+  const id = useId();
+  const idError = `${id}-error`;
+  const hijo = Children.count(children) === 1 && isValidElement(children) && CONECTABLES.includes(children.type) ? children : null;
+  const idCampo = (hijo?.props as { id?: string } | undefined)?.id || id;
   return (
     <div className={`${hasMb ? '' : 'mb-4'} ${className}`}>
-      <label className={`block text-sm font-medium mb-1 ${error ? 'text-red-500' : 'text-gray-700'}`}>{label}</label>
-      {children}
+      <label htmlFor={hijo ? idCampo : undefined} className={`block text-sm font-medium mb-1 ${error ? 'text-red-500' : 'text-gray-700'}`}>{label}</label>
+      {hijo
+        ? cloneElement(hijo as React.ReactElement<Record<string, unknown>>, {
+            id: idCampo,
+            'aria-invalid': error ? true : undefined,
+            'aria-describedby': error ? idError : undefined,
+          })
+        : children}
       {error && (
-        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-          <AlertCircle size={14} />
+        <p id={idError} role="alert" className="mt-1 text-sm text-red-600 flex items-center gap-1">
+          <AlertCircle size={14} aria-hidden="true" />
           {error}
         </p>
       )}
@@ -262,3 +283,6 @@ export function Textarea({ className = '', value, ...props }: TextareaProps) {
     />
   );
 }
+
+// Se registran aquí porque se declaran después de FormField.
+CONECTABLES.push(Input, CurrencyInput, Select, Textarea);

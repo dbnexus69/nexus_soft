@@ -142,6 +142,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           )}
           <button 
             onClick={onClose}
+            aria-label="Cerrar el menú"
             className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10"
           >
             <X size={20} />
@@ -303,6 +304,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             onClick={toggleDarkMode}
             className="p-2 hover:bg-white/5 rounded-xl transition-all text-slate-300 hover:text-white"
             title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
+            aria-label={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           >
             {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
           </button>

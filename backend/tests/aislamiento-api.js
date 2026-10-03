@@ -287,6 +287,10 @@ async function main() {
     comprobar('suplantando, el rol admin no se reescribe: 400',
       (await pedir('PUT', '/roles/admin/permissions', tokSup, { permissions: { users: { view: true } } })).status === 400);
     // Se sale con el propio token suplantado: es el que se invalida.
+    // Estando dentro de B, suplantar la agencia del propio superadmin (A): 400 claro. Antes la "empresa de
+    // origen" que se usaba era la visitada (B) y salía un error de clave ajena sin explicación.
+    const aPropia = await pedir('POST', `/companies/${A.id}/impersonations`, tokSup, { motivo: 'Prueba automática anidada' });
+    comprobar('dentro de B, suplantar la agencia propia: 400 claro (no un error de clave ajena)', aPropia.status === 400 && aPropia.json?.error?.code !== 'FOREIGN_KEY_ERROR', `HTTP ${aPropia.status} ${aPropia.json?.error?.code}`);
     const fin = await pedir('DELETE', `/companies/${B.id}/impersonations/${sup.json.data.suplantacionId}`, tokSup);
     comprobar('salir de la suplantación: 200', fin.status === 200, `HTTP ${fin.status}`);
     comprobar('el token suplantado ya no vale: 401', (await pedir('GET', '/sales', tokSup)).status === 401);

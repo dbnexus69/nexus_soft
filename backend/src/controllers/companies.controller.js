@@ -49,7 +49,10 @@ exports.iniciarSuplantacion = async (req, res, next) => {
   try {
     const data = await companiesService.iniciarSuplantacion(req.params.id, {
       motivo: req.validatedBody.motivo,
-      usuario: { id: req.user.id, empresaId: req.empresaId },
+      // La empresa donde vive el superadministrador, no la que está visitando: estando ya dentro de una
+      // agencia, `req.empresaId` es la visitada, y con ella la sesión y el token de la nueva suplantación
+      // quedaban apuntando a una agencia a la que el superadministrador no pertenece (error de clave ajena).
+      usuario: { id: req.user.id, empresaId: req.empresaOrigen ?? req.empresaId },
       ip: req.ip,
     });
     success(res, data, null, 201);

@@ -810,12 +810,31 @@ liquidar por debajo da 400 `BELOW_MINIMUM` con el mínimo en el mensaje. Un mín
 **Comprobado** en `pnpm test:aislamiento-api`: el mínimo por defecto, la liquidación por debajo (400) y por
 encima (201), y el negativo (422). `tsc` limpio. **Por ver en pantalla:** la tarjeta y el campo de la ficha.
 
+## T24 · Suplantar desde dentro de una suplantación `[~]`
+
+Reportado: al recargar estando dentro de una agencia suplantada, la pantalla no mostraba los datos de la
+agencia (el superadmin sigue siendo él, con la marca de la agencia). **Comprobado por la API** que, con un
+token de suplantación, `/auth/me`, `/branding`, `/config/all`, clientes, ventas, dashboard, usuarios y
+permisos devuelven los de la agencia visitada: el servidor no es el problema en el caso simple.
+
+**Sí salió un fallo cercano:** `/companies` sigue accesible dentro de una agencia, y suplantar otra desde
+ahí daba un 400 "Referencia inválida en campo: campo". `iniciarSuplantacion` recibía como empresa del
+superadmin la **visitada** (`req.empresaId`) en vez de la suya (`req.empresaOrigen`), así que intentaba
+guardar su sesión en una agencia a la que no pertenece. Corregido en `companies.controller.js`; el token
+nuevo conserva el origen del superadmin y trabaja en la tercera agencia. **Comprobado**: nido B → C da 201,
+`/auth/me` sigue siendo el superadmin y `/branding` es la de C; dentro de B, suplantar la propia agencia da un
+400 claro (en `pnpm test:aislamiento-api`).
+
+**Sin resolver, necesito el recorrido exacto:** si el síntoma de la recarga es otro (qué pantalla, qué se
+ve y qué se esperaba, y si se había entrado desde dentro de otra agencia o desde el superadmin directo).
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T24 | Suplantar desde dentro de otra agencia fallaba con un error de clave ajena (usaba la empresa visitada como origen); corregido. Queda por aclarar el síntoma de la recarga. |
 | 2026-10-03 | T23 | Cada comisionista con su mínimo para retirar, visible en su tarjeta, editable en su ficha y exigido por el servidor. |
 | 2026-10-03 | T22 | Dashboard: tiquetes por pasajero, los contadores de hotel/pólizas/paquetes (siempre en 0 por claves equivocadas) y las ventas anuladas fuera de todas las cifras. |
 | 2026-10-03 | T11 | El verificador de la API pasa al repo: `pnpm test:aislamiento-api`, 58 comprobaciones (A3, A9, un asesor, liquidaciones, suplantación), en verde y sin dejar restos. |

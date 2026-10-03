@@ -4,6 +4,7 @@ const {
   normalizarNombre, mensajeNombre,
   mensajeTelefono, mensajeNacimiento,
 } = require('../utils/datosPersona');
+const { idTipoDocumento, tipoDocumentoPorTexto } = require('./personaCampos');
 
 // Las reglas viven en utils/datosPersona.js; aquí solo se cablean. El servicio recibe `req.validatedBody`, ya normalizado.
 
@@ -20,11 +21,6 @@ const nombre = z
   .transform(normalizarNombre)
   .superRefine(validar(mensajeNombre));
 
-const tipoDocumento = z
-  .string({ required_error: 'Seleccione el tipo de documento', invalid_type_error: 'Seleccione el tipo de documento' })
-  .trim()
-  .min(1, 'Seleccione el tipo de documento');
-
 const numeroDocumento = z
   .string({ required_error: 'El número de documento es obligatorio', invalid_type_error: 'El número de documento es obligatorio' })
   .transform(normalizarDocumento);
@@ -32,7 +28,9 @@ const numeroDocumento = z
 const campos = {
   firstName: nombre,
   lastName: nombre,
-  docType: tipoDocumento,
+  // El contrato es `docTypeId` (el id de `tipos_documento`); `docType` (abreviatura o nombre) sigue valiendo.
+  docTypeId: idTipoDocumento,
+  docType: tipoDocumentoPorTexto,
   docNumber: numeroDocumento,
   email: z.preprocess(vacioAUndefined, z.string().trim().toLowerCase().max(180, 'Máximo 180 caracteres').email('Email inválido').optional()),
   phone: z.preprocess(vacioAUndefined, z.string().trim().superRefine(validar(mensajeTelefono)).optional()),
@@ -41,23 +39,40 @@ const campos = {
 };
 
 // El número solo se puede juzgar sabiendo el tipo: por eso viajan juntos.
+// Con el tipo por id, la regla del número la aplica el servicio (necesita la base para saber la abreviatura).
 function tipoYNumeroJuntos(d, ctx) {
-  const hayTipo = d.docType !== undefined;
+  const hayTipo = d.docType !== undefined || d.docTypeId !== undefined;
   const hayNumero = d.docNumber !== undefined;
   if (!hayTipo && !hayNumero) return;
   if (hayTipo !== hayNumero) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: [hayTipo ? 'docNumber' : 'docType'],
+      path: [hayTipo ? 'docNumber' : 'docTypeId'],
       message: 'El tipo y el número de documento se envían juntos',
     });
     return;
   }
-  const m = mensajeDocumento(d.docType, d.docNumber);
-  if (m) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['docNumber'], message: m });
+  if (d.docTypeId === undefined) {
+    const m = mensajeDocumento(d.docType, d.docNumber);
+    if (m) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['docNumber'], message: m });
+  }
 }
 
-const createClientSchema = z.object(campos).superRefine(tipoYNumeroJuntos);
+// Un cliente nuevo lleva siempre documento: si falta el tipo, el número o los dos, se dice cada uno.
+function conDocumento(d, ctx) {
+  let falta = false;
+  if (d.docNumber === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['docNumber'], message: 'El número de documento es obligatorio' });
+    falta = true;
+  }
+  if (d.docType === undefined && d.docTypeId === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['docTypeId'], message: 'Seleccione el tipo de documento' });
+    falta = true;
+  }
+  if (!falta) tipoYNumeroJuntos(d, ctx);
+}
+
+const createClientSchema = z.object({ ...campos, docNumber: numeroDocumento.optional() }).superRefine(conDocumento);
 
 const updateClientSchema = z.object(campos).partial().superRefine(tipoYNumeroJuntos);
 

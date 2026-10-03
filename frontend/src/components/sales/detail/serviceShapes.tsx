@@ -287,8 +287,8 @@ export const FORMAS: Record<string, Forma> = {
               ["Llegada de la ida", p.flightDepartureArrivalDate ? formatDateTime(p.flightDepartureArrivalDate) : null],
               ["Regreso", p.flightReturnDate ? formatDateTime(p.flightReturnDate) : null],
               ["Llegada del regreso", p.flightReturnArrivalDate ? formatDateTime(p.flightReturnArrivalDate) : null],
-              ["Check-in de la ida", ESTADO_CHECKIN[p.checkinStatusOutbound] || null],
-              ["Check-in del regreso", ESTADO_CHECKIN[p.checkinStatusReturn] || null],
+              ["Check-in de la ida", ESTADO_CHECKIN[p.checkinStatusOutbound] ? `${ESTADO_CHECKIN[p.checkinStatusOutbound]}${p.checkinStatusOutbound === "cancelado" && p.checkinReasonOutbound ? `: ${p.checkinReasonOutbound}` : ""}` : null],
+              ["Check-in del regreso", ESTADO_CHECKIN[p.checkinStatusReturn] ? `${ESTADO_CHECKIN[p.checkinStatusReturn]}${p.checkinStatusReturn === "cancelado" && p.checkinReasonReturn ? `: ${p.checkinReasonReturn}` : ""}` : null],
             ]} />
           )}
           <Personas titulo="Viajeros" gente={p.travelers} />

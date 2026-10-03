@@ -119,8 +119,11 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     try {
       const firstName = capitalizeName(normalizarNombre(formData.firstName || ""));
       const lastName = capitalizeName(normalizarNombre(formData.lastName || ""));
+      // El tipo viaja por id; la abreviatura del estado es solo para las reglas de esta pantalla.
+      const { docType, ...resto } = formData;
       const dataToSave = {
-        ...formData,
+        ...resto,
+        docTypeId: (documentTypes || []).find((dt) => dt.abbreviation === docType)?.id,
         firstName,
         lastName,
         name: `${firstName} ${lastName}`.trim(),
@@ -137,7 +140,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       const porCampo: Record<string, string> = {};
       const sueltos: string[] = [];
       for (const d of detalles) {
-        if (CAMPOS_DEL_FORMULARIO.includes(d.field)) porCampo[d.field] = d.message;
+        // El servidor nombra el tipo `docTypeId`; en esta pantalla su campo es `docType`.
+        const campo = d.field === "docTypeId" ? "docType" : d.field;
+        if (CAMPOS_DEL_FORMULARIO.includes(campo)) porCampo[campo] = d.message;
         else sueltos.push(d.message);
       }
       const general = detalles.length === 0 ? respuesta?.message || err?.message || "Error al guardar" : sueltos.join(". ");
@@ -209,21 +214,23 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 
                 <FormField label="Tipo Doc" required error={errors.docType}>
                   <Select
-                    value={formData.docType}
+                    // El valor es el id del tipo (lo que se envía) y se muestra su nombre; el estado guarda la
+                    // abreviatura porque es la que elige la regla del número.
+                    value={String((documentTypes || []).find((dt) => dt.abbreviation === formData.docType)?.id ?? "")}
                     onChange={(e) => {
-                      const tipo = e.target.value;
+                      const tipo = (documentTypes || []).find((dt) => String(dt.id) === e.target.value)?.abbreviation || "";
                       setFormData({ ...formData, docType: tipo });
                       // Un número ya escrito puede dejar de valer con el tipo nuevo (letras en una cédula): se avisa, no se borra.
                       if (formData.docNumber) validateField("docNumber", formData.docNumber, tipo);
                       else setErrors((prev) => ({ ...prev, docNumber: "" }));
                     }}
-                    onBlur={(e) => validateField("docType", e.target.value)}
+                    onBlur={() => validateField("docType", formData.docType || "")}
                     className="bg-gray-50/50"
                   >
                     <option value="">Seleccione...</option>
                     {(documentTypes || []).map((dt: any) => (
-                      <option key={dt.id} value={dt.abbreviation}>
-                        {dt.abbreviation}
+                      <option key={dt.id} value={String(dt.id)}>
+                        {dt.name || dt.abbreviation}
                       </option>
                     ))}
                   </Select>

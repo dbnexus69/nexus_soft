@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-01).** Servidor y pantalla hechos; la pantalla sin probar en el navegador.
+**Estado (2026-10-03).** Hechas T1–T10. T4 y T10 confirmadas en el navegador; T6 a T8 hechas en `feat-bayrol`.
 
 ## T1 · Servidor de vuelos `[x]`
 Rango en días de Bogotá, dirección deducida, aerolínea por tramo, planes terrestres fuera, `viewScope`, bloqueo de fila en el resumen, `search` normalizado. **Comprobado** con la API real: 63 comprobaciones, 0 fallos (la carrera de 4 check-ins simultáneos dio producto `realizado` 3 de 3 veces; antes 0 de 3).
@@ -13,13 +13,13 @@ Aeropuertos y plan de equipaje comprobados antes de la transacción; sin `UNK`. 
 ## T3 · Detalle de la venta `[x]`
 Plan con columnas reales, estado por tramo, ruta multidestino, paquete con vuelos y productos incluidos. `tsc --noEmit` limpio; el JSON del servidor lo comprobó la prueba de la API, el pintado no.
 
-## T4 · Pantalla de itinerarios `[~]`
+## T4 · Pantalla de itinerarios `[x]`
 Ver decisión 9 del plan. `tsc` limpio. **Por confirmar en el navegador:** cambiar de mes (esqueleto), cortar la red (aviso y "Reintentar"), marcar/deshacer un check-in, cancelar con motivo, ver el detalle de un paquete.
 
 ## T5 · Catálogo compartido `[x]`
 Tarifas 6, 7 y 15 de `politicas_equipaje` corregidas (antes `BÃƒÂ¡sica`, `Ãƒâ€œptima`, `EconÃƒÂ³mica`). Se buscó el mismo daño en aeropuertos, aerolíneas y el resto de columnas de tarifas: no hay más. El aeropuerto DXB, que se sospechaba, está bien.
 
-## T10 · Check-in realizado por otro medio `[~]`
+## T10 · Check-in realizado por otro medio `[x]`
 
 Pedido: dejar constancia de un check-in hecho por WhatsApp u otro canal ajeno a la aerolínea, sin
 pasar por el modal de adjuntar comprobante que ya existía (`handleMarkCheckin`).
@@ -69,16 +69,53 @@ marcado con `ponytail:` en el código. Y, encontrado al armar la prueba: `produc
 número pasa la validación y da 500. El asistente nunca manda `travelers` (usa `members`), así que solo
 sale con un cuerpo armado a mano.
 
-## Pendientes
+## T4 y T10, confirmadas en el navegador (2026-10-03)
 
-- **T6 · Cancelar vuelos de paquete** `[ ]` — exige columnas nuevas en `prod_planes` (migración; afecta a la otra rama).
-- **T7 · `TOPE_PLANES` y estadísticas** `[ ]` — paginar los vuelos de paquete y contarlos en el panel.
-- **T8 · Pasar la prueba de la API a `backend/tests/`** `[ ]` — hoy vive fuera del repo; montar agencias temporales exige `DIRECT_URL`.
-- **T9 · Creación de ventas intermitente** `[x]` — ver la sección T9 abajo.
+Con una agencia desechable y tres ventas con vuelos: el calendario pone cada salida y regreso en su día y
+hora de Bogotá (también los del paquete); cambiar de mes muestra el esqueleto; con la red cortada sale
+"No se pudieron cargar los vuelos del mes." y "Reintentar" recupera; la lista de check-in cuenta bien
+pendientes y críticos; "Marcar pendiente" revierte; cancelar exige 5 caracteres recortados y guarda el
+motivo; el detalle del paquete trae sus cuatro vuelos. T10: "Check-in realizado" marca sin pedir archivo.
+No se confirmó "Realizar Check-in" con su modal porque envía un correo al cliente.
+
+**Salió al probar:** la fila de un vuelo nombraba a los pasajeros pero pintaba al lado el documento del
+**cliente** de la venta. Ahora el servidor manda `passengerDocs` ("CC 1020304050, PA AB123456"), el de cada
+pasajero —el del cliente si no hay pasajeros—, y la pantalla pinta ese (`flights.service.js`,
+`documentosDePasajeros`; `Itineraries.tsx`). Y en el detalle de una venta, cambiar de venta antes de que
+cargara un servicio mostraba los productos de la anterior (spec 002, T21).
+
+## T6 · Cancelar vuelos de paquete `[x]`
+
+Migración `20261003180000_cancelar_vuelos_de_paquete`: `prod_planes` gana `canceled_at_ida`,
+`reason_canceled_ida`, `canceled_at_regreso` y `reason_canceled_regreso` (aditiva, con NULL; la otra rama
+sigue funcionando sin conocerlas). `cancelCheckin` deja de rechazar los vuelos de plan
+(`_cancelarDePlan`: venta vigente, ámbito, motivo, no dos veces); volver a pendiente o realizado borra la
+cancelación, como en un tramo; el listado y el detalle de la venta (`checkinReasonOutbound`/`Return`) traen
+el motivo; la pantalla muestra "Cancelar" también en los vuelos de paquete.
+
+**Comprobado** en `pnpm test:vuelos-api`: cancelar un vuelo de plan da 200 con el motivo, sale en la lista
+de cancelados y en el detalle de la venta, y volver a pendiente lo borra.
+
+## T7 · `TOPE_PLANES` y estadísticas `[x]`
+
+- Los planes ya no se leen con un tope de 500 que dejaba fuera a los demás sin aviso: `todosLosPlanes` lee
+  por lotes hasta el final (con un rango de un mes cabe en un lote). Pedir un vuelo de plan por su id lee
+  solo ese plan, no todos.
+- El panel "requiere atención" del dashboard (`GET /stats/attention`) cuenta también los check-ins críticos
+  de los vuelos de paquete, con la misma regla que `/flights/checkins?status=critico`, y "el próximo" es el
+  más cercano de los dos tipos. Antes decía "sin check-ins inminentes" con un paquete saliendo mañana.
+
+**Comprobado** en `pnpm test:vuelos-api`: con un tramo y un vuelo de plan críticos, el panel cuenta 2.
+
+## T8 · La prueba de la API en el repo `[x]`
+
+`backend/tests/vuelos-api.js` (`pnpm test:vuelos-api`), sobre el montaje compartido con
+`aislamiento-api.js` (`tests/montaje.js`: servidor propio, agencias `prueba-vue-*`, todo desmontado al
+final). 35 comprobaciones, en verde: lo de "La prueba que se queda", más T6 y T7.
 
 ## La prueba que se queda
 
-Pendiente de T8. Mientras tanto, esto es lo que hace, para poder rehacerla:
+Hecha en T8: `backend/tests/vuelos-api.js`. Lo que comprueba:
 
 1. Levanta un servidor propio en otro puerto con el rol de la aplicación.
 2. Crea dos agencias con el servicio real de altas (`verif-vue-a-…`, `verif-vue-b-…`) y entra en cada una.
@@ -95,6 +132,8 @@ Resultado de la última corrida: **63 correctas, 0 fallos.** Antes de los arregl
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T6, T7, T8 | Los vuelos de paquete se cancelan con motivo (migración aditiva); sin tope silencioso de planes y el panel de atención los cuenta; `pnpm test:vuelos-api` en el repo. |
+| 2026-10-03 | T4, T10 | Confirmadas en el navegador; la fila del vuelo muestra el documento de cada pasajero, no el del cliente. |
 | 2026-10-03 | T9 | Las ventas grandes se cortaban al cumplir los 30 s de la transacción (una ida y vuelta por fila, a ~1 s cada una). Reproducido y confirmado; el tope de `createSale` pasa a 120 s. Una venta de grupo que fallaba a los 31,5 s ahora pasa en 42 s, completa. |
 | 2026-10-01 | T10 | Botón "Check-in realizado" para dejar constancia de un check-in hecho por WhatsApp u otro medio, sin pasar por el modal de adjuntar comprobante. |
 | 2026-09-25 | T5 | Corregidas 3 tarifas corruptas del catálogo compartido. |

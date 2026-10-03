@@ -65,7 +65,10 @@ SELECT
   ), 0)::float AS "creditTa"
 
 FROM ventas
+-- Una venta anulada no es una operación ni un ingreso: fuera de todas las cifras,
+-- como ya hacen el detalle de un cliente y "requiere atención".
 WHERE deleted_at IS NULL
+  AND status <> 'anulado'
   AND ($1::timestamptz IS NULL OR creado_at >= $1)
   AND ($2::timestamptz IS NULL OR creado_at <= $2)
   AND ($3::int         IS NULL OR usuario_id = $3)

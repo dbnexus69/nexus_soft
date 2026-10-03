@@ -3,6 +3,7 @@ const prisma = require('../config/db');
 // la valida contra la base al generar (`prisma generate --sql`), así que una
 // columna mal escrita rompe el build en vez de la petición.
 const { dashboardAggregates } = require('@prisma/client/sql');
+const { vuelosDePlan } = require('./flights.service');
 
 // `limit` llega de la URL. Sin el piso de 1, `?limit=-5` acababa en un
 // `LIMIT -5` que Postgres rechaza con un 500.
@@ -43,11 +44,18 @@ class StatsService {
     const cDetalle = condiciones('v.'); // JOIN ventas v
 
 
+    // `count` son los productos de cada categoría; `personas`, cuántas personas viajan en ellos (sus
+    // pasajeros, y 1 si no se registró ninguno). Un tiquete se emite por persona: una venta con un
+    // tiquete y dos pasajeros son dos tiquetes, no uno.
     const categorySql = `
-      SELECT categoria, COUNT(d.id)::int as count, COALESCE(SUM(d.subtotal), 0)::float as revenue
+      SELECT categoria, COUNT(d.id)::int as count, COALESCE(SUM(d.subtotal), 0)::float as revenue,
+             COALESCE(SUM(GREATEST(px.n, 1)), 0)::int as personas
       FROM detalle_venta d
       JOIN ventas v ON d.venta_id = v.id
-      WHERE v.deleted_at IS NULL ${cDetalle.sql}
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS n FROM pasajeros_detalle p WHERE p.detalle_venta_id = d.id
+      ) px ON true
+      WHERE v.deleted_at IS NULL AND v.status <> 'anulado' ${cDetalle.sql}
       GROUP BY categoria
     `;
 
@@ -65,7 +73,7 @@ class StatsService {
         SUM(CASE WHEN EXTRACT(YEAR FROM creado_at) = ${currentYear - 1} THEN monto_total ELSE 0 END)::float as "previousYear"
       FROM ventas
       -- La tendencia compara dos años completos: no lleva el filtro de fechas.
-      WHERE deleted_at IS NULL ${cTendencia.sql}
+      WHERE deleted_at IS NULL AND status <> 'anulado' ${cTendencia.sql}
       GROUP BY EXTRACT(MONTH FROM creado_at)
       ORDER BY month ASC
     `;
@@ -109,8 +117,9 @@ class StatsService {
     const categoryBreakdown = {};
     let totalFlights = 0;
     categoryResult.forEach(c => {
-      categoryBreakdown[c.categoria] = { count: c.count, revenue: c.revenue };
-      if (c.categoria === 'ticket') totalFlights = c.count;
+      categoryBreakdown[c.categoria] = { count: c.count, revenue: c.revenue, personas: c.personas };
+      // Tiquetes emitidos: uno por pasajero (ver `categorySql`). El nombre del campo es histórico.
+      if (c.categoria === 'ticket') totalFlights = c.personas;
     });
 
     return {
@@ -311,7 +320,7 @@ class StatsService {
       FROM ventas v
       JOIN clientes c ON v.cliente_id = c.id
       JOIN personas p ON c.persona_id = p.id
-      WHERE v.deleted_at IS NULL
+      WHERE v.deleted_at IS NULL AND v.status <> 'anulado'
         AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY c.id, p.nombres, p.apellidos
       ORDER BY total DESC
@@ -328,7 +337,7 @@ class StatsService {
       FROM ventas v
       JOIN usuarios u ON v.usuario_id = u.id
       JOIN personas p ON u.persona_id = p.id
-      WHERE v.deleted_at IS NULL
+      WHERE v.deleted_at IS NULL AND v.status <> 'anulado'
         AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY u.id, p.nombres, p.apellidos
       ORDER BY "totalIngresos" DESC
@@ -342,7 +351,7 @@ class StatsService {
       SELECT mp.nombre AS name, COUNT(v.id)::int AS value
       FROM ventas v
       JOIN metodos_pago mp ON v.metodo_pago_principal_id = mp.id
-      WHERE v.deleted_at IS NULL
+      WHERE v.deleted_at IS NULL AND v.status <> 'anulado'
         AND (${propio}::int IS NULL OR v.usuario_id = ${propio})
       GROUP BY mp.id, mp.nombre
       ORDER BY value DESC
@@ -382,6 +391,12 @@ class StatsService {
       prod_tiqueteria: { detalle_venta: { ventas: ventaVigente } },
     };
 
+    // Los vuelos de un paquete también tienen check-in, y el panel no los contaba (spec 004, T7): se usa la
+    // misma regla que GET /flights/checkins?status=critico. Va en paralelo con lo demás.
+    const criticosDePlan = vuelosDePlan({
+      status: 'critico', dateFrom: ahora.toISOString(), dateTo: en48h.toISOString(), permissionScope, user,
+    }, ahora);
+
     const [vencidos, checkins, sinRevisar, checkinsCount] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         // Crédito vencido: la fecha de vencimiento ya pasó y queda saldo.
@@ -420,7 +435,17 @@ class StatsService {
     });
 
     const v = vencidos[0] || {};
-    const proximo = checkins[0];
+    const { filas: planesCriticos } = await criticosDePlan;
+    // El próximo, de entre los tramos y los vuelos de paquete.
+    const candidatos = [
+      ...(checkins[0] ? [{
+        departure: checkins[0].salida,
+        origin: checkins[0].aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos?.codigo_iata || null,
+        destination: checkins[0].aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos?.codigo_iata || null,
+      }] : []),
+      ...planesCriticos.slice(0, 1).map(p => ({ departure: p._salida, origin: p.origin || null, destination: p.destination || null })),
+    ].sort((a, b) => a.departure - b.departure);
+    const proximo = candidatos[0];
 
     return {
       overdueCredit: {
@@ -429,14 +454,8 @@ class StatsService {
         oldestDueDate: v.oldest ? new Date(v.oldest).toISOString() : null,
       },
       criticalCheckins: {
-        count: checkinsCount,
-        next: proximo
-          ? {
-              departure: proximo.salida.toISOString(),
-              origin: proximo.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos?.codigo_iata || null,
-              destination: proximo.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos?.codigo_iata || null,
-            }
-          : null,
+        count: checkinsCount + planesCriticos.length,
+        next: proximo ? { ...proximo, departure: new Date(proximo.departure).toISOString() } : null,
       },
       unreviewedSales: {
         count: sinRevisar._count._all,

@@ -114,8 +114,13 @@ no existe es un 422 con su campo (`docTypeId` o `docType`), nunca un `null` en s
 - **Por confirmar en pantalla:** en el asistente, poner una cédula con letras en un huésped y pulsar
   Siguiente: debe avisar sin avanzar.
 
-**Falta:** los clientes siguen mandando la abreviatura (`docType`); funciona, pero no es el contrato nuevo.
-Los nombres de los pasajeros no se validan (llegan en un solo campo libre).
+**Y los clientes (2026-10-03):** `ClientModal` manda `docTypeId` y su selector muestra el nombre del tipo; el
+esquema acepta `docTypeId` o `docType` y, con id, la regla del número la aplica el servicio
+(`validarDocumento`). Salió de paso un hueco: un tipo escrito con solo espacios pasaba el esquema y el
+cliente quedaba sin tipo; ahora es "sin tipo" y da 422 (`tipoDocumentoPorTexto` recorta antes de mirar si
+está vacío). Comprobado por la API (cliente por id, cédula con letras por id, tipo de espacios).
+
+**Falta:** los nombres de los pasajeros no se validan (llegan en un solo campo libre).
 
 ## T5 · El dígito de verificación del NIT `[x]`
 

@@ -66,6 +66,10 @@ export default function CommissionAgents() {
 
   // Los tipos de documento vienen de la base (id, nombre, abreviatura); la regla del número usa la abreviatura.
   const tiposDocumento: any[] = data.config.documentTypes || [];
+  // El mínimo que cada comisionista tiene que acumular para retirar; el servidor ya lo manda resuelto
+  // (el suyo, o el de por defecto si no tiene). 50.000 solo si llegara uno de antes, sin el campo.
+  const minimoDe = (agent: any): number => Number(agent?.paymentThreshold) > 0 ? Number(agent.paymentThreshold) : 50000;
+  const puedeRetirar = (agent: any) => Number(agent?.accumulated || 0) >= minimoDe(agent);
   const abreviaturaDe = (dt?: any): string => dt?.abbreviation || dt?.abreviatura || dt?.name || "";
   const abreviatura = abreviaturaDe(tiposDocumento.find((dt) => String(dt.id) === String(formData.docTypeId)));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -128,7 +132,7 @@ export default function CommissionAgents() {
 
   const stats = useMemo(() => {
     const totalAccumulated = filteredAgents.reduce((s: number, a: any) => s + (a.accumulated || 0), 0);
-    const pendingLiquidation = filteredAgents.filter((a: any) => a.accumulated >= 50000).length;
+    const pendingLiquidation = filteredAgents.filter(puedeRetirar).length;
     return {
       total: commissionAgents?.length || 0,
       totalAccumulated,
@@ -146,7 +150,7 @@ export default function CommissionAgents() {
       });
     } else {
       setEditingAgent(null);
-      setFormData({ status: "Activo", type: "Comisionista", avatar: AVATARS[0], docTypeId: String(tiposDocumento[0]?.id ?? "") });
+      setFormData({ status: "Activo", type: "Comisionista", avatar: AVATARS[0], docTypeId: String(tiposDocumento[0]?.id ?? ""), paymentThreshold: 50000 });
     }
     setIsModalOpen(true);
   };
@@ -195,7 +199,7 @@ export default function CommissionAgents() {
       // Un error con campo (`error.details`) se pinta junto a su input; el resto, en el aviso.
       const detalles: Array<{ field: string; message: string }> = err?.response?.data?.error?.details || [];
       const porCampo: Record<string, string> = {};
-      for (const d of detalles) if (["name", "docTypeId", "docNumber", "phone", "email"].includes(d.field)) porCampo[d.field] = d.message;
+      for (const d of detalles) if (["name", "docTypeId", "docNumber", "phone", "email", "paymentThreshold"].includes(d.field)) porCampo[d.field] = d.message;
       if (Object.keys(porCampo).length > 0) setErrors(porCampo);
       else notifyError(mensajeDeApi(err, "No se pudo guardar el comisionista. Revisa la conexión e inténtalo de nuevo."));
     } finally {
@@ -386,8 +390,8 @@ export default function CommissionAgents() {
               ) : (
                 <div className="flex flex-col gap-4">
                   {filteredAgents.map((agent: any) => {
-                    const progress = Math.min((agent.accumulated / 50000) * 100, 100);
-                    const isReady = agent.accumulated >= 50000;
+                    const progress = Math.min((Number(agent.accumulated || 0) / minimoDe(agent)) * 100, 100);
+                    const isReady = puedeRetirar(agent);
 
                     return (
                       <div
@@ -417,8 +421,8 @@ export default function CommissionAgents() {
                         {/* 2. Progress Bar (Center) */}
                         <div className="flex-1 w-full flex flex-col justify-center min-w-[200px]">
                           <div className="flex justify-between items-end mb-2">
-                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Progreso Meta</span>
-                            <span className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase">$50k</span>
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Mínimo para retirar</span>
+                            <span className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase">{formatCurrency(minimoDe(agent))}</span>
                           </div>
                           <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden relative">
                             <div 
@@ -488,9 +492,9 @@ export default function CommissionAgents() {
                   </div>
                 </div>
 
-                {filteredAgents.filter((a: any) => a.accumulated >= 50000).length > 0 ? (
+                {filteredAgents.filter(puedeRetirar).length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredAgents.filter((a: any) => a.accumulated >= 50000).map((agent: any) => (
+                    {filteredAgents.filter(puedeRetirar).map((agent: any) => (
                       <div key={agent.id} className="relative group p-6 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-800 border border-amber-100 dark:border-amber-900/30 rounded-3xl hover:shadow-xl transition-all duration-300">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                           <div className="flex items-center gap-3">
@@ -506,7 +510,10 @@ export default function CommissionAgents() {
                           <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-white dark:bg-amber-900/30 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800/50 uppercase self-start sm:self-auto">Saldo Pendiente</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <p className="text-2xl sm:text-3xl font-black text-gray-800 dark:text-white">{formatCurrency(agent.accumulated)}</p>
+                          <div>
+                            <p className="text-2xl sm:text-3xl font-black text-gray-800 dark:text-white">{formatCurrency(agent.accumulated)}</p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Mínimo para retirar: {formatCurrency(minimoDe(agent))}</p>
+                          </div>
                           <Button onClick={() => openSettleModal(agent)} className="bg-amber-500 hover:bg-amber-600 text-white px-6 rounded-xl font-bold h-12 w-full sm:w-auto justify-center">
                             Pagar Ahora
                           </Button>
@@ -520,7 +527,7 @@ export default function CommissionAgents() {
                       <CreditCard size={32} />
                     </div>
                     <p className="text-gray-500 dark:text-slate-400 font-bold text-lg">¡Todo al día!</p>
-                    <p className="text-gray-400 text-sm mt-1">No hay liquidaciones pendientes por encima de $50,000.</p>
+                    <p className="text-gray-400 text-sm mt-1">Ningún comisionista ha llegado a su mínimo para retirar.</p>
                   </div>
                 )}
               </div>
@@ -537,7 +544,7 @@ export default function CommissionAgents() {
                     Regla de Negocio
                   </h4>
                   <p className="text-white/80 text-sm leading-relaxed relative z-10">
-                    Las liquidaciones se habilitan automáticamente cuando un comisionista acumula un neto de <span className="bg-white/20 px-2 py-1 rounded-lg text-white font-black">$50,000</span>. Esto optimiza los procesos administrativos y bancarios de la oficina.
+                    Cada comisionista tiene su <span className="bg-white/20 px-2 py-1 rounded-lg text-white font-black">mínimo para retirar</span>: la liquidación se habilita cuando su neto acumulado llega a ese mínimo. Se define en su ficha; si no tiene uno, es de $50.000.
                   </p>
                 </div>
                 <div className="bg-accent text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden transition-transform hover:-translate-y-1">
@@ -704,6 +711,18 @@ export default function CommissionAgents() {
                       { value: "Referido", label: "Referido / Amigo" },
                       { value: "Otro", label: "Otro Comisionista" },
                     ]}
+                  />
+                </FormField>
+                <FormField label="Mínimo para retirar" error={errors.paymentThreshold}>
+                  <Input
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={formData.paymentThreshold ?? ""}
+                    onChange={(e) => setFormData({ ...formData, paymentThreshold: e.target.value === "" ? "" : Number(e.target.value) })}
+                    placeholder="50000"
+                    error={errors.paymentThreshold}
                   />
                 </FormField>
                 <FormField label="Estado de la Cuenta">

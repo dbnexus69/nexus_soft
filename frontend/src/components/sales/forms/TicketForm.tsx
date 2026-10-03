@@ -243,6 +243,10 @@ export function DatePicker({
         >
           <Datepicker
             popoverDirection={popoverDirection ?? direccionAuto}
+            // El campo de la librería es `absolute` dentro de la zona activa, así que no ocupa sitio y el
+            // calendario se pintaba desde el borde de arriba de la zona: tapaba el propio campo y su fecha.
+            // Hacia abajo, `top-full` lo baja al borde inferior; hacia arriba la librería ya pone `bottom-full`.
+            popupClassName={(base: string) => ((popoverDirection ?? direccionAuto) === "down" ? `${base} top-full` : base)}
             asSingle={true}
             useRange={false}
             value={{

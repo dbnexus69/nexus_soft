@@ -2,11 +2,11 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-01).** Hechas T1–T4. Ninguna probada en navegador.
+**Estado (2026-10-03).** Hechas T1–T4, vistas en el navegador (T1 con un arreglo por confirmar en pantalla).
 
 ---
 
-## T1 · El calendario escapa del recorte de la modal `[~]`
+## T1 · El calendario escapa del recorte de la modal `[x]`
 
 `DatePicker` (`TicketForm.tsx`) pinta su zona activa y el calendario por un portal a
 `document.body`, con la posición medida en pantalla (`useLayoutEffect`, corregida a los 350 ms, y
@@ -17,8 +17,13 @@ mejor la dirección) no bastaba — ver `docs/designs/calendario-escapa-del-reco
 confirmado que los dos sitios que ya forzaban `popoverDirection` (los filtros de fecha de
 `Sales.tsx`, con `"down"`) siguen recibiendo exactamente ese valor sin pasar por el cálculo nuevo.
 
-**Por confirmar:** en un navegador real, con el calendario abierto cerca de cada borde de una modal
-corta. No hay uno disponible en esta sesión.
+**Confirmado en el navegador (2026-10-03)**, en la modal de liquidar un comisionista con la ventana baja:
+el calendario sale por fuera de la modal sin recortarse. **Salió un defecto previo:** se abría encima de su
+propio campo y tapaba la fecha. El campo de la librería es `absolute` dentro de la zona activa
+(`[&_input]:absolute`, desde antes de T1), así que no ocupa sitio y el calendario se pintaba desde el borde
+de arriba de la zona. Ahora, cuando abre hacia abajo, `popupClassName` le añade `top-full` y arranca bajo el
+campo; hacia arriba la librería ya pone `bottom-full`. `tsc` limpio; **por ver en pantalla** que ya no tape
+el campo.
 
 ## T2 · Liquidar un comisionista: la misma tarjeta plana que el resto de la app `[x]`
 
@@ -52,7 +57,7 @@ mismo cambio, porque en `md` los cuatro botones no cabían ni agrupados.
 
 ## Pendiente
 
-- **Probar en navegador** las cuatro tareas — ninguna se ha visto en pantalla todavía.
+- ~~Probar en navegador las cuatro tareas~~ Hecho el 2026-10-03: T2 (liquidar), T3 y T4 (ficha de agencia) se ven como se diseñaron.
 - **`UserModal.tsx`** (fecha de nacimiento, usuarios) y **las fechas de vuelo del asistente de
   venta** (`DateTimePicker.tsx`) comparten la librería y el mismo riesgo de recorte que T1
   resolvió, pero ninguno se reportó roto. Quedan fuera a propósito (ver spec.md, Fuera de

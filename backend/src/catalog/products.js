@@ -207,6 +207,8 @@ const PRODUCT_TRANSFORMS = {
       flightReturnArrivalDate: p.fecha_llegada_regreso_vuelo?.toISOString() || null,
       checkinStatusOutbound: p.checkin_status_ida,
       checkinStatusReturn: p.checkin_status_regreso,
+      checkinReasonOutbound: p.reason_canceled_ida || null,
+      checkinReasonReturn: p.reason_canceled_regreso || null,
       packageId: p.paqueteId,
       travelers: passengers.map(pax => ({
         name: pax.nombreCompleto,

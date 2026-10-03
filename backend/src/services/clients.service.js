@@ -2,11 +2,9 @@ const prisma = require('../config/db');
 const { AppError, NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 
+const { validarDocumento } = require('../utils/tipoDocumento');
+
 // Errores que la pantalla pinta junto a su campo (`error.details`).
-const tipoDocumentoInexistente = () => new AppError(
-  'Datos inválidos: docType: No existe ese tipo de documento', 422, 'VALIDATION_ERROR',
-  [{ field: 'docType', message: 'No existe ese tipo de documento' }],
-);
 const documentoRepetido = (mensaje) => new BadRequestError(mensaje, 'DUPLICATE_DOCUMENT', [{ field: 'docNumber', message: mensaje }]);
 
 class ClientsService {
@@ -70,7 +68,7 @@ class ClientsService {
             select: {
               nombres: true, apellidos: true, documento: true, telefono: true,
               email: true, birth_date: true, status: true, avatar_url: true,
-              tipos_documento: { select: { abreviatura: true } },
+              tipos_documento: { select: { id: true, abreviatura: true } },
             },
           },
         },
@@ -83,6 +81,7 @@ class ClientsService {
       firstName: c.personas.nombres,
       lastName: c.personas.apellidos,
       name: `${c.personas.nombres} ${c.personas.apellidos}`,
+      docTypeId: c.personas.tipos_documento?.id ?? null,
       docType: c.personas.tipos_documento?.abreviatura || null,
       docNumber: c.personas.documento,
       phone: c.personas.telefono,
@@ -135,6 +134,7 @@ class ClientsService {
       firstName: cliente.personas.nombres,
       lastName: cliente.personas.apellidos,
       name: `${cliente.personas.nombres} ${cliente.personas.apellidos}`,
+      docTypeId: cliente.personas.tipos_documento?.id ?? null,
       docType: cliente.personas.tipos_documento?.abreviatura || null,
       docNumber: cliente.personas.documento,
       phone: cliente.personas.telefono,
@@ -162,15 +162,9 @@ class ClientsService {
    * Crear nuevo cliente
    */
   async createClient(data, userId) {
-    let tipo_documento_id = null;
-
-    if (data.docType) {
-      const tipoDoc = await prisma.tipos_documento.findUnique({
-        where: { abreviatura: data.docType }
-      });
-      if (!tipoDoc) throw tipoDocumentoInexistente();
-      tipo_documento_id = tipoDoc.id;
-    }
+    // El tipo por id o por texto, y la regla del número según él (spec 003, T4).
+    const tipoDoc = await validarDocumento(data);
+    const tipo_documento_id = tipoDoc ? tipoDoc.id : null;
 
     if (data.docNumber) {
       const existingClient = await prisma.clientes.findFirst({
@@ -234,7 +228,8 @@ class ClientsService {
       firstName: persona.nombres,
       lastName: persona.apellidos,
       name: `${persona.nombres} ${persona.apellidos}`,
-      docType: data.docType,
+      docTypeId: tipo_documento_id,
+      docType: tipoDoc?.abreviatura || null,
       docNumber: data.docNumber,
       phone: data.phone,
       email: data.email,
@@ -263,13 +258,8 @@ class ClientsService {
     if (data.firstName) personaData.nombres = data.firstName;
     if (data.lastName) personaData.apellidos = data.lastName;
 
-    if (data.docType) {
-      const tipoDoc = await prisma.tipos_documento.findUnique({
-        where: { abreviatura: data.docType }
-      });
-      if (!tipoDoc) throw tipoDocumentoInexistente();
-      personaData.tipo_documento_id = tipoDoc.id;
-    }
+    const tipoDoc = await validarDocumento(data);
+    if (tipoDoc) personaData.tipo_documento_id = tipoDoc.id;
 
     if (data.docNumber) {
       const existingDoc = await prisma.personas.findFirst({

@@ -81,7 +81,7 @@ comprobar('una cédula con letras falla en docNumber', camposConError({ ...valid
 comprobar('un pasaporte con letras pasa', camposConError({ ...valido, docType: 'PA', docNumber: 'AB123456' }).length === 0);
 comprobar('un nombre con números falla en firstName', camposConError({ ...valido, firstName: 'Juan2' }).join() === 'firstName');
 comprobar('un apellido con números falla en lastName', camposConError({ ...valido, lastName: 'P3rez' }).join() === 'lastName');
-comprobar('sin tipo ni número, fallan los dos', camposConError({ firstName: 'Ana', lastName: 'Gómez' }).join() === 'docNumber,docType');
+comprobar('sin tipo ni número, fallan los dos', camposConError({ firstName: 'Ana', lastName: 'Gómez' }).join() === 'docNumber,docTypeId');
 comprobar('sin nombre ni apellido, fallan los dos', camposConError({ docType: 'CC', docNumber: '1234567' }).join() === 'firstName,lastName');
 comprobar('el email y el teléfono vacíos no estorban', camposConError({ ...valido, email: '', phone: '', birthDate: '' }).length === 0);
 comprobar('un email mal formado falla', camposConError({ ...valido, email: 'no-es-email' }).join() === 'email');
@@ -93,7 +93,7 @@ comprobar('el esquema no deja pasar campos que no conoce', alta.success && !('na
 // ── La edición, parcial
 comprobar('editar solo el teléfono pasa', camposConError({ phone: '3001234567' }, updateClientSchema).length === 0);
 comprobar('editar solo el nombre pasa', camposConError({ firstName: 'Ana' }, updateClientSchema).length === 0);
-comprobar('editar solo el número, sin el tipo, se rechaza', camposConError({ docNumber: '1234567' }, updateClientSchema).join() === 'docType');
+comprobar('editar solo el número, sin el tipo, se rechaza', camposConError({ docNumber: '1234567' }, updateClientSchema).join() === 'docTypeId');
 comprobar('editar solo el tipo, sin el número, se rechaza', camposConError({ docType: 'PA' }, updateClientSchema).join() === 'docNumber');
 comprobar('editar tipo y número juntos valida el número contra el tipo nuevo', camposConError({ docType: 'CC', docNumber: 'AB123456' }, updateClientSchema).join() === 'docNumber');
 comprobar('editar un nombre a algo con números falla', camposConError({ lastName: 'G0mez' }, updateClientSchema).join() === 'lastName');

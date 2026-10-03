@@ -724,6 +724,8 @@ export interface Flight {
   clientEmail?: string | null;
   clientDocType?: string | null;
   clientDocNumber?: string | null;
+  // "CC 1020304050, PA AB123456": el de cada pasajero (o el del cliente si no hay pasajeros).
+  passengerDocs?: string | null;
   checkinStatus?: "pendiente" | "realizado" | "critico" | "cancelado";
   checkinAt?: string | null;
   checkinDocs?: { url: string; filename: string }[] | null;

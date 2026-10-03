@@ -19,145 +19,19 @@
  * superadministrador de prueba y desmontar). Tarda ~1-2 min: cada petición
  * viaja al pooler. Sin marco de pruebas, igual que `aislamiento.js`.
  */
-require('dotenv').config();
-const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const bcrypt = require('bcryptjs');
-const { PrismaClient, Prisma } = require('@prisma/client');
-const companiesService = require('../src/services/companies.service');
-const { sinEmpresa } = require('../src/config/tenant');
+const {
+  admin, BASE, CLAVE, comprobar, pedir, entrar, una,
+  levantarServidor, montarAgencia, montarSuperadmin, ventaMinima, ejecutar,
+} = require('./montaje');
 
 const PREFIJO = 'prueba-api-';
-const PUERTO = Number(process.env.TEST_PORT) || 3917;
-const BASE = `http://127.0.0.1:${PUERTO}`;
-const API = `${BASE}/api/v1`;
-const CLAVE = 'Prueba-api-1!';
-const RAIZ = path.join(__dirname, '..');
-
-const admin = new PrismaClient({
-  datasourceUrl: (process.env.DIRECT_URL || process.env.DATABASE_URL || '').split('?')[0],
-});
-
-let fallos = 0;
-let servidor = null;
-
-function comprobar(descripcion, condicion, detalle = '') {
-  const ok = Boolean(condicion);
-  if (!ok) fallos++;
-  console.log(`  ${ok ? '✓' : '✗'} ${descripcion}${detalle ? `  → ${detalle}` : ''}`);
-}
-
-/** Una petición; devuelve `{ status, json }` sin lanzar por un 4xx. */
-async function pedir(metodo, ruta, token, cuerpo, { base = API, form } = {}) {
-  const cabeceras = {};
-  if (token) cabeceras.Authorization = `Bearer ${token}`;
-  let body;
-  if (form) body = form;
-  else if (cuerpo !== undefined) { cabeceras['Content-Type'] = 'application/json'; body = JSON.stringify(cuerpo); }
-  const r = await fetch(base + ruta, { method: metodo, headers: cabeceras, body });
-  const json = await r.json().catch(() => null);
-  return { status: r.status, json };
-}
-
-const entrar = async (email) => {
-  const r = await pedir('POST', '/auth/login', null, { email, password: CLAVE });
-  if (r.status !== 200) throw new Error(`login de ${email}: ${r.status} ${JSON.stringify(r.json?.error)}`);
-  return r.json.data.token;
-};
-
-const una = (status, ...validos) => validos.includes(status);
-
-// ── Montaje ────────────────────────────────────────────────────────────────
-
-async function levantarServidor() {
-  servidor = spawn(process.execPath, ['src/index.js'], {
-    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO) }, stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  let salida = '';
-  servidor.stderr.on('data', d => { salida += d; });
-  await new Promise((resolver, rechazar) => {
-    const limite = setTimeout(() => rechazar(new Error(`el servidor no arrancó en 60 s:\n${salida}`)), 60000);
-    servidor.stdout.on('data', d => { if (String(d).includes('Servidor corriendo')) { clearTimeout(limite); resolver(); } });
-    servidor.on('exit', c => { clearTimeout(limite); rechazar(new Error(`el servidor salió con código ${c}:\n${salida}`)); });
-  });
-}
-
-async function montarAgencia(sufijo) {
-  const slug = `${PREFIJO}${sufijo}-${Date.now()}`;
-  const correo = `${slug}@prueba.local`;
-  // Como lo hace el superadministrador: sin empresa, pero con ese permiso, que
-  // es lo que la política de `empresas` pide para dejar crear una.
-  await sinEmpresa(() => companiesService.create({
-    slug, nombre: `Agencia ${sufijo}`,
-    admin: { firstName: 'Admin', lastName: sufijo, email: correo, password: CLAVE },
-  }), { esSuperadmin: true });
-  const empresa = await admin.empresas.findFirst({ where: { slug } });
-  return { slug, correo, id: empresa.id };
-}
-
-/** Un superadministrador de prueba, dentro de la agencia A (como el real). */
-async function montarSuperadmin(A) {
-  const rol = await admin.roles.create({ data: { empresa_id: A.id, nombre: 'superadmin' } });
-  const persona = await admin.personas.create({
-    data: { empresa_id: A.id, nombres: 'Super', apellidos: 'Prueba', email: `${A.slug}-super@prueba.local`, status: 'active' },
-  });
-  await admin.usuarios.create({
-    data: {
-      empresa_id: A.id, persona_id: persona.id, email: `${A.slug}-super@prueba.local`,
-      password_hash: await bcrypt.hash(CLAVE, 4), rol_id: rol.id, status: 'active',
-    },
-  });
-  return `${A.slug}-super@prueba.local`;
-}
-
-const ventaMinima = (clienteId, extra = {}) => ({
-  clientId: clienteId, total: 1, status: 'credito', creditDueDate: '2027-12-31T00:00:00.000Z',
-  restaurantData: [{ reservationName: 'Prueba', peopleCount: 2, supplierCost: 1000, ta: 500 }],
-  ...extra,
-});
-
-/** Todo lo que cuelga de las agencias de prueba, y los ficheros que subieron. */
-async function desmontar() {
-  const empresas = await admin.empresas.findMany({ where: { slug: { startsWith: PREFIJO } }, select: { id: true, slug: true } });
-  if (!empresas.length) return;
-  const ids = empresas.map(e => e.id);
-  const subidos = await admin.detalle_venta.findMany({
-    where: { empresa_id: { in: ids }, voucher_url: { not: null } }, select: { voucher_url: true },
-  });
-  const tablas = Prisma.dmmf.datamodel.models
-    .filter(m => m.name !== 'empresas' && m.fields.some(f => f.name === 'empresa_id')).map(m => m.name);
-  // Pasadas repetidas sobre TODAS las agencias a la vez: una suplantación vive
-  // en la agencia visitada pero cuelga del superadministrador de otra, y borrar
-  // las agencias de una en una se atascaba en esa clave ajena.
-  for (let pasada = 0; pasada < 10; pasada++) {
-    let pendientes = 0;
-    for (const t of tablas) {
-      try { await admin[t].deleteMany({ where: { empresa_id: { in: ids } } }); } catch { pendientes++; }
-    }
-    if (!pendientes) break;
-  }
-  await admin.empresas.deleteMany({ where: { id: { in: ids } } });
-  for (const { voucher_url } of subidos) {
-    try { fs.unlinkSync(path.join(RAIZ, 'uploads', path.basename(voucher_url))); } catch { /* ya no está */ }
-  }
-}
 
 // ── La prueba ──────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('\nAislamiento por la API\n');
-
-  const [rol] = await admin.$queryRawUnsafe(`SELECT current_user AS usuario`);
-  const [app] = await new PrismaClient({ datasourceUrl: process.env.DATABASE_URL })
-    .$queryRawUnsafe(`SELECT current_user AS usuario, (SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user) AS salta`);
-  comprobar('DATABASE_URL conecta con un rol que no salta la RLS', app.salta === false, `rol "${app.usuario}" (migraciones: "${rol.usuario}")`);
-  if (app.salta) return;
-
-  await desmontar(); // por si una corrida anterior murió a medias
   console.log('  Montando dos agencias y arrancando el servidor…');
-  const A = await montarAgencia('a');
-  const B = await montarAgencia('b');
+  const A = await montarAgencia(PREFIJO, 'a');
+  const B = await montarAgencia(PREFIJO, 'b');
   const correoSuper = await montarSuperadmin(A);
   await levantarServidor();
 
@@ -347,6 +221,49 @@ async function main() {
     personas.length === 2 && personas.every(x => x.tipos_documento),
     personas.map(x => `${x.documento}/${x.tipos_documento?.abreviatura}`).join(', '));
 
+  // ── 5c. El dashboard de B (agencia sin más ventas que las de esta sección y la mínima de arriba)
+  console.log('\n  Dashboard');
+  const pax = (n) => Array.from({ length: n }, (_, k) => ({ name: `Viajero ${k} Prueba`, docType: 'CC', docNumber: String(1030000000 + k) }));
+  const tiquete = (pasajeros) => ({ ta: 50000, supplierCost: 300000, flightMode: 'one_way',
+    legs: [{ origin: 'BOG', destination: 'MDE', date: '2027-03-10', departureTime: '08:00' }], passengers: pasajeros });
+  const dashAntes = (await pedir('GET', '/stats/dashboard', tokB)).json?.data;
+  const vTiq = await pedir('POST', '/sales', tokB, ventaMinima(cliB.id, {
+    restaurantData: undefined,
+    ticketData: [tiquete(pax(2)), tiquete([])],
+    hotelData: [{ ta: 1000, supplierCost: 1000, hotelType: 'hotel', hotelName: 'Hotel Prueba', guests: [] }],
+    insuranceData: [{ ta: 1000, supplierCost: 1000, members: [] }],
+  }));
+  comprobar('B vende 2 tiquetes (uno con 2 pasajeros, otro sin), un hotel y un seguro', vTiq.status === 201, `HTTP ${vTiq.status} ${JSON.stringify(vTiq.json?.error)}`);
+  const dash = (await pedir('GET', '/stats/dashboard', tokB)).json?.data;
+  const delta = (campo) => (dash?.[campo] ?? 0) - (dashAntes?.[campo] ?? 0);
+  comprobar('tiquetes emitidos: uno por pasajero (2) más uno sin pasajeros = 3', delta('totalFlights') === 3, `+${delta('totalFlights')}`);
+  comprobar('el desglose trae las categorías con su clave (hotel, insurance)',
+    dash?.categoryBreakdown?.hotel?.count >= 1 && dash?.categoryBreakdown?.insurance?.count >= 1, JSON.stringify(Object.keys(dash?.categoryBreakdown || {})));
+  const ops = dash?.totalOperations;
+  const anul = await pedir('POST', `/sales/${vTiq.json?.data?.id}/cancellation`, tokB, { reason: 'Prueba del dashboard: anular' });
+  const dashAnulada = (await pedir('GET', '/stats/dashboard', tokB)).json?.data;
+  comprobar('una venta anulada sale de las operaciones y de los tiquetes',
+    una(anul.status, 200, 201) && dashAnulada?.totalOperations === ops - 1 && dashAnulada?.totalFlights === dashAntes?.totalFlights,
+    `HTTP ${anul.status}; operaciones ${ops} -> ${dashAnulada?.totalOperations}; tiquetes ${dash?.totalFlights} -> ${dashAnulada?.totalFlights}`);
+
+  // Clientes por id del tipo (el contrato nuevo) y el mínimo para retirar de cada comisionista.
+  const cliPorId = await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Por Id', docTypeId: cc.id, docNumber: '1050000001' });
+  comprobar('cliente por docTypeId: 201 y la respuesta trae el id del tipo', cliPorId.status === 201 && cliPorId.json?.data?.docTypeId === cc.id, `HTTP ${cliPorId.status}`);
+  const cliMal = await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Mal', docTypeId: cc.id, docNumber: '12ab' });
+  comprobar('cliente por docTypeId con una cédula con letras: 422 en docNumber', cliMal.status === 422 && campoDe(cliMal).includes('docNumber'), `HTTP ${cliMal.status}`);
+  const cliEspacios = await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Sin Tipo', docType: '   ', docNumber: '1050000002' });
+  comprobar('cliente con un tipo de solo espacios: 422 (antes quedaba sin tipo)', cliEspacios.status === 422, `HTTP ${cliEspacios.status}`);
+  const agenteMin = (await pedir('POST', '/commissions/agents', tokA, { name: 'Comisionista Mínimo', type: 'freelance' })).json?.data;
+  comprobar('un comisionista sin mínimo propio tiene el de por defecto (50.000)', Number(agenteMin?.paymentThreshold) === 50000, String(agenteMin?.paymentThreshold));
+  await pedir('POST', '/sales', tokA, ventaMinima(cliA.id, {
+    commissionAgentId: agenteMin?.id, commissionAgentAmount: 5000, commissionAgentRetentionPercentage: 0, commissionAgentNetPayment: 5000,
+  }));
+  const bajoMinimo = await pedir('POST', '/commissions/settlements', tokA, { agentId: agenteMin?.id });
+  comprobar('liquidar por debajo del mínimo: 400 que dice cuál es', bajoMinimo.status === 400 && bajoMinimo.json?.error?.code === 'BELOW_MINIMUM' && /50\.000/.test(bajoMinimo.json?.error?.message || ''),
+    `HTTP ${bajoMinimo.status} ${bajoMinimo.json?.error?.message}`);
+  const minNegativo = await pedir('PUT', `/commissions/agents/${agenteMin?.id}`, tokA, { paymentThreshold: -5 });
+  comprobar('un mínimo negativo: 422', minNegativo.status === 422, `HTTP ${minNegativo.status}`);
+
   // ── 6. El superadministrador y la suplantación
   console.log('\n  Suplantación');
   comprobar('el admin de una agencia no puede suplantar: 403',
@@ -361,7 +278,8 @@ async function main() {
   if (tokSup) {
     const ve = await pedir('GET', '/sales?perPage=100', tokSup);
     const idsSup = (ve.json?.data || []).map(v => v.id);
-    comprobar('suplantando B ve las ventas de B y solo esas', idsSup.length === 1 && idsSup[0] === ventaB.id, `${idsSup.length} filas`);
+    const idsDeB = ((await pedir('GET', '/sales?perPage=100', tokB)).json?.data || []).map(v => v.id).sort();
+    comprobar('suplantando B ve las ventas de B y solo esas', JSON.stringify([...idsSup].sort()) === JSON.stringify(idsDeB) && idsSup.includes(ventaB.id), `${idsSup.length} filas, B tiene ${idsDeB.length}`);
     comprobar('suplantando B, la venta de A: 404', (await pedir('GET', `/sales/${ventaA.id}`, tokSup)).status === 404);
     comprobar('/auth/me sigue siendo el superadmin', (await pedir('GET', '/auth/me', tokSup)).json?.data?.email === correoSuper);
     const sinAsesor = await pedir('POST', '/sales', tokSup, ventaMinima(cliB.id));
@@ -375,13 +293,4 @@ async function main() {
   }
 }
 
-main()
-  .catch(err => { fallos++; console.error('\n  ✗ la prueba se cortó:', err.message || err); })
-  .finally(async () => {
-    if (servidor) servidor.kill();
-    try { await desmontar(); console.log('\n  Agencias de prueba desmontadas.'); }
-    catch (err) { fallos++; console.error('\n  ✗ no se pudo desmontar:', err.message); }
-    await admin.$disconnect();
-    console.log(fallos ? `\n${fallos} comprobación(es) fallida(s)\n` : '\nTodo en orden\n');
-    process.exit(fallos ? 1 : 0);
-  });
+ejecutar('Aislamiento por la API', PREFIJO, main);

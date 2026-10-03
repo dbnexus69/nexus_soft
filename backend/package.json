@@ -15,6 +15,7 @@
     "check:prisma": "node scripts/check-prisma-fields.js",
     "test:aislamiento": "node tests/aislamiento.js",
     "test:aislamiento-api": "node tests/aislamiento-api.js",
+    "test:vuelos-api": "node tests/vuelos-api.js",
     "test:validaciones": "node tests/validaciones.js",
     "test:reglas-espejo": "node tests/reglas-espejo.js"
   },

@@ -795,7 +795,7 @@ export default function Itineraries() {
                               docType: flight.clientDocType,
                               docNumber: flight.clientDocNumber,
                             };
-                            const docInfo = client ? `\n${client.docType}: ${client.docNumber}` : '';
+                            const docInfo = flight.passengerDocs ? `\n${flight.passengerDocs}` : '';
                             const isPlan = flight.source === 'plan';
                             return (
                             <div
@@ -865,9 +865,9 @@ export default function Itineraries() {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-gray-800 truncate">{flight.passenger}</span>
-                                {client && (
+                                {flight.passengerDocs && (
                                   <span className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-200">
-                                    {client.docNumber}
+                                    {flight.passengerDocs}
                                   </span>
                                 )}
                               </div>
@@ -1000,9 +1000,9 @@ export default function Itineraries() {
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="font-bold text-primary dark:text-white truncate">{flight.passenger}</span>
-                                  {client && (
+                                  {flight.passengerDocs && (
                                     <span className="text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-700">
-                                      {client.docType}: {client.docNumber}
+                                      {flight.passengerDocs}
                                     </span>
                                   )}
                                   <InsigniaEstado clave={claveEstado} />
@@ -1081,12 +1081,8 @@ export default function Itineraries() {
                                     </button>
                                   </>
                                 ) : null}
-                                {/* Un vuelo vendido dentro de un plan no se
-                                    puede cancelar: `prod_planes` no tiene
-                                    dónde guardar el motivo, y el servidor lo
-                                    rechaza. Se oculta el botón en vez de
-                                    ofrecer algo que va a fallar. */}
-                                {canEditItinerary('itineraries') && flight.source !== 'plan' ? (
+                                {/* Los vuelos de paquete también se cancelan con motivo (spec 004, T6). */}
+                                {canEditItinerary('itineraries') ? (
                                   <button
                                     onClick={() => handleOpenCancel(flight)}
                                     title="Cancelar el check-in de este vuelo"

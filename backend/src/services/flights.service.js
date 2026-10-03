@@ -39,6 +39,19 @@ const soloLasSuyas = ({ viewScope, permissionScope, user } = {}) =>
  * mes desaparecía del calendario, y un vuelo de las 23:30 caía en el día
  * siguiente. Acepta 'YYYY-MM-DD' o un instante ISO (se pasa a su día de Bogotá).
  */
+/**
+ * El documento de quien viaja, uno por pasajero ("CC 1020304050, PA AB123456"). La fila de un vuelo
+ * nombra a los pasajeros, y al lado se pintaba el documento del CLIENTE de la venta: con dos pasajeros, o
+ * con un cliente que compra para otro, el documento no era de ninguno de los nombres. Sin pasajeros
+ * registrados, el del cliente, que es entonces quien viaja.
+ */
+function documentosDePasajeros(dv, persona) {
+  const doc = (p) => (p?.documento ? [p.tipos_documento?.abreviatura, p.documento].filter(Boolean).join(' ') : null);
+  const deLosPasajeros = (dv?.pasajeros_detalle || []).map(pd => doc(pd.personas)).filter(Boolean);
+  if (deLosPasajeros.length) return deLosPasajeros.join(', ');
+  return doc(persona);
+}
+
 function diaDeColombia(valor) {
   if (!valor) return null;
   const texto = String(valor).trim();
@@ -229,6 +242,7 @@ function mapearTramo(t, tipo) {
   const pasajeros = (dv?.pasajeros_detalle || [])
     .map(pd => (pd.personas ? `${pd.personas.nombres} ${pd.personas.apellidos}` : null))
     .filter(Boolean);
+  const documentosPax = documentosDePasajeros(dv, persona);
 
   const origen = t.aeropuertos_tramos_vuelo_aeropuerto_origen_idToaeropuertos;
   const destino = t.aeropuertos_tramos_vuelo_aeropuerto_destino_idToaeropuertos;
@@ -290,6 +304,7 @@ function mapearTramo(t, tipo) {
     clientEmail: persona?.email || null,
     clientDocType: persona?.tipos_documento?.abreviatura || null,
     clientDocNumber: persona?.documento || null,
+    passengerDocs: documentosPax,
     ticketNumber: t.nro_tiquete || t.prod_tiqueteria?.nro_tiquete || '',
     seat: t.asiento || null,
     orden: t.orden,
@@ -320,7 +335,7 @@ function buscarTramos(where, skip, take) {
           detalle_venta: {
             include: {
               ventas: { include: { clientes: { include: { personas: { include: { tipos_documento: true } } } } } },
-              pasajeros_detalle: { include: { personas: true } },
+              pasajeros_detalle: { include: { personas: { include: { tipos_documento: true } } } },
             },
           },
           aerolineas: true,
@@ -362,8 +377,14 @@ function buscarTramos(where, skip, take) {
 
 const PLAN_ID_SEP = ':';
 const DIRECCIONES = {
-  ida: { estado: 'checkin_status_ida', salida: 'fecha_salida_vuelo', llegada: 'fecha_llegada_vuelo' },
-  regreso: { estado: 'checkin_status_regreso', salida: 'fecha_regreso_vuelo', llegada: 'fecha_llegada_regreso_vuelo' },
+  ida: {
+    estado: 'checkin_status_ida', salida: 'fecha_salida_vuelo', llegada: 'fecha_llegada_vuelo',
+    canceladoEn: 'canceled_at_ida', motivo: 'reason_canceled_ida',
+  },
+  regreso: {
+    estado: 'checkin_status_regreso', salida: 'fecha_regreso_vuelo', llegada: 'fecha_llegada_regreso_vuelo',
+    canceladoEn: 'canceled_at_regreso', motivo: 'reason_canceled_regreso',
+  },
 };
 
 const idVueloDePlan = (planId, direccion) => `plan${PLAN_ID_SEP}${planId}${PLAN_ID_SEP}${direccion}`;
@@ -439,10 +460,11 @@ function construirWherePlanes({ search, permissionScope, viewScope, user, rango 
  * `relationLoadStrategy: 'join'` por lo mismo que en tramos: un include de
  * cuatro niveles cuesta un viaje al pooler por nivel.
  */
-function buscarPlanes(where, take) {
+function buscarPlanes(where, take, skip = 0) {
   return prisma.prod_planes.findMany({
     where,
     take,
+    skip,
     relationLoadStrategy: 'join',
     include: {
       aerolineas: true,
@@ -450,7 +472,7 @@ function buscarPlanes(where, take) {
       detalle_venta: {
         include: {
           ventas: { include: { clientes: { include: { personas: { include: { tipos_documento: true } } } } } },
-          pasajeros_detalle: { include: { personas: true } },
+          pasajeros_detalle: { include: { personas: { include: { tipos_documento: true } } } },
         },
       },
     },
@@ -473,6 +495,7 @@ function expandirPlan(plan) {
   const pasajeros = (dv?.pasajeros_detalle || [])
     .map(pd => (pd.personas ? `${pd.personas.nombres} ${pd.personas.apellidos}` : null))
     .filter(Boolean);
+  const documentosPax = documentosDePasajeros(dv, persona);
   const nombrePax = pasajeros.length > 0
     ? pasajeros.join(', ')
     : (persona ? `${persona.nombres} ${persona.apellidos}` : '');
@@ -527,8 +550,8 @@ function expandirPlan(plan) {
       // distinguir.
       checkinAt: null,
       checkinDocs: null,
-      canceledAt: null,
-      reasonCanceled: null,
+      canceledAt: plan[col.canceladoEn] ? plan[col.canceladoEn].toISOString() : null,
+      reasonCanceled: plan[col.motivo] || null,
       passengerName: nombrePax,
       passenger: nombrePax,
       clientId: venta?.cliente_id || null,
@@ -537,6 +560,7 @@ function expandirPlan(plan) {
       clientEmail: persona?.email || null,
       clientDocType: persona?.tipos_documento?.abreviatura || null,
       clientDocNumber: persona?.documento || null,
+      passengerDocs: documentosPax,
       ticketNumber: plan.nro_tiquete || '',
       seat: null,
       orden: esIda ? 1 : 2,
@@ -583,11 +607,26 @@ const cuboDe = (vuelo) => (vuelo._estado === 'realizado' ? 'realizado'
  * en dos según sus fechas. `TOPE_PLANES` acota el coste; son planes con vuelo,
  * no ventas, así que el orden de magnitud es de decenas.
  */
-const TOPE_PLANES = 500;
+const LOTE_PLANES = 500;
 
-async function vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, viewScope, user }, ahora) {
+/**
+ * Todos los planes que pasan el filtro, por lotes. Antes se leían con un tope de 500 y los que sobraban
+ * desaparecían del calendario y de los contadores sin aviso (spec 004, T7). Con un rango de fechas —el caso
+ * normal, un mes— cabe en un lote; sin rango, se sigue leyendo hasta el final en vez de cortar.
+ */
+async function todosLosPlanes(where) {
+  const planes = [];
+  for (let skip = 0; ; skip += LOTE_PLANES) {
+    const lote = await buscarPlanes(where, LOTE_PLANES, skip);
+    planes.push(...lote);
+    if (lote.length < LOTE_PLANES) return planes;
+  }
+}
+
+async function vuelosDePlan({ status, dateFrom, dateTo, search, permissionScope, viewScope, user, planId }, ahora) {
   const rango = rangoDeDias(dateFrom, dateTo);
-  const planes = await buscarPlanes(construirWherePlanes({ search, permissionScope, viewScope, user, rango }), TOPE_PLANES);
+  const where = construirWherePlanes({ search, permissionScope, viewScope, user, rango });
+  const planes = await todosLosPlanes(planId ? { AND: [where, { id: planId }] } : where);
 
   const todos = planes
     .flatMap(expandirPlan)
@@ -683,7 +722,8 @@ class FlightsService {
   async getFlightById(id, { permissionScope, viewScope, user } = {}) {
     const dePlan = descomponerIdPlan(id);
     if (dePlan) {
-      const { filas } = await vuelosDePlan({ permissionScope, viewScope, user }, new Date());
+      // Solo ese plan: leer todos para quedarse con uno costaba un viaje por cada lote.
+      const { filas } = await vuelosDePlan({ permissionScope, viewScope, user, planId: dePlan.planId }, new Date());
       const vuelo = filas.find(v => v.id === String(id));
       if (!vuelo) throw new NotFoundError('Vuelo no encontrado');
       const { _salida, _estado, ...fila } = vuelo;
@@ -929,7 +969,8 @@ class FlightsService {
 
     await prisma.prod_planes.update({
       where: { id: planId },
-      data: { [col.estado]: pedido },
+      // Como en un tramo: dejar de estar cancelado borra la fecha y el motivo de la cancelación.
+      data: { [col.estado]: pedido, [col.canceladoEn]: null, [col.motivo]: null },
     });
 
     return {
@@ -945,15 +986,51 @@ class FlightsService {
     };
   }
 
-  async cancelCheckin(tramoId, { reasonCanceled }, { permissionScope, viewScope, user } = {}) {
-    // Cancelar exige guardar el motivo, y `prod_planes` no tiene dónde. Se
-    // dice, en vez de guardar el estado y perder el motivo: una cancelación
-    // sin motivo es justo lo que este endpoint existe para evitar.
-    if (descomponerIdPlan(tramoId)) {
-      throw new BadRequestError(
-        'Un vuelo de plan todavía no se puede cancelar: falta la columna del motivo. Márcalo como pendiente si el check-in no se hizo.'
-      );
+  /**
+   * Cancelar el vuelo de un sentido de un plan (spec 004, T6). Mismas reglas que un tramo: venta vigente,
+   * ámbito del asesor, motivo obligatorio (lo valida el esquema de la ruta) y no cancelar dos veces. Las
+   * columnas `canceled_at_<sentido>` y `reason_canceled_<sentido>` existen desde la migración
+   * `20261003180000_cancelar_vuelos_de_paquete`.
+   */
+  async _cancelarDePlan({ planId, direccion }, reasonCanceled, { permissionScope, viewScope, user }) {
+    const plan = await prisma.prod_planes.findUnique({
+      where: { id: planId },
+      include: { detalle_venta: { include: { ventas: true } } },
+    });
+    if (!plan) throw new NotFoundError('Vuelo no encontrado');
+
+    const venta = plan.detalle_venta?.ventas;
+    if (!venta || venta.deleted_at || venta.status === 'anulado') {
+      throw new BadRequestError('La venta de este vuelo no está vigente');
     }
+    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
+      throw new ForbiddenError('No puede cancelar el check-in de una venta de otro asesor');
+    }
+
+    const col = DIRECCIONES[direccion];
+    if (!plan[col.salida]) throw new NotFoundError('Este plan no tiene vuelo de ' + direccion);
+    if (plan[col.estado] === 'cancelado') throw new BadRequestError('El check-in de este vuelo ya está cancelado');
+
+    const actualizado = await prisma.prod_planes.update({
+      where: { id: planId },
+      data: { [col.estado]: 'cancelado', [col.canceladoEn]: new Date(), [col.motivo]: reasonCanceled },
+    });
+
+    return {
+      id: idVueloDePlan(planId, direccion),
+      source: 'plan',
+      checkinStatus: 'cancelado',
+      checkin: 'cancelado',
+      canceledAt: actualizado[col.canceladoEn].toISOString(),
+      reasonCanceled: actualizado[col.motivo],
+      checkinAt: null,
+      productCheckinStatus: 'cancelado',
+    };
+  }
+
+  async cancelCheckin(tramoId, { reasonCanceled }, { permissionScope, viewScope, user } = {}) {
+    const dePlan = descomponerIdPlan(tramoId);
+    if (dePlan) return this._cancelarDePlan(dePlan, reasonCanceled, { permissionScope, viewScope, user });
 
     const tramo = await prisma.tramos_vuelo.findUnique({
       where: { id: String(tramoId) },
@@ -1081,3 +1158,5 @@ class FlightsService {
 }
 
 module.exports = new FlightsService();
+// Para el panel "requiere atención" (stats.service.js): los check-ins críticos de los paquetes.
+module.exports.vuelosDePlan = vuelosDePlan;

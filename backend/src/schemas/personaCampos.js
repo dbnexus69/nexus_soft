@@ -26,7 +26,11 @@ const numeroDocumento = z
 const numeroDocumentoOpcional = z.preprocess(vacioAUndefined, numeroDocumento.optional());
 
 // La abreviatura o el nombre del tipo, de las rutas anteriores a `docTypeId`.
-const tipoDocumentoPorTexto = z.preprocess(vacioAUndefined, z.string().trim().optional());
+// Recortado antes de mirar si está vacío: un tipo de solo espacios es "sin tipo", no un tipo.
+const tipoDocumentoPorTexto = z.preprocess(
+  (v) => (typeof v === 'string' ? v.trim() || undefined : vacioAUndefined(v)),
+  z.string().optional(),
+);
 
 // El id del tipo de documento (`tipos_documento.id`); llega como número o como texto del <select>.
 const idTipoDocumento = z.preprocess(

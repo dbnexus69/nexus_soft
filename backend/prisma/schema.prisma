@@ -711,6 +711,10 @@ model prod_planes {
   observaciones               String?
   checkin_status_ida          CheckinStatus?   @default(pendiente)
   checkin_status_regreso      CheckinStatus?   @default(pendiente)
+  canceled_at_ida             DateTime?
+  reason_canceled_ida         String?          @db.VarChar(255)
+  canceled_at_regreso         DateTime?
+  reason_canceled_regreso     String?          @db.VarChar(255)
   tipo_paquete                String?          @default("own")
   tipo_transporte             String?          @default("Aereo")
   aerolineas                  aerolineas?      @relation(fields: [aerolineaId], references: [id])

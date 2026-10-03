@@ -256,7 +256,7 @@ export default function Dashboard() {
       {/* ── Tira operativa: apoyo, no titular ─────────────────────────── */}
       <section className="bg-[#ffffff] dark:bg-[#131524] border border-gray-border dark:border-slate-800 rounded-2xl px-5 py-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-3">
-          <Contador Icono={Plane} etiqueta="Tramos emitidos" valor={stats.totalFlights} cargando={cargando} />
+          <Contador Icono={Plane} etiqueta="Tiquetes emitidos" valor={stats.totalFlights} cargando={cargando} />
           <Contador Icono={BedDouble} etiqueta="Reservas de hotel" valor={stats.hotelesCount} cargando={cargando} />
           <Contador Icono={ShieldCheck} etiqueta="Pólizas emitidas" valor={stats.segurosCount} cargando={cargando} />
           <Contador Icono={Package} etiqueta="Paquetes" valor={stats.planesCount} cargando={cargando} />

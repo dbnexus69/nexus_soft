@@ -4,7 +4,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hechas T0–T11, T15–T21 (T4, T5 y T20 confirmadas en el navegador).
+**Estado (2026-10-03).** Hechas T0–T11, T15–T23 (T4, T5 y T20 confirmadas en el navegador).
 Pendientes T12 (despliegue, cuando haya hosting) y T14 (deuda menor; hechas la marca por agencia, el ruido del registro y los ids, queda unificar las búsquedas).
 T13 fuera de alcance: `moon-travel` es de otro proyecto.
 
@@ -769,12 +769,55 @@ de la #0007.
 de la carga solo se aplican si coincide. **Comprobado:** la misma secuencia muestra el tiquete correcto;
 devuelto el archivo a su versión anterior, vuelve a fallar; `tsc --noEmit` limpio.
 
+## T22 · El dashboard contaba mal `[x]`
+
+Pedido: una venta de tiquetería con dos pasajeros tiene que contar como dos tiquetes. Al revisar el
+dashboard entero salieron tres fallos más.
+
+1. **"Tramos emitidos" contaba productos, no tiquetes.** Era `COUNT(d.id)` sobre las líneas `ticket` de
+   `detalle_venta`: una venta con un tiquete y dos pasajeros daba 1 (y tampoco eran tramos). Ahora la
+   consulta de categorías (`stats.service.js`, `categorySql`) suma por cada línea sus pasajeros
+   (`pasajeros_detalle`, `LEFT JOIN LATERAL`, con índice por `detalle_venta_id`) y 1 si no se registró
+   ninguno; `totalFlights` es esa suma para `ticket`. La etiqueta pasa a "Tiquetes emitidos". Los tiquetes
+   dentro de un paquete cuentan igual.
+2. **"Reservas de hotel", "Pólizas emitidas" y "Paquetes" daban siempre 0.** `useDashboardStats.ts` leía
+   `categoryBreakdown.hoteles`, `.seguros_viaje` y `.planes`; el servidor manda las categorías de
+   `detalle_venta` (`hotel`, `insurance`, `plan`). Corregidas las claves.
+3. **Las ventas anuladas contaban.** Entraban en "operaciones", en la tendencia anual y en las ventas del
+   año (comparación interanual), en los conteos por categoría y en los listados de mejores clientes,
+   rendimiento de asesores y distribución por método de pago. El resto del sistema ya las excluía (el
+   detalle de un cliente, "requiere atención"). Ahora todas esas consultas llevan `status <> 'anulado'`,
+   incluida `prisma/sql/dashboardAggregates.sql` (SQL tipado: hay que regenerar con `pnpm db:generate`).
+
+**Comprobado** por la API real, dentro de `pnpm test:aislamiento-api` (sección "Dashboard"): una venta
+con un tiquete de 2 pasajeros y otro sin pasajeros suma 3 tiquetes; el desglose trae `hotel` e
+`insurance`; anularla baja las operaciones en 1 y devuelve los tiquetes a su valor anterior. `tsc`
+limpio.
+
+*Abierto, a decidir:* "Pólizas emitidas" sigue contando seguros (productos), no asegurados. Si cada
+asegurado lleva su póliza, es el mismo cambio que los tiquetes (`personas` ya viene en el desglose).
+
+## T23 · El mínimo para retirar, por comisionista `[x]`
+
+La pantalla de comisionistas decidía quién podía liquidar con un **$50.000 fijo** y no miraba el umbral de
+cada uno (`comisionistas.umbral_pago`), que además no se podía editar. Ahora cada comisionista tiene su
+**mínimo para retirar**: se define en su ficha (campo nuevo, 50.000 por defecto al crearlo), su tarjeta lo
+muestra ("Mínimo para retirar: $ X" y la barra de progreso hacia él), "Pendientes" lista a quienes llegaron
+al suyo, y la regla de negocio lo explica. Uno sin mínimo propio (0 o nulo, como quedaron los de antes)
+usa 50.000; el servidor lo devuelve ya resuelto (`minimoParaRetirar`). **El servidor también lo exige:**
+liquidar por debajo da 400 `BELOW_MINIMUM` con el mínimo en el mensaje. Un mínimo negativo da 422.
+
+**Comprobado** en `pnpm test:aislamiento-api`: el mínimo por defecto, la liquidación por debajo (400) y por
+encima (201), y el negativo (422). `tsc` limpio. **Por ver en pantalla:** la tarjeta y el campo de la ficha.
+
 ---
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T23 | Cada comisionista con su mínimo para retirar, visible en su tarjeta, editable en su ficha y exigido por el servidor. |
+| 2026-10-03 | T22 | Dashboard: tiquetes por pasajero, los contadores de hotel/pólizas/paquetes (siempre en 0 por claves equivocadas) y las ventas anuladas fuera de todas las cifras. |
 | 2026-10-03 | T11 | El verificador de la API pasa al repo: `pnpm test:aislamiento-api`, 58 comprobaciones (A3, A9, un asesor, liquidaciones, suplantación), en verde y sin dejar restos. |
 | 2026-10-03 | T14 | Marca por agencia (texto legal del voucher, título de la pestaña, sin parpadeo al entrar), registro sin traza para los rechazos previstos (`[REQUEST_REJECTED]`), ids revisados en roles, stats y uploads (y un `?limit=-5` que daba 500), y la búsqueda del método de pago principal, exacta. Falta unificar el resto de búsquedas. |
 | 2026-10-03 | T21 | El detalle de una venta podía mostrar los servicios de otra si se cambiaba de venta antes de que cargaran. Reproducido y arreglado. |

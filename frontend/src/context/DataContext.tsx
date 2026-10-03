@@ -46,7 +46,7 @@ interface DashboardData {
   categoryDistribution: { name: string; value: number; percentage: number }[];
   carteraStatus: { name: string; value: number; color: string }[];
   monthlyTrend: { month: number; currentYear: number; previousYear: number }[];
-  categoryBreakdown: Record<string, { count: number; revenue: number }>;
+  categoryBreakdown: Record<string, { count: number; revenue: number; personas?: number }>;
   creditProveedores?: number;
   creditTa?: number;
 }

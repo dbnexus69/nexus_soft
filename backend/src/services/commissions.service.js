@@ -6,6 +6,11 @@ const { validarDocumento } = require('../utils/tipoDocumento');
 const { aCentimos } = require('./saleTotals');
 const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
 
+// El mínimo que un comisionista tiene que acumular para poder retirar (liquidar). Cada uno tiene el suyo
+// (`comisionistas.umbral_pago`); uno sin definir (0 o nulo, que es como quedan los de antes) usa este.
+const MINIMO_PARA_RETIRAR = 50000;
+const minimoParaRetirar = (umbral) => (Number(umbral) > 0 ? Number(umbral) : MINIMO_PARA_RETIRAR);
+
 /**
  * Qué ventas deben comisión todavía. Una sola definición: la usan el acumulado
  * que ve la pantalla y la liquidación que lo paga, y si no coincidieran se
@@ -128,7 +133,7 @@ class CommissionsService {
       docNumber: a.docNumber || '',
       status: a.status,
       accumulated: a.accumulated,
-      paymentThreshold: a.paymentThreshold,
+      paymentThreshold: minimoParaRetirar(a.paymentThreshold),
       phone: a.phone,
       email: a.email,
       avatar: a.avatar || null,
@@ -199,7 +204,7 @@ class CommissionsService {
       data: {
         persona_id: persona.id,
         tipo: data.type || null,
-        umbral_pago: parseFloat(data.paymentThreshold) || 0,
+        umbral_pago: minimoParaRetirar(data.paymentThreshold),
         acumulado: 0,
         status: data.status || 'Activo',
         banco: data.banco || null,
@@ -218,7 +223,7 @@ class CommissionsService {
       docNumber: agent.personas.documento || '',
       status: agent.status,
       accumulated: agent.acumulado,
-      paymentThreshold: agent.umbral_pago,
+      paymentThreshold: minimoParaRetirar(agent.umbral_pago),
       phone: agent.personas.telefono,
       email: agent.personas.email,
       avatar: agent.personas.avatar_url || null,
@@ -275,7 +280,7 @@ class CommissionsService {
     if (data.type !== undefined) agentUpdate.tipo = data.type;
     if (data.status !== undefined) agentUpdate.status = data.status;
     if (data.paymentThreshold !== undefined) {
-      agentUpdate.umbral_pago = parseFloat(data.paymentThreshold) || 0;
+      agentUpdate.umbral_pago = minimoParaRetirar(data.paymentThreshold);
     }
     if (data.banco !== undefined) agentUpdate.banco = data.banco || null;
     if (data.tipoCuenta !== undefined) agentUpdate.tipo_cuenta = data.tipoCuenta || null;
@@ -400,7 +405,7 @@ class CommissionsService {
     return await prisma.transaccion(async (tx) => {
       const comisionista = await tx.comisionistas.findFirst({
         where: { id: data.agentId, deleted_at: null },
-        select: { id: true, personas: { select: { nombres: true, apellidos: true } } },
+        select: { id: true, umbral_pago: true, personas: { select: { nombres: true, apellidos: true } } },
       });
       if (!comisionista) throw new NotFoundError('Este comisionista ya no existe o fue eliminado.');
       const nombre = `${comisionista.personas.nombres} ${comisionista.personas.apellidos}`.trim();
@@ -472,6 +477,16 @@ class CommissionsService {
           `no ${pesos(aCentimos(data.amount))}. Revisa la nueva cifra y confirma otra vez.`,
           'SETTLEMENT_AMOUNT_CHANGED',
           [{ field: 'amount', message: `El acumulado actual es ${pesos(monto)}`, value: monto }],
+        );
+      }
+
+      // Por debajo de su mínimo no se retira: la pantalla ya no ofrece el botón, pero la regla vive aquí.
+      const minimo = minimoParaRetirar(comisionista.umbral_pago);
+      if (monto < minimo) {
+        throw new BadRequestError(
+          `${nombre} lleva ${pesos(monto)} y su mínimo para retirar es ${pesos(minimo)}.`,
+          'BELOW_MINIMUM',
+          [{ field: 'amount', message: `El mínimo para retirar es ${pesos(minimo)}`, value: minimo }],
         );
       }
 

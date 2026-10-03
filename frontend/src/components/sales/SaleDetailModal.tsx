@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { SKELETON } from '../ui/Skeleton';
 import { AlertCircle, ChevronDown, Receipt } from "lucide-react";
 import * as api from "../../api";
@@ -50,8 +50,12 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
   const [cargando, setCargando] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
   const [verMeta, setVerMeta] = useState(false);
+  // La venta abierta ahora. Una categoría que llega tarde, de una venta ya
+  // cerrada, no debe caer en el estado de la siguiente.
+  const ventaAbierta = useRef<number | null>(null);
 
   useEffect(() => {
+    ventaAbierta.current = isOpen && selectedSale ? selectedSale.id : null;
     if (!isOpen || !selectedSale) {
       setFullSale(null); setProductos({}); setCargando(null); setAbierta(null); setVerMeta(false);
       return;
@@ -88,14 +92,15 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
       return prev;
     });
     if (productos[slug] || !sale) return;
+    const id = sale.id;
     setCargando(slug);
     try {
-      const data = await api.getSaleProductsByCategory(sale.id, slug);
-      setProductos(prev => ({ ...prev, [slug]: data }));
+      const data = await api.getSaleProductsByCategory(id, slug);
+      if (ventaAbierta.current === id) setProductos(prev => ({ ...prev, [slug]: data }));
     } catch {
-      setError(`No se pudo cargar ${formaDe(slug).label}`);
+      if (ventaAbierta.current === id) setError(`No se pudo cargar ${formaDe(slug).label}`);
     } finally {
-      setCargando(null);
+      if (ventaAbierta.current === id) setCargando(null);
     }
   }, [productos, sale]);
 

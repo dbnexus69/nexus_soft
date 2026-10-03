@@ -734,6 +734,8 @@ class SalesService {
 
       // Del catálogo precargado, con el mismo criterio que antes:
       // igualdad de nombre sin distinguir mayúsculas.
+      // Tiquete, hotel, seguro y plan mandan el proveedor en `supplier`; las 11
+      // categorías que usan FinancialSection, en `supplierName`.
       const findProveedorId = (nombre) => {
         if (!nombre) return null;
         const buscado = String(nombre).toLowerCase();
@@ -958,7 +960,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
         c._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', tarjeta_proveedor_id: tarjetaDe(c), parentDetalleId: parentDetalleId, ...datosFinancieros(c) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'checkin', tarjeta_proveedor_id: tarjetaDe(c), parentDetalleId: parentDetalleId, ...datosFinancieros(c), proveedor_id: findProveedorId(c.supplierName) } });
         await tx.prod_checkins.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -981,7 +983,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(m);
         const detalleId = uuidv4();
         m._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'migration', tarjeta_proveedor_id: tarjetaDe(m), parentDetalleId: parentDetalleId, ...datosFinancieros(m) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'migration', tarjeta_proveedor_id: tarjetaDe(m), parentDetalleId: parentDetalleId, ...datosFinancieros(m), proveedor_id: findProveedorId(m.supplierName) } });
         await tx.prod_migracion.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -998,7 +1000,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(s);
         const detalleId = uuidv4();
         s._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', tarjeta_proveedor_id: tarjetaDe(s), parentDetalleId: parentDetalleId, ...datosFinancieros(s) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'simcard', tarjeta_proveedor_id: tarjetaDe(s), parentDetalleId: parentDetalleId, ...datosFinancieros(s), proveedor_id: findProveedorId(s.supplierName) } });
         await tx.prod_simcards.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1016,7 +1018,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
         c._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'car', tarjeta_proveedor_id: tarjetaDe(c), parentDetalleId: parentDetalleId, ...datosFinancieros(c) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'car', tarjeta_proveedor_id: tarjetaDe(c), parentDetalleId: parentDetalleId, ...datosFinancieros(c), proveedor_id: findProveedorId(c.supplierName) } });
         await tx.prod_autos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1035,7 +1037,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(f);
         const detalleId = uuidv4();
         f._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'finca', tarjeta_proveedor_id: tarjetaDe(f), parentDetalleId: parentDetalleId, ...datosFinancieros(f) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'finca', tarjeta_proveedor_id: tarjetaDe(f), parentDetalleId: parentDetalleId, ...datosFinancieros(f), proveedor_id: findProveedorId(f.supplierName) } });
         await tx.prod_fincas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1057,7 +1059,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(t);
         const detalleId = uuidv4();
         t._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tour', tarjeta_proveedor_id: tarjetaDe(t), parentDetalleId: parentDetalleId, ...datosFinancieros(t) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'tour', tarjeta_proveedor_id: tarjetaDe(t), parentDetalleId: parentDetalleId, ...datosFinancieros(t), proveedor_id: findProveedorId(t.supplierName) } });
         await tx.prod_tours.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1085,7 +1087,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(c);
         const detalleId = uuidv4();
         c._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'convention', tarjeta_proveedor_id: tarjetaDe(c), parentDetalleId: parentDetalleId, ...datosFinancieros(c) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'convention', tarjeta_proveedor_id: tarjetaDe(c), parentDetalleId: parentDetalleId, ...datosFinancieros(c), proveedor_id: findProveedorId(c.supplierName) } });
         await tx.prod_eventos.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1108,7 +1110,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(r);
         const detalleId = uuidv4();
         r._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurant', tarjeta_proveedor_id: tarjetaDe(r), parentDetalleId: parentDetalleId, ...datosFinancieros(r) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'restaurant', tarjeta_proveedor_id: tarjetaDe(r), parentDetalleId: parentDetalleId, ...datosFinancieros(r), proveedor_id: findProveedorId(r.supplierName) } });
         await tx.prod_restaurantes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1129,7 +1131,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(v);
         const detalleId = uuidv4();
         v._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', tarjeta_proveedor_id: tarjetaDe(v), parentDetalleId: parentDetalleId, ...datosFinancieros(v) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'visa', tarjeta_proveedor_id: tarjetaDe(v), parentDetalleId: parentDetalleId, ...datosFinancieros(v), proveedor_id: findProveedorId(v.supplierName) } });
         await tx.prod_visas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1148,7 +1150,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(p);
         const detalleId = uuidv4();
         p._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'passport', tarjeta_proveedor_id: tarjetaDe(p), parentDetalleId: parentDetalleId, ...datosFinancieros(p) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'passport', tarjeta_proveedor_id: tarjetaDe(p), parentDetalleId: parentDetalleId, ...datosFinancieros(p), proveedor_id: findProveedorId(p.supplierName) } });
         await tx.prod_pasaportes.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,
@@ -1169,7 +1171,7 @@ class SalesService {
         const parentDetalleId = getParentDetalleId(m);
         const detalleId = uuidv4();
         m._generatedId = detalleId;
-        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pet', tarjeta_proveedor_id: tarjetaDe(m), parentDetalleId: parentDetalleId, ...datosFinancieros(m) } });
+        await tx.detalle_venta.create({ data: { id: detalleId, venta_id: ventaId, categoria: 'pet', tarjeta_proveedor_id: tarjetaDe(m), parentDetalleId: parentDetalleId, ...datosFinancieros(m), proveedor_id: findProveedorId(m.supplierName) } });
         await tx.prod_mascotas.create({
           data: {
             id: uuidv4(), detalle_venta_id: detalleId,

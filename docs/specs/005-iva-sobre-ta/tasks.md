@@ -4,7 +4,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-09-27).** Hechas T1–T9. T10 con algo por confirmar en pantalla.
+**Estado (2026-10-03).** Hechas T1–T10.
 
 ---
 
@@ -65,7 +65,7 @@ Total", leyendo `form.iva`.
 `SaleDetailModal.tsx`: nueva línea "IVA" en el desglose de cabecera (junto a "Costo proveedor" / "TA"),
 leyendo `sale.iva`. `ServiceRow.tsx`: el fallback sin `subtotal` explícito incluye `iva`.
 
-## T10 · Verificación completa `[~]`
+## T10 · Verificación completa `[x]`
 
 `pnpm check:prisma` limpio · `pnpm test:aislamiento` 15/15 (54 claves ajenas compuestas, sin cambio) ·
 `pnpm build` del frontend sin errores de tipos.
@@ -82,10 +82,15 @@ más un comisionista con `commissionAgentNetPayment: 20000`):
 | C6 — El servidor nunca lee `iva` del body | No se mandó `iva` en ningún producto y aun así se calculó correctamente en los dos |
 | C8 — Las 15 categorías | Cubierto código (15/15 en `sales.service.js` y `catalog/products.js`); probado en vivo Hotel y Restaurant |
 
-**Por confirmar en pantalla** (sin navegador disponible en esta sesión): C4 (que el asistente sugiera
-la comisión sobre TA neta) y C5 (que "Ganancia Oficina" se vea como `ta − comisión` en las 3 pantallas)
-— la aritmética está verificada por revisión de código (150000 − 20000 = 130000 esperado en las 3), no
-visualmente. C7 (el voucher no cambia) tampoco se probó en pantalla, por el mismo motivo.
+**Confirmado en el navegador (2026-10-03)**, con una agencia desechable (`verif-ui-*`) y ventas hechas
+desde el asistente:
+
+| Criterio | Resultado |
+|---|---|
+| Resumen del paso 2 | Hotel con costo 300.000 y TA 100.000: IVA $19.000, venta total $419.000 |
+| C4 — Comisión sobre TA neta | Restaurante con TA 50.000 y comisionista al 10 %: comisión $5.000 (no $5.950) |
+| C5 — Ganancia Oficina = TA − comisión | Paso 3: $100.000 sin comisionista y $45.000 con él; detalle de la venta ("Ganancia neta") y modal de abonos ("Ganancias Oficina"): $100.000. El detalle muestra además la línea IVA $19.000 |
+| C7 — El voucher no cambia | Por código: `VoucherPDF.tsx` pinta un solo total, `sale.total`, que ya incluye el IVA. No se descargó el PDF |
 
 ---
 
@@ -93,5 +98,6 @@ visualmente. C7 (el voucher no cambia) tampoco se probó en pantalla, por el mis
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T10 | Confirmado en el navegador: IVA en el resumen del asistente, comisión y "Ganancia Oficina" sobre TA neta en el paso 3, el detalle y los abonos. |
 | 2026-09-27 | T2–T9 | Implementado y probado por API (C1, C2, C3, C6, C8). Falta confirmar en pantalla C4, C5, C7 — sin navegador disponible en esta sesión. |
 | 2026-09-27 | T1 | Migración aplicada y schema al día; cliente de Prisma regenerado. |

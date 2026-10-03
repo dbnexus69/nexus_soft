@@ -4,7 +4,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-02).** Hechas T0–T3, T6–T10, T15–T20. Por confirmar en pantalla T4 y T5.
+**Estado (2026-10-03).** Hechas T0–T10, T15–T21 (T4, T5 y T20 confirmadas en el navegador).
 Pendientes T11 (verificadores al repo), T12 (despliegue, cuando haya hosting) y T14 (deuda menor).
 T13 fuera de alcance: `moon-travel` es de otro proyecto.
 
@@ -151,7 +151,7 @@ dashboard abre una con seis consultas dentro.
 100, y el máximo de `/stats/attention` baja de 49 s a 1,4 s. Medianas: dashboard 2,0 s, atención
 1,3 s, config 1,3 s, ventas 1,1 s.
 
-## T4 · Ventas: campos que el asistente perdía `[~]`
+## T4 · Ventas: campos que el asistente perdía `[x]`
 
 `createSale` leía nombres de campo distintos de los que manda el formulario, y guardaba `null` o un
 valor por defecto sin avisar. El endpoint suelto de cada categoría usaba los nombres correctos: el
@@ -175,7 +175,21 @@ sus campos. **Las ventas ya guardadas con esos campos vacíos no se reparan.**
 mientras el contrato de lectura y el endpoint suelto usan `passportNumber`. Cada camino es coherente
 consigo mismo; conviene comprobar que el modal de edición no los cruza.
 
-## T5 · Una sola copia de los catálogos de gestión interna `[~]`
+**Confirmado en el navegador (2026-10-03)**, con una agencia desechable (`verif-ui-*`): un restaurante
+creado desde el asistente guarda comensales, mesa, menú, ocasión y celular; y una venta con las cinco
+categorías, con los nombres de campo del formulario, devuelve trámite, conductor, responsable, dieta
+(`"Vegano, Halal"`), espacio, equipo audiovisual y catering.
+
+**Salió un sexto caso de la misma familia: el proveedor.** Las 11 categorías que usan
+`FinancialSection` (check-in, migración, SIM, auto, finca, tour, convención, restaurante, visa,
+pasaporte, mascotas) mandan el proveedor como `supplierName`, y `createSale` solo escribía
+`proveedor_id` en tiquete, hotel, seguro y plan, que lo mandan como `supplier`: el proveedor elegido se
+perdía siempre (`supplier: null` al leer). Ahora esos 11 inserts escriben
+`proveedor_id: findProveedorId(x.supplierName)`. **Comprobado:** restaurante y tour vuelven con
+"Proveedor Prueba" (y con otra capitalización también); `check:prisma` limpio. Las ventas ya guardadas
+sin proveedor no se reparan.
+
+## T5 · Una sola copia de los catálogos de gestión interna `[x]`
 
 Al crear una aerolínea en gestión interna no aparecía en el selector del tiquete. La pantalla de
 configuración leía y escribía un `ConfigContext` con su propio estado, y el asistente de venta leía el
@@ -190,8 +204,8 @@ paquetes no compartían el bug: el formulario de planes los pide fresco cada vez
 **Comprobado:** `tsc --noEmit` limpio · el backend devuelve las 18 aerolíneas a cualquier agencia
 (catálogo compartido, sin RLS).
 
-**Por confirmar:** el síntoma en pantalla. Tras el cambio se pidió un refresco fuerte del navegador
-(`Ctrl+Shift+R`): un cambio en la raíz de los providers no siempre lo aplica el recarga en caliente.
+**Confirmado en el navegador (2026-10-03):** una tarjeta creada en gestión interna ("Visa Prueba T5",
+terminada en 5555) aparece en el selector de pago al proveedor del asistente sin recargar la página.
 
 ## T6 · Rama y base al día `[x]`
 
@@ -689,8 +703,31 @@ seguridad: la comprobación en el servidor (`authorize()`) ya aplica el cambio a
 el mismo token sin volver a entrar (comprobado arriba, T20); lo único que tarda es que el navegador
 de quien ya estaba dentro se entere de que ahora puede ver un botón nuevo.
 
-**Comprobado:** `tsc --noEmit` limpio. No probado en pantalla — ver spec 006 sobre por qué no hay
-navegador disponible en esta sesión.
+**Comprobado:** `tsc --noEmit` limpio.
+
+**Confirmado en el navegador (2026-10-03):** el superadministrador, suplantando una agencia de prueba,
+activa "Usuarios: crear" para asesores y guarda: el botón pasa a "Guardando…" deshabilitado, la rejilla
+queda de solo lectura mientras tanto, y la API devuelve después el permiso guardado. Revertido igual.
+
+Lo de ocultar "Nuevo Usuario" y editar/borrar a un asesor **no se puede ver hoy en pantalla**: la ruta
+`/users` está envuelta en `AdminRoute` (`App.tsx`) y un asesor que entra por la URL vuelve al inicio.
+La comprobación de `Users.tsx` queda como defensa por si esa ruta se abre alguna vez a otros roles.
+
+*Anotado sin arreglar:* la pantalla de permisos llama a `/api/roles/...`, no a `/api/v1/...` como el
+resto del frontend. Es el mismo router y funciona; solo se sale de la convención.
+
+## T21 · El detalle de una venta podía mostrar los servicios de otra `[x]`
+
+Encontrado al probar la 004 en el navegador. `SaleDetailModal.tsx` pide cada categoría al desplegarla
+(`alternar`) y guarda la respuesta en `productos`, sin comprobar que la venta abierta siga siendo la
+misma. Si se abre una venta, se despliega un servicio y se cierra antes de que llegue (con el pooler,
+1–3 s), la respuesta tardía cae en el estado de la siguiente venta, y desplegar la misma categoría ahí
+muestra los productos de la anterior. **Reproducido:** el detalle de la venta #0006 mostraba el tiquete
+de la #0007.
+
+**Lo hecho:** una referencia `ventaAbierta` con la venta abierta ahora; la respuesta, el error y el fin
+de la carga solo se aplican si coincide. **Comprobado:** la misma secuencia muestra el tiquete correcto;
+devuelto el archivo a su versión anterior, vuelve a fallar; `tsc --noEmit` limpio.
 
 ---
 
@@ -698,6 +735,8 @@ navegador disponible en esta sesión.
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T21 | El detalle de una venta podía mostrar los servicios de otra si se cambiaba de venta antes de que cargaran. Reproducido y arreglado. |
+| 2026-10-03 | T4, T5, T20 | Confirmadas en el navegador. En T4 salió un sexto campo perdido: el proveedor, en las 11 categorías que usan `FinancialSection`; arreglado. |
 | 2026-10-02 | T20 | Reportado después de la verificación: un permiso recién guardado podía no reflejarse (un `if` ajeno al catálogo lo descartaba en `fetchConfig`), y el botón de guardar no avisaba que estaba trabajando. Los dos arreglados; queda anotado que un asesor con la pantalla ya abierta necesita recargar para ver un permiso nuevo, por diseño. |
 | 2026-10-02 | T20 | El backend del módulo de permisos, comprobado de punta a punta sobre Usuarios: 22/22. La pantalla de Usuarios sí tenía un hueco — no ocultaba "Nuevo Usuario" ni editar/borrar a quien no tenía el permiso, a diferencia de toda pantalla comparable. |
 | 2026-10-01 | T12, T13, T14 | Doc al día con lo ya decidido o hecho: T13 fuera de alcance (`moon-travel` es de otro proyecto); T12 aplica cuando haya hosting (no hay despliegue todavía); en T14, el `.env.example` ya estaba corregido y los ids no numéricos ya tienen middleware en 7 routers. |

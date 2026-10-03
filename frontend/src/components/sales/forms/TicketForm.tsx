@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Datepicker from "react-tailwindcss-datepicker";
 import dayjs from "dayjs";
-import { Plane, MapPin, User, Briefcase, Trash2, PlusCircle, ArrowRight, ArrowLeftRight, ArrowLeft, Calendar } from "lucide-react";
+import { Plane, MapPin, User, Briefcase, Trash2, PlusCircle, ArrowRight, ArrowLeftRight, ArrowLeft, Calendar, TriangleAlert } from "lucide-react";
 import { FormField, Input, Combobox, Select, CurrencyInput } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { TicketData, FlightLeg } from "../../../types";
@@ -396,7 +396,7 @@ export function TicketForm({
           <button
             type="button"
             onClick={() => addStop(type)}
-            className={`flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-md transition-colors ${c.btn}`}
+            className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md transition-colors ${c.btn}`}
           >
             <PlusCircle size={10} /> Añadir Escala
           </button>
@@ -416,7 +416,7 @@ export function TicketForm({
               }`}
             >
               <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-sm flex items-center gap-1">
-                <span className={`text-[9px] font-extrabold uppercase tracking-wide ${color === "primary" ? "text-primary" : "text-blue-600"}`}>
+                <span className={`text-[10px] font-extrabold uppercase tracking-wide ${color === "primary" ? "text-primary" : "text-blue-600"}`}>
                   Escala #{sIdx + 1}
                 </span>
               </div>
@@ -465,7 +465,7 @@ export function TicketForm({
                       className="text-xs"
                     />
                     {stop.flightNumber?.length > 0 && stop.flightNumber.length < 3 && (
-                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">⚠️ Mínimo 3 caracteres.</p>
+                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 3 caracteres.</p>
                     )}
                   </FormField>
                   
@@ -481,7 +481,7 @@ export function TicketForm({
                       className="text-xs"
                     />
                     {stop.seat?.length > 0 && stop.seat.length < 2 && (
-                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">⚠️ Mínimo 2 caracteres.</p>
+                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 2 caracteres.</p>
                     )}
                   </FormField>
                 </div>
@@ -545,7 +545,7 @@ export function TicketForm({
                     />
                     {stop.ticketNumber && stop.ticketNumber.length > 0 && stop.ticketNumber.length < 8 && (
                       <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">
-                        ⚠️ Mínimo 8 caracteres.
+                        <TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 8 caracteres.
                       </p>
                     )}
                   </FormField>
@@ -653,7 +653,7 @@ export function TicketForm({
                 }`}
               >
                 {pill.label}
-                <span className="block text-[9px] font-normal mt-0.5 opacity-70">{pill.desc}</span>
+                <span className="block text-[10px] font-normal mt-0.5 opacity-70">{pill.desc}</span>
               </button>
             ))}
           </div>
@@ -676,7 +676,7 @@ export function TicketForm({
                   }`}
                 >
                   {pill.label}
-                  <span className="block text-[9px] font-normal mt-0.5 opacity-70">{pill.desc}</span>
+                  <span className="block text-[10px] font-normal mt-0.5 opacity-70">{pill.desc}</span>
                 </button>
               ))}
             </div>
@@ -702,7 +702,7 @@ export function TicketForm({
           {ticket.legs.map((leg, idx) => (
             <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100 relative group">
               <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-sm">
-                <span className="text-[9px] font-extrabold uppercase tracking-wide text-primary">Tramo #{idx + 1}</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-primary">Tramo #{idx + 1}</span>
               </div>
               {ticket.legs.length > 1 && (
                 <button
@@ -747,7 +747,7 @@ export function TicketForm({
                       className="text-xs"
                     />
                     {leg.flightNumber?.length > 0 && leg.flightNumber.length < 3 && (
-                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in">⚠️ Mínimo 3 caracteres.</p>
+                      <p className="text-[10px] text-amber-500 mt-1 font-medium animate-fade-in"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 3 caracteres.</p>
                     )}
                   </FormField>
                   <FormField label="Asiento">
@@ -827,7 +827,7 @@ export function TicketForm({
           </h4>
           <div className="p-4 bg-white rounded-xl border border-blue-100 relative">
             <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-sm">
-              <span className="text-[9px] font-extrabold uppercase tracking-wide text-blue-600">Retorno</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wide text-blue-600">Retorno</span>
             </div>
             <div className="space-y-3 pt-1">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -953,11 +953,11 @@ export function TicketForm({
           {(ticket.passengers || []).map((pax: any, pIdx: number) => (
             <div key={pIdx} className="p-4 bg-white rounded-xl border border-violet-100 relative group">
               <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-violet-200 shadow-sm flex items-center gap-1.5">
-                <span className="text-[9px] font-extrabold uppercase tracking-wide text-violet-600">
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-violet-600">
                   Pasajero #{pIdx + 1}
                 </span>
                 {pax.esTitular && (
-                  <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">Titular</span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">Titular</span>
                 )}
               </div>
               {(ticket.passengers || []).length > 1 && (

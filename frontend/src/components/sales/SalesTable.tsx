@@ -97,7 +97,7 @@ export default function SalesTable({
             <TableCell>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1">
-                  <Badge variant={sale.status} className="uppercase text-[9px] font-black">
+                  <Badge variant={sale.status} className="uppercase text-[10px] font-black">
                     {sale.status === "pagado"
                       ? "Finalizado"
                       : sale.status === "abonado"

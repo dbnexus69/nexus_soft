@@ -311,13 +311,13 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
       <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm animate-fade-in">
         <div className="flex flex-col">
           <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tighter">Costo Total para la Agencia</span>
-          <span className="text-[9px] text-gray-400 dark:text-slate-400 font-medium">(Costo Proveedor + Tarifa Administrativa)</span>
+          <span className="text-[10px] text-gray-400 dark:text-slate-400 font-medium">(Costo Proveedor + Tarifa Administrativa)</span>
         </div>
         <div className="flex flex-col items-end">
           <span className="text-lg font-black text-emerald-900 dark:text-emerald-300 leading-none">
             ${totalCost.toLocaleString('es-CO', { minimumFractionDigits: 0 })}
           </span>
-          {totalCost > 0 && <span className="text-[9px] text-emerald-600 font-bold uppercase">Valor Liquidado</span>}
+          {totalCost > 0 && <span className="text-[10px] text-emerald-600 font-bold uppercase">Valor Liquidado</span>}
         </div>
       </div>
     </div>

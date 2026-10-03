@@ -283,13 +283,13 @@ export default function Sales() {
       const marcaArchivo = (marca?.nombre ?? 'Nexus').replace(/\s+/g, '_');
       doc.save(`Voucher_${marcaArchivo}_#${voucherSale.numero ?? voucherSale.id}_${voucherSale.clientName.replace(/\s+/g, '_')}.pdf`);
 
-      setSuccessMessage(`✅ Voucher descargado correctamente`);
+      setSuccessMessage(`Voucher descargado correctamente`);
       setTimeout(() => setShowSuccess(false), 3000);
       setVoucherSale(null);
       setVoucherFullSale(null);
     } catch (err) {
       console.error(err);
-      setSuccessMessage(`❌ Error al generar el PDF`);
+      setSuccessMessage(`Error al generar el PDF`);
       setTimeout(() => setShowSuccess(false), 3000);
     } finally {
       setIsPdfGenerating(false);
@@ -310,14 +310,14 @@ export default function Sales() {
       setSuccessMessage(`Enviando al cliente...`);
       const result = await api.sendVoucher(voucherSale.id, pdfBase64);
 
-      setSuccessMessage(`✅ Voucher enviado a ${result.email}`);
+      setSuccessMessage(`Voucher enviado a ${result.email}`);
       setTimeout(() => setShowSuccess(false), 4000);
       setVoucherSale(null);
       setVoucherFullSale(null);
     } catch (err: any) {
       console.error(err);
       const msg = err?.response?.data?.error?.message || 'Error al enviar el voucher';
-      setSuccessMessage(`❌ ${msg}`);
+      setSuccessMessage(`${msg}`);
       setTimeout(() => setShowSuccess(false), 4000);
     } finally {
       setIsSendingVoucher(false);
@@ -714,7 +714,7 @@ export default function Sales() {
               {isSendingVoucher ? (
                 <><Loader2 size={16} className="animate-spin" /> Enviando...</>
               ) : (
-                <>✉ Enviar al Cliente</>
+                <>Enviar al Cliente</>
               )}
             </Button>
             <Button

@@ -1,4 +1,4 @@
-import { ShoppingBag, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { ShoppingBag, ChevronDown, ChevronUp, Check, Link2 } from "lucide-react";
 import { Button } from "../../ui/Button";
 import * as LuIcons from "react-icons/lu";
 import { SALE_PRODUCTS, SaleProductId } from "../../../types";
@@ -302,25 +302,25 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
             </div>
             <div className="grid grid-cols-4 gap-2 sm:gap-4 bg-white/5 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
               <div className="text-center sm:text-right px-2">
-                <span className="text-[9px] uppercase font-bold text-slate-400 block">Costo Prov.</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Costo Prov.</span>
                 <span className="text-xs sm:text-sm font-bold text-slate-100">
                   ${(Number(form.supplierCost) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2 border-x border-white/10">
-                <span className="text-[9px] uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
+                <span className="text-[10px] uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
                 <span className="text-xs sm:text-sm font-bold text-emerald-300">
                   ${(Number(form.ta) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2 border-r border-white/10">
-                <span className="text-[9px] uppercase font-bold text-amber-300 block">IVA</span>
+                <span className="text-[10px] uppercase font-bold text-amber-300 block">IVA</span>
                 <span className="text-xs sm:text-sm font-bold text-amber-300">
                   ${(Number(form.iva) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2">
-                <span className="text-[9px] uppercase font-bold text-cyan-300 block">Venta Total</span>
+                <span className="text-[10px] uppercase font-bold text-cyan-300 block">Venta Total</span>
                 <span className="text-xs sm:text-sm font-extrabold text-cyan-300">
                   ${(Number(form.total) || 0).toLocaleString("es-CO")}
                 </span>
@@ -399,12 +399,12 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                           <div className="flex items-center gap-1.5">
                             <p className="text-xs font-bold text-primary truncate">{item.label} #{item.idx + 1}</p>
                             {item.linkedToPlanIndex !== undefined && item.linkedToPlanIndex !== null && (
-                              <span className="text-[9px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold shrink-0">
-                                🔗 Paquete #{item.linkedToPlanIndex + 1}
+                              <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                                <Link2 size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Paquete #{item.linkedToPlanIndex + 1}
                               </span>
                             )}
                           </div>
-                          <p className="text-[9px] text-gray-400 truncate">{item.detail}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{item.detail}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

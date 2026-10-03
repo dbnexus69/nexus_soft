@@ -1,4 +1,4 @@
-import { Boxes, PlaneTakeoff, Building2, Coins, Database, MapPin, Luggage, ShieldCheck, Info, Briefcase, ArrowRight, ArrowLeftRight, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { Boxes, PlaneTakeoff, Building2, Coins, Database, MapPin, Luggage, ShieldCheck, Info, Briefcase, ArrowRight, ArrowLeftRight, ArrowLeft, PlusCircle, Trash2, Plane, Bus } from 'lucide-react';
 import * as LuIcons from "react-icons/lu";
 import { FormField, Input, Select, Combobox } from '../ui/Form';
 import { Button } from '../ui/Button';
@@ -420,7 +420,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                       : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                   }`}
                 >
-                  ✈️ Aéreo
+                  <Plane size={14} aria-hidden="true" className="inline mr-1" /> Aéreo
                 </button>
                 <button
                   type="button"
@@ -431,7 +431,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
                       : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                   }`}
                 >
-                  🚌 Terrestre
+                  <Bus size={14} aria-hidden="true" className="inline mr-1" /> Terrestre
                 </button>
               </div>
             </div>

@@ -1,5 +1,5 @@
-import { Building2 } from "lucide-react";
-import { FormField, Input, Combobox, Textarea , CurrencyInput} from "../../ui/Form";
+import { Building2, TriangleAlert } from "lucide-react";
+import { FormField, Input, Combobox, Textarea, CurrencyInput} from "../../ui/Form";
 import { ConventionData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
@@ -38,7 +38,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
             <div className="relative pb-5">
               <Input value={convention.placeName || ""} maxLength={40} onChange={(e) => onChange({ placeName: e.target.value })} placeholder="Ej. Plaza Mayor" />
               {convention.placeName !== undefined && convention.placeName.length > 0 && (convention.placeName.length < 3 || convention.placeName.length > 40) && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 3, Max 40 caracteres</p>
               )}
             </div>
           </FormField>
@@ -46,7 +46,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
             <div className="relative pb-5">
               <Input value={convention.city || ""} maxLength={40} onChange={(e) => onChange({ city: e.target.value })} placeholder="Ej. Medellín" />
               {convention.city !== undefined && convention.city.length > 0 && (convention.city.length < 3 || convention.city.length > 40) && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 3, Max 40 caracteres</p>
               )}
             </div>
           </FormField>
@@ -55,7 +55,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
               <div className="relative pb-5">
                 <Input value={convention.address || ""} maxLength={40} onChange={(e) => onChange({ address: e.target.value })} placeholder="Ej. Calle 41 #55-80" />
                 {convention.address !== undefined && convention.address.length > 0 && (convention.address.length < 5 || convention.address.length > 40) && (
-                  <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 5, Max 40 caracteres</p>
+                  <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 5, Max 40 caracteres</p>
                 )}
               </div>
             </FormField>
@@ -111,7 +111,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
                 placeholder="Ej. Sala A, Auditorio Principal..." 
               />
               {convention.requiredSpace !== undefined && convention.requiredSpace.length > 0 && (convention.requiredSpace.length < 3 || convention.requiredSpace.length > 40) && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 3, Max 40 caracteres</p>
               )}
             </div>
           </FormField>
@@ -124,7 +124,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
                 placeholder="Ej. Congreso, Feria, Seminario..." 
               />
               {convention.eventType !== undefined && convention.eventType.length > 0 && (convention.eventType.length < 3 || convention.eventType.length > 40) && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 40 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 3, Max 40 caracteres</p>
               )}
             </div>
           </FormField>

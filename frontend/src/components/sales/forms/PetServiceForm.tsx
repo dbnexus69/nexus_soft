@@ -1,5 +1,6 @@
 import { LuDog } from "react-icons/lu";
-import { FormField, Input, Combobox, Textarea , CurrencyInput} from "../../ui/Form";
+import { TriangleAlert } from "lucide-react";
+import { FormField, Input, Combobox, Textarea, CurrencyInput} from "../../ui/Form";
 import { PetServiceData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DatePicker } from "./TicketForm";
@@ -165,7 +166,7 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
                 maxLength={40}
               />
               {pet.transportCompany !== undefined && pet.transportCompany.length > 0 && pet.transportCompany.length < 3 && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 3 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 3 caracteres</p>
               )}
             </div>
           </FormField>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car, Bus } from "lucide-react";
 import * as api from "../../../api";
-import { FormField, Input, Combobox, Select , CurrencyInput} from "../../ui/Form";
+import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { PlanData, GuestInfo, SaleProductId } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
@@ -133,8 +133,8 @@ export function PlanForm({
               value={plan.transportType || "Aereo"}
               onChange={(e) => onChange({ transportType: e.target.value as 'Aereo' | 'Terrestre' })}
             >
-              <option value="Aereo">✈️ Transporte Aéreo (Vuelo / Aerolínea)</option>
-              <option value="Terrestre">🚌 Transporte Terrestre (Bus / Flota / Vehículo)</option>
+              <option value="Aereo">Transporte Aéreo (Vuelo / Aerolínea)</option>
+              <option value="Terrestre">Transporte Terrestre (Bus / Flota / Vehículo)</option>
             </Select>
           </FormField>
           <FormField label="Nombre del Hotel">
@@ -221,7 +221,7 @@ export function PlanForm({
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
-                ✈️ Aéreo
+                <Plane size={14} aria-hidden="true" className="inline mr-1" /> Aéreo
               </button>
               <button
                 type="button"
@@ -232,7 +232,7 @@ export function PlanForm({
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
-                🚌 Terrestre
+                <Bus size={14} aria-hidden="true" className="inline mr-1" /> Terrestre
               </button>
             </div>
           </div>

@@ -169,7 +169,7 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
                   <span className={`px-2 py-0.5 rounded-full font-bold ${
                     flight.checkin === 'realizado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {flight.checkin === 'realizado' ? 'Check-in ✓' : 'Pendiente'}
+                    {flight.checkin === 'realizado' ? 'Check-in realizado' : 'Pendiente'}
                   </span>
                 </div>
               ))}

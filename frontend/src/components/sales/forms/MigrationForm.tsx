@@ -1,5 +1,6 @@
 import { LuMapPin } from "react-icons/lu";
-import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
+import { TriangleAlert } from "lucide-react";
+import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { MigrationData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DatePicker } from "./TicketForm";
@@ -78,7 +79,7 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
                 maxLength={20}
               />
               {migration.docNumber !== undefined && migration.docNumber.length > 0 && migration.docNumber.length < 5 && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 5 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 5 caracteres</p>
               )}
             </div>
           </FormField>

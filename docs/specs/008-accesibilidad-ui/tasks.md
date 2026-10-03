@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hecha T1 (por confirmar en pantalla). Pendientes T2 a T4.
+**Estado (2026-10-03).** Hechas T1 a T4, por confirmar en pantalla. Queda subir los textos de 10 px a 12 px, viéndolos.
 
 ## T1 · Lo crítico: campos, nombres, foco y movimiento `[~]`
 
@@ -27,28 +27,38 @@ compartidos (un sitio por regla, no pantalla por pantalla):
 **Comprobado:** `tsc` limpio, `vite build` correcto. **Por ver en pantalla:** recorrer con Tab (el
 anillo se ve en botones, no al hacer clic), y pulsar la etiqueta de un campo (lleva al campo).
 
-## T2 · `Combobox` conectado a su etiqueta `[ ]`
+## T2 · `Combobox` conectado a su etiqueta `[~]`
 
-No recibe `id` ni atributos ARIA; los selectores de proveedor, tarjeta, aerolínea… siguen sin
-etiqueta conectada. Hay que pasarle `id`, `aria-describedby` y el patrón `combobox` (`role`,
-`aria-expanded`, `aria-controls`).
+`Combobox` (`Form.tsx`) ahora es un combobox ARIA: `role="combobox"`, `aria-expanded`,
+`aria-controls` hacia su lista (`role="listbox"`, opciones con `role="option"` y `aria-selected`),
+`aria-autocomplete="list"`, Escape cierra la lista, y recibe `id`, `aria-invalid` y `aria-describedby`
+de `FormField` (registrado junto a `Input`, `Select`…). El foco usa `focus-visible`. **Límite:** solo
+queda conectado con su etiqueta cuando es el hijo directo de un `FormField`; los que van envueltos en
+un `<div>` con un icono (proveedor, tarjeta en los formularios de producto) siguen sin ella. Tampoco
+tiene navegación con flechas: las opciones se alcanzan con Tab.
 
-## T3 · Emojis usados como iconos `[ ]`
+## T3 · Emojis usados como iconos `[x]`
 
-~30 sitios: ⚠️ en los avisos de los formularios de producto, ✈️/🚌 en el tipo de transporte del plan
-y en gestión interna, ✅/❌ en los avisos de `Sales.tsx`, 🔗 en el paso 2. La guía pide iconos SVG
-(la app ya usa `lucide-react`): se ven distinto según el sistema y los lectores de pantalla los leen
-("señal de advertencia").
+Sustituidos por iconos de `lucide-react` (con `aria-hidden`, junto a un texto que ya dice lo mismo): el
+⚠️ de los avisos de longitud mínima de siete formularios de producto y de `Config.tsx`, ✈️/🚌 del tipo
+de transporte (`PlanForm`, `ConfigForms`; en el `<option>` solo el texto, porque un `<option>` no admite
+iconos), 🔗 del paso 2. Sin emoji, porque el texto ya dice el resultado: ✅/❌ y ✉ de `Sales.tsx`, 📦 del
+`title` de un vuelo de paquete ("Paquete: …"), y "Check-in ✓" pasa a "Check-in realizado". Quedan solo
+las dos ★ del confeti (decorativas).
 
-## T4 · Texto por debajo de 10 px `[ ]`
+## T4 · Texto por debajo de 10 px `[~]`
 
-28 usos de `text-[8px]`/`text-[9px]` (sobre todo `TicketForm.tsx`, `Step2Products.tsx` y el
-calendario de `Itineraries.tsx`), y 108 de `text-[10px]`. La guía marca menos de 12 px como
-antipatrón para texto que hay que leer. Subirlos cambia el diseño de pantallas densas: hay que
-verlo en pantalla antes, por eso no se hizo junto con T1.
+Los 28 usos de `text-[8px]` y `text-[9px]` pasan a `text-[10px]`: ya no hay texto de menos de 10 px.
+**No se subieron** los 108 de `text-[10px]` (etiquetas en mayúscula de pantallas densas) a los 12 px que
+marca la guía: cambia el diseño y hay que verlo en pantalla antes. Pendiente de decidir viéndolo.
+
+**Comprobado (T2–T4):** `tsc` limpio, `vite build` correcto. **Por ver en pantalla:** los avisos de los
+formularios (el icono junto al texto), el tipo de transporte de un plan, y el calendario de vuelos con el
+texto de 10 px (por si algún chip se desborda).
 
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-03 | T2–T4 | `Combobox` como combobox ARIA, emojis por iconos de lucide, y ni un texto por debajo de 10 px. |
 | 2026-10-03 | T1 | Auditoría con la skill `ui-ux-pro-max`: campos conectados a su etiqueta y su error, 7 botones con nombre, foco visible por teclado, movimiento reducido global. |

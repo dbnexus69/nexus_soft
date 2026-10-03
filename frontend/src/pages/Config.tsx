@@ -21,7 +21,7 @@ import {
   Compass,
   Eye,
   ShieldCheck,
-  Info, X } from 'lucide-react';
+  Info, X, TriangleAlert } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -640,7 +640,7 @@ export default function Config() {
             </p>
           )}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left flex items-start gap-3">
-            <span className="text-amber-600 text-lg">⚠️</span>
+            <TriangleAlert size={20} aria-hidden="true" className="text-amber-600" />
             <p className="text-xs text-amber-700 leading-relaxed font-semibold">
               Nota: Asegúrate de que este elemento no esté siendo referenciado por tiquetes o ventas activas del sistema.
             </p>

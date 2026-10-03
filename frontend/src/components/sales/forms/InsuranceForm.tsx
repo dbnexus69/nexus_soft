@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { AlertCircle, Users, Briefcase, Trash2, PlusCircle } from "lucide-react";
+import { AlertCircle, Users, Briefcase, Trash2, PlusCircle, TriangleAlert } from "lucide-react";
 import { FormField, Input, Select, CurrencyInput, Combobox } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { InsuranceData, GuestInfo } from "../../../types";
@@ -55,7 +55,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
                 maxLength={40}
               />
               {insurance.insuranceType && insurance.insuranceType.length > 0 && insurance.insuranceType.length < 3 && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 3 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 3 caracteres</p>
               )}
             </div>
           </FormField>

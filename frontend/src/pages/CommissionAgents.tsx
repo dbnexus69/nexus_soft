@@ -611,7 +611,7 @@ export default function CommissionAgents() {
                               </div>
                             </td>
                             <td className="px-8 py-5">
-                              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[9px] font-black uppercase tracking-wider border border-blue-100 dark:border-blue-800/50">{s.paymentMethod}</span>
+                              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase tracking-wider border border-blue-100 dark:border-blue-800/50">{s.paymentMethod}</span>
                             </td>
                             <td className="px-8 py-5">
                               <div className="flex flex-col">
@@ -621,7 +621,7 @@ export default function CommissionAgents() {
                             </td>
                             <td className="px-8 py-5 text-right">
                                <p className="text-base font-black text-gray-800 dark:text-white">{formatCurrency(s.amount)}</p>
-                               <span className="text-[9px] text-success font-bold uppercase tracking-widest">● Procesado</span>
+                               <span className="text-[10px] text-success font-bold uppercase tracking-widest">● Procesado</span>
                             </td>
                           </tr>
                         ))

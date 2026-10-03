@@ -800,7 +800,7 @@ export default function Itineraries() {
                             return (
                             <div
                               key={flight.id}
-                              title={`${isPlan ? '📦 ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}${isPlan && flight.additionalPassengers ? `\nAcompañantes: ${flight.additionalPassengers}` : ''}`}
+                              title={`${isPlan ? 'Paquete: ' : ''}${flight.passenger}${docInfo}\nHora: ${flight.time}\nCheck-in: ${isPlan ? 'N/A (Paquete)' : flight.checkin}${flight.reservationNumber ? `\nReserva: ${flight.reservationNumber}` : ''}${isPlan ? `\nPlan: ${flight.route}` : ''}${isPlan && flight.additionalPassengers ? `\nAcompañantes: ${flight.additionalPassengers}` : ''}`}
                               className={`px-2 py-1 rounded-md text-[10px] font-semibold border flex items-center gap-1 shadow-sm transition-transform hover:scale-[1.02] ${
                                  isPlan
                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
@@ -828,7 +828,7 @@ export default function Itineraries() {
                         {dayFlights.length > 3 && (
                           <button
                             onClick={() => toggleDay(dayKey)}
-                            className="mt-2 w-full py-1 text-[9px] font-bold text-accent uppercase tracking-tighter hover:bg-accent/5 rounded transition-colors border border-accent/10"
+                            className="mt-2 w-full py-1 text-[10px] font-bold text-accent uppercase tracking-tighter hover:bg-accent/5 rounded transition-colors border border-accent/10"
                           >
                             {isExpanded ? 'Ver menos' : `+${dayFlights.length - 3} más vuelos`}
                           </button>
@@ -859,14 +859,14 @@ export default function Itineraries() {
                         <div key={flight.id} className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="flex flex-col items-center justify-center bg-primary/5 text-primary rounded-lg w-10 h-10 shrink-0 font-bold">
-                              <span className="text-[8px] uppercase font-semibold text-gray-400 leading-none">{dayOfWeek}</span>
+                              <span className="text-[10px] uppercase font-semibold text-gray-400 leading-none">{dayOfWeek}</span>
                               <span className="text-sm font-heading leading-tight mt-0.5">{Number(dayStr) || dayStr}</span>
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-gray-800 truncate">{flight.passenger}</span>
                                 {flight.passengerDocs && (
-                                  <span className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-200">
+                                  <span className="text-[10px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded shrink-0 border border-gray-200">
                                     {flight.passengerDocs}
                                   </span>
                                 )}
@@ -883,7 +883,7 @@ export default function Itineraries() {
                                   <span title={ESTADO_TITULO(isCancelado, isRealizado, isVencido)}
                                     className={`w-2 h-2 rounded-full ${ESTADO_PUNTO(isCancelado, isRealizado, isVencido)}`}
                                   />
-                                  <span className={`text-[9px] font-semibold uppercase tracking-wider ${isCancelado ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
+                                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${isCancelado ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
                                     {isCancelado ? 'Cancelado' : isRealizado ? 'Listo' : isVencido ? 'Vencido' : 'Pendiente'}
                                   </span>
                                 </>
@@ -1317,7 +1317,7 @@ export default function Itineraries() {
                     <div className="flex items-center gap-2 min-w-0">
                       <CheckCircle2 size={16} className="text-green-500 shrink-0" />
                       <span className="font-medium text-gray-700 truncate" title={file.name}>{file.name}</span>
-                      <span className="text-[9px] text-gray-400 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
+                      <span className="text-[10px] text-gray-400 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
                     </div>
                     <button 
                       type="button" 

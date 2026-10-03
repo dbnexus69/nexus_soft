@@ -1,5 +1,5 @@
 import { Car } from "lucide-react";
-import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
+import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { CarRentalData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";

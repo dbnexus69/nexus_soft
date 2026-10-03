@@ -1,5 +1,5 @@
-import { Home } from "lucide-react";
-import { FormField, Input , CurrencyInput} from "../../ui/Form";
+import { Home, TriangleAlert } from "lucide-react";
+import { FormField, Input, CurrencyInput} from "../../ui/Form";
 import { FincaData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
@@ -32,7 +32,7 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, onChange, 
             <div className="relative pb-5">
               <Input value={finca.fincaName} maxLength={30} onChange={(e) => onChange({ fincaName: e.target.value })} placeholder="Ej. Finca La Esperanza" />
               {finca.fincaName !== undefined && finca.fincaName.length > 0 && (finca.fincaName.length < 3 || finca.fincaName.length > 30) && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 30 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 3, Max 30 caracteres</p>
               )}
             </div>
           </FormField>
@@ -40,7 +40,7 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, onChange, 
             <div className="relative pb-5">
               <Input value={finca.fincaCity} maxLength={50} onChange={(e) => onChange({ fincaCity: e.target.value })} placeholder="Ej. Santa Fe de Antioquia" />
               {finca.fincaCity !== undefined && finca.fincaCity.length > 0 && (finca.fincaCity.length < 3 || finca.fincaCity.length > 50) && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 3, Max 50 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 3, Max 50 caracteres</p>
               )}
             </div>
           </FormField>
@@ -49,7 +49,7 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, onChange, 
               <div className="relative pb-5">
                 <Input value={finca.fincaAddress} maxLength={30} onChange={(e) => onChange({ fincaAddress: e.target.value })} placeholder="Ej. Vereda El Paso, Lote 4" />
                 {finca.fincaAddress !== undefined && finca.fincaAddress.length > 0 && (finca.fincaAddress.length < 5 || finca.fincaAddress.length > 30) && (
-                  <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Min 5, Max 30 caracteres</p>
+                  <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Min 5, Max 30 caracteres</p>
                 )}
               </div>
             </FormField>

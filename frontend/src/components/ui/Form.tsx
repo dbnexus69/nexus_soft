@@ -15,8 +15,8 @@ interface FormFieldProps {
  * La etiqueta se conecta con el campo (`htmlFor`/`id`) y el error también (`aria-describedby`,
  * `aria-invalid`, y `role="alert"` para que se anuncie): sin eso un lector de pantalla no decía qué
  * era cada campo ni que tenía un error, y pulsar la etiqueta no llevaba al campo. Solo se hace con los
- * controles que pasan el `id` al elemento nativo (`Input`, `CurrencyInput`, `Select`, `Textarea` y los
- * nativos); `Combobox` y los envoltorios quedan como estaban.
+ * controles que pasan el `id` y los `aria-*` al elemento nativo (`Input`, `CurrencyInput`, `Select`,
+ * `Textarea`, `Combobox` y los nativos); los envoltorios quedan como estaban.
  */
 const CONECTABLES: unknown[] = ['input', 'select', 'textarea'];
 
@@ -152,10 +152,15 @@ interface ComboboxProps {
   inputClassName?: string;
   preventNumbers?: boolean;
   direction?: 'down' | 'up';
+  // Los pone `FormField` para conectar la etiqueta y el error con el campo.
+  id?: string;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
 }
 
-export function Combobox({ value, onChange, options, placeholder, error, className = '', inputClassName = '', preventNumbers, direction = 'down' }: ComboboxProps) {
+export function Combobox({ value, onChange, options, placeholder, error, className = '', inputClassName = '', preventNumbers, direction = 'down', id, 'aria-invalid': ariaInvalid, 'aria-describedby': ariaDescribedby }: ComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const idLista = `${useId()}-lista`;
   const [searchTerm, setSearchTerm] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -193,10 +198,20 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
       <div className="relative">
         <input
           type="text"
-          className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all ${
+          id={id}
+          // Un combobox con lista: el lector de pantalla anuncia que se puede escribir y que hay opciones,
+          // y si la lista está abierta.
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={idLista}
+          aria-autocomplete="list"
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedby}
+          className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-all ${
             error ? 'border-red-500' : 'border-gray-border'
           } ${inputClassName}`}
           value={searchTerm}
+          onKeyDown={(e) => { if (e.key === 'Escape' && isOpen) { e.stopPropagation(); setIsOpen(false); } }}
           onChange={(e) => {
             let val = e.target.value;
             if (preventNumbers) {
@@ -212,19 +227,21 @@ export function Combobox({ value, onChange, options, placeholder, error, classNa
           }}
           placeholder={placeholder}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" aria-hidden="true">
           {isOpen ? <Search size={16} /> : <ChevronDown size={16} />}
         </div>
       </div>
 
       {isOpen && (
-        <div className={`absolute z-[100] w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in custom-scrollbar ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+        <div id={idLista} role="listbox" className={`absolute z-[100] w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in custom-scrollbar ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
           {filteredOptions.length > 0 ? (
             filteredOptions.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-accent/5 ${
+                role="option"
+                aria-selected={value === opt.value}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-accent/5 focus-visible:bg-accent/10 focus-visible:outline-none ${
                   value === opt.value ? 'bg-accent/10 text-accent font-bold' : 'text-gray-700'
                 }`}
                 onClick={() => {
@@ -285,4 +302,4 @@ export function Textarea({ className = '', value, ...props }: TextareaProps) {
 }
 
 // Se registran aquí porque se declaran después de FormField.
-CONECTABLES.push(Input, CurrencyInput, Select, Textarea);
+CONECTABLES.push(Input, CurrencyInput, Select, Textarea, Combobox);

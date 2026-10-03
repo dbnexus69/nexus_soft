@@ -1,5 +1,6 @@
 import { LuGlobe } from "react-icons/lu";
-import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
+import { TriangleAlert } from "lucide-react";
+import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { VisaData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DatePicker } from "./TicketForm";
@@ -81,7 +82,7 @@ export function VisaForm({ visa, client, suppliers, paymentMethods, onChange, tr
                 maxLength={20}
               />
               {visa.docNumber !== undefined && visa.docNumber.length > 0 && visa.docNumber.length < 5 && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0">⚠️ Mínimo 5 caracteres</p>
+                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 5 caracteres</p>
               )}
             </div>
           </FormField>

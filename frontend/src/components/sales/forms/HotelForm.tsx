@@ -1,6 +1,6 @@
 import { Building2, Users, Briefcase, Trash2, PlusCircle } from "lucide-react";
 import * as LuIcons from "react-icons/lu";
-import { FormField, Input, Combobox, Select , CurrencyInput} from "../../ui/Form";
+import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { HotelData, GuestInfo } from "../../../types";
 import { DateTimePicker } from "./TicketForm";

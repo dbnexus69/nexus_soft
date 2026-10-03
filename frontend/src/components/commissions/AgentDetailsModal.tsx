@@ -152,7 +152,7 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${sale.isSettled ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${sale.isSettled ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
                         {sale.isSettled ? 'Liquidada' : 'Pendiente'}
                       </span>
                     </td>

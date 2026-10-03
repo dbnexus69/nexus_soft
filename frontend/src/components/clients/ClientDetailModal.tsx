@@ -210,7 +210,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
                       <span className={`px-4 py-1.5 rounded-full text-xs font-bold border ${
                         flight.checkin === 'realizado' ? 'bg-green-100/50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-yellow-100/50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50'
                       }`}>
-                        {flight.checkin === 'realizado' ? 'Check-in ✓' : 'Pendiente'}
+                        {flight.checkin === 'realizado' ? 'Check-in realizado' : 'Pendiente'}
                       </span>
                     </div>
                   ))}

@@ -36,7 +36,7 @@ export const CardsGrid: React.FC<CardsGridProps> = ({ filteredData, handleOpenMo
                   <p className="text-[10px] uppercase tracking-widest text-white/70 font-semibold">Nombre Tarjeta</p>
                   <h3 className="font-heading font-bold text-base text-white">{card.name || card.bank || 'Tarjeta Sin Nombre'}</h3>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   isOptimistic ? 'bg-amber-500/20 text-amber-200 border border-amber-500/30' :
                   (card.status || 'Activo') === 'Activo' ? 'bg-green-500/20 text-green-200 border border-green-500/30' : 'bg-red-500/20 text-red-200 border border-red-500/30'
                 }`}>
@@ -44,14 +44,14 @@ export const CardsGrid: React.FC<CardsGridProps> = ({ filteredData, handleOpenMo
                 </span>
               </div>
               <div className="mb-2">
-                <p className="text-[9px] uppercase tracking-widest text-white/70 font-semibold">Método de Pago</p>
+                <p className="text-[10px] uppercase tracking-widest text-white/70 font-semibold">Método de Pago</p>
                 <p className="text-xs font-semibold text-white">{card.paymentMethod || card.type || 'No especificado'}</p>
               </div>
             </div>
 
             <div className="pt-4 border-t border-white/10 flex items-center justify-between">
               <div>
-                <p className="text-[9px] uppercase tracking-widest text-white/60 font-semibold">Últimos dígitos</p>
+                <p className="text-[10px] uppercase tracking-widest text-white/60 font-semibold">Últimos dígitos</p>
                 <p className="text-sm font-mono font-bold">•••• {card.lastFourDigits || '0000'}</p>
               </div>
               <div className="flex gap-2">

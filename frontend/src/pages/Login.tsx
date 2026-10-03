@@ -505,7 +505,7 @@ export default function Login() {
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat animate-slow-zoom"
           style={{ 
-            backgroundImage: 'url("/luxury_travel_bg.png")',
+            backgroundImage: 'url("/luxury_travel_bg.webp")',
           }}
         />
         {/* Overlay con degradado premium */}

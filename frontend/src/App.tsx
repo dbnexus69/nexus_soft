@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
@@ -8,18 +9,21 @@ import { CommissionsProvider } from './context/CommissionsContext';
 import { PermissionsProvider } from './context/PermissionsContext';
 import { Layout } from './components/layout/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import StatsView from './pages/StatsView';
-import Sales from './pages/Sales';
-import Clients from './pages/Clients';
-import Responsables from './pages/Responsables';
-import Itineraries from './pages/Itineraries';
-import Users from './pages/Users';
-import Companies from './pages/Companies';
-import Config from './pages/Config';
-import CommissionAgents from './pages/CommissionAgents';
 
 import { LoadingScreen } from './components/ui/LoadingScreen';
+
+// Cada pantalla se descarga al entrar en ella, no todas juntas al abrir la aplicación: el paquete único
+// pesaba 2,3 MB y el login cargaba también las quince pantallas que aún no se ven.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const StatsView = lazy(() => import('./pages/StatsView'));
+const Sales = lazy(() => import('./pages/Sales'));
+const Clients = lazy(() => import('./pages/Clients'));
+const Responsables = lazy(() => import('./pages/Responsables'));
+const Itineraries = lazy(() => import('./pages/Itineraries'));
+const Users = lazy(() => import('./pages/Users'));
+const Companies = lazy(() => import('./pages/Companies'));
+const Config = lazy(() => import('./pages/Config'));
+const CommissionAgents = lazy(() => import('./pages/CommissionAgents'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -53,6 +57,7 @@ function AppRoutes() {
   const { user } = useAuth();
 
   return (
+    <Suspense fallback={<LoadingScreen />}>
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -73,6 +78,7 @@ function AppRoutes() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { documentoDePersonaInvalido } from "./documentosDeLaVenta";
+import { useToast } from "../../context/ToastContext";
 import {
   User,
   Package,
@@ -130,13 +131,15 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const { error: toastError } = useToast();
+
   const triggerError = (msg: string) => {
     setErrorMessage(msg);
     setShowError(true);
     setTimeout(() => setShowError(false), 4000);
   };
 
-  // Saber si el formulario de tiqueteríƒÂ­a estíƒÂ¡ completamente vacíƒÂ­o (sin tocar)
+  // Saber si el formulario de tiquetería está completamente vacío (sin tocar)
   const isTicketFormEmpty = (() => {
     if (activeForm === "ticket" && activeIdx !== null) {
       const ticket = form.tickets[activeIdx];
@@ -386,7 +389,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     if (s === 1) {
       if (!form.clientId) errs.clientId = "El cliente es obligatorio";
       if (form.commissionAgentName && !form.commissionAgentId) {
-        errs.commissionAgent = "El comisionista ingresado no estíƒÂ¡ registrado";
+        errs.commissionAgent = "El comisionista ingresado no está registrado";
       } else if (form.commissionAgentId) {
         if (data.commissionAgents && data.commissionAgents.length > 0) {
           const agentExists = data.commissionAgents.some(
@@ -477,7 +480,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             })();
 
             if (!isStrictlyValid) {
-              triggerError(`El servicio de Seguro de Viaje #${i + 1} tiene campos requeridos vacíos o inválidos. El tipo de seguro debe tener entre 3 y 40 caracteres, el teléfono entre 7 y 15 díƒÂ­gitos y los costos financieros obligatorios.`);
+              triggerError(`El servicio de Seguro de Viaje #${i + 1} tiene campos requeridos vacíos o inválidos. El tipo de seguro debe tener entre 3 y 40 caracteres, el teléfono entre 7 y 15 dígitos y los costos financieros obligatorios.`);
               errs.segurosValidation = "invalid";
               break;
             }
@@ -494,11 +497,11 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             const errors: string[] = [];
             if (!plan) errors.push("Plan inválido");
             else {
-              // Campo comíƒÂºn a ambos tipos
+              // Campo común a ambos tipos
               if (!plan.planName || plan.planName.trim().length > 50) errors.push("Nombre del Plan (máx 50 chars)");
 
               if (plan.packageType === 'supplier') {
-                // í¢â€â‚¬í¢â€â‚¬ PAQUETE POR PROVEEDOR: solo campos míƒÂ­nimos í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬
+                // ── PAQUETE POR PROVEEDOR: solo campos mínimos ──────────────
                 if (!plan.supplier || plan.supplier.trim().length === 0) errors.push("Proveedor (requerido)");
 
                 if (!plan.vouchers || plan.vouchers.length === 0) {
@@ -510,7 +513,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 if (!plan.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
 
               } else {
-                // í¢â€â‚¬í¢â€â‚¬ PAQUETE POR EMPRESA: validaciíƒÂ³n completa í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬í¢â€â‚¬
+                // ── PAQUETE POR EMPRESA: validación completa ────────────────
                 if (!plan.hotelName || plan.hotelName.trim().length < 2 || plan.hotelName.trim().length > 50) errors.push("Nombre del Hotel (2-50 chars)");
                 if (!plan.reservationNumber || plan.reservationNumber.trim().length === 0 || plan.reservationNumber.trim().length > 20) errors.push("Número de Reservación (1-20 chars)");
                 if (plan.adultsCount === undefined || plan.adultsCount < 0 || plan.adultsCount > 999) errors.push("Adultos (0-999)");
@@ -581,7 +584,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 plan.guests.forEach((g, gIdx) => {
                   if (!g.name || g.name.trim().length < 3 || g.name.trim().length > 70) {
                     errors.push(`Integrante #${gIdx + 1}: Nombre Completo (3-70 caracteres)`);
-                  } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(g.name)) {
+                  } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(g.name)) {
                     errors.push(`Integrante #${gIdx + 1}: Nombre Completo solo permite letras y espacios`);
                   }
                   if (!g.docType || g.docType.trim().length === 0) {
@@ -618,7 +621,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             else {
               if (!check.passengerName || check.passengerName.trim().length === 0) errors.push("Nombre del pasajero (requerido)");
               if (!check.docType || check.docType.trim().length === 0) errors.push("Tipo de Doc (requerido)");
-              if (!check.docNumber || check.docNumber.trim().length === 0) errors.push("Ní‚Âº de Doc (requerido)");
+              if (!check.docNumber || check.docNumber.trim().length === 0) errors.push("Nº de Doc (requerido)");
               if (!check.flightOrReservation || check.flightOrReservation.trim().length < 3 || check.flightOrReservation.trim().length > 8) errors.push("Vuelo o Reserva (3-8 chars)");
               if (!check.travelDate) errors.push("Fecha de viaje (requerido)");
               if (check.seat && check.seat.trim().length > 10) errors.push("Silla Preferida (máx 10 chars)");
@@ -657,7 +660,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               
               if (mig.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(mig.email)) errors.push("Correo electríƒÂ³nico inválido");
+                if (!emailRegex.test(mig.email)) errors.push("Correo electrónico inválido");
                 if (!mig.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -693,7 +696,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               
               if (sim.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(sim.email)) errors.push("Correo electríƒÂ³nico inválido");
+                if (!emailRegex.test(sim.email)) errors.push("Correo electrónico inválido");
                 if (!sim.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -714,12 +717,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
       if (form.selectedProducts.includes("car")) {
         if (!form.carRentals || form.carRentals.length === 0) {
-          errs.products = "Debes configurar al menos una Renta de VehíƒÂ­culo";
+          errs.products = "Debes configurar al menos una Renta de Vehículo";
         } else {
           for (let i = 0; i < form.carRentals.length; i++) {
             const car = form.carRentals[i];
             const errors: string[] = [];
-            if (!car) errors.push("Renta de VehíƒÂ­culo inválida");
+            if (!car) errors.push("Renta de Vehículo inválida");
             else {
               if (!car.mainDriver || car.mainDriver.trim().length === 0) errors.push("Conductor Principal (requerido)");
               if (!car.pickupDate) errors.push("Recogida (requerida)");
@@ -735,7 +738,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }
 
               if (!car.guaranteeCreditCard || car.guaranteeCreditCard.trim().length !== 4) {
-                errors.push("Tarjeta de GarantíƒÂ­a (exactamente 4 díƒÂ­gitos)");
+                errors.push("Tarjeta de Garantía (exactamente 4 dígitos)");
               }
 
               const now = new Date();
@@ -747,7 +750,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             }
 
             if (errors.length > 0) {
-              triggerError(`El servicio de Renta de VehíƒÂ­culo #${i + 1} tiene errores: ${errors.join(", ")}`);
+              triggerError(`El servicio de Renta de Vehículo #${i + 1} tiene errores: ${errors.join(", ")}`);
               errs.carRentalValidation = "invalid";
               break;
             }
@@ -772,7 +775,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (!finca.checkOutDate) errors.push("Check-out (requerido)");
               
               if (finca.adultsCount === undefined || isNaN(Number(finca.adultsCount)) || Number(finca.adultsCount) < 0 || Number(finca.adultsCount) > 999) errors.push("Número de Adultos (0-999)");
-              if (finca.childrenCount === undefined || isNaN(Number(finca.childrenCount)) || Number(finca.childrenCount) < 0 || Number(finca.childrenCount) > 999) errors.push("Número de NiíƒÂ±os (0-999)");
+              if (finca.childrenCount === undefined || isNaN(Number(finca.childrenCount)) || Number(finca.childrenCount) < 0 || Number(finca.childrenCount) > 999) errors.push("Número de Niños (0-999)");
 
               const now = new Date();
               now.setHours(0, 0, 0, 0);
@@ -805,7 +808,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (!tour.pickupPoint || tour.pickupPoint.trim().length === 0 || tour.pickupPoint.length > 30) errors.push("Punto de Recogida (1-30 caracteres)");
               
               if (tour.adultsCount === undefined || isNaN(Number(tour.adultsCount)) || Number(tour.adultsCount) < 0 || Number(tour.adultsCount) > 999) errors.push("Número de Adultos (0-999)");
-              if (tour.childrenCount === undefined || isNaN(Number(tour.childrenCount)) || Number(tour.childrenCount) < 0 || Number(tour.childrenCount) > 999) errors.push("Número de NiíƒÂ±os (0-999)");
+              if (tour.childrenCount === undefined || isNaN(Number(tour.childrenCount)) || Number(tour.childrenCount) < 0 || Number(tour.childrenCount) > 999) errors.push("Número de Niños (0-999)");
 
               if (!tour.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
             }
@@ -821,12 +824,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
       if (form.selectedProducts.includes("convention")) {
         if (!form.conventions || form.conventions.length === 0) {
-          errs.products = "Debes configurar al menos un Centro de ConvenciíƒÂ³n";
+          errs.products = "Debes configurar al menos un Centro de Convención";
         } else {
           for (let i = 0; i < form.conventions.length; i++) {
             const conv = form.conventions[i];
             const errors: string[] = [];
-            if (!conv) errors.push("ConvenciíƒÂ³n inválida");
+            if (!conv) errors.push("Convención inválida");
             else {
               if (!conv.placeName || conv.placeName.trim().length < 3 || conv.placeName.trim().length > 40) errors.push("Nombre del Lugar (3-40 caracteres)");
               if (!conv.city || conv.city.trim().length < 3 || conv.city.trim().length > 40) errors.push("Ciudad (3-40 caracteres)");
@@ -842,7 +845,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
               if (conv.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(conv.email)) errors.push("Correo electríƒÂ³nico inválido");
+                if (!emailRegex.test(conv.email)) errors.push("Correo electrónico inválido");
                 if (!conv.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -877,13 +880,13 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               if (!rest.dateTime) errors.push("Fecha y Hora (requerida)");
               if (!rest.phone || rest.phone.trim().length === 0) errors.push("Celular (requerido)");
               
-              if (rest.peopleCount === undefined || isNaN(Number(rest.peopleCount)) || Number(rest.peopleCount) < 1 || Number(rest.peopleCount) > 999) errors.push("Ní‚Âº de Personas (1-999)");
+              if (rest.peopleCount === undefined || isNaN(Number(rest.peopleCount)) || Number(rest.peopleCount) < 1 || Number(rest.peopleCount) > 999) errors.push("Nº de Personas (1-999)");
 
               if (rest.tablePreference && (rest.tablePreference.trim().length < 3 || rest.tablePreference.length > 30)) {
                 errors.push("Preferencia de Mesa (3-30 caracteres)");
               }
               if (rest.menuType && (rest.menuType.trim().length < 3 || rest.menuType.length > 30)) {
-                errors.push("Tipo de MeníƒÂº (3-30 caracteres)");
+                errors.push("Tipo de Menú (3-30 caracteres)");
               }
 
               const now = new Date();
@@ -928,7 +931,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
               if (!visa.nationality || visa.nationality.trim().length < 3 || visa.nationality.trim().length > 30) {
                 errors.push("Nacionalidad (3-30 caracteres)");
-              } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(visa.nationality)) {
+              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(visa.nationality)) {
                 errors.push("Nacionalidad solo permite letras");
               }
 
@@ -952,13 +955,13 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
               if (!visa.countryApplying || visa.countryApplying.trim().length < 3 || visa.countryApplying.trim().length > 30) {
                 errors.push("País al que aplica (3-30 caracteres)");
-              } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(visa.countryApplying)) {
+              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(visa.countryApplying)) {
                 errors.push("País al que aplica solo permite letras");
               }
 
               if (visa.email) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(visa.email)) errors.push("Correo electríƒÂ³nico inválido");
+                if (!emailRegex.test(visa.email)) errors.push("Correo electrónico inválido");
                 if (!visa.email.endsWith(".com")) errors.push("Correo debe terminar en .com");
               }
 
@@ -1008,7 +1011,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
                 if (passport.residenceCity.length > 85) {
                   errors.push("Ciudad de Residencia (máximo 85 caracteres)");
                 }
-                if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(passport.residenceCity)) {
+                if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(passport.residenceCity)) {
                   errors.push("Ciudad de Residencia no debe tener números ni caracteres especiales");
                 }
               }
@@ -1022,19 +1025,19 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
               }
 
               if (!passport.phone || passport.phone.trim().length === 0) {
-                errors.push("TelíƒÂ©fono de Contacto (requerido)");
+                errors.push("Teléfono de Contacto (requerido)");
               } else {
                 if (passport.phone.length > 15) {
-                  errors.push("TelíƒÂ©fono de Contacto (máximo 15 caracteres)");
+                  errors.push("Teléfono de Contacto (máximo 15 caracteres)");
                 }
                 if (/[a-zA-Z]/.test(passport.phone)) {
-                  errors.push("TelíƒÂ©fono de Contacto no puede contener letras");
+                  errors.push("Teléfono de Contacto no puede contener letras");
                 }
               }
             }
 
             if (errors.length > 0) {
-              triggerError(`El tríƒÂ¡mite de Pasaporte #${i + 1} tiene errores: ${errors.join(", ")}`);
+              triggerError(`El trámite de Pasaporte #${i + 1} tiene errores: ${errors.join(", ")}`);
               errs.passportValidation = "invalid";
               break;
             }
@@ -1052,20 +1055,20 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
             if (!pet) errors.push("Transporte de Mascotas inválido");
             else {
               if (!pet.ownerName || pet.ownerName.trim().length === 0) {
-                errors.push("Nombre del DueíƒÂ±o (requerido)");
-              } else if (/[^a-zA-Záéíóúíí‰íí“íšñÑ\s]/.test(pet.ownerName)) {
-                errors.push("Nombre del DueíƒÂ±o solo permite letras");
+                errors.push("Nombre del Dueño (requerido)");
+              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(pet.ownerName)) {
+                errors.push("Nombre del Dueño solo permite letras");
               }
 
               if (!pet.petName || pet.petName.trim().length === 0) {
                 errors.push("Nombre de la Mascota (requerido)");
-              } else if (/[^a-zA-ZíƒÂ¡íƒÂ©íƒÂ­íƒÂ³íƒÂºíƒÂíƒâ€°íƒÂíƒâ€œíƒÅ¡íƒÂ±íƒâ€˜\s]/.test(pet.petName)) {
+              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(pet.petName)) {
                 errors.push("Nombre de la Mascota solo permite letras");
               }
 
               if (!pet.breed || pet.breed.trim().length === 0) {
                 errors.push("Raza (requerida)");
-              } else if (/[^a-zA-ZíƒÂ¡íƒÂ©íƒÂ­íƒÂ³íƒÂºíƒÂíƒâ€°íƒÂíƒâ€œíƒÅ¡íƒÂ±íƒâ€˜\s]/.test(pet.breed)) {
+              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(pet.breed)) {
                 errors.push("Raza solo permite letras");
               }
 
@@ -1088,18 +1091,18 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
               if (!pet.destinationCountry || pet.destinationCountry.trim().length < 3 || pet.destinationCountry.trim().length > 30) {
                 errors.push("País Destino (3-30 caracteres)");
-              } else if (/[^a-zA-ZíƒÂ¡íƒÂ©íƒÂ­íƒÂ³íƒÂºíƒÂíƒâ€°íƒÂíƒâ€œíƒÅ¡íƒÂ±íƒâ€˜\s]/.test(pet.destinationCountry)) {
+              } else if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/.test(pet.destinationCountry)) {
                 errors.push("País Destino solo permite letras");
               }
 
               if (!pet.phone || pet.phone.trim().length === 0) {
-                errors.push("TelíƒÂ©fono (requerido)");
+                errors.push("Teléfono (requerido)");
               } else {
                 if (pet.phone.length > 15) {
-                  errors.push("TelíƒÂ©fono (máximo 15 caracteres)");
+                  errors.push("Teléfono (máximo 15 caracteres)");
                 }
                 if (/[a-zA-Z]/.test(pet.phone)) {
-                  errors.push("TelíƒÂ©fono no puede contener letras");
+                  errors.push("Teléfono no puede contener letras");
                 }
               }
               if (!pet.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
@@ -1208,9 +1211,10 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     }
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setShowError(false); // el error del intento anterior se quita al reintentar
     const client = form.clientData;
     if (!client) {
-      setErrors({ ...errors, clientId: "El cliente no es víƒÂ¡lido" });
+      setErrors({ ...errors, clientId: "El cliente no es válido" });
       setStep(1);
       return;
     }
@@ -1306,10 +1310,9 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       if (fallidos.length) {
         // La venta ya existe: el aviso dice qué archivo falta, para que no se
         // dé por adjuntado un voucher que no llegó.
-        alert(
-          `${venta} registrada, pero no se pudo subir el voucher de:\n\n` +
-          fallidos.map((f) => `• ${f}`).join("\n") +
-          `\n\nConserva esos archivos: habrá que adjuntarlos otra vez.`
+        toastError(
+          `${venta} registrada, pero no se pudo subir el voucher de: ${fallidos.join(", ")}. ` +
+          `Conserva esos archivos: habrá que adjuntarlos otra vez.`
         );
       }
       onSuccess(
@@ -1321,7 +1324,9 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     } catch (err: any) {
       console.error("Error al registrar venta:", err);
       const errMsg = err?.response?.data?.error?.message || "Ocurrió un error interno en el servidor al registrar la venta.";
-      alert(`Error al registrar venta: ${errMsg}`);
+      // Se queda a la vista hasta el siguiente intento (el aviso de 4 s se perdía si se miraba a otro lado).
+      setErrorMessage(`No se pudo registrar la venta: ${errMsg}`);
+      setShowError(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -1335,7 +1340,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   return (
     <div className="flex h-full w-full overflow-hidden" style={{ minHeight: 0 }}>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• LEFT SIDEBAR â€“ STEP NAVIGATOR â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════════ LEFT SIDEBAR – STEP NAVIGATOR ══════════════ */}
       <div
         className="hidden sm:flex flex-col flex-shrink-0 w-64 relative overflow-hidden"
         style={{ background: "linear-gradient(160deg, #1e2035 0%, #2B2D42 60%, #3a2f50 100%)" }}

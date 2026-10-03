@@ -18,9 +18,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
 
+    // Un error se queda más: suele traer algo que hay que leer o anotar, no solo un "listo".
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, type === "error" ? 10000 : 4000);
   }, []);
 
   const removeToast = useCallback((id: string) => {

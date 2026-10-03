@@ -1,0 +1,66 @@
+# PENDIENTE DE ACTIVAR: el token de git no tiene el permiso `workflow` y GitHub rechaza crear archivos en
+# .github/workflows/. Para activarlo: `gh auth refresh -h github.com -s workflow`, luego
+# `mkdir -p .github/workflows && git mv docs/ci/ci.yml .github/workflows/ci.yml` y push.
+# Lo que se puede comprobar sin la base de datos ni secretos: tipos, build y las reglas puras.
+# Las pruebas que levantan servidor y agencias (test:aislamiento*, test:vuelos-api) necesitan
+# DATABASE_URL/DIRECT_URL de la base compartida y se siguen corriendo a mano (CLAUDE.md, "Commands").
+name: CI
+
+on:
+  push:
+    branches: [main, feat-bayrol, feat-dbmoon]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (tipos y build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build   # tsc && vite build
+
+  backend:
+    name: Backend (esquema y reglas de personas)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            backend/pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
+      # test:reglas-espejo compila frontend/src/utils/datosPersona.ts con el typescript del frontend.
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm install --frozen-lockfile
+        working-directory: backend
+      # `generate` sin --sql: no necesita la base. check:prisma solo lee el esquema generado.
+      - run: pnpm exec prisma generate
+        working-directory: backend
+      - run: pnpm check:prisma
+        working-directory: backend
+      - run: pnpm test:validaciones
+        working-directory: backend
+      - run: pnpm test:reglas-espejo
+        working-directory: backend

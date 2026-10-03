@@ -18,10 +18,10 @@ import {
   GuestInfo,
 } from "../../types";
 
-import imgTiqueteria from "../../assets/tiqueteria.jpg";
-import imgHoteleria from "../../assets/hoteleria.jpg";
-import imgSeguros from "../../assets/seguros.jpg";
-import imgPlanes from "../../assets/planes.jpg";
+import imgTiqueteria from "../../assets/tiqueteria.webp";
+import imgHoteleria from "../../assets/hoteleria.webp";
+import imgSeguros from "../../assets/seguros.webp";
+import imgPlanes from "../../assets/planes.webp";
 
 export const PRODUCT_IMAGES: Record<string, string> = {
   ticket: imgTiqueteria,

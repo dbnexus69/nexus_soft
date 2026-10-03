@@ -393,12 +393,15 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
     }
   };
 
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
+  const [motivo, setMotivo] = useState('Soporte técnico');
+  // El servidor exige entre 10 y 300 caracteres (`suplantacionSchema`).
+  const motivoValido = motivo.trim().length >= 10 && motivo.trim().length <= 300;
+
   const suplantar = async () => {
     setGuardando(true); setError('');
     try {
-      const motivo = window.prompt('Motivo de la suplantación (visible en auditoría):', 'Soporte técnico');
-      if (!motivo) { setGuardando(false); return; }
-      const res = await api.startImpersonation(empresa.id, motivo);
+      const res = await api.startImpersonation(empresa.id, motivo.trim());
       
       // Solo si no hay uno guardado ya. Esta pantalla sigue siendo accesible
       // mientras se suplanta —el token de suplantación lleva rol de
@@ -438,6 +441,7 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
   };
 
   return (
+    <>
     <Modal
       isOpen
       onClose={onClose}
@@ -462,7 +466,7 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
               </Button>
             )}
             {empresa.estado === 'activa' && (
-              <Button variant="outline" onClick={suplantar} className="hidden sm:flex text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+              <Button variant="outline" onClick={() => setPidiendoMotivo(true)} className="hidden sm:flex text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20">
                 Entrar
               </Button>
             )}
@@ -500,7 +504,7 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
 
         {empresa.estado === 'activa' && (
           <div className="sm:hidden">
-            <Button variant="outline" onClick={suplantar} className="w-full justify-center text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+            <Button variant="outline" onClick={() => setPidiendoMotivo(true)} className="w-full justify-center text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20">
               Entrar como Agencia
             </Button>
           </div>
@@ -541,5 +545,23 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
         )}
       </div>
     </Modal>
+
+    <Modal
+      isOpen={pidiendoMotivo}
+      onClose={() => setPidiendoMotivo(false)}
+      title="Entrar como la agencia"
+      size="sm"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setPidiendoMotivo(false)} disabled={guardando}>Cancelar</Button>
+          <Button onClick={suplantar} disabled={guardando || !motivoValido}>{guardando ? 'Entrando…' : 'Entrar'}</Button>
+        </div>
+      }
+    >
+      <FormField label="Motivo (queda en la auditoría)" error={motivo.trim() && !motivoValido ? 'Entre 10 y 300 caracteres' : undefined} className="mb-0">
+        <Input value={motivo} onChange={e => setMotivo(e.target.value)} maxLength={300} autoFocus />
+      </FormField>
+    </Modal>
+    </>
   );
 }

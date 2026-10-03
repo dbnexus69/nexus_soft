@@ -5,7 +5,7 @@
  * El color es una ESCALA, no un juego de categorías. La antigüedad es una
  * magnitud creciente, así que un solo tono que se va cargando la representa;
  * el diseño anterior usaba rojo, naranja, amarillo y el color de marca —cuatro
- * tonos sin relación entre sí— y con todo coloreado nada destacaba. Aquí solo
+ * tonos sin relación entre s× y con todo coloreado nada destacaba. Aquí solo
  * el tramo de más de 90 días llega a saturarse de verdad.
  *
  * `undated` queda fuera de la escala a propósito: un crédito sin fecha de

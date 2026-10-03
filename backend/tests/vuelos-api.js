@@ -163,6 +163,24 @@ async function main() {
   comprobar('sus vuelos desaparecen del calendario y de los contadores',
     una(anular.status, 200, 201) && !(trasAnular.json?.data || []).some(f => f.reservationNumber === 'CRIT01') && cTras.total === c.total - 1,
     `total ${c.total} -> ${cTras.total}`);
+
+  // ── 9. Una venta de grupo se escribe por lotes (spec 010 T5): el tiempo no crece con las filas
+  console.log('\n  Venta de grupo');
+  const grupo = (k) => tiquete(
+    [tramo('BOG', 'MDE', 14 + k), tramo('MDE', 'CTG', 14 + k, '12:00'), tramo('CTG', 'BAQ', 15 + k), tramo('BAQ', 'SMR', 15 + k, '15:00'),
+      tramo('SMR', 'CLO', 16 + k), tramo('CLO', 'BOG', 16 + k, '18:00')],
+    { reservationNumber: `GRUPO${k}`, passengers: pax(8, 40 + k) });
+  const inicio = Date.now();
+  const ventaGrupo = await vender(tokA, cliA, { ticketData: [grupo(0), grupo(1), grupo(2)] });
+  const segundos = (Date.now() - inicio) / 1000;
+  const lineas = await admin.detalle_venta.findMany({
+    where: { venta_id: ventaGrupo.json?.data?.id },
+    include: { prod_tiqueteria: { include: { tramos_vuelo: true } }, pasajeros_detalle: true },
+  });
+  comprobar('3 tiquetes de 6 tramos y 8 pasajeros: 201, con todas sus filas y en menos de 15 s',
+    ventaGrupo.status === 201 && lineas.length === 3
+      && lineas.every(l => l.prod_tiqueteria?.tramos_vuelo.length === 6 && l.pasajeros_detalle.length === 8) && segundos < 15,
+    `HTTP ${ventaGrupo.status}, ${segundos.toFixed(1)} s`);
 }
 
 ejecutar('Vuelos y check-in por la API', PREFIJO, main);

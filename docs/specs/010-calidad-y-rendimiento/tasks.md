@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hechas T1–T4 y T6, T8–T11. Pendientes T5 y T7, y el tipado de la API (T10).
+**Estado (2026-10-03).** Hechas T1–T11, salvo lo anotado como pendiente en T7 y T10 (tipado de la API).
 
 ## T1 · Textos corruptos en el asistente de venta `[x]`
 `NewSaleWizard.tsx` (y `aging.ts`) tenían la codificación duplicada: 27 mensajes visibles ("no est�¡ registrado",
@@ -50,7 +50,7 @@ hotel, seguro y plan (`costoObligatorio`). **Comprobado:** `test:validaciones` (
 El modo oscuro ya está resuelto de forma global en `index.css` (`.dark .bg-white`, `.dark .text-gray-*`); los 73 "fondos
 blancos" no eran un fallo. Lo real era el contraste: 143 `text-gray|slate-300/400` → `-500` en superficies claras, 136
 `text-[10px]` → `text-[11px]`, y `--color-text-light` oscuro de `#5d6675` (2,96:1) a `#8993a6`. **Por ver:** pantallas en modo
-oscuro. **Decisión abierta:** subir el texto de 11 px a 12 px.
+oscuro. **Texto de 12 px:** hecho después (ver abajo).
 
 ## T10 · Contrato de tipos `[x]` (primer paso)
 `tsconfig.json` con `noImplicitAny` y `strictNullChecks` en `true` (eran 2 y 62 errores; arreglados: `targetKey` tipado,
@@ -61,10 +61,32 @@ los envoltorios de `src/api/*.ts` (siguen devolviendo `res.data.data` sin tipo) 
 Ancho mínimo y `overflow-x-auto` en `ui/Table.tsx`, detalle de cliente, responsable y usuario, paso 3 del asistente y
 Config. **Por ver:** cada tabla a 375 px.
 
+## T5 · Crear una venta grande `[x]`
+`createSale` escribía una fila por ida y vuelta al pooler. Ahora `services/ventaProductos.js` acumula las filas de
+las 15 categorías (tabla por categoría, en lugar de 15 bloques casi iguales) y las escribe con **una inserción por tabla**
+(`createMany`), con las personas nuevas resueltas antes (`createMany` + `skipDuplicates`, o `createManyAndReturn` si no
+tienen documento) y los abonos también por lote. El número de viajes ya no depende del tamaño de la venta; el tope de 120 s
+de la 004 T9 se quitó (vuelve el de 30 s). **Comprobado:** venta de grupo (3 tiquetes × 6 tramos × 8 pasajeros) en
+**3,8 s** (antes ~40 s), con todas sus filas, en `test:vuelos-api` (nuevo caso); `test:aislamiento-api`, `test:aislamiento`
+y `check:prisma` en verde.
+
+## T7 · Archivos que hacen demasiado `[~]` (a medias)
+- `sales.service.js`: 2.231 → 1.712 líneas (la escritura de productos pasó a `ventaProductos.js`, T5).
+- `NewSaleWizard.tsx`: 1.662 → 890 (las reglas de cada paso están en `wizard/validarPaso.ts`, sin cambiar ninguna).
+- `Itineraries.tsx`: 1.400 → 1.233 (estados y esqueletos del check-in en `components/itineraries/checkinUi.tsx`).
+**Pendiente:** los 15 bloques de `validarPaso.ts` siguen siendo casi iguales (se podrían reducir a una tabla por producto,
+como en el servidor), y el JSX de `Itineraries.tsx` (~770 líneas) puede partirse en calendario y lista de check-in.
+**Comprobado:** `tsc` y `vite build`.
+
+## Texto de 12 px `[x]`
+Los 161 `text-[11px]` pasan a `text-xs` (12 px) y las marcas de los gráficos del tablero a 12. El comprobante (`VoucherPDF.css`)
+no se tocó: es un documento impreso. **Por ver en pantalla:** etiquetas en mayúscula y insignias de pantallas densas
+(Tabla, Clientes, Dashboard, Check-in) por si alguna se desborda o salta de línea.
+
 ## Pendientes
 
-- **T5 · Crear una venta grande tarda ~40 s** `[ ]` — agrupar la inserción de tramos y pasajeros (`createMany`); el tope de 120 s fue un parche (004 T9).
-- **T7 · Archivos que hacen demasiado** `[ ]` — `sales.service.js` (2.231 líneas), `NewSaleWizard.tsx` (1.657, con 15 bloques de validación casi iguales), `Itineraries.tsx` (1.400).
+- **T10 · Tipar la API** `[ ]` — los envoltorios de `src/api/*.ts` y los ~367 `any`.
+
 
 ## Registro
 
@@ -72,3 +94,4 @@ Config. **Por ver:** cada tabla a 375 px.
 |---|---|---|
 | 2026-10-03 | T1–T4 | Textos corruptos arreglados, CI añadida, carga inicial de 2,3 MB a 0,65 MB e imágenes a WebP, sin diálogos nativos. |
 | 2026-10-03 | T6, T8–T11 | Política de contraseña única, costo de proveedor obligatorio, contraste, `noImplicitAny`/`strictNullChecks`, tablas con scroll en móvil. |
+| 2026-10-03 | T5, T7, 12 px | Escritura de ventas por lotes (40 s → 3,8 s), archivos grandes partidos (parcial), texto mínimo de 12 px. |

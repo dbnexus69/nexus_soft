@@ -412,8 +412,8 @@ export default function CommissionAgents() {
                           <div>
                             <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight group-hover:text-primary transition-colors">{agent.name || "Comisionista"}</h3>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[11px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
-                              <span className="text-[11px] font-medium text-gray-500">{agent.docType} {agent.docNumber}</span>
+                              <span className="text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
+                              <span className="text-xs font-medium text-gray-500">{agent.docType} {agent.docNumber}</span>
                             </div>
                           </div>
                         </div>
@@ -421,8 +421,8 @@ export default function CommissionAgents() {
                         {/* 2. Progress Bar (Center) */}
                         <div className="flex-1 w-full flex flex-col justify-center min-w-[200px]">
                           <div className="flex justify-between items-end mb-2">
-                            <span className="text-[11px] font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest">Mínimo para retirar</span>
-                            <span className="text-[11px] font-black text-gray-500 dark:text-slate-500 uppercase">{formatCurrency(minimoDe(agent))}</span>
+                            <span className="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest">Mínimo para retirar</span>
+                            <span className="text-xs font-black text-gray-500 dark:text-slate-500 uppercase">{formatCurrency(minimoDe(agent))}</span>
                           </div>
                           <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden relative">
                             <div 
@@ -435,7 +435,7 @@ export default function CommissionAgents() {
                         {/* 3. Stats & Actions (Right) */}
                         <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto mt-4 md:mt-0">
                           <div className="text-right">
-                            <p className="text-[11px] font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest mb-0.5">Acumulado</p>
+                            <p className="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest mb-0.5">Acumulado</p>
                             <p className={`text-xl font-black ${isReady ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
                               {formatCurrency(agent.accumulated)}
                             </p>
@@ -507,7 +507,7 @@ export default function CommissionAgents() {
                              </div>
                              <span className="font-bold text-gray-800 dark:text-white">{agent.name || "Comisionista"}</span>
                           </div>
-                          <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-white dark:bg-amber-900/30 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800/50 uppercase self-start sm:self-auto">Saldo Pendiente</span>
+                          <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-white dark:bg-amber-900/30 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800/50 uppercase self-start sm:self-auto">Saldo Pendiente</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div>
@@ -581,11 +581,11 @@ export default function CommissionAgents() {
                   <table className="w-full text-left border-collapse min-w-[750px]">
                     <thead>
                       <tr className="bg-gray-50/30 dark:bg-slate-800/30">
-                        <th className="px-8 py-5 text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Fecha</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Beneficiario</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Método de Pago</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Referencia</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700 text-right">Monto</th>
+                        <th className="px-8 py-5 text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Fecha</th>
+                        <th className="px-8 py-5 text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Beneficiario</th>
+                        <th className="px-8 py-5 text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Método de Pago</th>
+                        <th className="px-8 py-5 text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">Referencia</th>
+                        <th className="px-8 py-5 text-xs font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700 text-right">Monto</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
@@ -611,17 +611,17 @@ export default function CommissionAgents() {
                               </div>
                             </td>
                             <td className="px-8 py-5">
-                              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[11px] font-black uppercase tracking-wider border border-blue-100 dark:border-blue-800/50">{s.paymentMethod}</span>
+                              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-black uppercase tracking-wider border border-blue-100 dark:border-blue-800/50">{s.paymentMethod}</span>
                             </td>
                             <td className="px-8 py-5">
                               <div className="flex flex-col">
                                 <span className="text-xs text-gray-500 font-medium">{s.reference || "Sín referencia"}</span>
-                                {s.notes && <span className="text-[11px] text-gray-500 italic mt-1 line-clamp-1">{s.notes}</span>}
+                                {s.notes && <span className="text-xs text-gray-500 italic mt-1 line-clamp-1">{s.notes}</span>}
                               </div>
                             </td>
                             <td className="px-8 py-5 text-right">
                                <p className="text-base font-black text-gray-800 dark:text-white">{formatCurrency(s.amount)}</p>
-                               <span className="text-[11px] text-success font-bold uppercase tracking-widest">● Procesado</span>
+                               <span className="text-xs text-success font-bold uppercase tracking-widest">● Procesado</span>
                             </td>
                           </tr>
                         ))
@@ -854,10 +854,10 @@ export default function CommissionAgents() {
                 {(selectedAgent?.name || "C").charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] text-gray-500 dark:text-slate-400">Orden de pago para</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Orden de pago para</p>
                 <h3 className="truncate font-bold text-gray-900 dark:text-white">{selectedAgent?.name}</h3>
               </div>
-              <span className="shrink-0 rounded-lg border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] font-semibold text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+              <span className="shrink-0 rounded-lg border border-gray-200 bg-white px-2 py-1 font-mono text-xs font-semibold text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
                 REF {new Date().getFullYear()}-{String(selectedAgent?.id ?? 0).padStart(3, "0")}
               </span>
             </div>

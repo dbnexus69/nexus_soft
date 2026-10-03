@@ -212,7 +212,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                     const count = targetKey ? ((form as any)[targetKey]?.length || 0) : 0;
                     if (count === 0) return null;
                     return (
-                      <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-md border border-white/20">
+                      <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-md border border-white/20">
                         {count} {count === 1 ? 'añadido' : 'añadidos'}
                       </div>
                     );
@@ -227,7 +227,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                   <h4 className={`font-bold transition-colors ${selected ? 'text-primary' : 'text-gray-700'}`}>
                     {product.label}
                   </h4>
-                  <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wider font-semibold">
+                  <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">
                     {selected ? 'Configurar' : 'Añadir servicio'}
                   </p>
                 </div>
@@ -297,30 +297,30 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Resumen de Venta en Tiempo Real</h4>
-                <p className="text-[11px] text-slate-500">Total acumulado de los servicios seleccionados</p>
+                <p className="text-xs text-slate-500">Total acumulado de los servicios seleccionados</p>
               </div>
             </div>
             <div className="grid grid-cols-4 gap-2 sm:gap-4 bg-white/5 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
               <div className="text-center sm:text-right px-2">
-                <span className="text-[11px] uppercase font-bold text-slate-500 block">Costo Prov.</span>
+                <span className="text-xs uppercase font-bold text-slate-500 block">Costo Prov.</span>
                 <span className="text-xs sm:text-sm font-bold text-slate-100">
                   ${(Number(form.supplierCost) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2 border-x border-white/10">
-                <span className="text-[11px] uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
+                <span className="text-xs uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
                 <span className="text-xs sm:text-sm font-bold text-emerald-300">
                   ${(Number(form.ta) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2 border-r border-white/10">
-                <span className="text-[11px] uppercase font-bold text-amber-300 block">IVA</span>
+                <span className="text-xs uppercase font-bold text-amber-300 block">IVA</span>
                 <span className="text-xs sm:text-sm font-bold text-amber-300">
                   ${(Number(form.iva) || 0).toLocaleString("es-CO")}
                 </span>
               </div>
               <div className="text-center sm:text-right px-2">
-                <span className="text-[11px] uppercase font-bold text-cyan-300 block">Venta Total</span>
+                <span className="text-xs uppercase font-bold text-cyan-300 block">Venta Total</span>
                 <span className="text-xs sm:text-sm font-extrabold text-cyan-300">
                   ${(Number(form.total) || 0).toLocaleString("es-CO")}
                 </span>
@@ -399,12 +399,12 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                           <div className="flex items-center gap-1.5">
                             <p className="text-xs font-bold text-primary truncate">{item.label} #{item.idx + 1}</p>
                             {item.linkedToPlanIndex !== undefined && item.linkedToPlanIndex !== null && (
-                              <span className="text-[11px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                              <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold shrink-0">
                                 <Link2 size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Paquete #{item.linkedToPlanIndex + 1}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-gray-500 truncate">{item.detail}</p>
+                          <p className="text-xs text-gray-500 truncate">{item.detail}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -446,7 +446,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
             {/* Botones para agregar múltiples ítems (Tiquete 2, Hotel 2, Tour 2, etc.) */}
             {form.selectedProducts.length > 0 && (
               <div className="pt-4 border-t border-gray-100 space-y-2">
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">
                   + Agregar ítems adicionales (Tiquete 2, Hotel 2, Tour 2, etc.):
                 </label>
                 <div className="flex flex-wrap gap-2">

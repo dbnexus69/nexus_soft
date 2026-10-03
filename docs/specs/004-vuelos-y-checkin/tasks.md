@@ -134,7 +134,7 @@ Resultado de la última corrida: **63 correctas, 0 fallos.** Antes de los arregl
 |---|---|---|
 | 2026-10-03 | T6, T7, T8 | Los vuelos de paquete se cancelan con motivo (migración aditiva); sin tope silencioso de planes y el panel de atención los cuenta; `pnpm test:vuelos-api` en el repo. |
 | 2026-10-03 | T4, T10 | Confirmadas en el navegador; la fila del vuelo muestra el documento de cada pasajero, no el del cliente. |
-| 2026-10-03 | T9 | Las ventas grandes se cortaban al cumplir los 30 s de la transacción (una ida y vuelta por fila, a ~1 s cada una). Reproducido y confirmado; el tope de `createSale` pasa a 120 s. Una venta de grupo que fallaba a los 31,5 s ahora pasa en 42 s, completa. |
+| 2026-10-03 | T9 (cerrada por 010 T5: el tope de 120 s ya no hace falta, la venta se escribe por lotes) | Las ventas grandes se cortaban al cumplir los 30 s de la transacción (una ida y vuelta por fila, a ~1 s cada una). Reproducido y confirmado; el tope de `createSale` pasa a 120 s. Una venta de grupo que fallaba a los 31,5 s ahora pasa en 42 s, completa. |
 | 2026-10-01 | T10 | Botón "Check-in realizado" para dejar constancia de un check-in hecho por WhatsApp u otro medio, sin pasar por el modal de adjuntar comprobante. |
 | 2026-09-25 | T5 | Corregidas 3 tarifas corruptas del catálogo compartido. |
 | 2026-09-25 | T4 | Pantalla: errores visibles, Bogotá, correo, deshacer check-in. |

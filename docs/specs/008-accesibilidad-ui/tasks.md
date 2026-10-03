@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hechas T1 a T4, por confirmar en pantalla. Queda subir los textos de 10 px a 12 px, viéndolos.
+**Estado (2026-10-03).** Hechas T1 a T4, por confirmar en pantalla. Los textos de 10 px ya están en 12 px (010), por ver en pantalla.
 
 ## T1 · Lo crítico: campos, nombres, foco y movimiento `[~]`
 

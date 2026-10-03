@@ -62,7 +62,7 @@ export default function SalesTable({
                   <span className="font-medium text-slate-800 dark:text-slate-100 leading-tight">
                     {sale.clientName}
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     {sale.clientEmail || "Sin correo"}
                   </span>
                 </div>
@@ -97,7 +97,7 @@ export default function SalesTable({
             <TableCell>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1">
-                  <Badge variant={sale.status} className="uppercase text-[11px] font-black">
+                  <Badge variant={sale.status} className="uppercase text-xs font-black">
                     {sale.status === "pagado"
                       ? "Finalizado"
                       : sale.status === "abonado"
@@ -136,7 +136,7 @@ export default function SalesTable({
                   )}
                 </div>
                 {sale.status === "credito" && sale.creditDueDate && (
-                  <span className="text-[11px] text-rose-500 font-medium whitespace-nowrap">
+                  <span className="text-xs text-rose-500 font-medium whitespace-nowrap">
                     Vence: {formatDate(sale.creditDueDate)}
                   </span>
                 )}

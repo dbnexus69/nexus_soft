@@ -70,7 +70,7 @@ function Cifra({ valor, que }: { valor: number; que: string }) {
   return (
     <div className="text-center">
       <p className="font-heading text-lg font-semibold tabular-nums text-primary dark:text-white">{valor}</p>
-      <p className="text-[11px] text-accent">{que}</p>
+      <p className="text-xs text-accent">{que}</p>
     </div>
   );
 }

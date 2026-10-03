@@ -279,9 +279,9 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-main)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-text-muted)" }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--color-text-muted)" }} axisLine={false} tickLine={false} />
                   <YAxis
-                    tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
+                    tick={{ fontSize: 12, fill: "var(--color-text-muted)" }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v: number) => (v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : `${Math.round(v / 1000)}k`)}

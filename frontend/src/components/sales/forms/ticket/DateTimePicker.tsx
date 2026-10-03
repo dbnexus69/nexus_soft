@@ -192,7 +192,7 @@ export function DateTimePicker({
         }`}>
           <div className="font-bold text-gray-800 border-b border-gray-100 pb-2 mb-3 flex items-center justify-between">
             <span>Ajustar Hora</span>
-            <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">12 horas</span>
+            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">12 horas</span>
           </div>
 
           <div className="flex items-center justify-between gap-1 mb-3">
@@ -222,7 +222,7 @@ export function DateTimePicker({
                   key={p}
                   type="button"
                   onClick={() => setTempPeriod(p)}
-                  className={`px-1.5 py-1 text-[11px] font-bold rounded ${
+                  className={`px-1.5 py-1 text-xs font-bold rounded ${
                     tempPeriod === p ? "bg-white text-primary shadow-sm" : "text-gray-500"
                   }`}
                 >

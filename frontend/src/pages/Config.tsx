@@ -682,16 +682,16 @@ export default function Config() {
                     </h4>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-[11px] text-blue-400 uppercase font-bold">Aerolínea / Ruta</p>
+                        <p className="text-xs text-blue-400 uppercase font-bold">Aerolínea / Ruta</p>
                         <p className="text-xs font-semibold text-blue-800">{viewingPackage.flight?.airline || '-'} | {viewingPackage.flight?.route || '-'}</p>
                       </div>
                       <div className="flex justify-between">
                         <div>
-                          <p className="text-[11px] text-blue-400 uppercase font-bold">Cabina</p>
+                          <p className="text-xs text-blue-400 uppercase font-bold">Cabina</p>
                           <p className="text-xs font-semibold text-blue-800">{viewingPackage.flight?.cabinBaggage || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-[11px] text-blue-400 uppercase font-bold">Bodega</p>
+                          <p className="text-xs text-blue-400 uppercase font-bold">Bodega</p>
                           <p className="text-xs font-semibold text-blue-800">{viewingPackage.flight?.checkedBaggage || '-'}</p>
                         </div>
                       </div>
@@ -704,11 +704,11 @@ export default function Config() {
                     </h4>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-[11px] text-emerald-400 uppercase font-bold">Hotel / Tipo</p>
+                        <p className="text-xs text-emerald-400 uppercase font-bold">Hotel / Tipo</p>
                         <p className="text-xs font-semibold text-emerald-800">{viewingPackage.accommodation?.hotel || '-'} | {viewingPackage.accommodation?.hotelType || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-[11px] text-emerald-400 uppercase font-bold">Régimen</p>
+                        <p className="text-xs text-emerald-400 uppercase font-bold">Régimen</p>
                         <p className="text-xs font-semibold text-emerald-800">{formatMealPlan(viewingPackage.accommodation?.mealPlan)}</p>
                       </div>
                     </div>
@@ -749,11 +749,11 @@ export default function Config() {
                   </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-[11px] text-amber-600 font-bold uppercase">Monto</span>
+                      <span className="text-xs text-amber-600 font-bold uppercase">Monto</span>
                       <span className="text-xs font-bold text-amber-900">{viewingPackage.medicalAssistance?.amountUsd ? `${viewingPackage.medicalAssistance.amountUsd} USD` : '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[11px] text-amber-600 font-bold uppercase">Cobertura</span>
+                      <span className="text-xs text-amber-600 font-bold uppercase">Cobertura</span>
                       <span className="text-xs font-bold text-amber-900">{viewingPackage.medicalAssistance?.coverageDays ? `${viewingPackage.medicalAssistance.coverageDays} Días` : '-'}</span>
                     </div>
                   </div>

@@ -58,7 +58,7 @@ export function Table({ headers, children, className = '', loading = false, skel
         <thead>
           <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
             {headers.map((header, i) => (
-              <th key={i} className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <th key={i} className="px-4 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {header}
               </th>
             ))}

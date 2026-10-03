@@ -40,10 +40,10 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({
             <p className="text-sm font-semibold text-white truncate">
               {getShortName(user?.nombre)}
             </p>
-            <p className="text-[11px] text-amber-400 font-bold uppercase tracking-wider">
+            <p className="text-xs text-amber-400 font-bold uppercase tracking-wider">
               {user?.rol}
             </p>
-            {user?.detalle && <p className="text-[11px] text-slate-400 truncate">{user.detalle}</p>}
+            {user?.detalle && <p className="text-xs text-slate-400 truncate">{user.detalle}</p>}
           </div>
         )}
         {isExpanded && (

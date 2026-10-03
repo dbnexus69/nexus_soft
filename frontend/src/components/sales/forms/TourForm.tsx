@@ -241,7 +241,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
           <h4 className="text-xs font-bold text-accent uppercase tracking-widest flex items-center gap-2">
             <LuFileText size={14} /> Gestión de Vouchers (Múltiples Archivos)
           </h4>
-          <span className="text-[11px] font-bold bg-accent/10 text-accent px-2 py-1 rounded-full border border-accent/20">
+          <span className="text-xs font-bold bg-accent/10 text-accent px-2 py-1 rounded-full border border-accent/20">
             Archivos Permitidos
           </span>
         </div>
@@ -268,7 +268,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-bold text-gray-700">Subir Vouchers</p>
-                  <p className="text-[11px] text-gray-500">PDF, Imágenes o DOC (Múltiples permitidos)</p>
+                  <p className="text-xs text-gray-500">PDF, Imágenes o DOC (Múltiples permitidos)</p>
                 </div>
               </button>
             </div>
@@ -290,7 +290,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                 <span className={`text-sm font-bold transition-colors ${tour.sendVoucher ? 'text-accent' : 'text-gray-500'}`}>
                   Enviar Vouchers al Cliente
                 </span>
-                <span className="text-[11px] text-gray-500">Se enviarán automáticamente al finalizar</span>
+                <span className="text-xs text-gray-500">Se enviarán automáticamente al finalizar</span>
               </div>
             </label>
           </div>
@@ -299,7 +299,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
         {/* List of uploaded vouchers */}
         {tour.vouchers && tour.vouchers.length > 0 && (
           <div className="mt-3 space-y-2">
-            <p className="text-[11px] font-bold text-gray-500 uppercase">Archivos Adjuntos ({tour.vouchers.length})</p>
+            <p className="text-xs font-bold text-gray-500 uppercase">Archivos Adjuntos ({tour.vouchers.length})</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {tour.vouchers.map((v, vIdx) => (
                 <div key={vIdx} className="flex items-center justify-between p-3 bg-white border border-accent/20 rounded-xl animate-fade-in">
@@ -309,7 +309,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-gray-700 truncate" title={v.name}>{v.name}</p>
-                      <p className="text-[11px] text-emerald-600 font-medium">Archivo listo para enviar</p>
+                      <p className="text-xs text-emerald-600 font-medium">Archivo listo para enviar</p>
                     </div>
                   </div>
                   <button
@@ -326,7 +326,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
         )}
 
         {tour.sendVoucher && tour.vouchers && tour.vouchers.length > 0 && (
-          <div className="mt-3 text-[11px] text-emerald-600 bg-emerald-50 p-2.5 rounded-lg flex items-center gap-2">
+          <div className="mt-3 text-xs text-emerald-600 bg-emerald-50 p-2.5 rounded-lg flex items-center gap-2">
             <LuSend size={12} className="shrink-0" /> 
             <span>Confirmado: Se enviarán <strong>{tour.vouchers.length} archivo(s)</strong> de soporte al cliente.</span>
           </div>

@@ -24,7 +24,7 @@ const Meta = memo(function Meta({ etiqueta, valor }: { etiqueta: string; valor: 
   if (valor === null || valor === undefined || valor === "" ) return null;
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] text-accent dark:text-slate-400">{etiqueta}</dt>
+      <dt className="text-xs text-accent dark:text-slate-400">{etiqueta}</dt>
       <dd className="text-sm font-medium text-primary dark:text-white break-words">{String(valor)}</dd>
     </div>
   );

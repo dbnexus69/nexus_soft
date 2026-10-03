@@ -456,13 +456,13 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
             {/* Tramos de Ida */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h5 className="text-[11px] font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
+                <h5 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
                   <ArrowRight size={12} className="text-primary" /> Trayectos de Ida
                 </h5>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-7 text-[11px]"
+                  className="h-7 text-xs"
                   onClick={() => {
                     const legs = formData.flight?.legs || [];
                     setFormData({
@@ -547,7 +547,7 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
 
             {/* Trayecto de Regreso - Siempre visible para paquetes */}
             <div className="bg-blue-50/30 rounded-xl border border-blue-100 p-4 space-y-3">
-              <h5 className="text-[11px] font-bold text-blue-700 uppercase tracking-widest flex items-center gap-2">
+              <h5 className="text-xs font-bold text-blue-700 uppercase tracking-widest flex items-center gap-2">
                 <ArrowLeft size={12} /> Trayecto de Regreso (Ida y Vuelta)
               </h5>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

@@ -47,7 +47,7 @@ const Dato = memo(function Dato({ etiqueta, valor }: { etiqueta: string; valor: 
   const v = valor === null || valor === undefined || valor === "" ? guion : valor;
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] leading-tight text-accent dark:text-slate-400">{etiqueta}</dt>
+      <dt className="text-xs leading-tight text-accent dark:text-slate-400">{etiqueta}</dt>
       <dd className="text-sm font-medium text-primary dark:text-white break-words">{String(v)}</dd>
     </div>
   );
@@ -71,7 +71,7 @@ const Personas = memo(function Personas({ titulo, gente }: { titulo: string; gen
   if (!gente?.length) return null;
   return (
     <div>
-      <p className="text-[11px] text-accent dark:text-slate-400 mb-1.5">{titulo}</p>
+      <p className="text-xs text-accent dark:text-slate-400 mb-1.5">{titulo}</p>
       <ul className="flex flex-wrap gap-1.5">
         {gente.map((p, i) => (
           <li
@@ -114,7 +114,7 @@ const Tramos = memo(function Tramos({ legs }: { legs?: any[] }) {
                      l.seat ? `asiento ${l.seat}` : null, l.ticketNumber])}
             </span>
             {l.checkinStatus && (
-              <span className="text-[11px] text-accent dark:text-slate-400">
+              <span className="text-xs text-accent dark:text-slate-400">
                 {ESTADO_CHECKIN[l.checkinStatus] || l.checkinStatus}
                 {l.checkinStatus === "cancelado" && l.checkinReason ? `: ${l.checkinReason}` : ""}
               </span>
@@ -131,7 +131,7 @@ const Nota = memo(function Nota({ titulo, texto }: { titulo: string; texto?: str
   if (!texto) return null;
   return (
     <div className="border-l-2 border-highlight/40 pl-3">
-      <p className="text-[11px] text-accent dark:text-slate-400">{titulo}</p>
+      <p className="text-xs text-accent dark:text-slate-400">{titulo}</p>
       <p className="text-sm text-primary dark:text-slate-200 leading-relaxed">{texto}</p>
     </div>
   );
@@ -297,7 +297,7 @@ export const FORMAS: Record<string, Forma> = {
             if (!forma) return null;
             return items.map((item, i) => (
               <div key={`${slug}-${item.id || i}`} className="border-l-2 border-highlight/40 pl-3 space-y-2">
-                <p className="text-[11px] text-accent dark:text-slate-400">Incluye: {forma.label}</p>
+                <p className="text-xs text-accent dark:text-slate-400">Incluye: {forma.label}</p>
                 <p className="text-sm font-medium text-primary dark:text-white">{forma.resumen(item).titulo}</p>
                 <forma.Detalle item={item} />
               </div>

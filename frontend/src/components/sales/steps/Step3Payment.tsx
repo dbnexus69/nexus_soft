@@ -164,7 +164,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
           <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
             Distribución de Pagos del Cliente
           </h4>
-          <span className="text-[11px] text-slate-500 font-bold bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
+          <span className="text-xs text-slate-500 font-bold bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
             {paymentsList.length} Pago(s) Registrado(s)
           </span>
         </div>
@@ -212,7 +212,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
           <div className="bg-white p-6 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
             <AlertTriangle className="text-amber-500 mb-2" size={24} />
             <p className="text-xs font-medium text-slate-600">No hay pagos registrados aún</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">La venta se registrará bajo el estado inicial de "Crédito"</p>
+            <p className="text-xs text-slate-500 mt-0.5">La venta se registrará bajo el estado inicial de "Crédito"</p>
           </div>
         )}
 
@@ -252,7 +252,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
                 />
               </FormField>
 
-              <FormField label={<span>Ref. / Comprobante <span className="font-normal text-[11px] text-slate-500">(Opcional)</span></span>}>
+              <FormField label={<span>Ref. / Comprobante <span className="font-normal text-xs text-slate-500">(Opcional)</span></span>}>
                 <Input
                   value={payReference}
                   onChange={(e) => setPayReference(e.target.value)}
@@ -272,7 +272,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
             <CheckCircle className="text-emerald-500 shrink-0" size={20} />
             <div>
               <p className="text-xs font-bold">¡Pago Completado!</p>
-              <p className="text-[11px] opacity-90">El valor total de la venta ha sido completamente cubierto por los pagos registrados.</p>
+              <p className="text-xs opacity-90">El valor total de la venta ha sido completamente cubierto por los pagos registrados.</p>
             </div>
           </div>
         )}
@@ -280,15 +280,15 @@ export function Step3Payment({ form, set, data, errors }: any) {
         {/* Resumen de Estado de Cobro */}
         <div className="grid grid-cols-3 gap-3 pt-2 text-center">
           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Venta</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Venta</p>
             <p className="text-sm font-black text-slate-800 dark:text-white">${totalSale.toLocaleString("es-CO")}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Abonado</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Abonado</p>
             <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">${totalPaid.toLocaleString("es-CO")}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Saldo Restante</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Saldo Restante</p>
             <p className={`text-sm font-black ${remaining > 0.01 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"}`}>
               ${remaining.toLocaleString("es-CO")}
             </p>
@@ -356,7 +356,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
             </div>
             <div>
               <p className="text-xs font-bold text-blue-900 dark:text-blue-200">Venta Directa</p>
-              <p className="text-[11px] text-blue-700/80 dark:text-blue-300/80 font-medium">Sin comisionista externo asignado a esta operación</p>
+              <p className="text-xs text-blue-700/80 dark:text-blue-300/80 font-medium">Sin comisionista externo asignado a esta operación</p>
             </div>
           </div>
         )}
@@ -432,7 +432,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">
+              <p className="text-xs font-bold text-gray-500 uppercase">
                 Total
               </p>
               <p className="font-black text-gray-800">
@@ -440,7 +440,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">
+              <p className="text-xs font-bold text-gray-500 uppercase">
                 Proveedores
               </p>
               <p className="font-black text-rose-600">
@@ -448,7 +448,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">
+              <p className="text-xs font-bold text-gray-500 uppercase">
                 Comisionista
               </p>
               <p className="font-black text-amber-600">
@@ -456,7 +456,7 @@ export function Step3Payment({ form, set, data, errors }: any) {
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">
+              <p className="text-xs font-bold text-gray-500 uppercase">
                 Ganancia Oficina
               </p>
               <p className="font-black text-emerald-600">

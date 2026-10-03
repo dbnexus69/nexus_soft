@@ -131,7 +131,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
           {/* Solo cuando no hay mora: con mora, la columna Mora ya dice los días
               y repetirlo aquí es la misma cifra dos veces en la misma fila. */}
           {fila.daysOverdue === 0 && vencimiento && (
-            <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Vence {vencimiento}
             </div>
           )}

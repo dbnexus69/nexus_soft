@@ -526,12 +526,12 @@ export default function Login() {
             <div className="pt-4">
               <div className="inline-flex items-center gap-6 p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl">
                 <div>
-                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Disponibilidad</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Disponibilidad</p>
                   <p className="text-lg font-bold text-emerald-400">99.98%</p>
                 </div>
                 <div className="w-px h-8 bg-white/10" />
                 <div>
-                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Soporte</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Soporte</p>
                   <p className="text-lg font-bold text-amber-400">24/7 Premium</p>
                 </div>
               </div>

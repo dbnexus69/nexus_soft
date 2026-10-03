@@ -72,7 +72,7 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
             <h3 className="font-bold text-xl text-gray-900 dark:text-white">{agent.name}</h3>
             <p className="text-sm text-gray-500 dark:text-slate-400">{agent.docType} {agent.docNumber}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{agent.type || "Comisionista"}</span>
             </div>
           </div>
           <div className="ml-auto text-right">
@@ -152,7 +152,7 @@ export function AgentDetailsModal({ agent, isOpen, onClose }: AgentDetailsModalP
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${sale.isSettled ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-black uppercase tracking-wider ${sale.isSettled ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
                         {sale.isSettled ? 'Liquidada' : 'Pendiente'}
                       </span>
                     </td>

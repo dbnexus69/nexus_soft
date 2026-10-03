@@ -101,7 +101,7 @@ const Alcance = memo(function Alcance({
             aria-checked={activo}
             disabled={readOnly}
             onClick={() => onChange(o.value)}
-            className={`px-2 py-1 text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight ${
+            className={`px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight ${
               activo
                 ? 'bg-highlight text-white'
                 : 'text-accent hover:bg-slate-100 dark:hover:bg-white/5'

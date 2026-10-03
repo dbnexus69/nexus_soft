@@ -90,7 +90,7 @@ export function VoucherField({ voucher, vouchers, multiple, sendVoucher, onChang
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-bold text-gray-700">{multiple ? "Subir Vouchers" : "Subir Voucher"}</p>
-                  <p className="text-[11px] text-gray-500">PDF, Imágenes o DOC (Máx. 10MB)</p>
+                  <p className="text-xs text-gray-500">PDF, Imágenes o DOC (Máx. 10MB)</p>
                 </div>
               </button>
             ) : null}
@@ -106,7 +106,7 @@ export function VoucherField({ voucher, vouchers, multiple, sendVoucher, onChang
                       </div>
                       <div className="max-w-[150px] md:max-w-[200px]">
                         <p className="text-sm font-bold text-gray-700 truncate">{v.name}</p>
-                        <p className="text-[11px] text-emerald-600 font-medium">Archivo listo</p>
+                        <p className="text-xs text-emerald-600 font-medium">Archivo listo</p>
                       </div>
                     </div>
                     <button
@@ -137,7 +137,7 @@ export function VoucherField({ voucher, vouchers, multiple, sendVoucher, onChang
                   </div>
                   <div className="max-w-[150px] md:max-w-[200px]">
                     <p className="text-sm font-bold text-gray-700 truncate">{voucher.name}</p>
-                    <p className="text-[11px] text-emerald-600 font-medium">Archivo listo para enviar</p>
+                    <p className="text-xs text-emerald-600 font-medium">Archivo listo para enviar</p>
                   </div>
                 </div>
                 <button
@@ -168,14 +168,14 @@ export function VoucherField({ voucher, vouchers, multiple, sendVoucher, onChang
               <span className={`text-sm font-bold transition-colors ${sendVoucher ? 'text-accent' : 'text-gray-500'}`}>
                 Enviar {multiple ? "Vouchers" : "Voucher"} al Cliente
               </span>
-              <span className="text-[11px] text-gray-500">Se enviará automáticamente al finalizar</span>
+              <span className="text-xs text-gray-500">Se enviará automáticamente al finalizar</span>
             </div>
           </label>
         </div>
       </div>
 
       {sendVoucher && ((!multiple && voucher) || (multiple && vouchers && vouchers.length > 0)) && (
-        <div className="mt-3 text-[11px] text-emerald-600 bg-emerald-50 p-2 rounded-lg flex items-center gap-2">
+        <div className="mt-3 text-xs text-emerald-600 bg-emerald-50 p-2 rounded-lg flex items-center gap-2">
           <LuSend size={12} /> Confirmado: {multiple ? `${vouchers?.length} documentos listos para enviar.` : `El archivo ${voucher?.name} se enviará al cliente.`}
         </div>
       )}
@@ -201,19 +201,19 @@ export function ClientInfoSection({ client }: ClientInfoSectionProps) {
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <p className="text-[11px] text-gray-500 font-bold uppercase">Nombre</p>
+          <p className="text-xs text-gray-500 font-bold uppercase">Nombre</p>
           <p className="text-xs font-bold text-gray-700">{client.name}</p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-500 font-bold uppercase">Documento</p>
+          <p className="text-xs text-gray-500 font-bold uppercase">Documento</p>
           <p className="text-xs font-bold text-gray-700">{client.docType} {client.docNumber}</p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-500 font-bold uppercase">Email</p>
+          <p className="text-xs text-gray-500 font-bold uppercase">Email</p>
           <p className="text-xs font-bold text-gray-700 truncate">{client.email}</p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-500 font-bold uppercase">Teléfono</p>
+          <p className="text-xs text-gray-500 font-bold uppercase">Teléfono</p>
           <p className="text-xs font-bold text-gray-700">{client.phone}</p>
         </div>
       </div>
@@ -248,7 +248,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
         <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-2">
           <LuDollarSign size={14} /> Detalles Financieros del Servicio
         </h4>
-        <span className="text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/30">
+        <span className="text-xs font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/30">
           Validación Activa
         </span>
       </div>
@@ -310,14 +310,14 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
       
       <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm animate-fade-in">
         <div className="flex flex-col">
-          <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tighter">Costo Total para la Agencia</span>
-          <span className="text-[11px] text-gray-500 dark:text-slate-400 font-medium">(Costo Proveedor + Tarifa Administrativa)</span>
+          <span className="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tighter">Costo Total para la Agencia</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">(Costo Proveedor + Tarifa Administrativa)</span>
         </div>
         <div className="flex flex-col items-end">
           <span className="text-lg font-black text-emerald-900 dark:text-emerald-300 leading-none">
             ${totalCost.toLocaleString('es-CO', { minimumFractionDigits: 0 })}
           </span>
-          {totalCost > 0 && <span className="text-[11px] text-emerald-600 font-bold uppercase">Valor Liquidado</span>}
+          {totalCost > 0 && <span className="text-xs text-emerald-600 font-bold uppercase">Valor Liquidado</span>}
         </div>
       </div>
     </div>

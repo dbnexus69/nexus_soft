@@ -111,7 +111,7 @@ function TopClients() {
             <YAxis
               type="category"
               dataKey="name"
-              tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
+              tick={{ fontSize: 12, fill: "#64748b", fontWeight: 700 }}
               axisLine={false}
               tickLine={false}
               width={140}
@@ -188,8 +188,8 @@ function TopAsesores() {
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.2)" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b", fontWeight: 700 }} dy={10} />
-            <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }} tickFormatter={(val) => `$${(val / 1000000).toFixed(1)}M`} />
-            <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }} />
+            <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8", fontWeight: 600 }} tickFormatter={(val) => `$${(val / 1000000).toFixed(1)}M`} />
+            <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8", fontWeight: 600 }} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(148, 163, 184, 0.1)" }} />
             <Legend wrapperStyle={{ fontSize: "12px", fontWeight: 700, paddingTop: "20px" }} iconType="circle" />
             <Bar yAxisId="left" dataKey="total" name="Ingresos Generados" fill="url(#gradientAsesor)" radius={[8, 8, 0, 0] as any} maxBarSize={50} className="hover:opacity-90 drop-shadow-sm transition-opacity cursor-pointer" />

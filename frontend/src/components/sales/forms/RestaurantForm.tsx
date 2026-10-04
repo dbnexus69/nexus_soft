@@ -3,12 +3,14 @@ import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
 import { RestaurantData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
+import type { ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface RestaurantFormProps {
   restaurant: RestaurantData;
-  client: any;
-  suppliers?: any[];
-  paymentMethods?: any[];
+  client: ClienteDelFormulario;
+  suppliers?: ConfigData['suppliers'];
+  paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<RestaurantData>) => void;
   triggerError?: (msg: string) => void;
 }

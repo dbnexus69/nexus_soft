@@ -4,13 +4,15 @@ import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form"
 import { Button } from "../../ui/Button";
 import { HotelData, GuestInfo } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
+import type { AppData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface HotelFormProps {
   hotel: HotelData;
   onChange: (updates: Partial<HotelData>) => void;
   triggerError: (msg: string) => void;
-  data: any;
-  mainClient?: any;
+  data: AppData;
+  mainClient?: ClienteDelFormulario;
   suppliers?: { name: string }[];
 }
 
@@ -55,7 +57,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
             <Combobox
               value={hotel.destination}
               onChange={(val) => onChange({ destination: val })}
-              options={(data?.config?.airports || []).map((a: any) => ({
+              options={(data?.config?.airports || []).map((a) => ({
                 value: a.location,
                 label: `${a.location} (${a.abbreviation})`,
               }))}
@@ -66,7 +68,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
             <Combobox
               value={hotel.supplier || ""}
               onChange={(val) => onChange({ supplier: val })}
-              options={suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
+              options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -138,7 +140,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
                   value={guest.name}
                   onChange={(val) => {
                     const client = (data?.clients || []).find(
-                      (c: any) =>
+                      (c) =>
                         (c.name === val || `${c.firstName} ${c.lastName || ""}`.trim() === val) &&
                         c.status === "active"
                     );
@@ -153,8 +155,8 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
                     }
                   }}
                   options={(data?.clients || [])
-                    .filter((c: any) => c.status === "active" && String(c.id) !== String(mainClient?.id))
-                    .map((c: any) => ({
+                    .filter((c) => c.status === "active" && String(c.id) !== String(mainClient?.id))
+                    .map((c) => ({
                       value: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                       label: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                     }))}
@@ -163,9 +165,9 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
                 <Combobox
                   value={guest.docType}
                   onChange={(val) => updateGuest(gIdx, { docType: val })}
-                  options={(data?.config?.documentTypes || []).map((d: any) => ({
-                    value: d.abreviatura || d.code || d.name,
-                    label: d.abreviatura || d.name || d.code,
+                  options={(data?.config?.documentTypes || []).map((d) => ({
+                    value: d.abbreviation || d.name,
+                    label: d.abbreviation || d.name,
                   }))}
                   placeholder="Tipo de documento"
                 />
@@ -216,7 +218,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
             <Combobox
               value={hotel.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
-              options={(data?.config?.cards || []).map((m: any) => ({
+              options={(data?.config?.cards || []).map((m) => ({
                 value: String(m.id),
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}

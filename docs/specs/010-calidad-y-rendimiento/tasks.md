@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hechas T1–T11. Lo que queda (más `any` por quitar, partir el resto de `Itineraries.tsx`) no bloquea nada.
+**Estado (2026-10-04).** Hechas T1–T11. Solo queda activar la CI (T2).
 
 ## T1 · Textos corruptos en el asistente de venta `[x]`
 `NewSaleWizard.tsx` (y `aging.ts`) tenían la codificación duplicada: 27 mensajes visibles ("no est�¡ registrado",
@@ -52,15 +52,24 @@ blancos" no eran un fallo. Lo real era el contraste: 143 `text-gray|slate-300/40
 `text-[10px]` → `text-[11px]`, y `--color-text-light` oscuro de `#5d6675` (2,96:1) a `#8993a6`. **Por ver:** pantallas en modo
 oscuro. **Texto de 12 px:** hecho después (ver abajo).
 
-## T10 · Contrato de tipos `[x]` (segunda pasada)
-`noImplicitAny` y `strictNullChecks` están activos (primera pasada). Ahora los envoltorios de `src/api/*.ts` devuelven tipos
-(`api/tipos.ts`: `Pagina<T>`, `Recurso<T>`): clientes, usuarios, responsables, ventas (incluida `VentaCreada`, la cartera y los
-abonos), comisionistas, vuelos y estadísticas. Las pantallas dejaron de anotar `: any` el resultado, y el compilador sacó a la luz
-tipos que no decían la verdad: `documentTypes` declaraba `abreviatura` y la API manda `abbreviation` (un `as any` lo tapaba),
-`DashboardStats` no era la respuesta real, `CommissionAgent` no traía `avatar` ni `docTypeId`, `User.lastLogin` admite `null`.
-Los tres pasos del asistente y `ConfigForms` tienen sus props tipadas. `any` explícitos: 421 → 330.
-**Pendiente (sin urgencia):** formularios de producto (`wizardData.ts`, `TicketForm`, `PlanForm`…, ~100) y `VoucherPDF.tsx`,
-donde el `any` es sobre todo claves dinámicas por categoría; `Config.tsx` y `serviceShapes.tsx`.
+## T10 · Contrato de tipos `[x]`
+`noImplicitAny` y `strictNullChecks` activos; los envoltorios de `src/api/*.ts` devuelven tipos (`api/tipos.ts`:
+`Pagina<T>`, `Recurso<T>`); los pasos del asistente, `ConfigForms`, los 15 formularios de producto y el comprobante tienen sus
+props tipadas (`ClienteDelFormulario` en `wizardData.ts`). `any` explícitos: 421 → 208.
+
+Tipar sacó a la luz fallos reales, ya corregidos:
+- **Tipos de documento en hotel y en los pasajeros del tiquete:** las opciones usaban `d.abreviatura`/`d.code`, que la API no
+  manda (manda `abbreviation`), así que el valor era el nombre largo ("Cédula de Ciudadanía") y el tipo que el formulario
+  ponía por defecto ("CC") no coincidía con ninguna opción. Ahora el valor es la abreviatura.
+- `FlightLegsManager` y `PassengerManager` estaban importados pero no se usaban (y el primero leía `a.code`, que no existe):
+  borrados.
+- Campos que la API sí manda y el tipo no declaraba: `airlineName` del tiquete, `city`/`country` del aeropuerto,
+  `transportType` del vuelo de un paquete, `arrivalTime` de un tramo. Y uno que el comprobante leía y no existe:
+  `plan.airlineName`.
+- `documentTypes` declaraba `abreviatura`; `DashboardStats` no era la respuesta real; `CommissionAgent` sin `avatar`.
+
+**Quedan (deliberados):** los `("" as any)` de los contadores de 5 formularios (dejan el campo vacío mientras se escribe), los de
+la librería del selector de fecha, claves dinámicas por categoría (`ProductFormsModal`, `Step2Products`) y `catch (err: any)`.
 
 ## T11 · Tablas en móvil `[x]`
 Ancho mínimo y `overflow-x-auto` en `ui/Table.tsx`, detalle de cliente, responsable y usuario, paso 3 del asistente y
@@ -75,14 +84,18 @@ de la 004 T9 se quitó (vuelve el de 30 s). **Comprobado:** venta de grupo (3 ti
 **3,8 s** (antes ~40 s), con todas sus filas, en `test:vuelos-api` (nuevo caso); `test:aislamiento-api`, `test:aislamiento`
 y `check:prisma` en verde.
 
-## T7 · Archivos que hacen demasiado `[x]` (primera pasada)
-- `sales.service.js`: 2.231 → 1.712 líneas (la escritura de productos pasó a `ventaProductos.js`, T5).
-- `NewSaleWizard.tsx`: 1.662 → 890; las reglas de cada paso están en `wizard/validarPaso.ts`, y sus 12 bloques casi iguales
-  (plan … mascotas) son ahora una sola función `revisar` con las reglas de cada producto (784 → 596 líneas, mismos mensajes).
-- `Itineraries.tsx`: 1.400 → 1.045 (estados y esqueletos en `components/itineraries/checkinUi.tsx`; los dos diálogos del
-  check-in en `components/itineraries/CheckinModals.tsx`).
-**Queda, sin urgencia:** el calendario y la lista de check-in de `Itineraries.tsx` (~510 líneas de JSX en un ternario) y
-`sales.service.js` (1.712 líneas: listados y cartera con SQL). **Comprobado:** `tsc` y `vite build`.
+## T7 · Archivos que hacen demasiado `[x]`
+- `sales.service.js`: 2.231 → 1.025 líneas. Fuera: la escritura de productos (`ventaProductos.js`, T5), el listado
+  (`ventasListado.js`), la cartera de crédito con sus CTE (`ventasCartera.js`) y el alcance de una venta
+  (`ventasAlcance.js`: `soloLasSuyas`, `esDeOtro`, `ventaVisible`). El controlador no cambió: el servicio sigue exponiendo
+  `listSales`, `getCreditPortfolio` y `getClientCredits`.
+- `NewSaleWizard.tsx`: 1.662 → 890; las reglas de cada paso en `wizard/validarPaso.ts`, con una sola función `revisar`
+  para los 12 productos que se validaban con el mismo bloque copiado.
+- `Itineraries.tsx`: 1.400 → 116. La página solo tiene la cabecera, las pestañas y los avisos; el calendario
+  (`components/itineraries/CalendarioVuelos.tsx`) y la lista de check-in con sus acciones y diálogos (`ListaCheckin.tsx`)
+  cargan cada uno lo suyo. Las dos pestañas siguen montadas (se ocultan), así que cambiar de una a otra no pierde el mes ni
+  la página, como antes.
+**Comprobado:** `tsc`, `vite build`, `check:prisma`, `test:aislamiento-api` y `test:vuelos-api` en verde.
 
 ## Texto de 12 px `[x]`
 Los 161 `text-[11px]` pasan a `text-xs` (12 px) y las marcas de los gráficos del tablero a 12. El comprobante (`VoucherPDF.css`)
@@ -91,7 +104,7 @@ no se tocó: es un documento impreso. **Por ver en pantalla:** etiquetas en may�
 
 ## Pendientes
 
-- Sin tareas abiertas en esta spec. CI sigue escrita pero sin activar (T2). Lo anotado como "queda" en T7 y T10.
+- Activar la CI (T2): necesita un token con permiso `workflow`.
 
 ## Registro
 
@@ -101,3 +114,4 @@ no se tocó: es un documento impreso. **Por ver en pantalla:** etiquetas en may�
 | 2026-10-03 | T6, T8–T11 | Política de contraseña única, costo de proveedor obligatorio, contraste, `noImplicitAny`/`strictNullChecks`, tablas con scroll en móvil. |
 | 2026-10-03 | T5, T7, 12 px | Escritura de ventas por lotes (40 s → 3,8 s), archivos grandes partidos (parcial), texto mínimo de 12 px. |
 | 2026-10-03 | T7, T10 | `validarPaso` con una sola función por lista, diálogos del check-in aparte, API tipada y `any` 421 → 330. |
+| 2026-10-04 | T7, T10 | `Itineraries` en calendario y lista, `sales.service` sin listado ni cartera, formularios y comprobante tipados (`any` 330 → 208); tipos de documento de hotel y tiquete corregidos. |

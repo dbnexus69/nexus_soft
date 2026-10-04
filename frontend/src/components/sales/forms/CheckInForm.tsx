@@ -3,13 +3,15 @@ import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
 import { CheckInData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
+import type { ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface CheckInFormProps {
   checkIn: CheckInData;
-  client: any;
-  suppliers?: any[];
-  baggage?: any[];
-  paymentMethods?: any[];
+  client: ClienteDelFormulario;
+  suppliers?: ConfigData['suppliers'];
+  baggage?: ConfigData['baggage'];
+  paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<CheckInData>) => void;
   triggerError?: (msg: string) => void;
 }
@@ -83,7 +85,7 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
             <Combobox
               value={checkIn.baggage}
               onChange={(val) => onChange({ baggage: val })}
-              options={baggage && baggage.length > 0 ? baggage.map((b: any) => ({
+              options={baggage && baggage.length > 0 ? baggage.map((b) => ({
                 value: `${b.airlineName} - ${b.fareType}`,
                 label: `${b.airlineName} - ${b.fareType}`
               })) : [

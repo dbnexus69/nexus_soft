@@ -5,11 +5,13 @@ import { FormField, Input, Combobox, Textarea, Select } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { TourData, GuestInfo } from "../../../types";
 import { ClientInfoSection, FinancialSection } from "./VoucherField";
+import type { AppData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface TourFormProps {
   tour: TourData;
-  mainClient: any;
-  data: any;
+  mainClient: ClienteDelFormulario;
+  data: AppData;
   onChange: (updates: Partial<TourData>) => void;
   triggerError?: (msg: string) => void;
 }
@@ -174,7 +176,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                   onChange={(val) => {
                     const cleaned = val.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
                     const client = (data?.clients || []).find(
-                      (c: any) =>
+                      (c) =>
                         (c.name === cleaned || `${c.firstName} ${c.lastName || ""}`.trim() === cleaned) &&
                         c.status === "active"
                     );
@@ -189,8 +191,8 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                     }
                   }}
                   options={(data?.clients || [])
-                    .filter((c: any) => c.status === "active" && String(c.id) !== String(mainClient?.id))
-                    .map((c: any) => ({
+                    .filter((c) => c.status === "active" && String(c.id) !== String(mainClient?.id))
+                    .map((c) => ({
                       value: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                       label: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                     }))}
@@ -200,8 +202,8 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
                 <Select
                   value={guest.docType}
                   onChange={(e) => updateGuest(gIdx, { docType: e.target.value })}
-                  options={(data?.config?.documentTypes || []).map((d: any) => {
-                    const code = d.abbreviation || d.abreviatura || d.code || d.name || '';
+                  options={(data?.config?.documentTypes || []).map((d) => {
+                    const code = d.abbreviation || d.name || '';
                     return { value: code, label: code };
                   })}
                 />

@@ -3,12 +3,14 @@ import { FormField, Input, CurrencyInput} from "../../ui/Form";
 import { FincaData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
+import type { ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface FincaFormProps {
   finca: FincaData;
-  client: any;
-  suppliers?: any[];
-  paymentMethods?: any[];
+  client: ClienteDelFormulario;
+  suppliers?: ConfigData['suppliers'];
+  paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<FincaData>) => void;
   triggerError?: (msg: string) => void;
 }

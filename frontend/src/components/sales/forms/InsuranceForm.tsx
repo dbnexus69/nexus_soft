@@ -3,12 +3,14 @@ import { AlertCircle, Users, Briefcase, Trash2, PlusCircle, TriangleAlert } from
 import { FormField, Input, Select, CurrencyInput, Combobox } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { InsuranceData, GuestInfo } from "../../../types";
+import type { AppData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface InsuranceFormProps {
   insurance: InsuranceData;
   onChange: (updates: Partial<InsuranceData>) => void;
-  data: any;
-  client?: any;
+  data: AppData;
+  client?: ClienteDelFormulario;
   suppliers?: { name: string }[];
 }
 
@@ -75,7 +77,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
             <Combobox
               value={insurance.supplier || ""}
               onChange={(val) => onChange({ supplier: val })}
-              options={suppliers.map((s: any) => ({ value: s.name, label: s.name }))}
+              options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -131,7 +133,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
                   value={member.name}
                   onChange={(val) => {
                     const client = (data?.clients || []).find(
-                      (c: any) =>
+                      (c) =>
                         (c.name === val || `${c.firstName} ${c.lastName || ""}`.trim() === val) &&
                         c.status === "active"
                     );
@@ -146,8 +148,8 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
                     }
                   }}
                   options={(data?.clients || [])
-                    .filter((c: any) => c.status === "active" && String(c.id) !== String(client?.id))
-                    .map((c: any) => ({
+                    .filter((c) => c.status === "active" && String(c.id) !== String(client?.id))
+                    .map((c) => ({
                       value: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                       label: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                     }))}
@@ -162,8 +164,8 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
                   <option value="PA">PA</option>
                   <option value="RC">RC</option>
                   <option value="TI">TI</option>
-                  {(data?.config?.documentTypes || []).map((d: any) => {
-                    const code = d.abbreviation || d.abreviatura || d.code || d.name || '';
+                  {(data?.config?.documentTypes || []).map((d) => {
+                    const code = d.abbreviation || d.name || '';
                     if (["CC", "CE", "PA", "RC", "TI"].includes(code)) return null;
                     return <option key={code} value={code}>{code}</option>;
                   })}
@@ -215,7 +217,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
             <Combobox
               value={insurance.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
-              options={(data?.config?.cards || []).map((m: any) => ({
+              options={(data?.config?.cards || []).map((m) => ({
                 value: String(m.id),
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}

@@ -2,6 +2,7 @@ import { LuFileText, LuSend, LuUser, LuUpload, LuX, LuFileCheck, LuDollarSign, L
 import { Input, Combobox , CurrencyInput, Select} from "../../ui/Form";
 import { FormField } from "../../ui/Form";
 import { useRef } from "react";
+import type { Client, ConfigData } from "../../../types";
 
 interface VoucherFieldProps {
   voucher?: { name: string; base64: string };
@@ -184,13 +185,7 @@ export function VoucherField({ voucher, vouchers, multiple, sendVoucher, onChang
 }
 
 interface ClientInfoSectionProps {
-  client: {
-    name: string;
-    docNumber: string;
-    email: string;
-    phone: string;
-    docType: string;
-  };
+  client: Partial<Pick<Client, 'name' | 'docNumber' | 'email' | 'phone' | 'docType'>>;
 }
 
 export function ClientInfoSection({ client }: ClientInfoSectionProps) {
@@ -226,7 +221,7 @@ interface FinancialSectionProps {
   ta?: number;
   supplierPaymentMethod?: string;
   isPaymentMethodRequired?: boolean;
-  paymentMethods?: any[];
+  paymentMethods?: ConfigData['cards'];
   suppliers?: { id: number; name: string }[];
   onChange: (updates: { supplierName?: string; supplierCost?: number; ta?: number; supplierPaymentMethod?: string }) => void;
 }

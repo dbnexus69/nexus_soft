@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { CheckinStatusFilter, CheckinCounts } from '../../types';
+import type { CheckinStatusFilter, CheckinCounts, Flight } from '../../types';
 
 // La presentación del check-in (estados, colores y esqueletos de carga) de la pantalla de vuelos.
 
@@ -170,3 +170,23 @@ export const EsqueletoVacio = memo(function EsqueletoVacio() {
     </div>
   );
 });
+
+/** En qué punto está el check-in de un vuelo: lo guardado manda, y la fecha (de Bogotá) matiza a los pendientes. */
+export function getFlightStatus(flight: Flight) {
+  // Cancelado manda sobre todo lo demás: un vuelo cancelado no está vencido
+  // ni urgente, ya no hay nada que hacer con él.
+  if (flight.checkin === 'cancelado') {
+    return { isCancelado: true, isRealizado: false, isVencido: false, isUrgente: false };
+  }
+  if (flight.checkin === 'realizado') {
+    return { isCancelado: false, isRealizado: true, isVencido: false, isUrgente: false };
+  }
+  // La fecha y la hora del vuelo son de Bogotá (UTC-5, sin horario de verano):
+  // con la hora local del navegador, quien mira desde otra zona ve vencido o
+  // urgente un vuelo que aún no lo es (y al revés).
+  const flightDateTime = new Date(`${flight.date}T${flight.time || '00:00'}:00-05:00`);
+  const now = new Date();
+  const isVencido = flightDateTime < now;
+  const isUrgente = !isVencido && (flightDateTime.getTime() <= now.getTime() + (48 * 60 * 60 * 1000));
+  return { isCancelado: false, isRealizado: false, isVencido, isUrgente };
+}

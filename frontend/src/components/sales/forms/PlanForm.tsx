@@ -5,13 +5,15 @@ import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form"
 import { Button } from "../../ui/Button";
 import { PlanData, GuestInfo, SaleProductId } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
+import type { AppData, TravelPackage } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface PlanFormProps {
   plan: PlanData;
   onChange: (updates: Partial<PlanData>) => void;
-  data: any;
+  data: AppData;
   triggerError?: (msg: string) => void;
-  mainClient?: any;
+  mainClient?: ClienteDelFormulario;
   onAddLinkedService?: (productType: SaleProductId, planIdx: number) => void;
   onEditLinkedService?: (productType: SaleProductId, itemIdx: number) => void;
   planIndex?: number;
@@ -52,19 +54,19 @@ export function PlanForm({
   // El catálogo de paquetes ya no viaja en /config/all: solo hace falta aquí.
   // Se pide el listado ligero al abrir el formulario, y el detalle completo
   // del paquete concreto que el usuario elija.
-  const [packages, setPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<TravelPackage[]>([]);
   const [loadingPackage, setLoadingPackage] = useState(false);
 
   useEffect(() => {
     let vivo = true;
     api.getConfigSection('packages')
-      .then((res: any) => { if (vivo) setPackages(Array.isArray(res) ? res : (res?.data || [])); })
+      .then((res) => { if (vivo) setPackages(Array.isArray(res) ? res : (res?.data || [])); })
       .catch(() => { if (vivo) setPackages([]); });
     return () => { vivo = false; };
   }, []);
 
   const handleSelectPackage = async (packageName: string) => {
-    const resumen = packages.find((p: any) => p.name === packageName);
+    const resumen = packages.find((p) => p.name === packageName);
     if (!resumen) return;
     setLoadingPackage(true);
     let pkg = resumen;
@@ -103,7 +105,7 @@ export function PlanForm({
           <Combobox
             value={plan.planName}
             onChange={(val) => handleSelectPackage(val)}
-            options={packages.map((p: any) => ({ value: p.name, label: `${p.name} - ${p.destination} (${p.nights} noches)` }))}
+            options={packages.map((p) => ({ value: p.name, label: `${p.name} - ${p.destination} (${p.nights} noches)` }))}
             placeholder="Busca un paquete registrado..."
           />
           <p className="text-xs text-gray-500 mt-2 italic">
@@ -169,7 +171,7 @@ export function PlanForm({
               <Combobox
                 value={plan.airline}
                 onChange={(val) => onChange({ airline: val })}
-                options={(data?.config?.airlines || []).map((a: any) => ({ value: a.name, label: a.name }))}
+                options={(data?.config?.airlines || []).map((a) => ({ value: a.name, label: a.name }))}
                 placeholder="Seleccionar aerolínea..."
               />
             )}
@@ -351,7 +353,7 @@ export function PlanForm({
             <Combobox
               value={plan.supplier}
               onChange={(val) => onChange({ supplier: val })}
-              options={(data?.config?.suppliers || []).map((s: any) => ({ value: s.name, label: s.name }))}
+              options={(data?.config?.suppliers || []).map((s) => ({ value: s.name, label: s.name }))}
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
@@ -381,7 +383,7 @@ export function PlanForm({
             <Combobox
               value={plan.supplierPaymentMethod || ""}
               onChange={(val) => onChange({ supplierPaymentMethod: val })}
-              options={(data?.config?.cards || []).map((m: any) => ({
+              options={(data?.config?.cards || []).map((m) => ({
                 value: String(m.id),
                 label: m.lastFourDigits ? `${m.name} (**${m.lastFourDigits})` : m.name,
               }))}
@@ -412,7 +414,7 @@ export function PlanForm({
                   onChange={(val) => {
                     const cleaned = val.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
                     const client = (data?.clients || []).find(
-                      (c: any) =>
+                      (c) =>
                         (c.name === cleaned || `${c.firstName} ${c.lastName || ""}`.trim() === cleaned) &&
                         c.status === "active"
                     );
@@ -427,8 +429,8 @@ export function PlanForm({
                     }
                   }}
                   options={(data?.clients || [])
-                    .filter((c: any) => c.status === "active" && String(c.id) !== String(mainClient?.id))
-                    .map((c: any) => ({
+                    .filter((c) => c.status === "active" && String(c.id) !== String(mainClient?.id))
+                    .map((c) => ({
                       value: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                       label: c.name || `${c.firstName} ${c.lastName || ""}`.trim(),
                     }))}
@@ -438,8 +440,8 @@ export function PlanForm({
                 <Select
                   value={guest.docType}
                   onChange={(e) => updateGuest(gIdx, { docType: e.target.value })}
-                  options={(data?.config?.documentTypes || []).map((d: any) => {
-                    const code = d.abbreviation || d.abreviatura || d.code || d.name || '';
+                  options={(data?.config?.documentTypes || []).map((d) => {
+                    const code = d.abbreviation || d.name || '';
                     return { value: code, label: code };
                   })}
                 />

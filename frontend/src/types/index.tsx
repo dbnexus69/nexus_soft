@@ -373,6 +373,8 @@ export interface InsuranceData {
 
 export interface TicketData {
   airline: string;
+  /** El nombre de la aerolínea tal como lo devuelve la API al leer la venta. */
+  airlineName?: string | null;
   supplier: string;
   reservationNumber: string;
   flightNumber: string;
@@ -781,6 +783,7 @@ export interface TravelPackage {
     checkedBaggage?: string;
     baggagePlan?: string;
     flightMode?: 'one_way' | 'round_trip';
+    transportType?: string;
     legs?: {
       origin: string;
       destination: string;
@@ -856,6 +859,8 @@ export interface ConfigData {
     id: number;
     name: string;
     abbreviation: string;
+    city?: string;
+    country?: string;
     location: string;
     type: "Nacional" | "Internacional" | "Ambos";
     status: "Activo" | "Inactivo";

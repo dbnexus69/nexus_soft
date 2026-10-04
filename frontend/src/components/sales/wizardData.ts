@@ -22,6 +22,7 @@ import imgTiqueteria from "../../assets/tiqueteria.webp";
 import imgHoteleria from "../../assets/hoteleria.webp";
 import imgSeguros from "../../assets/seguros.webp";
 import imgPlanes from "../../assets/planes.webp";
+import type { Client } from "../../types";
 
 export const PRODUCT_IMAGES: Record<string, string> = {
   ticket: imgTiqueteria,
@@ -41,7 +42,7 @@ export interface WizardFormData {
   clientId: string;
   /** Registro completo del cliente elegido en el selector. El catálogo ya no
    *  viaja entero al navegador, así que no se puede volver a buscar por nombre. */
-  clientData?: any;
+  clientData?: ClienteDelFormulario;
   commissionAgentId: string;
   commissionAgentName: string;
   responsableId?: string;
@@ -85,7 +86,7 @@ export interface WizardProps {
   onSuccess: (msg: string) => void;
 }
 
-export const INITIAL_TICKET = (client?: any): TicketData => ({
+export const INITIAL_TICKET = (client?: ClienteDelFormulario): TicketData => ({
   airline: "",
   supplier: "",
   reservationNumber: "",
@@ -118,7 +119,7 @@ export const INITIAL_TICKET = (client?: any): TicketData => ({
   ],
 });
 
-export const INITIAL_HOTEL = (client?: any): HotelData => ({
+export const INITIAL_HOTEL = (client?: ClienteDelFormulario): HotelData => ({
   hotelName: "",
   destination: "",
   supplier: "",
@@ -139,7 +140,7 @@ export const INITIAL_HOTEL = (client?: any): HotelData => ({
   ],
 });
 
-export const INITIAL_INSURANCE = (client?: any): InsuranceData => ({
+export const INITIAL_INSURANCE = (client?: ClienteDelFormulario): InsuranceData => ({
   insuranceType: "",
   phone: client?.phone || "",
   supplier: "",
@@ -159,7 +160,7 @@ export const INITIAL_INSURANCE = (client?: any): InsuranceData => ({
   ],
 });
 
-export const INITIAL_PLAN = (client?: any): PlanData => ({
+export const INITIAL_PLAN = (client?: ClienteDelFormulario): PlanData => ({
   planName: "",
   packageId: "",
   packageName: "",
@@ -197,7 +198,7 @@ export const INITIAL_PLAN = (client?: any): PlanData => ({
   sendVoucher: false,
 });
 
-export const INITIAL_CHECKIN = (client?: any): CheckInData => ({
+export const INITIAL_CHECKIN = (client?: ClienteDelFormulario): CheckInData => ({
   passengerName: client?.name || "",
   docType: client?.docType || "CC",
   docNumber: client?.docNumber || "",
@@ -215,7 +216,7 @@ export const INITIAL_CHECKIN = (client?: any): CheckInData => ({
   ta: 0,
 });
 
-export const INITIAL_MIGRATION = (client?: any): MigrationData => ({
+export const INITIAL_MIGRATION = (client?: ClienteDelFormulario): MigrationData => ({
   passengerName: client?.name || "",
   birthDate: client?.birthDate ? client.birthDate.split('T')[0] : "",
   nationality: "",
@@ -232,7 +233,7 @@ export const INITIAL_MIGRATION = (client?: any): MigrationData => ({
   ta: 0,
 });
 
-export const INITIAL_SIMCARD = (client?: any): SimCardData => ({
+export const INITIAL_SIMCARD = (client?: ClienteDelFormulario): SimCardData => ({
   passengerName: client?.name || "",
   docNumber: client?.docNumber || "",
   destinationCountry: "",
@@ -249,7 +250,7 @@ export const INITIAL_SIMCARD = (client?: any): SimCardData => ({
   ta: 0,
 });
 
-export const INITIAL_CAR_RENTAL = (client?: any): CarRentalData => ({
+export const INITIAL_CAR_RENTAL = (client?: ClienteDelFormulario): CarRentalData => ({
   mainDriver: client?.name || "",
   licenseNumber: "",
   pickupDate: "",
@@ -266,7 +267,7 @@ export const INITIAL_CAR_RENTAL = (client?: any): CarRentalData => ({
   ta: 0,
 });
 
-export const INITIAL_FINCA = (client?: any): FincaData => ({
+export const INITIAL_FINCA = (client?: ClienteDelFormulario): FincaData => ({
   fincaName: "",
   fincaAddress: "",
   fincaCity: "",
@@ -288,7 +289,7 @@ export const INITIAL_FINCA = (client?: any): FincaData => ({
   ta: 0,
 });
 
-export const INITIAL_TOUR = (client?: any): TourData => ({
+export const INITIAL_TOUR = (client?: ClienteDelFormulario): TourData => ({
   passengerName: client?.name || "",
   selectedTour: "",
   preferredDate: "",
@@ -310,7 +311,7 @@ export const INITIAL_TOUR = (client?: any): TourData => ({
   vouchers: [],
 });
 
-export const INITIAL_CONVENTION = (client?: any): ConventionData => ({
+export const INITIAL_CONVENTION = (client?: ClienteDelFormulario): ConventionData => ({
   city: "",
   address: "",
   placeName: "",
@@ -332,7 +333,7 @@ export const INITIAL_CONVENTION = (client?: any): ConventionData => ({
   ta: 0,
 });
 
-export const INITIAL_RESTAURANT = (client?: any): RestaurantData => ({
+export const INITIAL_RESTAURANT = (client?: ClienteDelFormulario): RestaurantData => ({
   reservationName: client?.name || "",
   dateTime: "",
   peopleCount: 2,
@@ -348,7 +349,7 @@ export const INITIAL_RESTAURANT = (client?: any): RestaurantData => ({
   ta: 0,
 });
 
-export const INITIAL_VISA = (client?: any): VisaData => ({
+export const INITIAL_VISA = (client?: ClienteDelFormulario): VisaData => ({
   fullName: client?.name || "",
   birthDate: client?.birthDate ? client.birthDate.split('T')[0] : "",
   nationality: "",
@@ -366,7 +367,7 @@ export const INITIAL_VISA = (client?: any): VisaData => ({
   ta: 0,
 });
 
-export const INITIAL_PASSPORT = (client?: any): PassportData => ({
+export const INITIAL_PASSPORT = (client?: ClienteDelFormulario): PassportData => ({
   fullName: client?.name || "",
   idNumber: client?.docNumber || "",
   birthDate: client?.birthDate ? client.birthDate.split('T')[0] : "",
@@ -381,7 +382,7 @@ export const INITIAL_PASSPORT = (client?: any): PassportData => ({
   ta: 0,
 });
 
-export const INITIAL_PET_SERVICE = (client?: any): PetServiceData => ({
+export const INITIAL_PET_SERVICE = (client?: ClienteDelFormulario): PetServiceData => ({
   ownerName: client?.name || "",
   petName: "",
   species: "perro",
@@ -445,3 +446,6 @@ export const INITIAL_FORM: WizardFormData = {
 
 /** Lo que reciben los pasos del asistente para cambiar un campo del formulario. */
 export type FijarCampo = <K extends keyof WizardFormData>(clave: K, valor: WizardFormData[K]) => void;
+
+/** El cliente de la venta tal como lo ven los formularios de producto (puede faltar mientras se elige). */
+export type ClienteDelFormulario = Partial<Client> | null | undefined;

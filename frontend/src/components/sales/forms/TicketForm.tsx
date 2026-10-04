@@ -6,18 +6,18 @@ import { Plane, MapPin, User, Briefcase, Trash2, PlusCircle, ArrowRight, ArrowLe
 import { FormField, Input, Combobox, Select, CurrencyInput } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { TicketData, FlightLeg } from "../../../types";
-import { PassengerManager } from "./subcomponents/PassengerManager";
-import { FlightLegsManager } from "./subcomponents/FlightLegsManager";
 import { DateTimePicker } from "./ticket/DateTimePicker";
 export { DateTimePicker };
 import { useData } from "../../../context/DataContext";
+import type { Client, ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface TicketFormProps {
   ticket: TicketData;
   onChange: (updates: Partial<TicketData>) => void;
   airlines: { name: string }[];
   suppliers: { name: string }[];
-  airports: any[];
+  airports: ConfigData['airports'];
   paymentMethods: { id: number; name: string; lastFourDigits?: string }[];
   baggage: {
     id: number;
@@ -28,7 +28,7 @@ interface TicketFormProps {
     checkedBag: string;
     notes: string;
   }[];
-  clients: any[];
+  clients: Client[];
   triggerError?: (msg: string) => void;
 }
 
@@ -284,7 +284,7 @@ export function TicketForm({
   clients,
   mainClient,
   triggerError,
-}: TicketFormProps & { mainClient?: any }) {
+}: TicketFormProps & { mainClient?: ClienteDelFormulario }) {
   const { data } = useData();
   const airportOptions = airports.map((a) => ({
     value: a.abbreviation,
@@ -950,7 +950,7 @@ export function TicketForm({
           </button>
         </div>
         <div className="space-y-4">
-          {(ticket.passengers || []).map((pax: any, pIdx: number) => (
+          {(ticket.passengers || []).map((pax, pIdx: number) => (
             <div key={pIdx} className="p-4 bg-white rounded-xl border border-violet-100 relative group">
               <div className="absolute -top-2.5 left-3 bg-white px-2 py-0.5 rounded-full border border-violet-200 shadow-sm flex items-center gap-1.5">
                 <span className="text-xs font-extrabold uppercase tracking-wide text-violet-600">
@@ -964,7 +964,7 @@ export function TicketForm({
                 <button
                   type="button"
                   onClick={() => {
-                    const newPax = (ticket.passengers || []).filter((_: any, i: number) => i !== pIdx);
+                    const newPax = (ticket.passengers || []).filter((_, i: number) => i !== pIdx);
                     if (pax.esTitular && newPax.length > 0) newPax[0].esTitular = true;
                     onChange({ passengers: newPax });
                   }}
@@ -980,7 +980,7 @@ export function TicketForm({
                     <Combobox
                       value={pax.name || ""}
                       onChange={(val) => {
-                        const cl = clients.find((c: any) => c.name === val || `${c.firstName} ${c.lastName || ''}`.trim() === val);
+                        const cl = clients.find((c) => c.name === val || `${c.firstName} ${c.lastName || ''}`.trim() === val);
                         const updatedPax = [...(ticket.passengers || [])];
                         updatedPax[pIdx] = {
                           ...updatedPax[pIdx],
@@ -990,14 +990,14 @@ export function TicketForm({
                         onChange({ passengers: updatedPax });
                       }}
                       options={(clients || [])
-                        .filter((c: any) => c.name || c.firstName)
-                        .map((c: any) => ({
+                        .filter((c) => c.name || c.firstName)
+                        .map((c) => ({
                           value: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
                           label: c.name || `${c.firstName} ${c.lastName || ''}`.trim(),
                         }))
                         .filter(opt => {
                           if (opt.value === pax.name) return true;
-                          const titularName = (ticket.passengers || []).find((p: any) => p.esTitular)?.name;
+                          const titularName = (ticket.passengers || []).find((p) => p.esTitular)?.name;
                           if (!pax.esTitular && titularName && opt.value === titularName) return false;
                           return true;
                         })
@@ -1013,9 +1013,9 @@ export function TicketForm({
                         updatedPax[pIdx] = { ...updatedPax[pIdx], docType: val, docNumber: "" };
                         onChange({ passengers: updatedPax });
                       }}
-                      options={(data?.config?.documentTypes || []).map((d: any) => ({
-                        value: d.code || d.name,
-                        label: d.name || d.code,
+                      options={(data?.config?.documentTypes || []).map((d) => ({
+                        value: d.abbreviation || d.name,
+                        label: d.name || d.abbreviation,
                       }))}
                       placeholder="Seleccionar..."
                     />
@@ -1106,7 +1106,7 @@ export function TicketForm({
                   <button
                     type="button"
                     onClick={() => {
-                      const updatedPax = (ticket.passengers || []).map((p: any, i: number) => ({
+                      const updatedPax = (ticket.passengers || []).map((p, i: number) => ({
                         ...p,
                         esTitular: i === pIdx,
                       }));

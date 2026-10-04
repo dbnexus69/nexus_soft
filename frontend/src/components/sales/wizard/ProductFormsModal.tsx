@@ -12,12 +12,13 @@ import {
   CarRentalForm, FincaForm, TourForm, ConventionForm, RestaurantForm, VisaForm,
   PassportForm, PetServiceForm, TicketForm
 } from "../forms";
+import type { AppData } from "../../../types";
 
 interface ProductFormsModalProps {
   activeForm: SaleProductId | null;
   activeIdx: number | null;
   form: WizardFormData;
-  data: any;
+  data: AppData;
   set: (field: keyof WizardFormData, val: any) => void;
   onCloseForm: () => void;
   onSwitchForm?: (productId: SaleProductId, idx: number) => void;
@@ -269,7 +270,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const nextItems = currentItems.filter((_: any, i: number) => i !== idx);
+                        const nextItems = currentItems.filter((_: unknown, i: number) => i !== idx);
                         set(currentConfig.key, nextItems);
                         if (nextItems.length === 0) {
                           onCloseForm();

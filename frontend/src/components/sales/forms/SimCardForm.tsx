@@ -3,12 +3,14 @@ import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
 import { SimCardData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
+import type { ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface SimCardFormProps {
   sim: SimCardData;
-  client: any;
-  suppliers?: any[];
-  paymentMethods?: any[];
+  client: ClienteDelFormulario;
+  suppliers?: ConfigData['suppliers'];
+  paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<SimCardData>) => void;
   triggerError?: (msg: string) => void;
 }

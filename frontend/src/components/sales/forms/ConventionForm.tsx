@@ -3,12 +3,14 @@ import { FormField, Input, Combobox, Textarea, CurrencyInput} from "../../ui/For
 import { ConventionData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
+import type { ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface ConventionFormProps {
   convention: ConventionData;
-  client: any;
-  suppliers?: any[];
-  paymentMethods?: any[];
+  client: ClienteDelFormulario;
+  suppliers?: ConfigData['suppliers'];
+  paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<ConventionData>) => void;
   triggerError?: (msg: string) => void;
 }

@@ -5,12 +5,14 @@ import { MigrationData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DatePicker } from "./TicketForm";
 import { todayStr as todayStrHelper } from "../../../utils/formatters";
+import type { ConfigData } from "../../../types";
+import type { ClienteDelFormulario } from "../wizardData";
 
 interface MigrationFormProps {
   migration: MigrationData;
-  client: any;
-  suppliers?: any[];
-  paymentMethods?: any[];
+  client: ClienteDelFormulario;
+  suppliers?: ConfigData['suppliers'];
+  paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<MigrationData>) => void;
   triggerError?: (msg: string) => void;
 }

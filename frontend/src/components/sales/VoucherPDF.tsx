@@ -4,11 +4,12 @@ import { Sale, TicketData } from '../../types';
 import { formatDate, formatDateTime, formatCurrency } from '../../utils/formatters';
 import { type AirportInfo } from '../../utils/airportInfo';
 import './VoucherPDF.css';
+import type { ConfigData } from "../../types";
 
 interface VoucherPDFProps {
   sale: Sale | null;
   airportMap?: Record<string, AirportInfo>;
-  baggageList?: any[];
+  baggageList?: ConfigData['baggage'];
 }
 
 function ServiceCell({ label, value }: { label: string; value: React.ReactNode }) {
@@ -55,7 +56,7 @@ function FlightBlock({ ticket, idx, airportMap }: { ticket: TicketData; idx: num
         arrivalDate: ticket.arrivalDate,
       }];
 
-  const formatTimeAMPM = (time24: string) => {
+  const formatTimeAMPM = (time24?: string) => {
     if (!time24) return '—';
     const [hour, minute] = time24.split(':');
     let h = parseInt(hour, 10);
@@ -92,16 +93,16 @@ function FlightBlock({ ticket, idx, airportMap }: { ticket: TicketData; idx: num
               <div className="v-fd-item">
                 <div className="v-fd-label">Salida</div>
                 <div className="v-fd-value">{leg.date ? formatDate(leg.date) : '—'}</div>
-                <div className="v-fd-value-small">{formatTimeAMPM((leg as any).time)}</div>
+                <div className="v-fd-value-small">{formatTimeAMPM(leg.time)}</div>
               </div>
               <div className="v-fd-item">
                 <div className="v-fd-label">Llegada</div>
-                <div className="v-fd-value">{(leg as any).arrivalDate ? formatDate((leg as any).arrivalDate) : (leg.date ? formatDate(leg.date) : '—')}</div>
-                <div className="v-fd-value-small">{formatTimeAMPM((leg as any).arrivalTime)}</div>
+                <div className="v-fd-value">{leg.arrivalDate ? formatDate(leg.arrivalDate) : (leg.date ? formatDate(leg.date) : '—')}</div>
+                <div className="v-fd-value-small">{formatTimeAMPM(leg.arrivalTime)}</div>
               </div>
               <div className="v-fd-item">
                 <div className="v-fd-label">Operador</div>
-                <div className="v-fd-value">{leg.airline || (ticket as any).airlineName || ticket.airline || '—'}</div>
+                <div className="v-fd-value">{leg.airline || ticket.airlineName || ticket.airline || '—'}</div>
               </div>
               <div className="v-fd-item">
                 <div className="v-fd-label">Reserva / PNR</div>
@@ -236,7 +237,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <ServiceCell label="Check-In" value={hotel.startDate ? formatDateTime(hotel.startDate) : null} />
                   <ServiceCell label="Check-Out" value={hotel.endDate ? formatDateTime(hotel.endDate) : null} />
                   <ServiceCell label="N° Reserva" value={hotel.reservationNumber || 'Pendiente'} />
-                  <ServiceCell label="Huéspedes" value={(hotel.guests || []).map((g: any) => g.name).join(', ')} />
+                  <ServiceCell label="Huéspedes" value={(hotel.guests || []).map((g) => g.name).join(', ')} />
                   <ServiceCell label="Observaciones" value={hotel.observations} />
                 </div>
               ))}
@@ -276,7 +277,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <ServiceCell label="Nombre del Plan" value={plan.planName || plan.packageName} />
                   <ServiceCell label="Proveedor / Operador" value={plan.supplier} />
                   <ServiceCell label="Tipo de Paquete" value="Por Proveedor" />
-                  <ServiceCell label="Lista de Pasajeros" value={(plan.guests || []).map((g: any) => g.name).join(', ')} />
+                  <ServiceCell label="Lista de Pasajeros" value={(plan.guests || []).map((g) => g.name).join(', ')} />
                   <ServiceCell label="Observaciones" value={plan.observations} />
                 </div>
               ) : (
@@ -288,20 +289,20 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <ServiceCell label="Check-Out (Hotel)" value={plan.endDate ? formatDateTime(plan.endDate) : null} />
                   <ServiceCell label="Pasajeros (Resumen)" value={`${plan.adultsCount ?? 0} adulto(s) / ${plan.childrenCount ?? 0} niño(s)`} />
                   
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Empresa de Transporte" : "Aerolínea"} value={(plan as any).airlineName || plan.airline} />
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Placa / Vehículo" : "N° Vuelo"} value={plan.flightNumber} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Empresa de Transporte" : "Aerolínea"} value={plan.airline} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Placa / Vehículo" : "N° Vuelo"} value={plan.flightNumber} />
                   <ServiceCell label="Localizador / Reserva" value={plan.reservationNumber} />
                   
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Tiquete / Puesto" : "N° Tiquete"} value={plan.ticketNumber} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Tiquete / Puesto" : "N° Tiquete"} value={plan.ticketNumber} />
                   <ServiceCell label="N° Confirmación" value={plan.confirmationNumber} />
                   
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Fecha Salida (Ida)" : "Salida Vuelo (Ida)"} value={plan.flightDepartureDate ? formatDateTime(plan.flightDepartureDate) : null} />
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Llegada Destino (Ida)" : "Llegada Vuelo Ida"} value={plan.flightDepartureArrivalDate ? formatDateTime(plan.flightDepartureArrivalDate) : null} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Fecha Salida (Ida)" : "Salida Vuelo (Ida)"} value={plan.flightDepartureDate ? formatDateTime(plan.flightDepartureDate) : null} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Llegada Destino (Ida)" : "Llegada Vuelo Ida"} value={plan.flightDepartureArrivalDate ? formatDateTime(plan.flightDepartureArrivalDate) : null} />
                   
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Fecha Salida (Regreso)" : "Salida Vuelo (Regreso)"} value={plan.flightReturnDate ? formatDateTime(plan.flightReturnDate) : null} />
-                  <ServiceCell label={(plan as any).transportType === 'Terrestre' ? "Llegada Origen (Regreso)" : "Llegada Vuelo Regreso"} value={plan.flightReturnArrivalDate ? formatDateTime(plan.flightReturnArrivalDate) : null} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Fecha Salida (Regreso)" : "Salida Vuelo (Regreso)"} value={plan.flightReturnDate ? formatDateTime(plan.flightReturnDate) : null} />
+                  <ServiceCell label={plan.transportType === 'Terrestre' ? "Llegada Origen (Regreso)" : "Llegada Vuelo Regreso"} value={plan.flightReturnArrivalDate ? formatDateTime(plan.flightReturnArrivalDate) : null} />
                   
-                  <ServiceCell label="Lista de Pasajeros" value={(plan.guests || []).map((g: any) => g.name).join(', ')} />
+                  <ServiceCell label="Lista de Pasajeros" value={(plan.guests || []).map((g) => g.name).join(', ')} />
                   <ServiceCell label="Observaciones" value={plan.observations} />
                 </div>
               )}
@@ -320,7 +321,7 @@ export const VoucherPDF = forwardRef<HTMLDivElement, VoucherPDFProps>(({ sale, a
                   <ServiceCell label="Tipo de Seguro" value={ins.insuranceType} />
                   <ServiceCell label="Teléfono" value={ins.phone} />
                   <ServiceCell label="Proveedor" value={ins.supplier} />
-                  <ServiceCell label="Asegurados" value={(ins.members || []).map((m: any) => m.name).join(', ')} />
+                  <ServiceCell label="Asegurados" value={(ins.members || []).map((m) => m.name).join(', ')} />
                 </div>
               ))}
             </ServiceCard>

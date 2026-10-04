@@ -57,7 +57,7 @@ interface DataContextType {
   addResponsable: (responsable: Record<string, unknown>) => Promise<void>;
   updateResponsable: (id: number, responsable: Record<string, unknown>) => Promise<void>;
   deleteResponsable: (id: number) => Promise<void>;
-  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<unknown>;
+  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<{ emailStatus?: string }>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;

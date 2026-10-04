@@ -1,6 +1,6 @@
 import api from './client';
 import type { Flight, CheckinCounts } from '../types';
-import type { Pagina } from './tipos';
+import type { Pagina, Recurso } from './tipos';
 
 export async function listFlights(params: Record<string, unknown>) {
   const res = await api.get<Pagina<Flight>>('/flights', { params });
@@ -19,7 +19,7 @@ export async function listCheckins(params: Record<string, unknown>) {
 
 export async function updateCheckin(id: string, data: Record<string, unknown> | FormData) {
   const isFormData = data instanceof FormData;
-  const res = await api.put(`/flights/${id}/checkin`, data, {
+  const res = await api.put<Recurso<{ emailStatus?: string }>>(`/flights/${id}/checkin`, data, {
     headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
   });
   return res.data.data;

@@ -19,7 +19,7 @@ export interface ClienteEnCartera {
   agingBucket: Tramo;
 }
 
-interface Credito {
+export interface Credito {
   saleId: number;
   dueDate: string | null;
   total: number;
@@ -61,7 +61,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
     const mia = ++peticion.current;
     setCargando(true);
     api.getClientCredits(fila.client.id, { perPage: 50 })
-      .then((res: any) => {
+      .then((res) => {
         if (mia !== peticion.current) return;
         setCreditos(res?.data || []);
       })

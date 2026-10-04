@@ -1,18 +1,24 @@
 import api from './client';
+import type { DashboardStats, AttentionSummary } from '../types';
+import type { Recurso } from './tipos';
+
+export interface ClienteTop { name: string; total: number }
+export interface RendimientoAsesor { asesorName: string; totalIngresos: number; totalVentas: number }
+export interface CategoriaVentas { name: string; value: number }
 
 export async function getDashboard(params: Record<string, unknown> = {}) {
-  const res = await api.get('/stats/dashboard', { params });
+  const res = await api.get<Recurso<DashboardStats>>('/stats/dashboard', { params });
   return res.data.data;
 }
 
 
 export async function getAsesorPerformance(params: Record<string, unknown> = {}) {
-  const res = await api.get('/stats/asesor-performance', { params });
+  const res = await api.get<Recurso<RendimientoAsesor[]>>('/stats/asesor-performance', { params });
   return res.data.data;
 }
 
 export async function getTopClients(params: Record<string, unknown> = {}) {
-  const res = await api.get('/stats/top-clients', { params });
+  const res = await api.get<Recurso<ClienteTop[]>>('/stats/top-clients', { params });
   return res.data.data;
 }
 
@@ -27,7 +33,7 @@ export async function getCreditBreakdown(params: Record<string, unknown> = {}) {
 }
 
 export async function getCategoryDistribution(params: Record<string, unknown> = {}) {
-  const res = await api.get('/stats/category-distribution', { params });
+  const res = await api.get<Recurso<CategoriaVentas[]>>('/stats/category-distribution', { params });
   return res.data.data;
 }
 
@@ -37,6 +43,6 @@ export async function getCategoryDistribution(params: Record<string, unknown> = 
  * costarían tres veces la latencia.
  */
 export async function getAttention() {
-  const res = await api.get('/stats/attention');
+  const res = await api.get<Recurso<AttentionSummary>>('/stats/attention');
   return res.data.data;
 }

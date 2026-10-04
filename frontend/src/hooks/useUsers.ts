@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { listUsers, createUser, updateUser, deleteUser, getRolePermissions, updateRolePermissions } from '../api/users';
 import { invalidateUsersCache } from '../utils/usersCache';
-import { User } from '../types';
+import { User, RolePermissions } from '../types';
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
@@ -75,7 +75,7 @@ export function useUsers() {
     return await getRolePermissions(role);
   };
 
-  const handleSaveRolePermissions = async (role: string, permissions: Record<string, unknown>) => {
+  const handleSaveRolePermissions = async (role: string, permissions: RolePermissions) => {
     return await updateRolePermissions(role, permissions);
   };
 

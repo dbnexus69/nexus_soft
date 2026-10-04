@@ -103,3 +103,13 @@ export function textoVencimiento(fecha: string | null, diasMora: number): string
   if (dias === 1) return 'mañana';
   return `en ${dias} días`;
 }
+
+/** Los totales de la cartera que devuelve `GET /sales/credit` en `meta.totals`. */
+export interface TotalesCartera {
+  clientsCount: number;
+  totalPending: number;
+  totalOverdue: number;
+  maxDaysOverdue: number;
+  aging: Aging;
+  bucketCounts: Record<Tramo, number>;
+}

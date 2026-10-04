@@ -1,19 +1,23 @@
 import api from './client';
+import type { Sale, PaymentRecord } from '../types';
+import type { Pagina, Recurso } from './tipos';
+import type { ClienteEnCartera, Credito } from '../components/sales/credit/ClientCreditRow';
+import type { TotalesCartera } from '../components/sales/credit/aging';
 
 export async function listSales(params: Record<string, unknown>) {
-  const res = await api.get('/sales', { params });
+  const res = await api.get<Pagina<Sale>>('/sales', { params });
   return res.data;
 }
 
 export async function getSale(id: number) {
-  const res = await api.get(`/sales/${id}`);
+  const res = await api.get<Recurso<Sale>>(`/sales/${id}`);
   return res.data.data;
 }
 
 // Cartera de crédito agrupada por cliente. Los totales de meta.totals son de
 // toda la cartera, no de la página.
 export async function getCreditPortfolio(params: Record<string, unknown>) {
-  const res = await api.get('/sales/credit', { params });
+  const res = await api.get<Pagina<ClienteEnCartera, { totals?: Partial<TotalesCartera> }>>('/sales/credit', { params });
   return res.data;
 }
 
@@ -25,7 +29,7 @@ export async function getCreditPortfolio(params: Record<string, unknown>) {
  * cuatro campos, y se cortaba en 50 sin mirar `meta.totalPages`.
  */
 export async function getClientCredits(clientId: number, params: Record<string, unknown> = {}) {
-  const res = await api.get(`/sales/credit/${clientId}`, { params });
+  const res = await api.get<Pagina<Credito>>(`/sales/credit/${clientId}`, { params });
   return res.data;
 }
 
@@ -41,8 +45,18 @@ export async function getSaleProductsByCategory(id: number, category: string) {
   return res.data.data;
 }
 
+/** Lo que devuelve `POST /sales`: la venta recién creada y la línea de cada producto, para subir sus vouchers. */
+export interface VentaCreada {
+  id: number;
+  numero: number | null;
+  clientId: number;
+  total: number;
+  status: Sale['status'];
+  products: Array<{ category: string; index: number; detalleId: string | null }>;
+}
+
 export async function createSale(data: Record<string, unknown>) {
-  const res = await api.post('/sales', data);
+  const res = await api.post<Recurso<VentaCreada>>('/sales', data);
   return res.data.data;
 }
 
@@ -73,7 +87,7 @@ export async function deletePayment(saleId: number, paymentId: string, body?: Re
 }
 
 export async function getSalePayments(saleId: number) {
-  const res = await api.get(`/sales/${saleId}/payments`);
+  const res = await api.get<Recurso<PaymentRecord[]>>(`/sales/${saleId}/payments`);
   return res.data.data;
 }
 

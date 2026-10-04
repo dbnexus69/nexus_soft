@@ -1,3 +1,4 @@
+import type { DashboardStats } from '../types';
 /**
  * dashboardCache.ts
  * Módulo de caché en localStorage para el Dashboard.
@@ -27,20 +28,20 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
-export function saveDashboardCache(data: any): void {
+export function saveDashboardCache(data: DashboardStats): void {
   try {
-    const entry: CacheEntry<any> = { data, timestamp: Date.now() };
+    const entry: CacheEntry<DashboardStats> = { data, timestamp: Date.now() };
     localStorage.setItem(getCacheKey(), JSON.stringify(entry));
   } catch {
     // Ignorar si localStorage está lleno
   }
 }
 
-export function loadDashboardCache(): any | null {
+export function loadDashboardCache(): DashboardStats | null {
   try {
     const raw = localStorage.getItem(getCacheKey());
     if (!raw) return null;
-    const entry: CacheEntry<any> = JSON.parse(raw);
+    const entry: CacheEntry<DashboardStats> = JSON.parse(raw);
     const age = Date.now() - entry.timestamp;
     if (age > CACHE_TTL_MS) {
       localStorage.removeItem(getCacheKey());

@@ -294,6 +294,7 @@ export interface FlightLeg {
   date: string;
   time?: string;
   arrivalDate?: string;
+  arrivalTime?: string;
   ticketNumber?: string;
   airline?: string;
   baggagePlan?: string;
@@ -750,14 +751,20 @@ export interface CheckinCounts {
 
 export interface CommissionAgent {
   id: number;
+  numero?: number | null;
   name: string;
   type: string;
+  docTypeId?: number | null;
   docType: string;
   docNumber: string;
   status: "Activo" | "Inactivo";
   phone?: string;
   email?: string;
-  accumulated?: number;
+  avatar?: string | null;
+  banco?: string | null;
+  tipoCuenta?: string | null;
+  numeroCuenta?: string | null;
+  accumulated: number;
   paymentThreshold?: number;
 }
 
@@ -829,7 +836,7 @@ export interface ConfigData {
     description: string;
   }[];
   paymentMethods: { id: number; name: string }[];
-  documentTypes: { id: number; name: string; abreviatura: string }[];
+  documentTypes: { id: number; name: string; abbreviation: string }[];
   airlines: {
     id: number;
     name: string;
@@ -900,17 +907,23 @@ export interface MonthlySale {
 
 export interface DashboardStats {
   totalRevenue: number;
-  previousYearRevenue: number;
-  revenueGrowth: number;
+  // La respuesta los devolvía y el tipo no los declaraba.
   totalOperations: number;
-  operationsGrowth: number;
+  salesGrowth: number;
+  monthlyRevenue: number;
   pendingBalance: number;
   pendingCount: number;
   suppliersTotal: number;
-  monthlyRevenue: number;
-  categoryDistribution: CategoryData[];
-  carteraStatus: CarteraData[];
-  monthlyTrend: TrendData[];
+  totalClients: number;
+  activeClients: number;
+  totalFlights: number;
+  supplierCount: number;
+  categoryDistribution: { name: string; value: number; percentage: number }[];
+  carteraStatus: { name: string; value: number; color: string }[];
+  monthlyTrend: { month: number; currentYear: number; previousYear: number }[];
+  categoryBreakdown: Record<string, { count: number; revenue: number; personas?: number }>;
+  creditProveedores?: number;
+  creditTa?: number;
 }
 
 export interface CategoryData {

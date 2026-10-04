@@ -70,7 +70,7 @@ function TopClients() {
     getTopClients({ limit: 8 })
       .then((res) => {
         if (!cancelled) {
-          setData((res as any[]).map((c: any) => ({
+          setData(res.map((c) => ({
             name: c.name,
             total: c.total,
           })));
@@ -145,8 +145,8 @@ function TopAsesores() {
     getAsesorPerformance()
       .then((res) => {
         if (!cancelled) {
-          const mapped = (res as any[])
-            .map((a: any) => ({
+          const mapped = res
+            .map((a) => ({
               name: a.asesorName,
               total: a.totalIngresos,
               count: a.totalVentas,
@@ -211,7 +211,7 @@ function CategoryDistribution() {
     getCategoryDistribution()
       .then((res) => {
         if (!cancelled) {
-          setData((res as any[]).filter((d: any) => d.value > 0));
+          setData(res.filter((d) => d.value > 0));
         }
       })
       .catch(() => {})

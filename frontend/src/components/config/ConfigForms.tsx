@@ -1,9 +1,10 @@
+import type { AppData } from "../../types";
 import { Boxes, PlaneTakeoff, Building2, Coins, Database, MapPin, Luggage, ShieldCheck, Info, Briefcase, ArrowRight, ArrowLeftRight, ArrowLeft, PlusCircle, Trash2, Plane, Bus } from 'lucide-react';
 import * as LuIcons from "react-icons/lu";
 import { FormField, Input, Select, Combobox } from '../ui/Form';
 import { Button } from '../ui/Button';
 
-export default function ConfigForms({ section, formData, setFormData, errors, setErrors, data }: any) {
+export default function ConfigForms({ section, formData, setFormData, errors, setErrors, data }: { section: string; formData: any; setFormData: (v: any) => void; errors: Record<string, string>; setErrors: (v: Record<string, string>) => void; data: Pick<AppData, 'config'> }) {
   switch (section) {
     case 'cards':
       return (

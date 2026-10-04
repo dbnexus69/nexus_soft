@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
-import { AppData, User, Client, Sale, Flight, Responsable, CommissionAgent, RolePermissions, ADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
+import { AppData, ConfigData, DashboardStats, User, Client, Sale, Flight, Responsable, CommissionAgent, RolePermissions, ADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
 import * as api from '../api';
 import { fetchAllPages } from '../api/fetchAll';
 import { useAuth } from './AuthContext';
@@ -29,31 +29,13 @@ try { localStorage.removeItem('nexus_role_permissions_cache'); } catch {}
 
 type ConfigSection = 'cards' | 'paymentMethods' | 'documentTypes' | 'airlines' | 'suppliers' | 'airports' | 'baggage' | 'packages';
 
-
-interface DashboardData {
-  totalRevenue: number;
-  // La respuesta los devolvía y el tipo no los declaraba.
-  totalOperations: number;
-  salesGrowth: number;
-  monthlyRevenue: number;
-  pendingBalance: number;
-  pendingCount: number;
-  suppliersTotal: number;
-  totalClients: number;
-  activeClients: number;
-  totalFlights: number;
-  supplierCount: number;
-  categoryDistribution: { name: string; value: number; percentage: number }[];
-  carteraStatus: { name: string; value: number; color: string }[];
-  monthlyTrend: { month: number; currentYear: number; previousYear: number }[];
-  categoryBreakdown: Record<string, { count: number; revenue: number; personas?: number }>;
-  creditProveedores?: number;
-  creditTa?: number;
-}
+// Las secciones del catálogo tienen formas distintas, pero todas se editan por `id`.
+type ItemConfig = { id: number } & Record<string, unknown>;
+const listaDe = (config: ConfigData, section: ConfigSection) => (config[section] ?? []) as unknown as ItemConfig[];
 
 interface DataContextType {
   data: AppData;
-  dashboardData: DashboardData | null;
+  dashboardData: DashboardStats | null;
   dashboardLoading: boolean;
   fetchDashboard: (params?: Record<string, unknown>, isBackgroundRefresh?: boolean) => Promise<void>;
   invalidateDashboard: () => void;
@@ -72,15 +54,15 @@ interface DataContextType {
   addClient: (client: Omit<Client, 'id'>) => Promise<Client>;
   updateClient: (id: number, client: Partial<Client>) => Promise<void>;
   toggleClientStatus: (id: number) => Promise<void>;
-  addResponsable: (responsable: any) => Promise<any>;
-  updateResponsable: (id: number, responsable: any) => Promise<void>;
+  addResponsable: (responsable: Record<string, unknown>) => Promise<void>;
+  updateResponsable: (id: number, responsable: Record<string, unknown>) => Promise<void>;
   deleteResponsable: (id: number) => Promise<void>;
-  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<any>;
+  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<unknown>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;
-  addCommissionAgent: (agent: any) => Promise<any>;
-  updateCommissionAgent: (id: number, agent: any) => Promise<void>;
+  addCommissionAgent: (agent: Record<string, unknown>) => Promise<CommissionAgent>;
+  updateCommissionAgent: (id: number, agent: Record<string, unknown>) => Promise<void>;
   deleteCommissionAgent: (id: number) => Promise<void>;
   updateRolePermissions: (role: 'asesor' | 'freelancer', permissions: RolePermissions) => Promise<void>;
 }
@@ -133,7 +115,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     return emptyData;
   });
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => loadDashboardCache());
+  const [dashboardData, setDashboardData] = useState<DashboardStats | null>(() => loadDashboardCache());
   const [dashboardLoading, setDashboardLoading] = useState<boolean>(() => !loadDashboardCache());
   const backgroundLoadingRef = useRef(false);
   const fetchingDashboardRef = useRef(false);
@@ -147,10 +129,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     try {
       const result = await api.getDashboard(params);
-      setDashboardData(result as DashboardData);
+      setDashboardData(result);
       
       // Guardar en caché el dashboard consultado
-      saveDashboardCache(result as DashboardData);
+      saveDashboardCache(result);
     } catch {
       setDashboardData(null);
     } finally {
@@ -354,7 +336,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addUser = async (user: Omit<User, 'id'>): Promise<User> => {
-    const created = await api.createUser(user as any);
+    const created = await api.createUser(user);
     setData(prev => {
       const updated = [...prev.users, created];
       invalidateUsersCache();
@@ -382,7 +364,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   const addClient = async (client: Omit<Client, 'id'>): Promise<Client> => {
-    const created = await api.createClient(client as any);
+    const created = await api.createClient(client);
     setData(prev => ({ ...prev, clients: [...prev.clients, created] }));
     return created;
   };
@@ -400,12 +382,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await fetchClients();
   };
 
-  const addResponsable = async (responsable: any) => {
+  const addResponsable = async (responsable: Record<string, unknown>) => {
     await api.createResponsable(responsable);
     await fetchResponsables();
   };
 
-  const updateResponsable = async (id: number, responsable: any) => {
+  const updateResponsable = async (id: number, responsable: Record<string, unknown>) => {
     const res = await api.updateResponsable(id, responsable);
     const updated = res.data;
     setData(prev => ({
@@ -430,13 +412,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateFlight = async (id: string, flightUpdate: Partial<Flight> | FormData) => {
     // Devuelve el resultado para que la pantalla decida qué hacer. Ya no parchea
     // `data.flights`: esa lista no existe (ver fetchFlights).
-    return api.updateCheckin(id, flightUpdate as any);
+    return api.updateCheckin(id, flightUpdate);
   };
 
 
   const addConfigItem = async (section: ConfigSection, item: Record<string, unknown>): Promise<Record<string, unknown>> => {
-    const list = (data.config as any)[section] || [];
-    const maxId = list.reduce((max: number, i: any) => {
+    const list = listaDe(data.config, section) || [];
+    const maxId = list.reduce((max: number, i) => {
       const idNum = Number(i.id);
       return !isNaN(idNum) && idNum > max ? idNum : max;
     }, 0);
@@ -447,7 +429,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData(prev => {
       const nextConfig = {
         ...prev.config,
-        [section]: [...(prev.config as any)[section], optimisticItem]
+        [section]: [...listaDe(prev.config, section), optimisticItem]
       };
       saveConfigCache(nextConfig);
       return { ...prev, config: nextConfig };
@@ -458,7 +440,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData(prev => {
         const nextConfig = {
           ...prev.config,
-          [section]: (prev.config as any)[section].map((i: any) => i.id === tempId ? created : i)
+          [section]: listaDe(prev.config, section).map((i) => i.id === tempId ? created : i)
         };
         saveConfigCache(nextConfig);
         return { ...prev, config: nextConfig };
@@ -468,7 +450,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData(prev => {
         const nextConfig = {
           ...prev.config,
-          [section]: (prev.config as any)[section].filter((i: any) => i.id !== tempId)
+          [section]: listaDe(prev.config, section).filter((i) => i.id !== tempId)
         };
         saveConfigCache(nextConfig);
         return { ...prev, config: nextConfig };
@@ -478,12 +460,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateConfigItem = async (section: ConfigSection, id: number, itemUpdate: Record<string, unknown>) => {
-    const originalItem = (data.config as any)[section].find((i: any) => i.id === id);
+    const originalItem = listaDe(data.config, section).find((i) => i.id === id);
 
     setData(prev => {
       const nextConfig = {
         ...prev.config,
-        [section]: (prev.config as any)[section].map((i: any) => i.id === id ? { ...i, ...itemUpdate } : i)
+        [section]: listaDe(prev.config, section).map((i) => i.id === id ? { ...i, ...itemUpdate } : i)
       };
       saveConfigCache(nextConfig);
       return { ...prev, config: nextConfig };
@@ -495,7 +477,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData(prev => {
         const nextConfig = {
           ...prev.config,
-          [section]: (prev.config as any)[section].map((i: any) => i.id === id ? originalItem : i)
+          [section]: listaDe(prev.config, section).map((i) => i.id === id ? originalItem : i)
         };
         saveConfigCache(nextConfig);
         return { ...prev, config: nextConfig };
@@ -505,12 +487,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteConfigItem = async (section: ConfigSection, id: number) => {
-    const originalList = (data.config as any)[section];
+    const originalList = listaDe(data.config, section);
 
     setData(prev => {
       const nextConfig = {
         ...prev.config,
-        [section]: (prev.config as any)[section].filter((i: any) => i.id !== id)
+        [section]: listaDe(prev.config, section).filter((i) => i.id !== id)
       };
       saveConfigCache(nextConfig);
       return { ...prev, config: nextConfig };
@@ -531,13 +513,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addCommissionAgent = async (agent: any) => {
+  const addCommissionAgent = async (agent: Record<string, unknown>) => {
     const created = await api.createCommissionAgent(agent);
     setData(prev => ({ ...prev, commissionAgents: [...prev.commissionAgents, created] }));
     return created;
   };
 
-  const updateCommissionAgent = async (id: number, agentUpdate: any) => {
+  const updateCommissionAgent = async (id: number, agentUpdate: Record<string, unknown>) => {
     await api.updateCommissionAgent(id, agentUpdate);
     setData(prev => ({
       ...prev,
@@ -555,7 +537,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateRolePermissions = async (role: 'asesor' | 'freelancer', permissions: RolePermissions) => {
     const normalized = normalizeRolePermissions(permissions);
-    await api.updateRolePermissions(role, normalized as any);
+    await api.updateRolePermissions(role, normalized);
     setData(prev => ({
       ...prev,
       config: {

@@ -67,6 +67,7 @@ import { Step3Payment } from "./steps/Step3Payment";
 import { ProductFormsModal, PRODUCT_MAP } from "./wizard";
 import { todayStr, formatSaleId } from "../../utils/formatters";
 import * as api from "../../api";
+import type { VentaCreada } from "../../api/sales";
 
 interface Props {
   onClose: () => void;
@@ -251,7 +252,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     setShowOtherProducts,
     activeForm,
     activeIdx,
-    openForm: (type: SaleProductId, idx: number) => {
+    openForm: (type: SaleProductId | null, idx: number | null) => {
       setActiveForm(type);
       setActiveIdx(idx);
     },
@@ -403,7 +404,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
    * alta. `creada.products` viene en el mismo orden que cada lista del
    * formulario, así que el producto se encuentra por categoría y posición.
    */
-  const subirVouchers = async (creada: any) => {
+  const subirVouchers = async (creada: VentaCreada) => {
     let subidos = 0;
     const fallidos: string[] = [];
     for (const [categoria, config] of Object.entries(PRODUCT_MAP)) {
@@ -412,7 +413,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
         const archivo = item?.voucher || item?.vouchers?.[0];
         if (!archivo?.base64) continue;
         const nombre = `${config.labelSingular} ${indice + 1}`;
-        const linea = creada?.products?.find((p: any) => p.category === categoria && p.index === indice);
+        const linea = creada.products.find((p) => p.category === categoria && p.index === indice);
         try {
           if (!linea?.detalleId) throw new Error("la venta no devolvió el producto");
           await api.uploadProductVoucher(creada.id, linea.detalleId, dataUrlABlob(archivo.base64), archivo.name || "voucher");
@@ -529,12 +530,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     try {
       // handleCreateSale ya refresca el listado; el dashboard se invalida aparte
       // porque sus cifras cambian con cada venta nueva.
-      const creada = await handleCreateSale(saleData as any);
+      const creada = await handleCreateSale(saleData);
       invalidateDashboard();
       localStorage.removeItem(draftKey);
 
       const { subidos, fallidos } = await subirVouchers(creada);
-      const venta = `Venta N.º ${formatSaleId(creada.numero)}`;
+      const venta = `Venta N.º ${formatSaleId(creada.numero ?? creada.id)}`;
       if (fallidos.length) {
         // La venta ya existe: el aviso dice qué archivo falta, para que no se
         // dé por adjuntado un voucher que no llegó.

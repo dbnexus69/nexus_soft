@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import type { CommissionAgent } from "../types";
 import { createPortal } from "react-dom";
 import {
   Coins,
@@ -59,18 +60,18 @@ export default function CommissionAgents() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<any>(null);
-  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const [editingAgent, setEditingAgent] = useState<CommissionAgent | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<CommissionAgent | null>(null);
   const [activeTab, setActiveTab] = useState<"agents" | "settlements" | "history">("agents");
   const [formData, setFormData] = useState<any>({});
 
   // Los tipos de documento vienen de la base (id, nombre, abreviatura); la regla del número usa la abreviatura.
-  const tiposDocumento: any[] = data.config.documentTypes || [];
+  const tiposDocumento = data.config.documentTypes || [];
   // El mínimo que cada comisionista tiene que acumular para retirar; el servidor ya lo manda resuelto
   // (el suyo, o el de por defecto si no tiene). 50.000 solo si llegara uno de antes, sin el campo.
-  const minimoDe = (agent: any): number => Number(agent?.paymentThreshold) > 0 ? Number(agent.paymentThreshold) : 50000;
-  const puedeRetirar = (agent: any) => Number(agent?.accumulated || 0) >= minimoDe(agent);
-  const abreviaturaDe = (dt?: any): string => dt?.abbreviation || dt?.abreviatura || dt?.name || "";
+  const minimoDe = (agent?: CommissionAgent | null): number => Number(agent?.paymentThreshold) > 0 ? Number(agent?.paymentThreshold) : 50000;
+  const puedeRetirar = (agent: CommissionAgent) => Number(agent?.accumulated || 0) >= minimoDe(agent);
+  const abreviaturaDe = (dt?: { abbreviation?: string; name?: string }): string => dt?.abbreviation || dt?.name || "";
   const abreviatura = abreviaturaDe(tiposDocumento.find((dt) => String(dt.id) === String(formData.docTypeId)));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
@@ -124,14 +125,14 @@ export default function CommissionAgents() {
     const agents = commissionAgents || [];
     const q = (searchTerm || "").toLowerCase();
     return agents
-      .filter((a: any) =>
+      .filter((a) =>
         (a.name || "").toLowerCase().includes(q) ||
         (a.docNumber || "").includes(searchTerm))
-      .sort((a: any, b: any) => b.id - a.id);
+      .sort((a, b) => b.id - a.id);
   }, [commissionAgents, searchTerm]);
 
   const stats = useMemo(() => {
-    const totalAccumulated = filteredAgents.reduce((s: number, a: any) => s + (a.accumulated || 0), 0);
+    const totalAccumulated = filteredAgents.reduce((s: number, a) => s + (a.accumulated || 0), 0);
     const pendingLiquidation = filteredAgents.filter(puedeRetirar).length;
     return {
       total: commissionAgents?.length || 0,
@@ -140,13 +141,13 @@ export default function CommissionAgents() {
     };
   }, [filteredAgents, commissionAgents]);
 
-  const handleOpenModal = (agent?: any) => {
+  const handleOpenModal = (agent?: CommissionAgent) => {
     setErrors({});
     if (agent) {
       setEditingAgent(agent);
       setFormData({
         ...agent,
-        docTypeId: String(agent.docTypeId ?? tiposDocumento.find((dt: any) => abreviaturaDe(dt) === agent.docType)?.id ?? ""),
+        docTypeId: String(agent.docTypeId ?? tiposDocumento.find((dt) => abreviaturaDe(dt) === agent.docType)?.id ?? ""),
       });
     } else {
       setEditingAgent(null);
@@ -221,11 +222,11 @@ export default function CommissionAgents() {
     }
   };
 
-  const openSettleModal = (agent: any) => {
+  const openSettleModal = (agent: CommissionAgent) => {
     setSelectedAgent(agent);
     setSettleError(null);
     setSettleFieldErrors({});
-    const defaultPM = (data.config.paymentMethods || []).find((pm: any) => pm.name === "Transferencia");
+    const defaultPM = (data.config.paymentMethods || []).find((pm) => pm.name === "Transferencia");
     setSettleData({
       date: todayStr(),
       paymentMethod: defaultPM?.id?.toString() || "",
@@ -389,7 +390,7 @@ export default function CommissionAgents() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {filteredAgents.map((agent: any) => {
+                  {filteredAgents.map((agent) => {
                     const progress = Math.min((Number(agent.accumulated || 0) / minimoDe(agent)) * 100, 100);
                     const isReady = puedeRetirar(agent);
 
@@ -494,7 +495,7 @@ export default function CommissionAgents() {
 
                 {filteredAgents.filter(puedeRetirar).length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredAgents.filter(puedeRetirar).map((agent: any) => (
+                    {filteredAgents.filter(puedeRetirar).map((agent) => (
                       <div key={agent.id} className="relative group p-6 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-800 border border-amber-100 dark:border-amber-900/30 rounded-3xl hover:shadow-xl transition-all duration-300">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                           <div className="flex items-center gap-3">
@@ -594,7 +595,7 @@ export default function CommissionAgents() {
                           `data.commissionSettlements` de DataContext, una segunda copia que
                           nadie actualizaba: la liquidación recién hecha no aparecía. */}
                       {settlements.length > 0 ? (
-                        settlements.map((s: any) => (
+                        settlements.map((s) => (
                           <tr key={s.id} className="hover:bg-accent/5 transition-all group">
                             <td className="px-8 py-5">
                               <div className="flex items-center gap-2 text-gray-500">
@@ -750,7 +751,7 @@ export default function CommissionAgents() {
                     }}
                     options={[
                       { value: "", label: "Seleccione" },
-                      ...tiposDocumento.map((dt: any) => ({ value: String(dt.id), label: dt.name || dt.nombre || abreviaturaDe(dt) })),
+                      ...tiposDocumento.map((dt) => ({ value: String(dt.id), label: dt.name || abreviaturaDe(dt) })),
                     ]}
                     error={errors.docTypeId}
                   />
@@ -896,7 +897,7 @@ export default function CommissionAgents() {
                     }}
                     options={[
                       { value: "", label: "Seleccione un canal" },
-                      ...(data.config.paymentMethods || []).map((pm: any) => ({
+                      ...(data.config.paymentMethods || []).map((pm) => ({
                         value: pm.id.toString(),
                         label: pm.name,
                       })),
@@ -928,14 +929,14 @@ export default function CommissionAgents() {
 
           {/* Recapitula la operación antes de confirmar: es dinero saliendo de
               la agencia, y el formulario de arriba no deja verlo de un vistazo. */}
-          {selectedAgent?.accumulated > 0 && settleData.paymentMethod && (
+          {selectedAgent && selectedAgent.accumulated > 0 && settleData.paymentMethod && (
             <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 px-3.5 py-3 text-xs text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
               <CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
               <p>
                 Vas a liquidar <strong>{formatCurrency(selectedAgent.accumulated)}</strong> a{" "}
                 <strong>{selectedAgent.name}</strong> por{" "}
                 <strong>
-                  {(data.config.paymentMethods || []).find((pm: any) => pm.id.toString() === settleData.paymentMethod?.toString())?.name || "el canal elegido"}
+                  {(data.config.paymentMethods || []).find((pm) => pm.id.toString() === settleData.paymentMethod?.toString())?.name || "el canal elegido"}
                 </strong>
                 .
               </p>
@@ -956,7 +957,7 @@ export default function CommissionAgents() {
             <Button variant="outline" onClick={() => setIsSettleModalOpen(false)} className="flex-1" disabled={isSaving}>
               Cancelar
             </Button>
-            <Button variant="success" onClick={handleSettle} className="flex-1" disabled={isSaving || !(selectedAgent?.accumulated > 0)}>
+            <Button variant="success" onClick={handleSettle} className="flex-1" disabled={isSaving || !((selectedAgent?.accumulated ?? 0) > 0)}>
               {isSaving ? "Procesando..." : "Confirmar liquidación"}
             </Button>
           </div>

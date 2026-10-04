@@ -1,23 +1,24 @@
 import api from './client';
-import { User } from '../types';
+import type { Pagina, Recurso } from './tipos';
+import { User, RolePermissions } from '../types';
 
 export async function listUsers(params: Record<string, unknown>) {
-  const res = await api.get('/users', { params });
+  const res = await api.get<Pagina<User>>('/users', { params });
   return res.data;
 }
 
 export async function getUser(id: number) {
-  const res = await api.get(`/users/${id}`);
+  const res = await api.get<Recurso<User>>(`/users/${id}`);
   return res.data.data;
 }
 
 export async function createUser(data: Partial<User>) {
-  const res = await api.post('/users', data);
+  const res = await api.post<Recurso<User>>('/users', data);
   return res.data.data;
 }
 
 export async function updateUser(id: number, data: Partial<User>) {
-  const res = await api.put(`/users/${id}`, data);
+  const res = await api.put<Recurso<User>>(`/users/${id}`, data);
   return res.data.data;
 }
 
@@ -44,7 +45,7 @@ export async function deleteUser(id: number): Promise<ResultadoBaja> {
 }
 
 
-export async function updateRolePermissions(role: string, permissions: Record<string, unknown>) {
+export async function updateRolePermissions(role: string, permissions: RolePermissions) {
   const res = await api.put(`/roles/${role}/permissions`, { permissions });
   return res.data.data;
 }

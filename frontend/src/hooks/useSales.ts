@@ -69,13 +69,13 @@ export function useSales() {
   // Los errores se dejan pasar tal cual. Antes cada manejador los envolvía en
   // `new Error(err.message)`, que descarta la respuesta de la API: el asistente
   // enseñaba "error interno" en vez del campo que la validación señalaba.
-  const handleCreateSale = async (sale: any) => {
+  const handleCreateSale = async (sale: Record<string, unknown>) => {
     const created = await createSale(sale);
     await fetchSales();
     return created;
   };
 
-  const handleUpdateSale = async (id: number, saleUpdate: any) => {
+  const handleUpdateSale = async (id: number, saleUpdate: Record<string, unknown>) => {
     await updateSale(id, saleUpdate);
     await fetchSales();
   };

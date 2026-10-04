@@ -97,7 +97,7 @@ export default function CreditDashboard() {
         sortBy: orden.por || undefined,
         sortOrder: orden.por ? orden.sentido : undefined,
       })
-        .then((res: any) => {
+        .then((res) => {
           if (!vivo) return;
           setClientes(res?.data || []);
           setMeta({ total: res?.meta?.total || 0, totalPages: res?.meta?.totalPages || 0 });

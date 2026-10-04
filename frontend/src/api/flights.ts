@@ -1,7 +1,9 @@
 import api from './client';
+import type { Flight, CheckinCounts } from '../types';
+import type { Pagina } from './tipos';
 
 export async function listFlights(params: Record<string, unknown>) {
-  const res = await api.get('/flights', { params });
+  const res = await api.get<Pagina<Flight>>('/flights', { params });
   return res.data;
 }
 
@@ -11,7 +13,7 @@ export async function listFlights(params: Record<string, unknown>) {
  * `listFlights` con filtros distintos.
  */
 export async function listCheckins(params: Record<string, unknown>) {
-  const res = await api.get('/flights/checkins', { params });
+  const res = await api.get<Pagina<Flight, { counts?: CheckinCounts }>>('/flights/checkins', { params });
   return res.data;
 }
 

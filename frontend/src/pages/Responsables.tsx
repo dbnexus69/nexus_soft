@@ -115,7 +115,7 @@ export default function Responsables() {
   // El contrato es el id del tipo (`tipos_documento`); la regla del número usa su abreviatura.
   const abreviaturaDeTipo = (id: string | number) => {
     const found = data.config.documentTypes.find(d => String(d.id) === String(id));
-    return found ? ((found as any).abbreviation || (found as any).abreviatura || found.name || '') : '';
+    return found ? (found.abbreviation || found.name || '') : '';
   };
 
 
@@ -350,7 +350,7 @@ export default function Responsables() {
     if (!selectedResponsable) { setResponsableFlights([]); return; }
     let vivo = true;
     api.listFlights({ search: selectedResponsable.name, perPage: 50 })
-      .then((res: any) => { if (vivo) setResponsableFlights(res?.data || []); })
+      .then((res) => { if (vivo) setResponsableFlights(res?.data || []); })
       .catch(() => { if (vivo) setResponsableFlights([]); });
     return () => { vivo = false; };
   }, [selectedResponsable]);

@@ -198,7 +198,7 @@ export default function Clients() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         editingClient={editingClient}
-        documentTypes={(data.config.documentTypes as any) || []}
+        documentTypes={data.config.documentTypes || []}
         onSave={handleSaveClient}
       />
 

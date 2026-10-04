@@ -442,3 +442,6 @@ export const INITIAL_FORM: WizardFormData = {
   passports: [],
   petServices: [],
 };
+
+/** Lo que reciben los pasos del asistente para cambiar un campo del formulario. */
+export type FijarCampo = <K extends keyof WizardFormData>(clave: K, valor: WizardFormData[K]) => void;

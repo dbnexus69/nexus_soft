@@ -6,11 +6,15 @@ import * as api from "../../../api";
 import { Button } from "../../ui/Button";
 import { DatePicker } from "../forms/TicketForm";
 import { todayStr } from "../../../utils/formatters";
+import type { WizardFormData, FijarCampo } from "../wizardData";
+import type { AppData } from "../../../types";
 
-export function Step3Payment({ form, set, data, errors }: any) {
+interface Props { form: WizardFormData; set: FijarCampo; data: AppData; errors: Record<string, string> }
+
+export function Step3Payment({ form, set, data, errors }: Props) {
   // Los responsables se buscan en el servidor: el catálogo ya no viaja entero.
   const buscarResponsables = useCallback(async (q: string) => {
-    const res: any = await api.listResponsables({ search: q || undefined, perPage: 20, status: 'active' });
+    const res = await api.listResponsables({ search: q || undefined, perPage: 20, status: 'active' });
     return (res?.data || []).map((r: any) => ({ value: r.name, label: r.name, data: r }));
   }, []);
 

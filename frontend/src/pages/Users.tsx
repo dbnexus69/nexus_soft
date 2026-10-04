@@ -373,7 +373,7 @@ export default function Users() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         editingUser={editingUser}
-        documentTypes={(data.config.documentTypes as any) || []}
+        documentTypes={data.config.documentTypes || []}
         existingUsers={users}
         onSave={handleSaveUser}
       />

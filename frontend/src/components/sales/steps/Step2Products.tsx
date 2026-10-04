@@ -1,7 +1,8 @@
 import { ShoppingBag, ChevronDown, ChevronUp, Check, Link2 } from "lucide-react";
 import { Button } from "../../ui/Button";
 import * as LuIcons from "react-icons/lu";
-import { SALE_PRODUCTS, SaleProductId } from "../../../types";
+import { SALE_PRODUCTS, SaleProductId, AppData } from "../../../types";
+import type { WizardFormData, FijarCampo } from "../wizardData";
 import { 
   PRODUCT_IMAGES, 
   INITIAL_TICKET, 
@@ -27,7 +28,25 @@ function ProductIcon({ name, size = 20, className = "" }: { name: string; size?:
   return <IconComponent size={size} className={className} />;
 }
 
-export function Step2Products({ form, set, data, errors, toggleProduct, actions }: any) {
+// Las listas del formulario se eligen por categoría en tiempo de ejecución: la clave y el valor ya no se ligan en el tipo.
+type FijarGenerico = (clave: keyof WizardFormData, valor: unknown) => void;
+
+interface Props {
+  form: WizardFormData;
+  set: FijarCampo;
+  data: AppData;
+  errors: Record<string, string>;
+  toggleProduct: (id: SaleProductId) => void;
+  actions: {
+    showOtherProducts: boolean;
+    setShowOtherProducts: (v: boolean) => void;
+    activeForm: SaleProductId | null;
+    activeIdx: number | null;
+    openForm: (type: SaleProductId | null, idx: number | null) => void;
+  };
+}
+
+export function Step2Products({ form, set, data, errors, toggleProduct, actions }: Props) {
   const {
     showOtherProducts, setShowOtherProducts,
     activeForm, activeIdx,
@@ -45,7 +64,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
 
   const handleAddAnotherProduct = (productId: SaleProductId, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    let targetKey: string | null = null;
+    let targetKey: keyof WizardFormData | null = null;
     let initialFn: any = null;
 
     switch (productId) {
@@ -70,11 +89,11 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
       if (!form.selectedProducts.includes(productId)) {
         toggleProduct(productId);
       }
-      const currentItems = [...((form as any)[targetKey] || [])];
+      const currentItems = [...((form[targetKey] as unknown[] | undefined) || [])];
       const newItem = initialFn(client);
       const newIdx = currentItems.length;
       currentItems.push(newItem);
-      set(targetKey, currentItems);
+      (set as FijarGenerico)(targetKey, currentItems);
       openForm(productId, newIdx);
     }
   };
@@ -86,7 +105,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
       toggleProduct(productId);
     }
 
-    let targetKey: string | null = null;
+    let targetKey: keyof WizardFormData | null = null;
     let initialFn: any = null;
 
     switch (productId) {
@@ -108,10 +127,10 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
     }
 
     if (targetKey && initialFn) {
-      const currentItems = (form as any)[targetKey] || [];
+      const currentItems = (form[targetKey] as unknown[] | undefined) || [];
       if (currentItems.length === 0) {
         const newItem = initialFn(client);
-        set(targetKey, [newItem]);
+        (set as FijarGenerico)(targetKey, [newItem]);
         openForm(productId, 0);
       } else {
         openForm(productId, 0);
@@ -208,8 +227,8 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                       convention: "conventions", restaurantes: "restaurants", visa: "visas",
                       passport: "passports", servicio_mascotas: "petServices"
                     };
-                    const targetKey = keyMap[product.id];
-                    const count = targetKey ? ((form as any)[targetKey]?.length || 0) : 0;
+                    const targetKey = keyMap[product.id] as keyof WizardFormData | undefined;
+                    const count = targetKey ? ((form[targetKey] as unknown[] | undefined)?.length || 0) : 0;
                     if (count === 0) return null;
                     return (
                       <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-md border border-white/20">

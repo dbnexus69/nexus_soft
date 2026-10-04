@@ -2,29 +2,32 @@ import { useCallback, useState } from "react";
 import { Users } from "lucide-react";
 import { FormField, Input, Combobox, Select } from "../../ui/Form";
 import { AsyncCombobox } from "../../ui/AsyncCombobox";
-import { WizardFormData } from "../wizardData";
+import { WizardFormData, FijarCampo } from "../wizardData";
+import type { AppData } from "../../../types";
 import { getAvatarGradient } from "../../../utils/formatters";
 import * as api from "../../../api";
 
-export function Step1Client({ form, set, data, errors }: any) {
+interface Props { form: WizardFormData; set: FijarCampo; data: AppData; errors: Record<string, string> }
+
+export function Step1Client({ form, set, data, errors }: Props) {
   // El cliente elegido se guarda aquí: ya no se puede buscar en data.clients,
   // porque el catálogo completo ya no viaja al navegador.
   const [clienteElegido, setClienteElegido] = useState<any>(null);
 
   const buscarClientes = useCallback(async (q: string) => {
-    const res: any = await api.listClients({ search: q || undefined, perPage: 20, status: 'active' });
+    const res = await api.listClients({ search: q || undefined, perPage: 20, status: 'active' });
     return (res?.data || []).map((c: any) => ({ value: c.name, label: c.name, data: c }));
   }, []);
 
   const buscarAsesores = useCallback(async (q: string) => {
-    const res: any = await api.listUsers({ search: q || undefined, perPage: 20 });
+    const res = await api.listUsers({ search: q || undefined, perPage: 20 });
     return (res?.data || [])
       .filter((u: any) => u.status === 'active')
       .map((u: any) => ({ value: u.name, label: u.name, data: u }));
   }, []);
 
   const buscarComisionistas = useCallback(async (q: string) => {
-    const res: any = await api.listCommissionAgents({ search: q || undefined, perPage: 20 });
+    const res = await api.listCommissionAgents({ search: q || undefined, perPage: 20 });
     return (res?.data || []).map((a: any) => ({ value: a.name, label: a.name, data: a }));
   }, []);
 

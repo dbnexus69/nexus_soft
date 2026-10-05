@@ -5,7 +5,7 @@ import * as api from "../../api";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-import { formatCurrency, formatDate, formatSaleId } from "../../utils/formatters";
+import { formatCurrency, formatDate, formatDateTime, formatSaleId } from "../../utils/formatters";
 import { Sale } from "../../types";
 import { ServiceRow } from "./detail/ServiceRow";
 import { formaDe } from "./detail/serviceShapes";
@@ -278,6 +278,7 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
               <Meta etiqueta="Ganancia neta" valor={formatCurrency(cifras.ganancia)} />
               <Meta etiqueta="Comisionista" valor={sale.commissionAgentName} />
               <Meta etiqueta="Comisión neta" valor={cifras.comision ? formatCurrency(cifras.comision) : null} />
+              <Meta etiqueta="Voucher enviado" valor={sale.lastVoucherSent ? `${formatDateTime(sale.lastVoucherSent.at)} a ${sale.lastVoucherSent.to}` : null} />
               <Meta etiqueta="Vence crédito" valor={sale.creditDueDate ? formatDate(sale.creditDueDate) : null} />
             </dl>
           ) : null}

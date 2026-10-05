@@ -23,6 +23,7 @@ const Itineraries = lazy(() => import('./pages/Itineraries'));
 const Users = lazy(() => import('./pages/Users'));
 const Companies = lazy(() => import('./pages/Companies'));
 const Config = lazy(() => import('./pages/Config'));
+const Empresa = lazy(() => import('./pages/Empresa'));
 const CommissionAgents = lazy(() => import('./pages/CommissionAgents'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,7 @@ function AppRoutes() {
         <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
         <Route path="companies" element={<SuperadminRoute><Companies /></SuperadminRoute>} />
         <Route path="config" element={<AdminRoute><Config /></AdminRoute>} />
+        <Route path="empresa" element={<Empresa />} />
         <Route path="commissions" element={<CommissionAgents />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

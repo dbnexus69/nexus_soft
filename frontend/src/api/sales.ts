@@ -103,8 +103,14 @@ export async function uploadProductVoucher(saleId: number, detalleId: string, fi
   return res.data.data as { detalleId: string; voucher_url: string };
 }
 
-export async function sendVoucher(saleId: number, pdfBase64: string) {
-  const res = await api.post(`/sales/${saleId}/send-voucher`, { pdfBase64 });
+/** URL firmada (5 min) del voucher en PDF; lo genera y lo guarda el servidor (spec 011). */
+export async function getVoucherUrl(saleId: number) {
+  const res = await api.get<Recurso<{ url: string; expiraEn: number }>>(`/sales/${saleId}/voucher`);
+  return res.data.data;
+}
+
+export async function sendVoucher(saleId: number) {
+  const res = await api.post<Recurso<{ enviadoA: string; enviadoAt: string }>>(`/sales/${saleId}/send-voucher`);
   return res.data.data;
 }
 

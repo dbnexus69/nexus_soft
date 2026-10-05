@@ -33,6 +33,8 @@ interface AuthContextType {
   /** Por qué se cerró la sesión sin que el usuario lo pidiera (caducó, se revocó). */
   avisoSesion: string | null;
   limpiarAvisoSesion: () => void;
+  /** Vuelve a leer la marca (tras cambiar el logo o el nombre en Mi empresa). */
+  refrescarMarca: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -160,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       marca,
       avisoSesion,
       limpiarAvisoSesion: () => setAvisoSesion(null),
+      refrescarMarca: () => getBranding().then(ponerMarca).catch(() => {}),
       // Rol administrativo, no el rol llamado 'admin'. `superadmin` se creó
       // como un admin con MÁS permisos, pero esta comparación exacta lo dejaba
       // fuera: al pasar el usuario 1 a superadmin desapareció del menú la

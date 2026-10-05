@@ -698,6 +698,8 @@ export interface Sale {
   payments?: PaymentRecord[];
   servicesSummary?: Array<{ tipo: string; label: string; detail: string | null }>;
   isReviewed?: boolean;
+  /** El último envío del voucher al cliente (spec 011). */
+  lastVoucherSent?: { to: string; at: string } | null;
 }
 
 export interface Flight {

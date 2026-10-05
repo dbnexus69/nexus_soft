@@ -13,7 +13,7 @@ export {
 export {
   listSales, getSale, getCreditPortfolio, getClientCredits, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, deleteSale, voidSale,
   registerPayment, deletePayment, getSalePayments, uploadProductVoucher,
-  sendVoucher, updateReviewStatus,
+  sendVoucher, getVoucherUrl, updateReviewStatus,
 } from './sales';
 export {
   listFlights, listCheckins, updateCheckin, cancelCheckin,
@@ -36,3 +36,5 @@ export {
   startImpersonation, stopImpersonation,
 } from './companies';
 export type { Empresa, NuevaEmpresa } from './companies';
+export { getCompanyProfile, updateCompanyProfile, uploadCompanyProfileLogo, previewVoucher } from './companyProfile';
+export type { PerfilEmpresa, CambiosPerfil, Clausula } from './companyProfile';

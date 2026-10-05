@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   Compass,
   Wallet,
@@ -16,7 +16,7 @@ import {
   Moon,
   RefreshCw,
   ChevronDown,
-  Building2,
+  Building2, Building,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionsContext";
@@ -340,6 +340,15 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                     <p className="text-xs text-amber-400 font-bold uppercase tracking-wider">{perfil?.rol}</p>
                     {perfil?.detalle && <p className="text-xs text-slate-400 mt-1 truncate">{perfil.detalle}</p>}
                   </div>
+                  {/* Mi empresa la ve cualquiera de la agencia; editarla es del admin (spec 011). */}
+                  <Link
+                    to="/empresa"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-xl text-xs font-bold transition-all"
+                  >
+                    <Building size={14} />
+                    Mi empresa
+                  </Link>
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);

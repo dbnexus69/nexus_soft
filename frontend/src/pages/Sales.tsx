@@ -26,7 +26,6 @@ import { useClientsContext } from "../context/ClientsContext";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { formatSaleId, formatCurrency, formatDate, formatId } from "../utils/formatters";
-import { buildAirportMap } from "../utils/airportInfo";
 import { Sale } from "../types";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import NewSaleWizard from "../components/sales/NewSaleWizard";
@@ -36,8 +35,6 @@ import SalesTable from "../components/sales/SalesTable";
 import { Pagination } from "../components/ui/Pagination";
 import StatCard from "../components/ui/StatCard";
 import CreditDashboard from "../components/sales/CreditDashboard";
-import { VoucherPDF } from "../components/sales/VoucherPDF";
-import { useRef } from "react";
 
 export default function Sales() {
   const { data } = useData(); // para airports, config, etc.
@@ -89,11 +86,8 @@ export default function Sales() {
   const [isVoiding, setIsVoiding] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [voucherSale, setVoucherSale] = useState<Sale | null>(null);
-  const [voucherFullSale, setVoucherFullSale] = useState<Sale | null>(null);
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const [isSendingVoucher, setIsSendingVoucher] = useState(false);
-  const voucherRef = useRef<HTMLDivElement>(null);
-  const airportMap = useMemo(() => buildAirportMap(data.config.airports || []), [data.config.airports]);
 
   // Búsqueda, estado, fechas, orden y alcance por rol los resuelve el servidor.
   // La tabla pinta la página que recibe, sin volver a filtrarla.
@@ -140,157 +134,20 @@ export default function Sales() {
     setIsDetailOpen(true);
   };
 
-  const handleDownloadVoucher = (sale: Sale) => {
-    setVoucherSale(sale);
-    setVoucherFullSale(null); // will be fetched on demand
-  };
+  const handleDownloadVoucher = (sale: Sale) => setVoucherSale(sale);
 
-  /** Carga la venta completa, renderiza el VoucherPDF y devuelve canvas + doc jsPDF listos */
-  const buildVoucherPdf = async (sale: Sale) => {
-    // 1. Traer venta completa
-    let fullSale: Sale = sale;
-    try {
-      const [cabecera, productos] = await Promise.all([
-        api.getSale(sale.id),
-        api.getSaleProducts(sale.id),
-      ]);
-      fullSale = { ...cabecera, ...productos };
-    } catch { /* fallback */ }
-
-    // 2. Inyectar en el componente oculto y esperar render
-    setVoucherFullSale(fullSale);
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    if (!voucherRef.current) throw new Error('Contenedor del PDF no disponible');
-
-    // Helper to calculate element height with margins
-    const getElementHeightWithMargins = (el: HTMLElement) => {
-      const rect = el.getBoundingClientRect();
-      const style = window.getComputedStyle(el);
-      const marginTop = parseFloat(style.marginTop) || 0;
-      const marginBottom = parseFloat(style.marginBottom) || 0;
-      return rect.height + marginTop + marginBottom;
-    };
-
-    // 3. Distribución dinámica de elementos en páginas
-    const originalChildren = Array.from(voucherRef.current.children) as HTMLElement[];
-    const footerElement = originalChildren.find(el => el.classList.contains('v-footer'));
-    const childrenToDistribute = originalChildren.filter(el => !el.classList.contains('v-footer'));
-
-    const pagesData: HTMLElement[][] = [];
-    let currentPageContent: HTMLElement[] = [];
-    let currentPageHeight = 0;
-
-    // Altura máxima del contenido por página A4 (820px de ancho -> 1160px de alto. Restando pie de página ~75px y margen de seguridad)
-    const maxContentHeight = 1070;
-
-    for (const child of childrenToDistribute) {
-      const childHeight = getElementHeightWithMargins(child);
-      
-      if (currentPageHeight + childHeight > maxContentHeight && currentPageContent.length > 0) {
-        pagesData.push(currentPageContent);
-        currentPageContent = [child];
-        currentPageHeight = childHeight;
-      } else {
-        currentPageContent.push(child);
-        currentPageHeight += childHeight;
-      }
-    }
-    if (currentPageContent.length > 0) {
-      pagesData.push(currentPageContent);
-    }
-
-    const totalPages = pagesData.length;
-    const currentDate = new Date().toLocaleDateString('es-CO', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-    });
-
-    const tempContainer = document.createElement('div');
-    tempContainer.className = 'nexus-voucher';
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '-9999px';
-    tempContainer.style.width = '820px';
-    document.body.appendChild(tempContainer);
-
-    const pageElements: HTMLDivElement[] = [];
-
-    for (let i = 0; i < totalPages; i++) {
-      const pageDiv = document.createElement('div');
-      pageDiv.className = 'v-page v-page-temp';
-      
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'v-page-content-temp';
-      
-      pagesData[i].forEach(child => {
-        contentDiv.appendChild(child.cloneNode(true));
-      });
-      
-      pageDiv.appendChild(contentDiv);
-
-      if (footerElement) {
-        const clonedFooter = footerElement.cloneNode(true) as HTMLElement;
-        const footerRight = clonedFooter.querySelector('.v-footer-right');
-        if (footerRight) {
-          // El pie del voucher lleva la marca de la agencia y SU número de
-          // venta, no el id interno: es el documento que se lleva el cliente.
-          const contacto = marca?.slug ? `${marca.nombre}` : 'Nexus';
-          footerRight.innerHTML = `Voucher Electrónico — Orden #${fullSale.numero ?? fullSale.id}<br />${contacto}<br />Impreso el ${currentDate}<br />Página ${i + 1} de ${totalPages}`;
-        }
-        pageDiv.appendChild(clonedFooter);
-      }
-
-      tempContainer.appendChild(pageDiv);
-      pageElements.push(pageDiv);
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const html2canvas = (await import('html2canvas')).default;
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210;
-    const imgHeight = 297; 
-
-    for (let i = 0; i < totalPages; i++) {
-      if (i > 0) doc.addPage();
-      
-      const canvas = await html2canvas(pageElements[i], {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      });
-      
-      doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgWidth, imgHeight);
-    }
-
-    document.body.removeChild(tempContainer);
-
-    return { doc, fullSale };
-  };
-
+  // El voucher lo genera y lo guarda el servidor (spec 011): descargar es abrir una URL firmada y enviar no lleva cuerpo.
   const executeDownloadPDF = async () => {
     if (!voucherSale) return;
     setIsPdfGenerating(true);
     try {
-      setSuccessMessage(`Generando voucher #${voucherSale.id}...`);
-      setShowSuccess(true);
-
-      const { doc } = await buildVoucherPdf(voucherSale);
-      // El nombre del fichero que se descarga el cliente: su agencia y su número.
-      const marcaArchivo = (marca?.nombre ?? 'Nexus').replace(/\s+/g, '_');
-      doc.save(`Voucher_${marcaArchivo}_#${voucherSale.numero ?? voucherSale.id}_${voucherSale.clientName.replace(/\s+/g, '_')}.pdf`);
-
-      setSuccessMessage(`Voucher descargado correctamente`);
-      setTimeout(() => setShowSuccess(false), 3000);
+      const { url } = await api.getVoucherUrl(voucherSale.id);
+      window.open(url, '_blank', 'noopener');
       setVoucherSale(null);
-      setVoucherFullSale(null);
-    } catch (err) {
-      console.error(err);
-      setSuccessMessage(`Error al generar el PDF`);
-      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      setSuccessMessage(err?.response?.data?.error?.message || 'No se pudo generar el voucher');
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 4000);
     } finally {
       setIsPdfGenerating(false);
     }
@@ -300,26 +157,14 @@ export default function Sales() {
     if (!voucherSale) return;
     setIsSendingVoucher(true);
     try {
-      setSuccessMessage(`Generando voucher #${voucherSale.id}...`);
-      setShowSuccess(true);
-
-      const { doc } = await buildVoucherPdf(voucherSale);
-
-      const pdfBase64 = doc.output('datauristring').split(',')[1];
-
-      setSuccessMessage(`Enviando al cliente...`);
-      const result = await api.sendVoucher(voucherSale.id, pdfBase64);
-
-      setSuccessMessage(`Voucher enviado a ${result.email}`);
-      setTimeout(() => setShowSuccess(false), 4000);
+      const { enviadoA } = await api.sendVoucher(voucherSale.id);
+      setSuccessMessage(`Voucher enviado a ${enviadoA}`);
       setVoucherSale(null);
-      setVoucherFullSale(null);
     } catch (err: any) {
-      console.error(err);
-      const msg = err?.response?.data?.error?.message || 'Error al enviar el voucher';
-      setSuccessMessage(`${msg}`);
-      setTimeout(() => setShowSuccess(false), 4000);
+      setSuccessMessage(err?.response?.data?.error?.message || 'Error al enviar el voucher');
     } finally {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 4000);
       setIsSendingVoucher(false);
     }
   };
@@ -697,7 +542,7 @@ export default function Sales() {
       {/* ===== VOUCHER MODAL (Opciones de Voucher) ===== */}
       <Modal
         isOpen={!!voucherSale}
-        onClose={() => { if (!isPdfGenerating && !isSendingVoucher) { setVoucherSale(null); setVoucherFullSale(null); } }}
+        onClose={() => { if (!isPdfGenerating && !isSendingVoucher) { setVoucherSale(null); } }}
         title="Opciones de Voucher"
         size="sm"
       >
@@ -732,7 +577,7 @@ export default function Sales() {
             <Button
               variant="outline"
               className="w-full text-gray-500 mt-2 border-none"
-              onClick={() => { setVoucherSale(null); setVoucherFullSale(null); }}
+              onClick={() => { setVoucherSale(null); }}
               disabled={isSendingVoucher || isPdfGenerating}
             >
               Cancelar
@@ -742,7 +587,6 @@ export default function Sales() {
       </Modal>
 
       {/* COMPONENTE OCULTO PARA GENERAR PDF - usa la venta completa cargada del API */}
-      <VoucherPDF ref={voucherRef} sale={voucherFullSale} airportMap={airportMap} baggageList={data.config.baggage} />
     </div>
   );
 }

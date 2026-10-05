@@ -2,7 +2,6 @@ const prisma = require('../config/db');
 const { AppError, NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { recalcularVenta, aCentimos, bloquearVenta } = require('./saleTotals');
-const emailService = require('../utils/emailService');
 const { normalizarDocumento, mensajeDocumento } = require('../utils/datosPersona');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
@@ -680,8 +679,13 @@ class SalesService {
 
     if (!venta) throw new NotFoundError('Venta no encontrada');
 
+    // El último envío del voucher al cliente (spec 011), para el detalle de la venta.
+    const ultimoEnvio = await prisma.vouchers_venta.findFirst({
+      where: { venta_id: id }, orderBy: { enviado_at: 'desc' }, select: { enviado_a: true, enviado_at: true },
+    });
     return {
       ...this._saleHeader(venta),
+      lastVoucherSent: ultimoEnvio ? { to: ultimoEnvio.enviado_a, at: ultimoEnvio.enviado_at } : null,
       products: inventario
         .filter(r => CATALOG[r.categoria])
         .map(r => ({ category: r.categoria, label: labelOf(r.categoria), count: r._count._all }))
@@ -989,36 +993,6 @@ class SalesService {
     }));
   }
 
-  async sendVoucher(saleId, pdfBase64, alcance = {}) {
-    await ventaVisible(saleId, alcance);
-    if (!pdfBase64) throw new BadRequestError('El PDF es requerido (base64)');
-    const venta = await prisma.ventas.findFirst({
-      where: { id: saleId, deleted_at: null },
-      include: { clientes: { include: { personas: true } }, usuarios: { include: { personas: true } } }
-    });
-
-    if (!venta) throw new NotFoundError('Venta no encontrada');
-    const clientEmail = venta.clientes.personas.email;
-    if (!clientEmail) throw new BadRequestError('El cliente no tiene correo electrónico registrado');
-
-    const clientName = `${venta.clientes.personas.nombres} ${venta.clientes.personas.apellidos}`;
-    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-    const pdfBuffer = Buffer.from(base64Data, 'base64');
-
-    // El cliente final recibe esto con el nombre de SU agencia, y con el número
-    // de venta que esa agencia usa —no el id interno, que es global y con huecos.
-    const { nombre: agencia } = await emailService.marcaDeCorreo();
-    const numero = venta.numero ?? saleId;
-
-    await emailService.sendEmail({
-      to: clientEmail,
-      subject: `${agencia} · Voucher de tu reserva #${numero}`,
-      html: `<p>Hola <strong>${clientName}</strong>,</p><p>Adjunto encontrarás el voucher de tu reserva.</p><p>${agencia}</p>`,
-      attachments: [{ filename: `Voucher_Reserva_${numero}.pdf`, content: pdfBuffer }]
-    });
-
-    return { message: `Voucher enviado exitosamente a ${clientEmail}` };
-  }
 }
 
 // El listado y la cartera viven en sus propios archivos; el controlador los sigue viendo aquí.

@@ -178,6 +178,15 @@ model empresas {
   /// escrito en el código: esto es lo que lo sustituye en T9.
   email_remitente           String?
   email_nombre              String?
+  /// Perfil de la agencia (spec 011): lo edita su admin desde "Mi empresa" y sale en el voucher.
+  nit                       String?
+  direccion                 String?
+  telefono                  String?
+  email_contacto            String?
+  sitio_web                 String?
+  voucher_pie               String?
+  /// Cláusulas del voucher: [{ titulo, texto }] en orden. NULL = las de por defecto.
+  voucher_terminos          Json?
   estado                    EstadoEmpresa               @default(activa)
   creado_at                 DateTime                    @default(now())
   deleted_at                DateTime?
@@ -224,6 +233,7 @@ model empresas {
   usuarios                  usuarios[]
   ventas                    ventas[]
   ventas_mensuales          ventas_mensuales[]
+  vouchers_venta            vouchers_venta[]
 }
 
 enum EstadoEmpresa {
@@ -1043,6 +1053,7 @@ model usuarios {
 
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
+  vouchers_venta       vouchers_venta[]
   @@unique([id, empresa_id])
   @@unique([empresa_id, numero])
   @@index([empresa_id])
@@ -1091,6 +1102,7 @@ model ventas {
   empresa_id Int      @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
   empresas   empresas @relation(fields: [empresa_id], references: [id])
 
+  vouchers_venta                vouchers_venta[]
   @@unique([empresa_id, numero])
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
@@ -1204,4 +1216,25 @@ enum TipoHotel {
 enum UserStatus {
   active
   inactive
+}
+
+/// Los vouchers enviados al cliente (spec 011): qué PDF (huella y objeto en Storage), a quién y cuándo.
+/// Solo se escribe cuando el correo salió.
+model vouchers_venta {
+  id             String    @id @default(uuid())
+  venta_id       Int
+  huella         String
+  ruta           String
+  enviado_a      String
+  enviado_at     DateTime  @default(now())
+  /// Nulo si quien envía está suplantando: su id es de otra agencia (spec 002, T19).
+  enviado_por_id Int?
+  ventas         ventas    @relation(fields: [venta_id], references: [id])
+  usuarios       usuarios? @relation(fields: [enviado_por_id], references: [id])
+
+  empresa_id Int      @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas   empresas @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
+  @@index([venta_id])
 }

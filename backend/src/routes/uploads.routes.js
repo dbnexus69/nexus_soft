@@ -20,8 +20,8 @@ const { error } = require('../utils/apiResponse');
  * o el fichero no existe o es de otra agencia — y las dos respuestas son la
  * misma, que es lo correcto.
  *
- * Los logos NO pasan por aquí: van en `/uploads/logos`, se sirven sin sesión, y
- * el motivo está en `middleware/uploadLogo.js`.
+ * Los logos NO pasan por aquí: están en el bucket privado `logos` de Supabase
+ * Storage y se entregan con URL firmada (`perfilEmpresa.service.js`, spec 011).
  */
 const CARPETA = path.join(__dirname, '../../uploads');
 

@@ -2,9 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { randomUUID } = require('crypto');
 const { generateTokenConCaducidad } = require('../utils/tokenUtils');
-const fs = require('fs/promises');
-const path = require('path');
-const { CARPETA_LOGOS } = require('../middleware/uploadLogo');
+const perfilEmpresa = require('./perfilEmpresa.service');
 const prisma = require('../config/db');
 const { conEmpresa, empresaActual } = require('../config/tenant');
 const { olvidarToken, olvidarEmpresa } = require('../middleware/authCache');
@@ -63,12 +61,13 @@ const SUPLANTACION_MINUTOS = 60;
 /** Los permisos se guardan como texto: 'true'/'false' o el alcance. */
 const comoTexto = (valor) => (typeof valor === 'boolean' ? String(valor) : String(valor));
 
-const aFicha = (e) => ({
+// `logoUrl` firmada: el logo vive en un bucket privado (spec 011).
+const aFicha = async (e) => ({
   id: e.id,
   slug: e.slug,
   nombre: e.nombre,
   nombreComercial: e.nombre_comercial,
-  logoUrl: e.logo_url,
+  logoUrl: await perfilEmpresa.urlDelLogo(e.id, e.logo_url),
   colorPrimario: e.color_primario,
   colorAcento: e.color_acento,
   colorRealce: e.color_realce,
@@ -94,7 +93,7 @@ class CompaniesService {
       prisma.empresas.count({ where }),
       prisma.empresas.findMany({ where, skip, take: perPage, orderBy: [{ nombre: 'asc' }, { id: 'asc' }] }),
     ]);
-    return { data: empresas.map(aFicha), meta: buildMeta(total, page, perPage) };
+    return { data: await Promise.all(empresas.map(aFicha)), meta: buildMeta(total, page, perPage) };
   }
 
   /**
@@ -114,7 +113,7 @@ class CompaniesService {
       clientes: await prisma.clientes.count({ where: { deleted_at: null } }),
       ventas: await prisma.ventas.count({ where: { deleted_at: null } }),
     }));
-    return { ...aFicha(empresa), uso };
+    return { ...(await aFicha(empresa)), uso };
   }
 
   /**
@@ -242,26 +241,9 @@ class CompaniesService {
     return this.getById(empresa.id);
   }
 
-  /**
-   * Guarda el logo y devuelve la ficha.
-   *
-   * El fichero anterior se borra: si no, cada cambio de logo dejaría el viejo
-   * ocupando disco para siempre, y con el tiempo la carpeta sería un archivo de
-   * todos los logos que una agencia ha tenido.
-   */
+  /** Guarda el logo en el bucket (`perfilEmpresa.guardarLogo`) y devuelve la ficha. */
   async setLogo(id, fichero) {
-    if (!fichero) throw new BadRequestError('No llegó ningún archivo');
-    const empresa = await prisma.empresas.findFirst({ where: { id: Number(id), deleted_at: null } });
-    if (!empresa) throw new NotFoundError('Empresa no encontrada');
-
-    const anterior = empresa.logo_url;
-    await prisma.empresas.update({ where: { id: empresa.id }, data: { logo_url: `/uploads/logos/${fichero.filename}` } });
-
-    if (anterior && anterior.startsWith('/uploads/logos/')) {
-      // Que no se pueda borrar el anterior no es motivo para fallar: el logo
-      // nuevo ya está guardado y es lo que importa.
-      await fs.unlink(path.join(CARPETA_LOGOS, path.basename(anterior))).catch(() => {});
-    }
+    const empresa = await perfilEmpresa.guardarLogo(id, fichero);
     return this.getById(empresa.id);
   }
 
@@ -319,7 +301,7 @@ class CompaniesService {
     // El id va en la respuesta además de dentro del token: es lo que hace falta
     // para volver a salir, y quien entra no debería tener que pedir otra cosa
     // para poder deshacerlo.
-    return { suplantacionId: id, token, empresa: aFicha(empresa), expiraAt: expira, motivo };
+    return { suplantacionId: id, token, empresa: await aFicha(empresa), expiraAt: expira, motivo };
   }
 
   /** Salir. Cierra la sesión suplantada y cierra la fila de auditoría. */
@@ -386,7 +368,7 @@ class CompaniesService {
     return {
       slug: empresa.slug,
       nombre: empresa.nombre_comercial || empresa.nombre,
-      logoUrl: empresa.logo_url,
+      logoUrl: await perfilEmpresa.urlDelLogo(empresa.id, empresa.logo_url),
       colores: {
         primario: empresa.color_primario,
         acento: empresa.color_acento,

@@ -21,6 +21,8 @@ const PUERTO = Number(process.env.TEST_PORT) || 3917;
 const BASE = `http://127.0.0.1:${PUERTO}`;
 const API = `${BASE}/api/v1`;
 const CLAVE = 'Prueba-api-1!';
+// Lo que el servidor de prueba sube a Storage va bajo esta carpeta, y se borra entera al desmontar.
+const PREFIJO_ALMACEN = 'prueba';
 const RAIZ = path.join(__dirname, '..');
 
 const admin = new PrismaClient({
@@ -58,7 +60,7 @@ const una = (status, ...validos) => validos.includes(status);
 
 async function levantarServidor() {
   servidor = spawn(process.execPath, ['src/index.js'], {
-    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1', ALMACENAMIENTO_PREFIJO: PREFIJO_ALMACEN }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let salida = '';
   servidor.stderr.on('data', d => { salida += d; });
@@ -129,8 +131,30 @@ async function desmontar(prefijo) {
     if (!pendientes) break;
   }
   await admin.empresas.deleteMany({ where: { id: { in: ids } } });
+  await limpiarAlmacenamiento(ids);
   for (const url of subidos) {
     try { fs.unlinkSync(path.join(RAIZ, 'uploads', path.basename(url))); } catch { /* ya no está */ }
+  }
+}
+
+/** Borra de los buckets las carpetas de prueba de esas agencias (hasta dos niveles: `vouchers/<p>/<id>/<venta>/x.pdf`). */
+async function limpiarAlmacenamiento(ids) {
+  if (!process.env.SUPABASE_URL) return;
+  const { storage, BUCKETS } = require('../src/utils/almacenamiento');
+  const listar = async (bucket, carpeta) => {
+    const { data } = await storage().from(bucket).list(carpeta, { limit: 1000 });
+    const rutas = [];
+    for (const o of data || []) {
+      const ruta = `${carpeta}/${o.name}`;
+      if (o.id) rutas.push(ruta); else rutas.push(...await listar(bucket, ruta));
+    }
+    return rutas;
+  };
+  for (const bucket of Object.keys(BUCKETS)) {
+    for (const id of ids) {
+      const rutas = await listar(bucket, `${PREFIJO_ALMACEN}/${id}`);
+      if (rutas.length) await storage().from(bucket).remove(rutas);
+    }
   }
 }
 

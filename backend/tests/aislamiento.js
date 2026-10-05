@@ -154,7 +154,7 @@ async function main() {
   // 53 de la spec 001 (T3b) + la de la tarjeta de pago al proveedor (spec 002,
   // `20260925150000_tarjeta_de_pago_al_proveedor`). Una clave compuesta nueva
   // sube este número; una que desaparece lo baja y pone esto en rojo.
-  const ESPERADAS = 54;
+  const ESPERADAS = 56;
   comprobar('siguen las claves ajenas compuestas', compuestas === ESPERADAS, `${compuestas} de ${ESPERADAS}`);
 
   // ── 4c. El número propio de cada agencia

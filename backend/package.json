@@ -16,6 +16,8 @@
     "test:aislamiento": "node tests/aislamiento.js",
     "test:aislamiento-api": "node tests/aislamiento-api.js",
     "test:vuelos-api": "node tests/vuelos-api.js",
+    "storage:buckets": "node scripts/crear-buckets.js",
+    "test:voucher": "node tests/voucher-api.js",
     "test:validaciones": "node tests/validaciones.js",
     "test:reglas-espejo": "node tests/reglas-espejo.js"
   },
@@ -29,6 +31,7 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@supabase/supabase-js": "^2.117.2",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -39,6 +42,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
+    "pdfmake": "^0.2.23",
     "resend": "^6.12.4",
     "zod": "^3.24.4"
   },

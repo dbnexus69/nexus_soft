@@ -81,9 +81,11 @@ for (const ruta of ['login', 'forgot-password', 'verify-code', 'reset-password']
   app.use([`/api/auth/${ruta}`, `/api/v1/auth/${ruta}`], authLimiter);
 }
 
-// Parsing
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Parsing. Eran 50 MB por el voucher que el navegador subía en base64; ahora lo genera el servidor (spec 011).
+// Los archivos van por multipart con su propio límite; en JSON solo quedan los avatares en data URL.
+// ponytail: 5 MB cubre un avatar; si se mueven a Storage, bajar a 1 MB.
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 
 // Logging
@@ -92,10 +94,8 @@ if (env.nodeEnv === 'development') {
 }
 
 // Archivos estáticos
-// Los logos son marca pública y los carga una etiqueta <img>, que no manda
-// cabeceras de sesión: se sirven estáticos. El resto —vouchers y documentos de
-// check-in— pasa por una ruta que comprueba que el fichero sea de tu agencia.
-app.use('/uploads/logos', express.static(path.join(__dirname, '../uploads/logos')));
+// Vouchers de proveedor y documentos de check-in: una ruta que comprueba que el fichero sea de tu agencia.
+// Los logos ya no salen de aquí: viven en el bucket privado `logos` y se entregan con URL firmada (spec 011).
 app.use('/uploads', require('./routes/uploads.routes'));
 
 // Rutas

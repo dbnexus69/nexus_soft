@@ -92,4 +92,4 @@ const suplantacionSchema = z.object({
   motivo: z.string().trim().min(10, 'Explica en una frase para qué necesitas entrar').max(300),
 }).strict();
 
-module.exports = { createCompanySchema, updateCompanySchema, suplantacionSchema, SLUGS_RESERVADOS };
+module.exports = { createCompanySchema, updateCompanySchema, suplantacionSchema, SLUGS_RESERVADOS, color };

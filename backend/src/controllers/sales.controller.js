@@ -1,4 +1,5 @@
 const salesService = require('../services/sales.service');
+const voucher = require('../services/voucher');
 const { success, noContent } = require('../utils/apiResponse');
 
 /**
@@ -11,6 +12,12 @@ const { success, noContent } = require('../utils/apiResponse');
  */
 // `suplantando`: si está suplantando, `user.id` no pertenece a esta agencia
 // (ver `createSale`, el asesor de una venta sin asesor explícito).
+exports.voucherUrl = async (req, res, next) => {
+  try {
+    success(res, await voucher.urlDeDescarga(parseInt(req.params.id), alcanceDe(req)));
+  } catch (err) { next(err); }
+};
+
 const alcanceDe = (req) => ({ permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user, suplantando: !!req.suplantacion });
 
 exports.list = async (req, res, next) => {
@@ -175,8 +182,7 @@ exports.listPayments = async (req, res, next) => {
 exports.sendVoucher = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.id);
-    const result = await salesService.sendVoucher(saleId, req.body.pdfBase64, alcanceDe(req));
-    success(res, result);
+    success(res, await voucher.enviarVoucher(saleId, alcanceDe(req)));
   } catch (err) {
     next(err);
   }

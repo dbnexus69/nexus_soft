@@ -43,6 +43,8 @@ router.get('/:id/payments', authorize('sales', 'view'), salesController.listPaym
 // Lectura de productos: la colección completa (la usa el voucher) y una categoría suelta.
 router.get('/:id/products', authorize('sales', 'view'), salesController.getProducts);
 router.get('/:id/products/:category', authorize('sales', 'view'), salesController.getProductsByCategory);
+// El voucher lo genera y lo guarda el servidor (spec 011): la descarga es una URL firmada y el envío no lleva cuerpo.
+router.get('/:id/voucher', authorize('sales', 'view'), salesController.voucherUrl);
 router.post('/:id/send-voucher', authorize('sales', 'view'), salesController.sendVoucher);
 
 // Los productos se crean con la venta (POST /sales) y no se editan ni se borran

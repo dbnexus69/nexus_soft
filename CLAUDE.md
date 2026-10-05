@@ -13,6 +13,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Modo cavernícola (ahorro de tokens).** Respuestas cortas y directas: lo hecho, lo que falla, lo que hay que decidir; sin recapitulaciones, sin repetir lo que el usuario ya sabe, sin explicar lo que el código o el commit ya dicen. Leer solo lo necesario, no volver a leer lo ya leído, y agrupar llamadas. Mismo criterio que `ponytail`: la solución mínima que funciona.
 
+- **No hacer commit ni push sin que el usuario lo pida.** Se termina el cambio y se deja en el árbol de trabajo; el commit y el push (y cualquier merge) solo cuando lo ordene.
+
+- **Pruebas solo cuando hacen falta.** No correr todas las suites por rutina: solo la que cubre lo que se tocó (p. ej. `test:aislamiento-api` si cambió tenencia/permisos, `test:vuelos-api` si cambió vuelos o el alta de ventas, `tsc` si cambió el frontend). Si el cambio no lo requiere (docs, comentarios, textos), no se corre nada. Menos comandos por turno.
+
 - **No abrir ni manejar el navegador sin permiso expreso del usuario.** Sin esa orden no se usan las herramientas del navegador (ni el integrado ni Chrome) ni se levantan servidores para verlo. Se termina la tarea, se comprueba lo que se pueda sin navegador (`tsc`, `check:prisma`, pruebas, la API) y se explica qué hay que hacer en pantalla para probarla.
 
 ## Project overview

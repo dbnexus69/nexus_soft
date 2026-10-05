@@ -203,7 +203,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
               }}
             />
           </FormField>
-          <FormField label="Tarifa Administrativa (TA)">
+          <FormField label="Ganancia">
             <CurrencyInput
               required
               value={hotel.ta === 0 ? "" : hotel.ta}

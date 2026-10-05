@@ -1139,7 +1139,7 @@ export function TicketForm({
               onChange={(val) => onChange({ supplierCost: val === "" ? 0 : Number(val) })}
             />
           </FormField>
-          <FormField label="Valor TA">
+          <FormField label="Ganancia">
             <CurrencyInput
               required
               value={ticket.ta === 0 ? "" : ticket.ta}

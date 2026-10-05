@@ -327,7 +327,7 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
                 </span>
               </div>
               <div className="text-center sm:text-right px-2 border-x border-white/10">
-                <span className="text-xs uppercase font-bold text-emerald-400 block">T.A. Acumulada</span>
+                <span className="text-xs uppercase font-bold text-emerald-400 block">Ganancias Acumuladas</span>
                 <span className="text-xs sm:text-sm font-bold text-emerald-300">
                   ${(Number(form.ta) || 0).toLocaleString("es-CO")}
                 </span>

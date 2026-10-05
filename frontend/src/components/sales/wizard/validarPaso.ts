@@ -140,7 +140,7 @@ export function validarPaso(s: number, form: WizardFormData, data: any, avisar: 
         }
 
         if (plan.supplierCost === undefined || plan.supplierCost <= 0) errors.push("Costo Proveedor (> $0)");
-        if (plan.ta === undefined || plan.ta < 0) errors.push("Valor TA (>= $0)");
+        if (plan.ta === undefined || plan.ta < 0) errors.push("Ganancia (>= $0)");
         if (!plan.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
 
       } else {
@@ -206,7 +206,7 @@ export function validarPaso(s: number, form: WizardFormData, data: any, avisar: 
         }
 
         if (plan.supplierCost === undefined || plan.supplierCost <= 0) errors.push("Costo Proveedor (> $0)");
-        if (plan.ta === undefined || plan.ta < 0) errors.push("Valor TA (>= $0)");
+        if (plan.ta === undefined || plan.ta < 0) errors.push("Ganancia (>= $0)");
         if (!plan.supplierPaymentMethod) errors.push("Método de Pago Proveedor (requerido)");
       }
 
@@ -390,7 +390,7 @@ export function validarPaso(s: number, form: WizardFormData, data: any, avisar: 
       if (rest.dateTime && new Date(rest.dateTime) < now) errors.push("Fecha y Hora no puede ser pasada");
 
       if (rest.ta === undefined || rest.ta <= 0) {
-        errors.push("Tarifa Admin (TA) obligatoria (> $0)");
+        errors.push("Ganancia obligatoria (> $0)");
       }
     });
 

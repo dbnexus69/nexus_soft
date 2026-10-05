@@ -273,7 +273,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
             />
           </div>
         </FormField>
-        <FormField label="T.A (Tarifa Admin)">
+        <FormField label="Ganancia">
           <div className="relative group">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
             <CurrencyInput 
@@ -306,7 +306,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
       <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm animate-fade-in">
         <div className="flex flex-col">
           <span className="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tighter">Costo Total para la Agencia</span>
-          <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">(Costo Proveedor + Tarifa Administrativa)</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">(Costo Proveedor + Ganancia)</span>
         </div>
         <div className="flex flex-col items-end">
           <span className="text-lg font-black text-emerald-900 dark:text-emerald-300 leading-none">

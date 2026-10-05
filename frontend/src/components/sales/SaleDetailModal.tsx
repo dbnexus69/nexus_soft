@@ -273,7 +273,7 @@ export default function SaleDetailModal({ isOpen, onClose, selectedSale }: SaleD
               <Meta etiqueta="Responsable" valor={(sale as any).responsableName} />
               <Meta etiqueta="Fecha" valor={sale.date ? formatDate(sale.date) : null} />
               <Meta etiqueta="Costo proveedor" valor={cifras.costo ? formatCurrency(cifras.costo) : null} />
-              <Meta etiqueta="TA" valor={sale.ta ? formatCurrency(sale.ta) : null} />
+              <Meta etiqueta="Ganancia" valor={sale.ta ? formatCurrency(sale.ta) : null} />
               <Meta etiqueta="IVA" valor={cifras.iva ? formatCurrency(cifras.iva) : null} />
               <Meta etiqueta="Ganancia neta" valor={formatCurrency(cifras.ganancia)} />
               <Meta etiqueta="Comisionista" valor={sale.commissionAgentName} />

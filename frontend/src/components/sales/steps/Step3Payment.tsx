@@ -367,7 +367,7 @@ export function Step3Payment({ form, set, data, errors }: Props) {
 
         {form.commissionAgentId && (
           <>
-            <FormField label="% Comisión Bruta (sobre T.A.)">
+            <FormField label="% Comisión Bruta (sobre la ganancia)">
               <Input
                 type="number"
                 className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"

@@ -202,7 +202,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               }
             />
           </FormField>
-          <FormField label="Valor TA">
+          <FormField label="Ganancia">
             <CurrencyInput
               required
               value={insurance.ta === 0 ? "" : insurance.ta}

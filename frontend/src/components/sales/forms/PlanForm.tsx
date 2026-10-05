@@ -368,7 +368,7 @@ export function PlanForm({
               }
             />
           </FormField>
-          <FormField label="Valor TA">
+          <FormField label="Ganancia">
             <CurrencyInput
               required
               value={plan.ta === 0 ? "" : plan.ta}

@@ -3,6 +3,13 @@ const path = require('path');
 const prisma = require('../config/db');
 const { buildMeta } = require('../utils/paginationHelper');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
+
+// Por qué no se marcó un check-in como realizado: el correo al cliente no salió.
+const MOTIVO_SIN_ENVIO = {
+  sin_correo: 'El cliente no tiene correo registrado: regístralo para enviarle el check-in',
+  error_adjunto: 'No se pudo adjuntar el archivo al correo: vuelve a intentarlo',
+  error_envio: 'No se pudo enviar el correo al cliente: vuelve a intentarlo',
+};
 const emailService = require('../utils/emailService');
 const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
 
@@ -871,9 +878,17 @@ class FlightsService {
       filename: f.originalname,
     }));
 
-    // El correo va DESPUÉS del commit: es una llamada de red, y dentro de la
-    // transacción la mantendría abierta durante segundos y un fallo haría
-    // rollback de un check-in que el operador ya da por hecho.
+    // El check-in se da por realizado cuando el cliente lo recibe: el correo va ANTES de guardar y, si no
+    // sale (cliente sin correo, adjunto ilegible o fallo de envío), el tramo sigue pendiente y se responde un
+    // 400 que dice por qué. Fuera de la transacción: es una llamada de red y la mantendría abierta segundos.
+    // Volver a pendiente no envía nada.
+    const correo = realizado
+      ? await this._enviarCheckin(tramo, venta, docs)
+      : { emailSent: false, emailStatus: 'no_aplica', emailError: null, emailTo: null };
+    if (realizado && !correo.emailSent) {
+      throw new BadRequestError(MOTIVO_SIN_ENVIO[correo.emailStatus] || 'No se pudo enviar el check-in al cliente');
+    }
+
     const { productStatus } = await prisma.transaccion(async (tx) => {
       await tx.tramos_vuelo.update({
         where: { id: tramo.id },
@@ -899,10 +914,6 @@ class FlightsService {
       where: { id: tramo.id },
       select: { checkin_status: true, checkin_at: true, checkin_docs: true },
     });
-
-    const correo = realizado
-      ? await this._enviarCheckin(tramo, venta, docs)
-      : { emailSent: false, emailStatus: 'no_aplica', emailError: null, emailTo: null };
 
     return {
       id: tramo.id,
@@ -1091,9 +1102,7 @@ class FlightsService {
   /**
    * Envía los documentos del check-in al correo del cliente.
    *
-   * Nunca lanza: un cliente sin correo, o un fallo de Resend, no puede tumbar
-   * un check-in que ya está guardado. El resultado viaja en la respuesta para
-   * que la pantalla pueda avisar.
+   * Nunca lanza: devuelve cómo fue, y quien la llama decide (sin envío, el check-in no se guarda).
    */
   async _enviarCheckin(tramo, venta, docs) {
     const persona = venta?.clientes?.personas;

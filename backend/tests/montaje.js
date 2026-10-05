@@ -58,7 +58,7 @@ const una = (status, ...validos) => validos.includes(status);
 
 async function levantarServidor() {
   servidor = spawn(process.execPath, ['src/index.js'], {
-    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO) }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let salida = '';
   servidor.stderr.on('data', d => { salida += d; });

@@ -170,7 +170,7 @@ export function ModalEnviarCheckin({ abierto, enviando, vuelo, cliente, aeroline
 
         <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700">
           <AlertCircle size={14} className="shrink-0 mt-0.5" />
-          <p>Al confirmar, el documento se enviará automáticamente al correo registrado del cliente.</p>
+          <p>Al confirmar se envía al correo registrado del cliente. Si no tiene correo o el envío falla, el check-in sigue pendiente.</p>
         </div>
       </div>
     </Modal>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plane, X, UserCheck, Search, Filter, AlertCircle, Clock, CheckCircle2, XCircle, Package, MessageCircle } from 'lucide-react';
+import { Plane, X, UserCheck, Search, Filter, AlertCircle, Clock, CheckCircle2, XCircle, Package } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -220,60 +220,28 @@ export function ListaCheckin({ refresco, onCambio, onContadores, avisar }: Props
     }
   };
 
-  const [marcandoId, setMarcandoId] = useState<string | null>(null);
-
-  // El check-in "a mano", sin modal ni adjunto: el pasajero lo hizo por WhatsApp
-  // u otro canal ajeno a la aerolínea, y aquí solo queda dejar constancia. El
-  // flujo con el modal (`handleMarkCheckin`) sigue para cuando sí hay un
-  // comprobante que adjuntar.
-  const handleQuickCheckin = async (flight: Flight) => {
-    if (!canEditItinerary('itineraries')) return;
-    setMarcandoId(flight.id);
-    try {
-      await updateFlight(flight.id, { checkin: 'realizado' });
-      onCambio();
-      avisar(true, `Check-in de ${flight.passenger} registrado (realizado por otro medio)`, 3000);
-    } catch (err: any) {
-      avisar(false, err?.response?.data?.error?.message || 'No se pudo registrar el check-in', 5000);
-    } finally {
-      setMarcandoId(null);
-    }
-  };
-
   const confirmCheckin = async () => {
     if (!selectedFlightForCheckin) return;
 
     setIsSending(true);
     try {
-      let resultado: { emailStatus?: string } | undefined;
       if (checkinFiles.length > 0) {
         const formData = new FormData();
         formData.append('checkin', 'realizado');
         checkinFiles.forEach(file => {
           formData.append('files', file);
         });
-        resultado = await updateFlight(selectedFlightForCheckin.id, formData);
+        await updateFlight(selectedFlightForCheckin.id, formData);
       } else {
-        resultado = await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
+        await updateFlight(selectedFlightForCheckin.id, { checkin: 'realizado' });
       }
       setIsCheckinModalOpen(false);
       // Las listas viven en el servidor: se releen en vez de parchearse aquí.
       onCambio();
-      // El check-in ya está guardado; lo que puede fallar es el aviso al
-      // cliente, y eso no puede darse por enviado en silencio.
-      const AVISO_CORREO: Record<string, string> = {
-        sin_correo: 'El cliente no tiene correo: no se le envió el aviso.',
-        error_adjunto: 'No se pudo adjuntar el archivo al correo: el cliente no recibió el aviso.',
-        error_envio: 'No se pudo enviar el correo al cliente.',
-      };
-      const avisoCorreo = AVISO_CORREO[resultado?.emailStatus ?? ''];
-      const correoFallo = !!avisoCorreo;
-      avisar(
-        true,
-        `Check-in realizado para ${selectedFlightForCheckin.passenger}` + (avisoCorreo ? `. ${avisoCorreo}` : ''),
-        correoFallo ? 6000 : 3000,
-      );
+      avisar(true, `Check-in enviado a ${selectedFlightForCheckin.passenger} y marcado como realizado`, 3000);
     } catch (err: any) {
+      // Si el correo no salió (cliente sin correo, fallo de envío), el servidor no lo marca y dice por qué;
+      // el diálogo se queda abierto para reintentar.
       const msg = err?.response?.data?.error?.message || 'Error al realizar check-in';
       avisar(false, msg, 5000);
     } finally {
@@ -443,18 +411,6 @@ export function ListaCheckin({ refresco, onCambio, onContadores, avisar }: Props
                                   >
                                     <UserCheck size={16} /> Realizar Check-in
                                   </Button>
-                                  {/* Para cuando el check-in se hizo por WhatsApp u otro
-                                      medio ajeno a la aerolínea: deja constancia sin pasar
-                                      por el modal de adjuntar comprobante. */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleQuickCheckin(flight)}
-                                    disabled={marcandoId === flight.id}
-                                    title="El pasajero ya hizo el check-in por WhatsApp u otro medio"
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/50 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors whitespace-nowrap disabled:opacity-50"
-                                  >
-                                    <MessageCircle size={14} /> {marcandoId === flight.id ? 'Marcando…' : 'Check-in realizado'}
-                                  </button>
                                 </>
                               ) : null}
                               {/* Los vuelos de paquete también se cancelan con motivo (spec 004, T6). */}

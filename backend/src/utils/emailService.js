@@ -61,6 +61,8 @@ async function marcaDeCorreo() {
  * @returns {Promise<{success: boolean, data?: Object, error?: Object}>}
  */
 const sendEmail = async ({ to, subject, html, attachments = [], remitente }) => {
+  // Solo para las pruebas por la API (tests/montaje.js arranca el servidor con esta variable): no sale nada.
+  if (process.env.EMAIL_SIMULADO === '1') return { success: true, data: { simulado: true, to } };
   try {
     const marca = remitente || await marcaDeCorreo();
 

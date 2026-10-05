@@ -33,7 +33,7 @@ async function main() {
 
   const cliA = (await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Vuelos', docTypeId: 1, docNumber: '930000001' })).json?.data;
   const cliB = (await pedir('POST', '/clients', tokB, { firstName: 'Cliente', lastName: 'Ajeno', docTypeId: 1, docNumber: '930000002' })).json?.data;
-  comprobar('cada agencia tiene su cliente (sin correo: el check-in no envía nada)', cliA?.id && cliB?.id);
+  comprobar('cada agencia tiene su cliente (A, de momento, sin correo)', cliA?.id && cliB?.id);
   const vender = (tok, cliente, productos) => pedir('POST', '/sales', tok, {
     clientId: cliente.id, total: 1, status: 'credito', creditDueDate: `${dia(60)}T00:00:00.000Z`, ...productos,
   });
@@ -102,8 +102,15 @@ async function main() {
   // ── 4. Check-in de un tramo
   console.log('\n  Check-in');
   const tramoRt = rt.find(f => f.type === 'ida');
+  // Sin correo del cliente el check-in no se le puede enviar, así que no se marca como realizado.
+  const sinCorreo = await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, { checkin: 'realizado' });
+  const tramoTras = await admin.tramos_vuelo.findUnique({ where: { id: tramoRt.id }, select: { checkin_status: true } });
+  comprobar('cliente sin correo: 400 y el tramo sigue pendiente',
+    sinCorreo.status === 400 && tramoTras.checkin_status !== 'realizado', `HTTP ${sinCorreo.status}, ${tramoTras.checkin_status}`);
+  const conCorreo = await pedir('PUT', `/clients/${cliA.id}`, tokA, { email: 'cliente-vuelos@prueba.local' });
+  comprobar('se le registra un correo al cliente', conCorreo.status === 200, `HTTP ${conCorreo.status}`);
   const hecho = await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, { checkin: 'realizado' });
-  comprobar('registrar el check-in: realizado', hecho.status === 200 && hecho.json?.data?.checkinStatus === 'realizado', `HTTP ${hecho.status}`);
+  comprobar('registrar el check-in: realizado', hecho.status === 200 && hecho.json?.data?.checkinStatus === 'realizado' && hecho.json?.data?.emailSent === true, `HTTP ${hecho.status}`);
   const revertido = await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, { checkin: 'pendiente' });
   comprobar('revertirlo: pendiente', revertido.json?.data?.checkinStatus === 'pendiente');
   for (const malo of ['cancelado', 'critico']) {

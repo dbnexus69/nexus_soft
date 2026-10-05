@@ -17,7 +17,7 @@ lerna-debug.log*
 .env.development
 .env.test
 .env*.local
-.env.example
+# .env.example SÍ se versiona: es la plantilla de las variables (sin valores).
 
 # IDEs / Editors / System Files
 .vscode/
@@ -99,6 +99,12 @@ coverage/
 .agents/**/node_modules/
 .agents/**/__pycache__/
 .agents/**/*.pyc
+# Caché de Python que generan los scripts de las skills al usarlas (p. ej. ui-ux-pro-max).
+**/__pycache__/
+*.pyc
+# Los datos de las skills son CSV: el *.csv de arriba los dejaba fuera y la búsqueda de ui-ux-pro-max
+# no funcionaba en un clon nuevo.
+!.claude/skills/**/*.csv
 
 # ==========================================
 # Temporales de trabajo y respaldos

@@ -48,6 +48,23 @@ No es opcional. `prisma db push` y `prisma generate --sql` usan `directUrl`, y c
 host viejo los dos fallan con `P1001 Can't reach database server`. Como `pnpm build`
 ejecuta `prisma generate --sql`, sin este valor no se puede ni generar el cliente.
 
+### Archivos en Supabase Storage (spec 011)
+
+Los logos y los vouchers viven en dos buckets **privados** de Supabase Storage, `logos` y `vouchers`, con una carpeta por
+empresa (`<empresa_id>/…`). Solo los toca el backend, con estas variables en `backend/.env`:
+
+- `SUPABASE_URL` — la URL del proyecto, `https://<ref>.supabase.co` (no la clave *publishable*).
+- `SUPABASE_SERVICE_ROLE_KEY` — la clave `service_role`. Salta las políticas de Storage, así que nunca sale del backend; el
+  aislamiento entre agencias lo pone `src/utils/almacenamiento.js`, que antepone siempre la carpeta de la empresa del token.
+
+Los buckets se crean (o se ajustan) con `pnpm storage:buckets`. El navegador nunca recibe la ruta de un objeto: recibe una URL
+firmada que caduca (1 h el logo, 5 min un voucher).
+
+El **voucher** se genera en el servidor con `pdfmake` (`src/services/voucher/`), con la marca de la agencia: logo, colores,
+datos de contacto, términos y pie, que el admin edita en *Mi empresa*. Cada PDF se guarda con un hash de su contenido; si
+nada cambió se reutiliza, y si cambió algo (un abono, otro logo) se genera otro. Los envíos al cliente quedan en
+`vouchers_venta`, solo cuando el correo salió.
+
 ## Convenciones de la API
 
 ### Paginación

@@ -1,6 +1,6 @@
 # Spec 011 — Perfil de la empresa y voucher personalizable
 
-**Estado:** diseño, pendiente de revisión · **Rama:** `feat-bayrol` · **Toca la base compartida** (columnas nuevas en
+**Estado:** implementada (2026-10-04), pendiente de probar en pantalla · **Rama:** `feat-bayrol` · **Toca la base compartida** (columnas nuevas en
 `empresas` y una tabla nueva) · **Relacionadas:** [`001`](../001-multi-tenant/spec.md) (tenancy, RLS),
 [`003`](../003-validacion-de-datos-de-personas/spec.md) (reglas de NIT y teléfono), [`005`](../005-iva-sobre-ta/spec.md)
 (IVA aparte en el resumen)

@@ -88,12 +88,15 @@ real sigue pasando, como siempre, por `POST /sales` (spec 002, T15: una venta se
 entera, en una sola transacción) — convertir no crea un segundo camino para escribir
 una venta, solo precarga el primero.
 
-### 6. El PDF reutiliza el mecanismo del voucher
+### 6. El PDF se genera en el servidor, como el voucher
 
-`VoucherPDF.tsx` ya genera un documento con la marca de la agencia
-(`GET /branding`) para una venta. Una `QuotePDF.tsx` nueva sigue el mismo patrón
-—mismos colores derivados, mismo renderizado a imagen—, con su propio maquetado
-porque una cotización no tiene pasajeros ni tramos que mostrar.
+El voucher ya no se construye en el navegador: `services/voucher/plantilla.js`
+(spec 011) arma un documento `pdfmake` con el perfil de la agencia y lo cachea en
+Supabase Storage (`services/voucher/index.js`, URL firmada de 5 minutos). Una
+cotización sigue el mismo camino: una plantilla propia en `services/quotes/` que
+reutiliza `services/voucher/` para la marca y el almacenamiento, sin `QuotePDF.tsx`
+en el navegador. Su maquetado es distinto porque una cotización no tiene pasajeros
+ni tramos que mostrar.
 
 ### 7. Permisos
 

@@ -53,9 +53,11 @@ tarifa vigente, costo, TA), ver totales en vivo (mismo cálculo que ya usa
 `useSaleCalculations.ts`, si se puede compartir). Botones: guardar, enviar, marcar
 aceptada/rechazada, duplicar, convertir en venta, descargar PDF.
 
-## T7 · `QuotePDF.tsx` `[ ]`
+## T7 · Plantilla PDF de la cotización (servidor) `[ ]`
 
-El documento que recibe el cliente, mismo mecanismo de marca que `VoucherPDF.tsx`.
+El documento que recibe el cliente, generado en el servidor con `pdfmake` y la
+marca de la agencia, igual que el voucher (`services/voucher/`, spec 011). No hay
+`VoucherPDF.tsx` en el navegador: se eliminó en la rama de Bayrol.
 
 ## T8 · Convertir en venta, de punta a punta `[ ]`
 

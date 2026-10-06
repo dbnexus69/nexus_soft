@@ -142,7 +142,9 @@ export default function Sales() {
     setIsPdfGenerating(true);
     try {
       const { url } = await api.getVoucherUrl(voucherSale.id);
-      window.open(url, '_blank', 'noopener');
+      // Navegar a la URL y no `window.open`: tras el `await` ya no cuenta como clic del usuario y el bloqueador
+      // de ventanas emergentes lo frenaba en silencio. La URL responde como adjunto, así que la página no se va.
+      window.location.assign(url);
       setVoucherSale(null);
     } catch (err: any) {
       setSuccessMessage(err?.response?.data?.error?.message || 'No se pudo generar el voucher');

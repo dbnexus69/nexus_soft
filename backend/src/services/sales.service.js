@@ -334,6 +334,23 @@ class SalesService {
   _validarTiquetes(ticketData, catalogos) {
     const detalles = [];
     ticketData.forEach((t, i) => {
+      // La reserva va por pasajero (spec 012): el titular la lleva; los demás, si no traen, heredan la suya. Un
+      // borrador de antes trae la reserva arriba (`reservationNumber`) y se le pasa al titular.
+      const pasajeros = Array.isArray(t.passengers) ? t.passengers : [];
+      const titular = pasajeros.find(p => p?.esTitular) || pasajeros[0];
+      if (titular && !String(titular.nroReserva || t.reservationNumber || '').trim()) {
+        detalles.push({
+          field: `ticketData.${i}.passengers.${pasajeros.indexOf(titular)}.nroReserva`,
+          message: 'El número de reserva del titular es obligatorio',
+        });
+      }
+      // Cada asiento apunta a un tramo del tiquete, por su orden (el mismo que guarda `ventaProductos.js`).
+      const nTramos = (t.legs || []).length + (t.outboundStops || []).length + (t.returnLeg ? 1 : 0) + (t.returnStops || []).length;
+      pasajeros.forEach((p, j) => (Array.isArray(p?.asientos) ? p.asientos : []).forEach((a, k) => {
+        if (Number(a?.tramo) > nTramos) {
+          detalles.push({ field: `ticketData.${i}.passengers.${j}.asientos.${k}.tramo`, message: `El tiquete solo tiene ${nTramos} tramo(s)` });
+        }
+      }));
       const tramos = [
         ...(t.legs || []).map((l, j) => [`legs.${j}`, l]),
         ...(t.outboundStops || []).map((l, j) => [`outboundStops.${j}`, l]),

@@ -224,7 +224,7 @@ async function main() {
   // ── 5c. El dashboard de B (agencia sin más ventas que las de esta sección y la mínima de arriba)
   console.log('\n  Dashboard');
   const pax = (n) => Array.from({ length: n }, (_, k) => ({ name: `Viajero ${k} Prueba`, docType: 'CC', docNumber: String(1030000000 + k) }));
-  const tiquete = (pasajeros) => ({ ta: 50000, supplierCost: 300000, flightMode: 'one_way',
+  const tiquete = (pasajeros) => ({ ta: 50000, supplierCost: 300000, flightMode: 'one_way', reservationNumber: 'DASH01',
     legs: [{ origin: 'BOG', destination: 'MDE', date: '2027-03-10', departureTime: '08:00' }], passengers: pasajeros });
   const dashAntes = (await pedir('GET', '/stats/dashboard', tokB)).json?.data;
   const vTiq = await pedir('POST', '/sales', tokB, ventaMinima(cliB.id, {

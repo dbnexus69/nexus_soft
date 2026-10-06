@@ -21,7 +21,7 @@ const pax = (n, base) => Array.from({ length: n }, (_, i) => ({
   name: `Viajero ${base}${i} Prueba`, docType: 'CC', docNumber: String(1040000000 + base * 10 + i), esTitular: i === 0,
 }));
 const tramo = (origin, destination, n, hora = '08:00', extra = {}) => ({ origin, destination, date: dia(n), departureTime: hora, ...extra });
-const tiquete = (legs, extra = {}) => ({ ta: 50000, supplierCost: 300000, flightMode: 'one_way', legs, passengers: pax(1, 1), ...extra });
+const tiquete = (legs, extra = {}) => ({ ta: 50000, supplierCost: 300000, flightMode: 'one_way', reservationNumber: 'RES001', legs, passengers: pax(1, 1), ...extra });
 
 async function main() {
   console.log('  Montando dos agencias y arrancando el servidor…');
@@ -188,6 +188,44 @@ async function main() {
     ventaGrupo.status === 201 && lineas.length === 3
       && lineas.every(l => l.prod_tiqueteria?.tramos_vuelo.length === 6 && l.pasajeros_detalle.length === 8) && segundos < 15,
     `HTTP ${ventaGrupo.status}, ${segundos.toFixed(1)} s`);
+
+  await asientosYReserva(tokA, cliA, vender);
+}
+
+async function asientosYReserva(tokA, cliA, vender) {
+  // ── 10. Asientos por pasajero y tramo, y reserva por pasajero (spec 012)
+  console.log('\n  Asientos y reserva por pasajero');
+  const legs = [tramo('BOG', 'MDE', 30), tramo('MDE', 'BOG', 34, '18:00')];
+  const pasajeros = [
+    { name: 'Titular Asientos Prueba', docType: 'CC', docNumber: '1040009901', esTitular: true, nroReserva: 'TIT123',
+      asientos: [{ tramo: 1, asiento: '12a' }, { tramo: 2, asiento: '14B' }] },
+    { name: 'Acompana Asientos Prueba', docType: 'CC', docNumber: '1040009902', asientos: [{ tramo: 1, asiento: '12C' }, { tramo: 2, asiento: '14C' }] },
+  ];
+  const ok = await vender(tokA, cliA, { ticketData: [tiquete(legs, { flightMode: 'round_trip', reservationNumber: undefined, passengers: pasajeros })] });
+  const filas = await admin.pasajeros_detalle.findMany({
+    where: { detalle_venta: { venta_id: ok.json?.data?.id } }, orderBy: { es_titular: 'desc' },
+    select: { asientos: true, nro_reserva: true },
+  });
+  const tiq = await admin.prod_tiqueteria.findFirst({ where: { detalle_venta: { venta_id: ok.json?.data?.id } }, select: { nro_reserva: true } });
+  comprobar('dos pasajeros y dos tramos: se guardan los cuatro asientos (en mayúsculas)',
+    ok.status === 201 && JSON.stringify(filas.map(f => f.asientos)) === JSON.stringify([
+      [{ tramo: 1, asiento: '12A' }, { tramo: 2, asiento: '14B' }], [{ tramo: 1, asiento: '12C' }, { tramo: 2, asiento: '14C' }]]),
+    `HTTP ${ok.status} ${JSON.stringify(ok.json?.error?.details || '')}`);
+  comprobar('el acompañante sin reserva hereda la del titular, y el tiquete también',
+    filas.every(f => f.nro_reserva === 'TIT123') && tiq?.nro_reserva === 'TIT123');
+  const detalle = await pedir('GET', `/sales/${ok.json?.data?.id}/products/ticket`, tokA);
+  comprobar('el detalle devuelve los asientos de cada pasajero',
+    (detalle.json?.data?.[0]?.passengers || []).every(p => Array.isArray(p.asientos) && p.asientos.length === 2), `HTTP ${detalle.status}`);
+
+  const malTramo = await vender(tokA, cliA, { ticketData: [tiquete(legs, { reservationNumber: undefined,
+    passengers: [{ ...pasajeros[0], asientos: [{ tramo: 3, asiento: '1A' }] }] })] });
+  comprobar('un asiento en un tramo que no existe: 422 en su campo',
+    malTramo.status === 422 && (malTramo.json?.error?.details || []).some(d => d.field === 'ticketData.0.passengers.0.asientos.0.tramo'),
+    `HTTP ${malTramo.status}`);
+  const sinReserva = await vender(tokA, cliA, { ticketData: [tiquete(legs, { reservationNumber: undefined,
+    passengers: [{ ...pasajeros[0], nroReserva: '' }] })] });
+  comprobar('titular sin reserva: 422', sinReserva.status === 422
+    && (sinReserva.json?.error?.details || []).some(d => d.field === 'ticketData.0.passengers.0.nroReserva'), `HTTP ${sinReserva.status}`);
 }
 
 ejecutar('Vuelos y check-in por la API', PREFIJO, main);

@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 export const passengerSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
@@ -6,7 +6,7 @@ export const passengerSchema = z.object({
   docNumber: z.string().optional(),
   birthDate: z.string().optional(),
   esTitular: z.boolean().optional(),
-  asiento: z.string().optional(),
+  asientos: z.array(z.object({ tramo: z.number(), asiento: z.string() })).optional(),
   nroReserva: z.string().optional(),
   nroTiquete: z.string().optional()
 }).refine(data => data.name.trim().length > 0, {
@@ -20,16 +20,11 @@ export const flightLegSchema = z.object({
   flightNumber: z.string().min(3, "Mínimo 3 caracteres").max(6, "Máximo 6 caracteres"),
   date: z.string().min(1, "Fecha de salida requerida"),
   arrivalDate: z.string().min(1, "Fecha de llegada requerida"),
-  seat: z.string().optional()
-}).refine(data => !data.seat || (data.seat.length >= 2 && data.seat.length <= 5), {
-  message: "Silla inválida (2-5 caracteres)",
-  path: ["seat"]
 });
 
 export const ticketSchema = z.object({
   airline: z.string().min(1, "Aerolínea requerida"),
   supplier: z.string().min(1, "Proveedor requerido"),
-  reservationNumber: z.string().length(6, "Debe tener 6 caracteres").regex(/^[A-Z0-9]+$/, "Alfanumérico mayúsculas"),
   flightMode: z.enum(["one_way", "round_trip"]),
   hasStops: z.boolean().optional(),
   returnHasStops: z.boolean().optional(),
@@ -47,6 +42,14 @@ export const ticketSchema = z.object({
 }).superRefine((data, ctx) => {
   // Validar titularidad y tiquete
   const titular = data.passengers.find(p => p.esTitular) || data.passengers[0];
+  // La reserva va por pasajero (spec 012): la del titular es obligatoria; los demás heredan la suya.
+  if (!titular.nroReserva || !/^[A-Z0-9]{5,10}$/.test(titular.nroReserva.trim())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "N° de reserva del titular inválido (5-10 letras o números)",
+      path: ["passengers", "titular", "nroReserva"]
+    });
+  }
   if (!titular.nroTiquete || titular.nroTiquete.trim().length < 8 || titular.nroTiquete.trim().length > 16) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

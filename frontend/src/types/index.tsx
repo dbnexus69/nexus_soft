@@ -399,6 +399,8 @@ export interface TicketData {
     docNumber: string;
     birthDate: string;
     esTitular?: boolean;
+    /** Un asiento por tramo, por su orden en el tiquete (spec 012). `asiento` es de borradores viejos y se ignora. */
+    asientos?: { tramo: number; asiento: string }[];
     asiento?: string;
     nroReserva?: string;
     nroTiquete?: string;

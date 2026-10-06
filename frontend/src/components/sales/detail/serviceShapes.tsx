@@ -67,7 +67,8 @@ const Datos = memo(function Datos({ items }: { items: [string, any][] }) {
  * Lista de personas. Aparece en cinco categorías con nombres de campo
  * distintos (`guests`, `travelers`, `passengers`), así que se normaliza aquí.
  */
-const Personas = memo(function Personas({ titulo, gente }: { titulo: string; gente?: any[] }) {
+// `tramos`: en un tiquete, para poner junto a cada pasajero su reserva y su asiento en cada tramo (spec 012).
+const Personas = memo(function Personas({ titulo, gente, tramos }: { titulo: string; gente?: any[]; tramos?: any[] }) {
   if (!gente?.length) return null;
   return (
     <div>
@@ -79,8 +80,19 @@ const Personas = memo(function Personas({ titulo, gente }: { titulo: string; gen
             className="text-xs bg-white dark:bg-slate-800 border border-gray-border dark:border-slate-700 rounded-full pl-2.5 pr-2 py-1 text-primary dark:text-slate-200"
           >
             {p.name || p.nombreCompleto || guion}
-            {p.docNumber ? (
-              <span className="text-accent dark:text-slate-500 ml-1.5">{p.docNumber}</span>
+            {p.docNumber || p.nroDocumento ? (
+              <span className="text-accent dark:text-slate-500 ml-1.5">{p.docNumber || p.nroDocumento}</span>
+            ) : null}
+            {tramos ? (
+              <span className="text-accent dark:text-slate-500 ml-1.5">
+                {unir([
+                  p.nroReserva ? `Reserva ${p.nroReserva}` : null,
+                  ...tramos.map((l, k) => {
+                    const asiento = (p.asientos || []).find((a: any) => Number(a.tramo) === k + 1)?.asiento || l.seat;
+                    return asiento ? `${l.origin}→${l.destination} ${asiento}` : null;
+                  }),
+                ])}
+              </span>
             ) : null}
           </li>
         ))}
@@ -186,7 +198,7 @@ export const FORMAS: Record<string, Forma> = {
         if (l.destination) paradas.push(l.destination);
       }
       const ruta = paradas.join(" → ");
-      const pax = (t.passengers || []).map((p: any) => p.name).filter(Boolean);
+      const pax = (t.passengers || []).map((p: any) => p.name || p.nombreCompleto).filter(Boolean);
       return {
         titulo: ruta || t.flightNumber || "Vuelo",
         meta: unir([pax.join(", "), t.reservationNumber, MODO_VUELO[t.flightMode]]),
@@ -204,7 +216,7 @@ export const FORMAS: Record<string, Forma> = {
           ["Modo", MODO_VUELO[t.flightMode] || t.flightMode],
           ["Check-in", ESTADO_CHECKIN[t.checkinStatus] || t.checkinStatus],
         ]} />
-        <Personas titulo="Pasajeros" gente={t.passengers} />
+        <Personas titulo="Pasajeros" gente={t.passengers} tramos={t.legs || []} />
       </Bloque>
     ),
   },

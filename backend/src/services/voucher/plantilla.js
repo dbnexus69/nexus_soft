@@ -9,7 +9,7 @@ const TERMINOS_POR_DEFECTO = require('./terminosPorDefecto');
  * contacto, términos y pie). Cada categoría de producto es una entrada de `SECCIONES`: título y pares
  * etiqueta/valor; un valor vacío no se pinta. Subir `PLANTILLA_VERSION` cuando cambie el diseño invalida la caché.
  */
-const PLANTILLA_VERSION = 1;
+const PLANTILLA_VERSION = 2;
 
 const vfs = (vfsFuentes.pdfMake && vfsFuentes.pdfMake.vfs) || vfsFuentes.vfs || vfsFuentes;
 const fuente = (archivo) => Buffer.from(vfs[archivo], 'base64');
@@ -161,10 +161,19 @@ function bloqueTiquete(t, aeropuertos, c) {
     });
   }
   if (t.passengers?.length) {
+    // El asiento de cada pasajero en cada tramo (spec 012); en ventas anteriores, el del tramo.
+    const asientosDe = (p) => tramos.map((l, k) => {
+      const propio = (p.asientos || []).find(a => Number(a.tramo) === k + 1)?.asiento;
+      const asiento = propio || l.seat;
+      return asiento ? `${l.origin}→${l.destination} ${asiento}` : null;
+    }).filter(Boolean).join('  ·  ') || '—';
     contenido.push({
-      table: { headerRows: 1, widths: ['*', 'auto', 'auto', 'auto'],
-        body: [['Pasajero', 'Documento', 'Tiquete', 'Asiento'].map(h => ({ text: h, style: 'cabecera', fillColor: c.fondo })),
-          ...t.passengers.map(p => [`${p.name || '—'}${p.esTitular ? ' (titular)' : ''}`, p.docNumber || '—', p.nroTiquete || '—', p.asiento || '—'])] },
+      table: { headerRows: 1, widths: ['*', 'auto', 'auto', 'auto', '*'],
+        body: [['Pasajero', 'Documento', 'Reserva', 'Tiquete', 'Asientos'].map(h => ({ text: h, style: 'cabecera', fillColor: c.fondo })),
+          ...t.passengers.map(p => [
+            `${p.name || p.nombreCompleto || '—'}${p.esTitular ? ' (titular)' : ''}`,
+            p.docNumber || p.nroDocumento || '—', p.nroReserva || '—', p.nroTiquete || '—', asientosDe(p),
+          ])] },
       layout: 'lightHorizontalLines', fontSize: 8, margin: [0, 0, 0, 6],
     });
   }

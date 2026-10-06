@@ -8,7 +8,10 @@ module.exports = {
       { origin: 'BOG', destination: 'CTG', flightNumber: 'AV9620', date: '2026-12-18', time: '07:30', arrivalTime: '08:55' },
       { origin: 'CTG', destination: 'BOG', flightNumber: 'AV9625', date: '2026-12-23', time: '18:10', arrivalTime: '19:40' },
     ],
-    passengers: [{ name: 'Laura Gómez', docNumber: '1020304050', esTitular: true }, { name: 'Andrés Gómez', docNumber: '1020304051' }],
+    passengers: [
+      { name: 'Laura Gómez', docNumber: '1020304050', esTitular: true, nroReserva: 'XK7P2Q', asientos: [{ tramo: 1, asiento: '14A' }, { tramo: 2, asiento: '9A' }] },
+      { name: 'Andrés Gómez', docNumber: '1020304051', nroReserva: 'XK7P2Q', asientos: [{ tramo: 1, asiento: '14B' }, { tramo: 2, asiento: '9B' }] },
+    ],
   }],
   hotelData: [{
     hotelName: 'Hotel Caribe', destination: 'Cartagena', hotelType: 'hotel', reservationNumber: 'HC-55821',

@@ -84,6 +84,24 @@ const STEPS = [
  * Un voucher adjunto llega del formulario como data URL (`VoucherField` lo lee
  * con FileReader). Para subirlo como archivo hay que devolverlo a binario.
  */
+/**
+ * Un borrador guardado antes de la spec 012 traía la reserva arriba del tiquete: se le pasa al titular si no tiene.
+ * El asiento suelto de cada pasajero (`asiento`) se ignora: ahora va uno por tramo (`asientos`).
+ */
+function borradorAlDia(form: WizardFormData): WizardFormData {
+  return {
+    ...form,
+    tickets: (form.tickets || []).map((t) => {
+      if (!t.reservationNumber) return t;
+      const iTitular = Math.max(0, (t.passengers || []).findIndex((p) => p.esTitular));
+      return {
+        ...t,
+        passengers: (t.passengers || []).map((p, i) => (i === iTitular && !p.nroReserva ? { ...p, nroReserva: t.reservationNumber } : p)),
+      };
+    }),
+  };
+}
+
 function dataUrlABlob(dataUrl: string): Blob {
   const [cabecera, datos = ""] = dataUrl.split(",");
   const tipo = /data:([^;]+)/.exec(cabecera)?.[1] || "application/octet-stream";
@@ -112,7 +130,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     const saved = localStorage.getItem(draftKey);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return borradorAlDia(JSON.parse(saved));
       } catch (e) {
         return INITIAL_FORM;
       }

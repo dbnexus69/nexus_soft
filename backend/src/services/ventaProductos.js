@@ -21,6 +21,16 @@ function normalizarTamanoMascota(valor) {
 }
 
 const fecha = (v) => (v ? new Date(v) : null);
+
+// La reserva va por pasajero (spec 012): la del titular, o la de arriba en un borrador de antes del cambio.
+const titularDe = (t) => (t.passengers || []).find(p => p?.esTitular) || (t.passengers || [])[0];
+const reservaDelTitular = (t) => titularDe(t)?.nroReserva || t.reservationNumber || null;
+const asientosDe = (p) => {
+  const lista = (Array.isArray(p?.asientos) ? p.asientos : [])
+    .filter(a => a && String(a.asiento || '').trim())
+    .map(a => ({ tramo: Number(a.tramo), asiento: String(a.asiento).trim().toUpperCase() }));
+  return lista.length ? lista : null;
+};
 const unaPersona = (name, docType, docNumber, extra = {}) => ({ name, docType, docNumber, extra });
 const invitados = (lista) => (lista || []).map(g => unaPersona(g.name, g.docType, g.docNumber, { es_titular: false }));
 
@@ -66,7 +76,7 @@ const CATEGORIAS = [
     }),
     fila: (t, c) => ({
       aerolineaId: c.aerolineaId(t.airline),
-      nro_reserva: t.reservationNumber || null,
+      nro_reserva: reservaDelTitular(t),
       nro_vuelo: t.flightNumber || null,
       nro_tiquete: t.passengers?.[0]?.nroTiquete || null,
       modo_vuelo: t.flightMode || 'one_way',
@@ -74,7 +84,11 @@ const CATEGORIAS = [
       planEquipajeId: c.planEquipajeId(t.baggagePlan),
     }),
     personas: (t) => (t.passengers || []).map(pax => unaPersona(pax.name, pax.docType, pax.docNumber, {
-      es_titular: pax.esTitular || false, nro_reserva: pax.nroReserva || null, nro_tiquete: pax.nroTiquete || null,
+      es_titular: pax.esTitular || false,
+      // Sin reserva propia, la del titular: casi siempre van en la misma.
+      nro_reserva: pax.nroReserva || reservaDelTitular(t),
+      nro_tiquete: pax.nroTiquete || null,
+      asientos: asientosDe(pax) ?? undefined,
     })),
     tramos: (t, ticketId, c) => {
       const todos = [...(t.legs || []), ...(t.outboundStops || []), ...(t.returnLeg ? [t.returnLeg] : []), ...(t.returnStops || [])];
@@ -95,7 +109,7 @@ const CATEGORIAS = [
           aeropuerto_destino_id: c.aeropuertoId(leg.destination),
           salida, llegada,
           nro_vuelo_tramo: leg.flightNumber || null,
-          asiento: leg.seat || null,
+          // El asiento es de cada pasajero en cada tramo (spec 012, `pasajeros_detalle.asientos`).
           orden: i + 1,
           nro_tiquete: leg.ticketNumber || null,
           aerolinea_id: leg.airline && leg.airline !== t.airline ? (c.aerolineaId(leg.airline) ?? aerolineaDelTiquete) : aerolineaDelTiquete,

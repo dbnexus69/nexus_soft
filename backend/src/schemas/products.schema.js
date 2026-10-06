@@ -129,8 +129,18 @@ const SOBRE = {
  * Postgres y las cantidades. El resto de campos de cada transform son texto o
  * fecha y los cubre `comprobarColumnas`.
  */
+// Un asiento por tramo (spec 012). Que el tramo exista en el tiquete lo comprueba `_validarTiquetes`.
+const asientos = z.array(z.object({
+  tramo: z.coerce.number().int('el tramo es un número entero').min(1, 'el tramo empieza en 1'),
+  asiento: z.string().trim().regex(/^[A-Za-z0-9]{1,4}$/, 'el asiento lleva de 1 a 4 letras o números (ej. 12A)'),
+})).nullable().optional()
+  .refine(l => !l || new Set(l.map(a => Number(a.tramo))).size === l.length, 'un tramo tiene un solo asiento por pasajero');
+
 const EXTRAS = {
-  ticket: { flightMode: valorEnum('FlightMode'), supplierCost: costoObligatorio },
+  ticket: {
+    flightMode: valorEnum('FlightMode'), supplierCost: costoObligatorio,
+    passengers: z.array(z.object({ asientos }).passthrough()).nullable().optional(),
+  },
   // `finca` era el valor que mandaba el formulario (el enum dice `fincas`); se
   // acepta por los borradores guardados antes de corregirlo, y `createSale` lo
   // traduce.

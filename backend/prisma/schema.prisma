@@ -462,6 +462,8 @@ model pasajeros_detalle {
   persona_id       Int
   es_titular       Boolean?      @default(false)
   asiento          String?
+  /// Un asiento por tramo (spec 012): [{ tramo: <orden del tramo>, asiento: "12A" }]. `asiento` queda por los datos viejos.
+  asientos         Json?
   nro_reserva      String?
   nro_tiquete      String?
   nota             String?

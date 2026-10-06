@@ -51,6 +51,8 @@ function mapPassengers(detalle) {
     persona_id: p.persona_id,
     esTitular: p.es_titular,
     asiento: p.asiento,
+    // Un asiento por tramo (spec 012); null en ventas anteriores, que usan el `seat` del tramo.
+    asientos: p.asientos ?? null,
     nombreCompleto: p.personas ? `${p.personas.nombres} ${p.personas.apellidos}` : null,
     tipos_documento: p.personas?.tipo_documento_id,
     nroDocumento: p.personas?.documento,

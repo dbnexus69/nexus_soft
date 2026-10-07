@@ -307,45 +307,43 @@ export function Step2Products({ form, set, data, errors, toggleProduct, actions 
           )}
         </div>
 
-        {/* Live Financial Summary Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-primary text-white p-4 rounded-2xl shadow-lg border border-slate-700/50 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-emerald-400 shrink-0 border border-white/10">
-                <LuIcons.LuCalculator size={22} />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Resumen de Venta en Tiempo Real</h4>
-                <p className="text-xs text-slate-500">Total acumulado de los servicios seleccionados</p>
-              </div>
+        {/* Resumen en tiempo real: la venta es costo de proveedor + ganancia + IVA (ver useSaleCalculations). */}
+        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm mb-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 text-primary dark:text-white">
+              <LuIcons.LuCalculator size={16} />
+              <h4 className="text-sm font-bold">Resumen de la venta</h4>
             </div>
-            <div className="grid grid-cols-4 gap-2 sm:gap-4 bg-white/5 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
-              <div className="text-center sm:text-right px-2">
-                <span className="text-xs uppercase font-bold text-slate-500 block">Costo Prov.</span>
-                <span className="text-xs sm:text-sm font-bold text-slate-100">
-                  ${(Number(form.supplierCost) || 0).toLocaleString("es-CO")}
-                </span>
-              </div>
-              <div className="text-center sm:text-right px-2 border-x border-white/10">
-                <span className="text-xs uppercase font-bold text-emerald-400 block">Ganancias Acumuladas</span>
-                <span className="text-xs sm:text-sm font-bold text-emerald-300">
-                  ${(Number(form.ta) || 0).toLocaleString("es-CO")}
-                </span>
-              </div>
-              <div className="text-center sm:text-right px-2 border-r border-white/10">
-                <span className="text-xs uppercase font-bold text-amber-300 block">IVA</span>
-                <span className="text-xs sm:text-sm font-bold text-amber-300">
-                  ${(Number(form.iva) || 0).toLocaleString("es-CO")}
-                </span>
-              </div>
-              <div className="text-center sm:text-right px-2">
-                <span className="text-xs uppercase font-bold text-cyan-300 block">Venta Total</span>
-                <span className="text-xs sm:text-sm font-extrabold text-cyan-300">
-                  ${(Number(form.total) || 0).toLocaleString("es-CO")}
-                </span>
-              </div>
-            </div>
+            <span className="text-xs text-gray-500 dark:text-slate-400">Se actualiza al agregar servicios</span>
           </div>
+
+          <div className="rounded-xl bg-primary/5 dark:bg-primary/10 px-4 py-3 mb-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">Venta total</p>
+            <p className="text-2xl sm:text-3xl font-black tabular-nums text-primary dark:text-white">
+              ${(Number(form.total) || 0).toLocaleString("es-CO")}
+            </p>
+          </div>
+
+          <dl className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-gray-100 dark:border-slate-700 px-3 py-2.5">
+              <dt className="text-xs font-semibold text-gray-500 dark:text-slate-400">Costo proveedor</dt>
+              <dd className="text-sm font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                ${(Number(form.supplierCost) || 0).toLocaleString("es-CO")}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-gray-100 dark:border-slate-700 px-3 py-2.5">
+              <dt className="text-xs font-semibold text-gray-500 dark:text-slate-400">Ganancia</dt>
+              <dd className="text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                ${(Number(form.ta) || 0).toLocaleString("es-CO")}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-gray-100 dark:border-slate-700 px-3 py-2.5">
+              <dt className="text-xs font-semibold text-gray-500 dark:text-slate-400">IVA</dt>
+              <dd className="text-sm font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                ${(Number(form.iva) || 0).toLocaleString("es-CO")}
+              </dd>
+            </div>
+          </dl>
         </div>
 
         {/* Selected Services Summary */}

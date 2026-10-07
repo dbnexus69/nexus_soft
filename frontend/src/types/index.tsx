@@ -449,6 +449,7 @@ export interface MigrationData {
 
 export interface SimCardData {
   passengerName: string;
+  docType?: string;
   docNumber: string;
   destinationCountry: string;
   arrivalDate: string;
@@ -491,6 +492,7 @@ export interface FincaData {
   fincaCity: string;
   observations: string;
   responsibleName: string;
+  docType?: string;
   docNumber: string;
   checkInDate: string;
   checkOutDate: string;

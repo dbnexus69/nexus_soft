@@ -1,5 +1,5 @@
 import { Home, TriangleAlert } from "lucide-react";
-import { FormField, Input, CurrencyInput} from "../../ui/Form";
+import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { FincaData } from "../../../types";
 import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
@@ -11,11 +11,12 @@ interface FincaFormProps {
   client: ClienteDelFormulario;
   suppliers?: ConfigData['suppliers'];
   paymentMethods?: ConfigData['cards'];
+  documentTypes?: ConfigData['documentTypes'];
   onChange: (updates: Partial<FincaData>) => void;
   triggerError?: (msg: string) => void;
 }
 
-export function FincaForm({ finca, client, suppliers, paymentMethods, onChange, triggerError }: FincaFormProps) {
+export function FincaForm({ finca, client, suppliers, paymentMethods, documentTypes, onChange, triggerError }: FincaFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -61,6 +62,17 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, onChange, 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Responsable">
             <Input value={finca.responsibleName} onChange={(e) => onChange({ responsibleName: e.target.value })} placeholder="Nombre completo" />
+          </FormField>
+          <FormField label="Tipo de Documento">
+            <Combobox
+              value={finca.docType || ""}
+              onChange={(val) => onChange({ docType: val })}
+              options={(documentTypes || []).map((d) => ({
+                value: d.abbreviation || d.name,
+                label: d.abbreviation || d.name,
+              }))}
+              placeholder="Tipo de documento"
+            />
           </FormField>
           <FormField label="Número de Documento">
             <Input value={finca.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="C.C." />

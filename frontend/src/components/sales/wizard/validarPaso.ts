@@ -334,6 +334,8 @@ export function validarPaso(s: number, form: WizardFormData, data: any, avisar: 
 
     revisar("tour", form.tours, "Debes configurar al menos un Tour", "Tour inválido", "El servicio de Tour", "tourValidation", (tour, errors) => {
       if (!tour.passengerName || tour.passengerName.trim().length === 0) errors.push("Nombre del Pasajero (requerido)");
+      if (!tour.selectedTour || tour.selectedTour.trim().length === 0) errors.push("Nombre del Tour (requerido)");
+      if (!tour.preferredDate) errors.push("Fecha y hora del tour (requerida)");
       if (!tour.pickupPoint || tour.pickupPoint.trim().length === 0 || tour.pickupPoint.length > 30) errors.push("Punto de Recogida (1-30 caracteres)");
       
       if (tour.adultsCount === undefined || isNaN(Number(tour.adultsCount)) || Number(tour.adultsCount) < 0 || Number(tour.adultsCount) > 999) errors.push("Número de Adultos (0-999)");

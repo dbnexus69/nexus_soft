@@ -5,6 +5,7 @@ import { FormField, Input, Combobox, Textarea, Select } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { TourData, GuestInfo } from "../../../types";
 import { ClientInfoSection, FinancialSection } from "./VoucherField";
+import { DateTimePicker } from "./TicketForm";
 import type { AppData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
 
@@ -18,6 +19,12 @@ interface TourFormProps {
 
 export function TourForm({ tour, mainClient, data, onChange, triggerError }: TourFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Hora local en el formato que espera el selector (`AAAA-MM-DDTHH:mm`), como en la SIM card.
+  const minDateTime = (() => {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+  })();
 
   const addGuest = () => {
     onChange({ guests: [...(tour.guests || []), { name: "", docType: "CC", docNumber: "" }] });
@@ -79,6 +86,23 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
           <LuMap size={14} /> Tour Guiado
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField label="Nombre del Tour">
+            <Input
+              value={tour.selectedTour}
+              onChange={(e) => onChange({ selectedTour: e.target.value })}
+              placeholder="Ej. City tour por Cartagena"
+              maxLength={80}
+            />
+          </FormField>
+          <FormField label="Fecha y Hora del Tour">
+            <DateTimePicker
+              value={tour.preferredDate}
+              onChange={(val) => onChange({ preferredDate: val })}
+              min={minDateTime}
+              triggerError={triggerError}
+              fieldName="Fecha del tour"
+            />
+          </FormField>
           <FormField label="Número de Adultos">
             <Input 
               type="text" 

@@ -222,26 +222,6 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
             );
           })()}
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCloseForm}
-            className="text-xs gap-1.5 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X size={15} />
-            <span>Cancelar</span>
-          </Button>
-          <Button
-            type="button"
-            onClick={onCloseForm}
-            className="text-xs gap-1.5 bg-primary text-white hover:bg-primary/90 shadow-sm"
-          >
-            <Check size={15} />
-            <span>Guardar Servicio</span>
-          </Button>
-        </div>
       </div>
 
       {/* Barra de Pestañas e Ítems Múltiples (Tiquete 1, Tiquete 2, + Añadir otro) */}
@@ -438,6 +418,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   client={client}
                   suppliers={data.config.suppliers}
                   paymentMethods={data.config.cards}
+                  documentTypes={data.config.documentTypes}
                   onChange={(updates) => {
                     const next = [...form.simCards];
                     next[activeIdx] = { ...next[activeIdx], ...updates };
@@ -468,6 +449,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   client={client}
                   suppliers={data.config.suppliers}
                   paymentMethods={data.config.cards}
+                  documentTypes={data.config.documentTypes}
                   onChange={(updates) => {
                     const next = [...form.fincas];
                     next[activeIdx] = { ...next[activeIdx], ...updates };

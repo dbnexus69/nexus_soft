@@ -434,7 +434,7 @@ export function Step3Payment({ form, set, data, errors }: Props) {
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
             Resumen Financiero
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <p className="text-xs font-bold text-gray-500 uppercase">
                 Total
@@ -449,6 +449,14 @@ export function Step3Payment({ form, set, data, errors }: Props) {
               </p>
               <p className="font-black text-rose-600">
                 ${(Number(form.supplierCost) || 0).toLocaleString("es-CO")}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase">
+                IVA
+              </p>
+              <p className="font-black text-amber-600">
+                ${(Number(form.iva) || 0).toLocaleString("es-CO")}
               </p>
             </div>
             <div>

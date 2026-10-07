@@ -111,6 +111,12 @@ function dataUrlABlob(dataUrl: string): Blob {
   return new Blob([bytes], { type: tipo });
 }
 
+// Borradores de la sesión. El asistente se desmonta al cambiar de módulo, y el
+// localStorage no sirve de copia única: los vouchers viajan en base64 y pueden
+// superar su cupo (~5 MB), en cuyo caso la escritura falla. Por eso la copia
+// viva está aquí, con la misma clave (empresa + usuario) que el localStorage.
+const borradoresEnMemoria = new Map<string, WizardFormData>();
+
 export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   const { data, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig, invalidateDashboard } = useData();
   // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,
@@ -127,6 +133,8 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<WizardFormData>(() => {
+    const enMemoria = borradoresEnMemoria.get(draftKey);
+    if (enMemoria) return enMemoria;
     const saved = localStorage.getItem(draftKey);
     if (saved) {
       try {
@@ -277,10 +285,12 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
   };
 
   useEffect(() => {
+    borradoresEnMemoria.set(draftKey, form);
     try {
-      // Intentar guardar el draft en localStorage
       localStorage.setItem(draftKey, JSON.stringify(form));
     } catch (error) {
+      // Sin esto, al recargar se restauraría una versión vieja sin avisar.
+      localStorage.removeItem(draftKey);
       console.warn("[DRAFT_SAVE_FAILED]", "likely oversized file attachments:", error);
     }
   }, [form]);
@@ -550,6 +560,7 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       // porque sus cifras cambian con cada venta nueva.
       const creada = await handleCreateSale(saleData);
       invalidateDashboard();
+      borradoresEnMemoria.delete(draftKey);
       localStorage.removeItem(draftKey);
 
       const { subidos, fallidos } = await subirVouchers(creada);
@@ -579,8 +590,8 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
     }
   };
 
+  // Cerrar no descarta: el borrador queda guardado para la próxima vez que se abra la venta.
   const handleCancel = () => {
-    localStorage.removeItem(draftKey);
     onClose();
   };
 

@@ -235,6 +235,7 @@ export const INITIAL_MIGRATION = (client?: ClienteDelFormulario): MigrationData 
 
 export const INITIAL_SIMCARD = (client?: ClienteDelFormulario): SimCardData => ({
   passengerName: client?.name || "",
+  docType: client?.docType || "CC",
   docNumber: client?.docNumber || "",
   destinationCountry: "",
   arrivalDate: "",
@@ -273,6 +274,7 @@ export const INITIAL_FINCA = (client?: ClienteDelFormulario): FincaData => ({
   fincaCity: "",
   observations: "",
   responsibleName: client?.name || "",
+  docType: client?.docType || "CC",
   docNumber: client?.docNumber || "",
   checkInDate: "",
   checkOutDate: "",

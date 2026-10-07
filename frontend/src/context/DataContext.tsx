@@ -57,7 +57,7 @@ interface DataContextType {
   addResponsable: (responsable: Record<string, unknown>) => Promise<void>;
   updateResponsable: (id: number, responsable: Record<string, unknown>) => Promise<void>;
   deleteResponsable: (id: number) => Promise<void>;
-  updateFlight: (id: string, flight: Partial<Flight> | FormData) => Promise<{ emailStatus?: string }>;
+  updateFlight: (id: string, flight: (Partial<Flight> & { sinEnvio?: boolean }) | FormData) => Promise<{ emailStatus?: string }>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;
@@ -409,7 +409,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
 
-  const updateFlight = async (id: string, flightUpdate: Partial<Flight> | FormData) => {
+  const updateFlight = async (id: string, flightUpdate: (Partial<Flight> & { sinEnvio?: boolean }) | FormData) => {
     // Devuelve el resultado para que la pantalla decida qué hacer. Ya no parchea
     // `data.flights`: esa lista no existe (ver fetchFlights).
     return api.updateCheckin(id, flightUpdate);

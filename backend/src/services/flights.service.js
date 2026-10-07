@@ -873,6 +873,8 @@ class FlightsService {
     }
 
     const realizado = pedido === 'realizado';
+    // Check-in hecho por otro medio (WhatsApp, la aerolínea...): se deja constancia sin enviar nada al cliente.
+    const sinEnvio = body.sinEnvio === true || body.sinEnvio === 'true';
     const docs = (files || []).map(f => ({
       url: `/uploads/${f.filename}`,
       filename: f.originalname,
@@ -882,10 +884,11 @@ class FlightsService {
     // sale (cliente sin correo, adjunto ilegible o fallo de envío), el tramo sigue pendiente y se responde un
     // 400 que dice por qué. Fuera de la transacción: es una llamada de red y la mantendría abierta segundos.
     // Volver a pendiente no envía nada.
-    const correo = realizado
+    const enviar = realizado && !sinEnvio;
+    const correo = enviar
       ? await this._enviarCheckin(tramo, venta, docs)
       : { emailSent: false, emailStatus: 'no_aplica', emailError: null, emailTo: null };
-    if (realizado && !correo.emailSent) {
+    if (enviar && !correo.emailSent) {
       throw new BadRequestError(MOTIVO_SIN_ENVIO[correo.emailStatus] || 'No se pudo enviar el check-in al cliente');
     }
 

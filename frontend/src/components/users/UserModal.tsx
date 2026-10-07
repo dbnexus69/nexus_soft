@@ -4,9 +4,9 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input, Select, FormField } from "../ui/Form";
 import AvatarPicker, { AVATARS } from "../ui/AvatarPicker";
-import Datepicker from "react-tailwindcss-datepicker";
+import { DatePicker } from "../sales/forms/TicketForm";
 import { User } from "../../types";
-import { capitalizeName } from "../../utils/formatters";
+import { capitalizeName, todayStr } from "../../utils/formatters";
 import { AYUDA_CONTRASENA, mensajeContrasena } from "../../utils/contrasena";
 import {
   limpiarDocumento, limpiarNombre, limpiarTelefono,
@@ -303,19 +303,11 @@ export const UserModal: React.FC<UserModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField label="Fecha de Nacimiento" error={errors.birthDate || errors.birth_date}>
-                <Datepicker
-                  useRange={false}
-                  asSingle={true}
-                  value={{ startDate: formData.birthDate ? new Date(formData.birthDate) : null, endDate: formData.birthDate ? new Date(formData.birthDate) : null } as any}
-                  onChange={(newValue: any) => setFormData({ ...formData, birthDate: newValue?.startDate || "" })}
-                  primaryColor={"indigo"}
-                  displayFormat={"DD/MM/YYYY"}
-                  maxDate={new Date()}
-                  placeholder={"DD/MM/YYYY"}
-                  popoverDirection="up"
-                  containerClassName="relative"
-                  inputClassName="w-full h-12 text-sm font-medium text-gray-800 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder-gray-400"
-                  toggleClassName="absolute right-3 top-3.5 text-gray-500 hover:text-primary transition-colors"
+                <DatePicker
+                  value={formData.birthDate || ""}
+                  onChange={(date) => setFormData({ ...formData, birthDate: date || "" })}
+                  max={todayStr()}
+                  fieldName="birthDate"
                 />
               </FormField>
             </div>

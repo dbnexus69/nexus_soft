@@ -68,6 +68,20 @@ exports.creditBreakdown = async (req, res, next) => {
   }
 };
 
+exports.iva = async (req, res, next) => {
+  try {
+    const result = await statsService.getIva({
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      pagination: req.pagination,
+      ...ambito(req),
+    });
+    success(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.categoryDistribution = async (req, res, next) => {
   try {
     const data = await statsService.getCategoryDistribution({ ...ambito(req), limit: req.query.limit });

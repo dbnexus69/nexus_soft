@@ -11,6 +11,7 @@ import { useData } from "../context/DataContext";
 import { useDashboardStats } from "../hooks/useDashboardStats";
 import { AttentionPanel } from "../components/dashboard/AttentionPanel";
 import { CreditBreakdownModal } from "../components/dashboard/CreditBreakdownModal";
+import { IvaBreakdownModal } from "../components/dashboard/IvaBreakdownModal";
 import * as api from "../api";
 import { AttentionSummary } from "../types";
 
@@ -133,6 +134,8 @@ export default function Dashboard() {
   });
 
   const [desgloseAbierto, setDesgloseAbierto] = useState(false);
+  const [ivaAbierto, setIvaAbierto] = useState(false);
+  const [iva, setIva] = useState<{ total: number } | null>(null);
   const [atencion, setAtencion] = useState<AttentionSummary | null>(null);
   const [atencionCargando, setAtencionCargando] = useState(true);
   const primeraCarga = useRef(true);
@@ -190,6 +193,18 @@ export default function Dashboard() {
     return () => { vivo = false; };
   }, []);
 
+  /**
+   * El IVA sigue el mismo rango que la pantalla. Pide una sola fila: lo que
+   * importa son los totales de `meta`, que cubren el rango entero.
+   */
+  useEffect(() => {
+    let vivo = true;
+    api.getIva({ ...paramsDeFecha(), page: 1, perPage: 1 })
+      .then(r => { if (vivo) setIva({ total: r.meta.totals.iva }); })
+      .catch(() => { if (vivo) setIva(null); });
+    return () => { vivo = false; };
+  }, [dateRange, paramsDeFecha]);
+
   const cargando = dashboardLoading && !dashboardData;
 
   const tendencia = stats.yearlyTrendData;
@@ -233,10 +248,24 @@ export default function Dashboard() {
         </div>
 
         {/* Costos y clientes: cifras de contexto, no titulares. */}
-        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-4 mt-7 pt-6 border-t border-gray-border dark:border-slate-800">
+        <dl className="grid grid-cols-2 sm:grid-cols-5 gap-x-8 gap-y-4 mt-7 pt-6 border-t border-gray-border dark:border-slate-800">
           <div>
             <dt className="text-xs text-accent dark:text-slate-400">Costos de proveedor</dt>
             <dd className="text-base font-semibold text-primary dark:text-white tabular-nums">{formatCurrency(stats.totalProveedores)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-accent dark:text-slate-400">IVA del periodo</dt>
+            <dd className="text-base font-semibold tabular-nums">
+              <button
+                type="button"
+                onClick={() => setIvaAbierto(true)}
+                disabled={!iva}
+                aria-label={iva ? `IVA del periodo: ${formatCurrency(iva.total)}. Ver las ventas` : 'IVA del periodo'}
+                className="rounded text-amber-600 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight/50 disabled:cursor-default disabled:no-underline dark:text-amber-400"
+              >
+                {iva ? formatCurrency(iva.total) : '—'}
+              </button>
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-accent dark:text-slate-400">Proveedores activos</dt>
@@ -343,6 +372,13 @@ export default function Dashboard() {
       <CreditBreakdownModal
         isOpen={desgloseAbierto}
         onClose={() => setDesgloseAbierto(false)}
+        dateFrom={paramsDeFecha().dateFrom as string | undefined}
+        dateTo={paramsDeFecha().dateTo as string | undefined}
+      />
+
+      <IvaBreakdownModal
+        isOpen={ivaAbierto}
+        onClose={() => setIvaAbierto(false)}
         dateFrom={paramsDeFecha().dateFrom as string | undefined}
         dateTo={paramsDeFecha().dateTo as string | undefined}
       />

@@ -4,6 +4,7 @@ const prisma = require('../config/db');
 // columna mal escrita rompe el build en vez de la petición.
 const { dashboardAggregates } = require('@prisma/client/sql');
 const { vuelosDePlan } = require('./flights.service');
+const { buildMeta } = require('../utils/paginationHelper');
 
 // `limit` llega de la URL. Sin el piso de 1, `?limit=-5` acababa en un
 // `LIMIT -5` que Postgres rechaza con un 500.
@@ -460,6 +461,60 @@ class StatsService {
       unreviewedSales: {
         count: sinRevisar._count._all,
         amount: Number(sinRevisar._sum.monto_total) || 0,
+      },
+    };
+  }
+
+  /**
+   * IVA de las ventas vigentes del rango: el total y la lista paginada de esas ventas.
+   * Mismo filtro de fechas y de alcance que el dashboard. Anuladas y borradas no cuentan.
+   */
+  async getIva({ dateFrom, dateTo, permissionScope, user, pagination }) {
+    const { page, perPage, skip } = pagination;
+    const where = {
+      deleted_at: null,
+      status: { not: 'anulado' },
+      ...((dateFrom || dateTo) && {
+        creado_at: {
+          ...(dateFrom && { gte: new Date(dateFrom) }),
+          ...(dateTo && { lte: new Date(dateTo) }),
+        },
+      }),
+      ...(permissionScope === 'own' && { usuario_id: user.id }),
+    };
+
+    const [agregado, ventas] = await Promise.all([
+      prisma.ventas.aggregate({ where, _count: { _all: true }, _sum: { iva_total: true, monto_total: true } }),
+      prisma.ventas.findMany({
+        where,
+        orderBy: { creado_at: 'desc' },
+        skip,
+        take: perPage,
+        select: {
+          id: true, numero: true, creado_at: true, monto_total: true, iva_total: true, status: true,
+          clientes: { select: { personas: { select: { nombres: true, apellidos: true } } } },
+        },
+      }),
+    ]);
+
+    const total = agregado._count._all;
+    return {
+      data: ventas.map(v => ({
+        id: v.id,
+        numero: v.numero,
+        fecha: v.creado_at.toISOString(),
+        cliente: [v.clientes?.personas?.nombres, v.clientes?.personas?.apellidos].filter(Boolean).join(' '),
+        total: Number(v.monto_total) || 0,
+        iva: Number(v.iva_total) || 0,
+        estado: v.status,
+      })),
+      meta: {
+        ...buildMeta(total, page, perPage),
+        totals: {
+          iva: Number(agregado._sum.iva_total) || 0,
+          ventas: total,
+          total: Number(agregado._sum.monto_total) || 0,
+        },
       },
     };
   }

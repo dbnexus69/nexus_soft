@@ -37,6 +37,31 @@ export async function getCategoryDistribution(params: Record<string, unknown> = 
   return res.data.data;
 }
 
+export interface VentaIva {
+  id: number;
+  numero: number | null;
+  fecha: string;
+  cliente: string;
+  total: number;
+  iva: number;
+  estado: string;
+}
+
+export interface RespuestaIva {
+  data: VentaIva[];
+  meta: {
+    page: number; perPage: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean;
+    /** Totales de TODO el rango, no de la página. */
+    totals: { iva: number; ventas: number; total: number };
+  };
+}
+
+/** Lista paginada: se devuelve el sobre entero, porque los totales van en `meta`. */
+export async function getIva(params: Record<string, unknown> = {}) {
+  const res = await api.get<RespuestaIva>('/stats/iva', { params });
+  return res.data;
+}
+
 /**
  * Lo que requiere acción hoy: créditos vencidos, check-ins inminentes y ventas
  * sin revisar. Un solo endpoint y un solo viaje: tres peticiones separadas

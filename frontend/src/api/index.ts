@@ -27,7 +27,7 @@ export {
 } from './config';
 export {
   getDashboard, getAttention, getAsesorPerformance, getCreditBreakdown,
-  getTopClients, getCategoryDistribution,
+  getTopClients, getCategoryDistribution, getIva,
 } from './stats';
 
 // Empresas: solo el superadministrador. `getBranding` la usa cualquiera.

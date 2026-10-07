@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
 const { validateQuery } = require('../middleware/validate');
 const { dateRangeSchema } = require('../schemas/common.schema');
+const paginate = require('../middleware/paginate');
 
 router.use(auth);
 
@@ -23,6 +24,9 @@ router.get('/top-clients', authorize('dashboard', 'view'), statsController.topCl
 // Acepta el mismo rango de fechas que /dashboard para que la modal muestre el
 // mismo periodo que la pantalla desde la que se abre.
 router.get('/credit-breakdown', authorize('dashboard', 'view'), validateQuery(dateRangeSchema), statsController.creditBreakdown);
+
+// IVA del rango: total y lista paginada de ventas. Mismo rango que /dashboard.
+router.get('/iva', authorize('dashboard', 'view'), validateQuery(dateRangeSchema), paginate, statsController.iva);
 router.get('/category-distribution', authorize('dashboard', 'view'), statsController.categoryDistribution);
 
 // Se retiró GET /sales-history: el controlador era un placeholder que devolvía

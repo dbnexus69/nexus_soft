@@ -158,9 +158,28 @@ cierran en vez de comparar el número.
 
 ---
 
+## T7 · Fecha de nacimiento en el alta de usuarios `[~]`
+
+Pedido: en "Registrar usuario" no se podía escribir la fecha a mano, y una fecha válida salía
+como "no es válida".
+
+Causa: `UserModal.tsx` usaba `react-tailwindcss-datepicker` (solo calendario) y guardaba en
+`birthDate` el objeto `Date` que devuelve la librería, no el texto `AAAA-MM-DD`. La validación
+(`mensajeNacimiento`) recibía `String(Date)` y respondía "Fecha inválida".
+
+Arreglo: `UserModal` usa el `DatePicker` compartido de `TicketForm.tsx`, como el módulo de
+clientes. Emite `AAAA-MM-DD`, admite escribir a mano y mantiene la validación de no futura y de
+edad máxima.
+
+**Comprobado:** `tsc` sin errores. **Pendiente:** probar el alta en pantalla con una fecha escrita a
+mano y una elegida en el calendario. Otros usos de la librería (dashboard, `DateTimePicker` de
+vuelos) no se han tocado.
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
+|---|---|---|
+| 2026-10-06 | T7 | Fecha de nacimiento de usuarios: escribible y validada como texto `AAAA-MM-DD`; `tsc` sin errores. Sin probar en pantalla. |
 |---|---|---|
 | 2026-10-03 | T4 | Usuarios, comisionistas y responsables validan sus datos de persona y el tipo de documento por id (`docTypeId`), en el servidor y en sus formularios; 16 comprobaciones por la API. Y los pasajeros del asistente de venta, en el servidor y al pasar del paso de productos. |
 | 2026-10-03 | T5, T6 | El dígito de verificación del NIT (módulo 11, solo cuando el dígito es inequívoco) en las dos copias, y `pnpm test:reglas-espejo` compara las dos sobre 785 entradas. Se corrigió el ejemplo de NIT, que tenía mal el dígito. |

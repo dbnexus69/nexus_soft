@@ -36,6 +36,25 @@ usa (`checkin: 'realizado'` sin adjuntos) ya era válido desde antes.
 **Por confirmar en navegador:** pulsar el botón en un vuelo pendiente y verificar que pasa a
 "Realizado" sin pedir ningún archivo.
 
+## T11 · Check-in por otro medio, sin correo, con decisión pendiente `[~]`
+
+**Qué pasó con T10.** El commit `54977b6` de Bayrol quitó el botón "Check-in realizado" con la
+regla "solo se marca realizado si el correo llega al cliente". Con el merge de `feat-bayrol`,
+el botón desapareció de la lista.
+
+**Qué se hizo.** El botón vuelve, pero el check-in por otro medio no envía nada al cliente:
+- `PUT /flights/:id/checkin` acepta `sinEnvio: true` (`flights.service.js`, `updateCheckin`).
+  Sin esa marca, la regla de Bayrol sigue igual.
+- `ListaCheckin.tsx`: `handleQuickCheckin` manda `{ checkin: 'realizado', sinEnvio: true }`.
+- `DataContext.tsx`: `updateFlight` admite `sinEnvio`.
+
+**Comprobado:** `tsc` sin errores; `pnpm test:vuelos-api` sin fallos. La suite **no cubre
+`sinEnvio`**: el camino nuevo no tiene prueba automática.
+
+**Pendiente:** decidir con Bayrol si el check-in por otro medio puede marcarse sin correo (lo
+que pide esta spec) o si se mantiene su regla y el botón se retira otra vez. Y probar en
+pantalla que el botón deja el vuelo en "Realizado" sin enviar correo.
+
 ## T9 · Creación de ventas intermitente `[x]`
 
 Reportado: en 2 de 4 corridas una venta dio 500 o timeout, con un mensaje de Prisma distinto cada vez.
@@ -132,6 +151,7 @@ Resultado de la última corrida: **63 correctas, 0 fallos.** Antes de los arregl
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-06 | T11 | Botón "Check-in realizado" de vuelta, con `sinEnvio` para no mandar correo. Bayrol lo había retirado (`54977b6`); decisión pendiente. `tsc` y `test:vuelos-api` sin fallos. |
 | 2026-10-03 | T6, T7, T8 | Los vuelos de paquete se cancelan con motivo (migración aditiva); sin tope silencioso de planes y el panel de atención los cuenta; `pnpm test:vuelos-api` en el repo. |
 | 2026-10-03 | T4, T10 | Confirmadas en el navegador; la fila del vuelo muestra el documento de cada pasajero, no el del cliente. |
 | 2026-10-03 | T9 (cerrada por 010 T5: el tope de 120 s ya no hace falta, la venta se escribe por lotes) | Las ventas grandes se cortaban al cumplir los 30 s de la transacción (una ida y vuelta por fila, a ~1 s cada una). Reproducido y confirmado; el tope de `createSale` pasa a 120 s. Una venta de grupo que fallaba a los 31,5 s ahora pasa en 42 s, completa. |

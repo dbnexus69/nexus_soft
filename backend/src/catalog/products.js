@@ -541,23 +541,24 @@ const PRODUCT_TRANSFORMS = {
 };
 
 // ── Metadatos de cada categoría ─────────────────────────────────────────────
-// canBeChild: puede ir dentro de un plan (vuelos, hotelería y seguros).
+// canBeChild: puede ir dentro de un plan. Todo menos el propio plan: el asistente deja vincular cualquier servicio
+// a un paquete de la venta, y lo que se guarda vinculado tiene que leerse y verse en el voucher.
 const META = {
   ticket:     { label: 'Tiquetería',    responseKey: 'ticketData',      canBeChild: true  },
   hotel:      { label: 'Hotelería',     responseKey: 'hotelData',       canBeChild: true  },
   insurance:  { label: 'Seguro',        responseKey: 'insuranceData',   canBeChild: true  },
   plan:       { label: 'Plan',          responseKey: 'planData',        canBeChild: false },
-  checkin:    { label: 'Check-in',      responseKey: 'checkInData',     canBeChild: false },
-  migration:  { label: 'Migración',     responseKey: 'migrationData',   canBeChild: false },
-  simcard:    { label: 'SIM Card',      responseKey: 'simCardData',     canBeChild: false },
-  car:        { label: 'Renta de Auto', responseKey: 'carRentalData',   canBeChild: false },
-  finca:      { label: 'Finca',         responseKey: 'fincaData',       canBeChild: false },
-  tour:       { label: 'Tour',          responseKey: 'tourData',        canBeChild: false },
-  convention: { label: 'Evento',        responseKey: 'conventionData',  canBeChild: false },
-  restaurant: { label: 'Restaurante',   responseKey: 'restaurantData',  canBeChild: false },
-  visa:       { label: 'Visa',          responseKey: 'visaData',        canBeChild: false },
-  passport:   { label: 'Pasaporte',     responseKey: 'passportData',    canBeChild: false },
-  pet:        { label: 'Mascota',       responseKey: 'petServiceData',  canBeChild: false }
+  checkin:    { label: 'Check-in',      responseKey: 'checkInData',     canBeChild: true  },
+  migration:  { label: 'Migración',     responseKey: 'migrationData',   canBeChild: true  },
+  simcard:    { label: 'SIM Card',      responseKey: 'simCardData',     canBeChild: true  },
+  car:        { label: 'Renta de Auto', responseKey: 'carRentalData',   canBeChild: true  },
+  finca:      { label: 'Finca',         responseKey: 'fincaData',       canBeChild: true  },
+  tour:       { label: 'Tour',          responseKey: 'tourData',        canBeChild: true  },
+  convention: { label: 'Evento',        responseKey: 'conventionData',  canBeChild: true  },
+  restaurant: { label: 'Restaurante',   responseKey: 'restaurantData',  canBeChild: true  },
+  visa:       { label: 'Visa',          responseKey: 'visaData',        canBeChild: true  },
+  passport:   { label: 'Pasaporte',     responseKey: 'passportData',    canBeChild: true  },
+  pet:        { label: 'Mascota',       responseKey: 'petServiceData',  canBeChild: true  }
 };
 
 // ── Catálogo unificado ──────────────────────────────────────────────────────

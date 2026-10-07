@@ -179,7 +179,7 @@ const CATEGORIAS = [
   {
     campo: 'fincaData', categoria: 'finca', tabla: 'prod_fincas',
     fila: (f) => ({
-      nombre_finca: f.fincaName || null, ciudad_pueblo: f.city || null, direccion_finca: f.address || null,
+      nombre_finca: f.fincaName || null, ciudad_pueblo: f.fincaCity || null, direccion_finca: f.fincaAddress || null,
       responsable_nombre: f.responsibleName || null, documento_responsable: f.docNumber || null,
       fecha_entrada: fecha(f.checkInDate), fecha_salida: fecha(f.checkOutDate),
       adultos_count: Number(f.adultsCount || 1), ninos_count: Number(f.childrenCount || 0),

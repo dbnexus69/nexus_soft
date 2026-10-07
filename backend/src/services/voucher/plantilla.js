@@ -1,6 +1,7 @@
 const PdfPrinter = require('pdfmake');
 const vfsFuentes = require('pdfmake/build/vfs_fonts.js');
 const TERMINOS_POR_DEFECTO = require('./terminosPorDefecto');
+const { META } = require('../../catalog/products');
 
 /**
  * El voucher en PDF (spec 011): venta + configuración de la agencia → definición de `pdfmake` → Buffer.
@@ -9,7 +10,7 @@ const TERMINOS_POR_DEFECTO = require('./terminosPorDefecto');
  * contacto, términos y pie). Cada categoría de producto es una entrada de `SECCIONES`: título y pares
  * etiqueta/valor; un valor vacío no se pinta. Subir `PLANTILLA_VERSION` cuando cambie el diseño invalida la caché.
  */
-const PLANTILLA_VERSION = 2;
+const PLANTILLA_VERSION = 4;
 
 const vfs = (vfsFuentes.pdfMake && vfsFuentes.pdfMake.vfs) || vfsFuentes.vfs || vfsFuentes;
 const fuente = (archivo) => Buffer.from(vfs[archivo], 'base64');
@@ -33,6 +34,14 @@ const hora12 = (h) => {
   return `${((n + 11) % 12) + 1}:${mm} ${n >= 12 ? 'PM' : 'AM'}`;
 };
 
+// Un tour: va en su sección, o dentro del paquete al que pertenece.
+const campoTour = (t) => [
+  ['Tour / actividad', t.tourName], ['Fecha y hora', fechaHora(t.preferredDate)],
+  ['Pasajeros', nombres(t.guests) || t.passengerName],
+  ['Adultos', t.adultsCount], ['Niños', t.childrenCount], ['Punto de recogida', t.pickupPoint],
+  ['Idioma guía', t.guideLanguage], ['Transporte', t.needsTransport ? 'Incluido' : 'No requiere'], ['Observaciones', t.observations],
+];
+
 // ── Secciones por categoría: [clave de la venta, título, (producto) => [[etiqueta, valor], …]]
 const SECCIONES = [
   ['hotelData', 'ALOJAMIENTO', (h) => [
@@ -40,11 +49,7 @@ const SECCIONES = [
     ['Check-in', fechaHora(h.startDate)], ['Check-out', fechaHora(h.endDate)],
     ['N° reserva', h.reservationNumber || 'Pendiente'], ['Huéspedes', nombres(h.guests)], ['Observaciones', h.observations],
   ]],
-  ['tourData', 'ACTIVIDADES Y TOURS', (t) => [
-    ['Tour / actividad', t.selectedTour], ['Pasajeros', nombres(t.guests) || t.passengerName],
-    ['Adultos', t.adultsCount], ['Niños', t.childrenCount], ['Punto de recogida', t.pickupPoint],
-    ['Idioma guía', t.guideLanguage], ['Transporte', t.needsTransport ? 'Incluido' : 'No requiere'], ['Observaciones', t.observations],
-  ]],
+  ['tourData', 'ACTIVIDADES Y TOURS', campoTour],
   ['planData', 'PAQUETES', (p) => {
     const terrestre = p.transportType === 'Terrestre';
     if (p.packageType === 'supplier') {
@@ -121,6 +126,21 @@ const SECCIONES = [
 const vacio = (v) => v === null || v === undefined || v === '' || v === '—';
 
 /** Pares etiqueta/valor en una rejilla de dos columnas. */
+// Lo que cuelga de un paquete (`includedProducts`, por slug): cada servicio con el formato de su sección.
+function bloquesDeHijos(plan, aeropuertos, c) {
+  const bloques = [];
+  for (const [slug, lista] of Object.entries(plan.includedProducts || {})) {
+    if (!lista?.length) continue;
+    const { label, responseKey } = META[slug];
+    const seccion = SECCIONES.find(([clave]) => clave === responseKey);
+    const items = slug === 'ticket'
+      ? lista.map(t => bloqueTiquete(t, aeropuertos, c))
+      : lista.map(x => rejilla(seccion[2](x), c)).filter(Boolean).map(i => tarjeta([i], c));
+    if (items.length) bloques.push(titulo(`${label} incluido en ${plan.planName || plan.packageName || 'el paquete'}`, c), ...items);
+  }
+  return bloques;
+}
+
 function rejilla(pares, c) {
   const celdas = pares.filter(([, v]) => !vacio(v)).map(([etiqueta, valor]) => ({
     stack: [{ text: etiqueta.toUpperCase(), style: 'etiqueta', color: c.tenue }, { text: String(valor), style: 'valor' }],
@@ -207,6 +227,10 @@ function definicion(venta, config, { logo = null, aeropuertos = {}, hoy = new Da
   for (const [clave, nombre, campos] of SECCIONES) {
     const items = (venta[clave] || []).map(x => rejilla(campos(x), c)).filter(Boolean);
     if (items.length) cuerpo.push(titulo(nombre, c), ...items.map(i => tarjeta([i], c)));
+    // Los servicios que cuelgan de un paquete no están en su sección: salen debajo de él.
+    if (clave === 'planData') {
+      for (const plan of venta.planData || []) cuerpo.push(...bloquesDeHijos(plan, aeropuertos, c));
+    }
   }
 
   return {

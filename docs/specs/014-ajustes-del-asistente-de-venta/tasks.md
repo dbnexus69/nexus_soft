@@ -7,7 +7,9 @@ ha probado en el navegador.
 
 ---
 
-## T1 · Borrador que sobrevive a cambiar de módulo `[~]`
+## T1 · Borrador que sobrevive a cambiar de módulo `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Copia en memoria por empresa y usuario; cerrar con X o "Cancelar" ya no borra; si falla el
 `localStorage` se borra la copia vieja. Ver `plan.md` decisión 1.
@@ -15,7 +17,9 @@ Copia en memoria por empresa y usuario; cerrar con X o "Cancelar" ya no borra; s
 Pendiente: decidir si se añade "Descartar borrador" (hoy solo lo borra registrar la venta) y
 resolver que una recarga pierde los borradores con vouchers grandes (IndexedDB o servidor).
 
-## T2 · Tipo de documento en SIM card y finca `[~]`
+## T2 · Tipo de documento en SIM card y finca `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Selector "Tipo de Documento" antes del número, con las opciones de la configuración de la
 agencia. La causa del aviso "Elija primero el tipo de documento" era que
@@ -24,13 +28,17 @@ revisaron todos los formularios de venta: era el único caso (SIM y finca).
 
 Pendiente: probar en pantalla que el selector precarga el tipo del cliente.
 
-## T3 · Nombre y fecha y hora del tour `[~]`
+## T3 · Nombre y fecha y hora del tour `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Dos campos obligatorios al pasar del paso de productos. El backend ya guardaba `tour_nombre`
 y `fecha_preferida`; faltaba la pantalla. Las ventas de tours ya guardadas no tienen nombre y
 hay que volver a capturarlo.
 
-## T4 · Resumen de la venta y IVA en el pago `[~]`
+## T4 · Resumen de la venta y IVA en el pago `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Tarjeta de resumen rediseñada (paso de productos) y celda de IVA en el resumen financiero
 (paso de pago).
@@ -40,7 +48,9 @@ Tarjeta de resumen rediseñada (paso de productos) y celda de IVA en el resumen 
 Se quitan "Cancelar" y "Guardar Servicio" de la cabecera; quedan los de la barra inferior,
 que llaman a la misma función.
 
-## T6 · Ciudad y dirección de la finca `[~]`
+## T6 · Ciudad y dirección de la finca `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 `ventaProductos.js` leía `f.city` y `f.address`; ahora `f.fincaCity` y `f.fincaAddress`.
 Verificado por lectura del código y `node --check`. Falta comprobarlo con una venta real de
@@ -52,6 +62,13 @@ Reportado en el chat. El aviso da una referencia de 8 caracteres y el servidor r
 causa en la consola del backend (`[ERROR] <referencia> POST /api/v1/sales …`). Falta esa
 línea para diagnosticar. Mientras tanto, revisado: las columnas de `prod_fincas` y
 `prod_simcards` existen en el esquema, así que no es un problema de columnas.
+
+*Intento de reproducirlo (2026-10-08), por la API con servidor propio y `app_nexus`:* una venta con los 15
+servicios rellenos como los deja el asistente, otra con un pasajero nuevo repetido en varios servicios, y otra
+con paquete de proveedor con servicios vinculados más ida y vuelta con escala: **las tres dan 201**. El cuerpo
+grande tampoco lo explica (pasaría de 5 MB → 413, no 500; los vouchers ya no viajan en el JSON). Sigue
+haciendo falta la línea `[ERROR] <referencia>` del backend o los datos exactos de la venta que falló.
+El equipo confirma que las ventas funcionan con normalidad: queda abierta solo por si vuelve a aparecer.
 
 ## Registro
 

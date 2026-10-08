@@ -37,10 +37,25 @@ Verificado:
 - `pnpm test:voucher`: "Todo en orden".
 - `pnpm test:vuelos-api`: "Todo en orden", 0 fallos.
 
-## T7 · PDF y detalle de la venta en pantalla `[ ]`
+## T7 · PDF y detalle de la venta en pantalla `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Pendiente: abrir el voucher de una venta con paquete y tours, y revisar que el detalle de la
 venta muestre los hijos dentro del paquete.
+
+**Comprobado sin navegador (2026-10-08)** con la venta 603, la única con servicios vinculados:
+- **PDF:** generado con la plantilla actual y revisado como texto y como imagen. Los dos tours salen bajo
+  "Tour incluido en San Andres All Inclusive", cada uno en su tarjeta con fecha y hora, y no como tours
+  sueltos.
+- **Detalle:** `getSaleProducts` devuelve los dos tours en `includedProducts.tour` del paquete y ninguno en
+  la lista de tours. La pantalla (`serviceShapes.tsx`) pinta los hijos de cualquier categoría que tenga en
+  `FORMAS`, y están las 14.
+- Los tours siguen sin nombre: se guardaron antes del campo, y los productos de una venta ya no se editan
+  (T8 de la 002), así que solo se arregla registrando la venta de nuevo o con el nombre dado a mano en la
+  base.
+
+**Por ver en pantalla:** el detalle de la venta 603 (los tours dentro del paquete).
 
 ## Registro
 

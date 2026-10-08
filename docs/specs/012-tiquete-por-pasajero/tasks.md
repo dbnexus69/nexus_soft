@@ -18,7 +18,9 @@ del titular heredada).
 ### T4 · Voucher `[x]`
 Columna de asientos por tramo en la tabla de pasajeros; `PLANTILLA_VERSION` 2. **Se comprueba:** `test:voucher`.
 
-### T5 · Formulario de tiquete `[~]`
+### T5 · Formulario de tiquete `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 Pasos 7–10 del plan. **Se comprueba:** `tsc`, `vite build`. **En pantalla:** tiquete de ida y vuelta con dos pasajeros;
 borrador viejo.
 

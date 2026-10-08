@@ -18,7 +18,9 @@ Verificado: prueba desechable por la API (`verif-iva-…`, agencia propia):
 - asesor con alcance `own`: 1 venta, IVA 95 (igual que su venta en la base).
 - sin sesión: 401.
 
-## T2 · Cifra y modal en el dashboard `[~]`
+## T2 · Cifra y modal en el dashboard `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Cifra "IVA del periodo" en el panel de contexto, que sigue el calendario; modal con cifra,
 lista y paginación.

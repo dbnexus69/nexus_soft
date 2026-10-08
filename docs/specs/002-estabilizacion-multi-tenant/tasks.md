@@ -433,8 +433,7 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
   vuelve al de `index.html` al salir; y el parpadeo era del login, que pedía la marca sin esperarla y
   antes de guardar el token, así que la primera pantalla salía con la de la casa — ahora guarda el
   token, espera la marca y recién entonces fija el usuario (al recargar ya esperaba). `tsc` limpio.
-  **Por ver en pantalla:** entrar con una agencia con marca (sin parpadeo, título de la pestaña) y
-  descargar un voucher (texto legal con el nombre de la agencia).
+  **Confirmado en pantalla** (2026-10-08).
 - ~~**Ruido en el registro:** el manejador de errores escribe con traza cada 404 de negocio.~~ Hecho
   (2026-10-03): lo previsto (4xx propios, y los errores de Prisma, Zod y multer que se traducen) escribe
   una línea `[REQUEST_REJECTED]`; `[ERROR]` con meta y traza queda para lo inesperado. Comprobado
@@ -810,7 +809,9 @@ liquidar por debajo da 400 `BELOW_MINIMUM` con el mínimo en el mensaje. Un mín
 **Comprobado** en `pnpm test:aislamiento-api`: el mínimo por defecto, la liquidación por debajo (400) y por
 encima (201), y el negativo (422). `tsc` limpio. **Por ver en pantalla:** la tarjeta y el campo de la ficha.
 
-## T24 · Suplantar desde dentro de una suplantación `[~]`
+## T24 · Suplantar desde dentro de una suplantación `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Reportado: al recargar estando dentro de una agencia suplantada, la pantalla no mostraba los datos de la
 agencia (el superadmin sigue siendo él, con la marca de la agencia). **Comprobado por la API** que, con un

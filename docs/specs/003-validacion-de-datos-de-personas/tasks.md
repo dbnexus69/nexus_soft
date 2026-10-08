@@ -158,7 +158,9 @@ cierran en vez de comparar el número.
 
 ---
 
-## T7 · Fecha de nacimiento en el alta de usuarios `[~]`
+## T7 · Fecha de nacimiento en el alta de usuarios `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Pedido: en "Registrar usuario" no se podía escribir la fecha a mano, y una fecha válida salía
 como "no es válida".
@@ -175,10 +177,19 @@ edad máxima.
 mano y una elegida en el calendario. Otros usos de la librería (dashboard, `DateTimePicker` de
 vuelos) no se han tocado.
 
+## T8 · El NIT vale por su base `[x]`
+
+Decisión del equipo (2026-10-08): basta con la base del NIT (9 o 10 números). El dígito de verificación —con o
+sin guion— es opcional y **ya no se comprueba** con el módulo 11 de la DIAN, que rechazaba NIT que la agencia sí
+usa. Cambiado en las dos copias (`backend/src/utils/datosPersona.js` y `frontend/src/utils/datosPersona.ts`) y en
+los ejemplos de los campos (`Ej. 900123456`). **Comprobado:** `test:validaciones` (135) con los casos nuevos y
+`test:reglas-espejo` (las dos copias coinciden en 785 comparaciones).
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-08 | T8 | El NIT vale por su base; el dígito de verificación es opcional y no se comprueba. |
 | 2026-10-06 | T7 | Fecha de nacimiento de usuarios: escribible y validada como texto `AAAA-MM-DD`; `tsc` sin errores. Sin probar en pantalla. |
 |---|---|---|
 | 2026-10-03 | T4 | Usuarios, comisionistas y responsables validan sus datos de persona y el tipo de documento por id (`docTypeId`), en el servidor y en sus formularios; 16 comprobaciones por la API. Y los pasajeros del asistente de venta, en el servidor y al pasar del paso de productos. |

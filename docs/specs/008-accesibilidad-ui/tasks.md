@@ -4,7 +4,9 @@ Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
 **Estado (2026-10-03).** Hechas T1 a T4, por confirmar en pantalla. Los textos de 10 px ya están en 12 px (010), por ver en pantalla.
 
-## T1 · Lo crítico: campos, nombres, foco y movimiento `[~]`
+## T1 · Lo crítico: campos, nombres, foco y movimiento `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Auditoría estática contra las reglas de prioridad 1–2 de la skill, y arreglo en los componentes
 compartidos (un sitio por regla, no pantalla por pantalla):
@@ -27,7 +29,9 @@ compartidos (un sitio por regla, no pantalla por pantalla):
 **Comprobado:** `tsc` limpio, `vite build` correcto. **Por ver en pantalla:** recorrer con Tab (el
 anillo se ve en botones, no al hacer clic), y pulsar la etiqueta de un campo (lleva al campo).
 
-## T2 · `Combobox` conectado a su etiqueta `[~]`
+## T2 · `Combobox` conectado a su etiqueta `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 `Combobox` (`Form.tsx`) ahora es un combobox ARIA: `role="combobox"`, `aria-expanded`,
 `aria-controls` hacia su lista (`role="listbox"`, opciones con `role="option"` y `aria-selected`),
@@ -46,7 +50,9 @@ iconos), 🔗 del paso 2. Sin emoji, porque el texto ya dice el resultado: ✅/�
 `title` de un vuelo de paquete ("Paquete: …"), y "Check-in ✓" pasa a "Check-in realizado". Quedan solo
 las dos ★ del confeti (decorativas).
 
-## T4 · Texto por debajo de 10 px `[~]`
+## T4 · Texto por debajo de 10 px `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
 
 Los 28 usos de `text-[8px]` y `text-[9px]` pasan a `text-[10px]`: ya no hay texto de menos de 10 px.
 **No se subieron** los 108 de `text-[10px]` (etiquetas en mayúscula de pantallas densas) a los 12 px que
@@ -56,9 +62,24 @@ marca la guía: cambia el diseño y hay que verlo en pantalla antes. Pendiente d
 formularios (el icono junto al texto), el tipo de transporte de un plan, y el calendario de vuelos con el
 texto de 10 px (por si algún chip se desborda).
 
+## T5 · Responsables: sin estado al crear y detalle rediseñado `[x]`
+
+**Confirmado en pantalla** (2026-10-08).
+
+- El formulario de responsables ya no pide el estado: nace activo (lo pone el backend) y se activa o desactiva
+  desde la tabla.
+- La modal de detalle, con la skill `ui-ux-pro-max` y el mismo patrón que la de clientes: identidad y cifras a la
+  izquierda (iniciales, estado en texto, deuda pendiente y ventas a su cargo), datos de contacto como lista
+  (`dl`) con teléfono y correo enlazados, ventas con el estado en palabras ("En crédito", no `credito`), estado
+  vacío que explica cuándo aparecerán, error de carga visible y vuelos con "Ida/Regreso" en texto, no solo por
+  color. Corrige la insignia que decía "CLIENTE ACTIVO".
+
+`tsc` limpio. **Por confirmar en pantalla** (sin navegador por la regla del `CLAUDE.md`).
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-08 | T5 | Responsables: sin selector de estado al crear y modal de detalle rediseñada. |
 | 2026-10-03 | T2–T4 | `Combobox` como combobox ARIA, emojis por iconos de lucide, y ni un texto por debajo de 10 px. |
 | 2026-10-03 | T1 | Auditoría con la skill `ui-ux-pro-max`: campos conectados a su etiqueta y su error, 7 botones con nombre, foco visible por teclado, movimiento reducido global. |

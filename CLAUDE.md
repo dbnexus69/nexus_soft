@@ -39,6 +39,7 @@ pnpm test:aislamiento    # tests/aislamiento.js — builds a 2nd agency, checks 
 pnpm test:aislamiento-api # tests/aislamiento-api.js — starts its own server on :3917, two agencies + a test superadmin; checks isolation through the real API (ids, files, asesor role, settlements, impersonation); ~1-2 min, tears down everything
 pnpm test:validaciones    # tests/validaciones.js — person-data rules (document by type, names, phone…); no DB needed
 pnpm test:vuelos-api      # tests/vuelos-api.js — flights/check-in through the real API (spec 004): Bogotá days, direction, counts, check-in, package flights, concurrency; same harness as aislamiento-api (tests/montaje.js)
+pnpm test:ventas-filtros # tests/ventas-filtros-api.js — sales list and credit filters (spec 016): Bogotá days, 422 per invalid field
 pnpm test:voucher        # tests/voucher-api.js — company profile and logo through the real API (spec 011); uploads under the `prueba/` folder of the buckets, removed on teardown
 pnpm test:reglas-espejo   # tests/reglas-espejo.js — compiles frontend/src/utils/datosPersona.ts and compares it with the server copy on ~800 inputs; no DB
 pnpm db:seed | db:studio

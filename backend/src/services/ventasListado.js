@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { BadRequestError } = require('../errors/AppError');
+const { rangoDeDias } = require('../utils/fechas');
 const { buildMeta } = require('../utils/paginationHelper');
 const { labelOf } = require('../catalog/products');
 const { soloLasSuyas } = require('./ventasAlcance');
@@ -56,11 +57,13 @@ async function listSales({ pagination, search, status, asesorId, clientId, respo
   if (commissionAgentId) {
     push('v.comisionista_id = ?', parseInt(commissionAgentId));
   }
-  if (dateFrom) {
-    push('v.creado_at >= ?', new Date(dateFrom));
+  // Días de Colombia, los dos incluidos (`rangoDeDias`).
+  const { desde, hasta } = rangoDeDias(dateFrom, dateTo);
+  if (desde) {
+    push('v.creado_at >= ?', desde);
   }
-  if (dateTo) {
-    push('v.creado_at <= ?', new Date(dateTo));
+  if (hasta) {
+    push('v.creado_at < ?', hasta);
   }
   // El alcance 'own' manda sobre el filtro de asesor que venga por query.
   const asesorEfectivo = soloLasSuyas({ permissionScope, viewScope, user }) ? user.id : (asesorId ? parseInt(asesorId) : null);

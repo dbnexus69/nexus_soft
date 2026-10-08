@@ -78,4 +78,28 @@ function fechaEnColombia(instante) {
   }).format(new Date(instante));
 }
 
-module.exports = { enHoraColombia, fechaEnColombia, OFFSET_COLOMBIA_H };
+/** El día de Colombia ('AAAA-MM-DD') de un día ya escrito así o de un instante. */
+function diaDeColombia(valor) {
+  if (!valor) return null;
+  const texto = String(valor).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+  return fechaEnColombia(new Date(texto));
+}
+
+/**
+ * Un filtro "desde / hasta" por días de Colombia, los dos incluidos: `[desde, hasta)` en instantes, con
+ * `hasta` en la medianoche del día siguiente. Lo usan los vuelos y el listado de ventas; antes las ventas
+ * leían `dateFrom` como medianoche UTC (las 19:00 del día anterior en Bogotá) y `dateTo` en la zona del
+ * servidor.
+ */
+function rangoDeDias(dateFrom, dateTo) {
+  const primero = diaDeColombia(dateFrom);
+  const ultimo = diaDeColombia(dateTo);
+  const [a, m, d] = ultimo ? ultimo.split('-').map(Number) : [];
+  return {
+    desde: primero ? enHoraColombia(primero, '00:00') : null,
+    hasta: ultimo ? enHoraColombia(new Date(Date.UTC(a, m - 1, d + 1)).toISOString().slice(0, 10), '00:00') : null,
+  };
+}
+
+module.exports = { enHoraColombia, fechaEnColombia, diaDeColombia, rangoDeDias, OFFSET_COLOMBIA_H };

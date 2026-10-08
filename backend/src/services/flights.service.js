@@ -11,7 +11,7 @@ const MOTIVO_SIN_ENVIO = {
   error_envio: 'No se pudo enviar el correo al cliente: vuelve a intentarlo',
 };
 const emailService = require('../utils/emailService');
-const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
+const { enHoraColombia, fechaEnColombia, rangoDeDias } = require('../utils/fechas');
 
 // Los formateadores se crean una vez, no en cada petición: construir un
 // Intl.DateTimeFormat es caro y antes se hacían dos por llamada.
@@ -57,23 +57,6 @@ function documentosDePasajeros(dv, persona) {
   const deLosPasajeros = (dv?.pasajeros_detalle || []).map(pd => doc(pd.personas)).filter(Boolean);
   if (deLosPasajeros.length) return deLosPasajeros.join(', ');
   return doc(persona);
-}
-
-function diaDeColombia(valor) {
-  if (!valor) return null;
-  const texto = String(valor).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
-  return fechaEnColombia(new Date(texto));
-}
-
-function rangoDeDias(dateFrom, dateTo) {
-  const primero = diaDeColombia(dateFrom);
-  const ultimo = diaDeColombia(dateTo);
-  const [a, m, d] = ultimo ? ultimo.split('-').map(Number) : [];
-  return {
-    desde: primero ? enHoraColombia(primero, '00:00') : null,
-    hasta: ultimo ? enHoraColombia(new Date(Date.UTC(a, m - 1, d + 1)).toISOString().slice(0, 10), '00:00') : null,
-  };
 }
 
 /** Una venta anulada o borrada no aparece en itinerarios ni acepta check-in. */

@@ -1,4 +1,6 @@
 const { z } = require('zod');
+const { fechaQuery } = require('./common.schema');
+const { diaDeColombia } = require('../utils/fechas');
 const { SLUGS, CATALOG } = require('../catalog/products');
 // La misma regla de precio que usa la venta al guardar: si aquí se calculara
 // aparte, la validación podría discrepar de lo que acaba en la base.
@@ -148,7 +150,40 @@ const reviewStatusSchema = z.object({
   isReviewed: z.boolean(),
 });
 
+// ── Filtros por query del listado y de la cartera ──────────────────────────
+// Un parámetro vacío (`?status=`) es lo mismo que no mandarlo.
+const opcional = (esquema) => z.preprocess(v => (v === '' ? undefined : v), esquema.optional());
+const ESTADOS_VENTA = ['credito', 'abonado', 'pagado', 'anulado'];
+const busqueda = opcional(z.string().trim().max(100, 'La búsqueda no puede pasar de 100 caracteres'));
+const idQuery = opcional(z.string().regex(/^[1-9]\d{0,9}$/, 'Debe ser un id numérico'));
+
+/**
+ * `GET /sales`. Antes solo se miraban las fechas: un `status` fuera del enum llegaba al SQL como
+ * `?::"SaleStatus"` y respondía 500, y un id que no era número se volvía `NaN`. Las fechas son días de
+ * Colombia (`rangoDeDias`), y "desde" no puede ser posterior a "hasta".
+ */
+const listSalesQuerySchema = z.object({
+  search: busqueda,
+  status: opcional(z.enum(ESTADOS_VENTA, { errorMap: () => ({ message: `Estado inválido. Válidos: ${ESTADOS_VENTA.join(', ')}` }) })),
+  dateFrom: opcional(fechaQuery.unwrap()),
+  dateTo: opcional(fechaQuery.unwrap()),
+  asesorId: idQuery,
+  clientId: idQuery,
+  responsableId: idQuery,
+  commissionAgentId: idQuery,
+  sortBy: opcional(z.enum(['creadoAt', 'date', 'total', 'status', 'clientName'], { errorMap: () => ({ message: 'Orden inválido. Válidos: creadoAt, date, total, status, clientName' }) })),
+  sortOrder: opcional(z.enum(['asc', 'desc'], { errorMap: () => ({ message: 'Sentido inválido. Válidos: asc, desc' }) })),
+}).passthrough().refine(
+  q => !q.dateFrom || !q.dateTo || diaDeColombia(q.dateFrom) <= diaDeColombia(q.dateTo),
+  { message: 'La fecha inicial no puede ser posterior a la final', path: ['dateFrom'] }
+);
+
+/** `GET /sales/credit`: estado, tramo y orden ya los valida el servicio; aquí, el largo de la búsqueda. */
+const creditQuerySchema = z.object({ search: busqueda }).passthrough();
+
 module.exports = {
+  listSalesQuerySchema,
+  creditQuerySchema,
   createSaleSchema,
   updateSaleSchema,
   registerPaymentSchema,

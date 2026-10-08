@@ -24,4 +24,4 @@ const dateRangeSchema = z
     { message: 'La fecha inicial no puede ser posterior a la final', path: ['dateFrom'] }
   );
 
-module.exports = { dateRangeSchema };
+module.exports = { dateRangeSchema, fechaQuery };

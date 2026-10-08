@@ -34,6 +34,9 @@ export function useSales() {
   const [perPage, setPerPage] = useState(10);
 
   const fetchSales = useCallback(async () => {
+    // Un rango al revés no se pide: la pantalla ya lo señala junto a las fechas, y el servidor lo
+    // rechazaría con un 422.
+    if (startDate && endDate && startDate > endDate) return;
     setLoading(true);
     setError(null);
     try {
@@ -43,16 +46,19 @@ export function useSales() {
         search: searchTerm || undefined,
         // 'all' es la opción vacía del selector, no un estado del enum.
         status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
+        // Días de Bogotá, los dos incluidos: el servidor los convierte (`rangoDeDias`). Antes "hasta" iba
+        // como `AAAA-MM-DDT23:59:59`, que el servidor leía en su propia zona horaria.
         dateFrom: startDate || undefined,
-        dateTo: endDate ? `${endDate}T23:59:59` : undefined,
+        dateTo: endDate || undefined,
       });
       if (res.success && Array.isArray(res.data)) {
         setSales(res.data);
         setMeta(res.meta || META_VACIA);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar ventas';
-      setError(msg);
+      // El mensaje de la API (un 422 dice qué filtro está mal), no "Request failed with status code 422".
+      const api = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      setError(api || 'No se pudieron cargar las ventas. Revisa la conexión e inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }

@@ -15,7 +15,6 @@ import {
   Ban,
   Search,
   X,
-  ExternalLink,
 } from "lucide-react";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -25,7 +24,7 @@ import { useSalesContext } from "../context/SalesContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionsContext";
-import { formatSaleId, formatCurrency, formatDate, formatId } from "../utils/formatters";
+import { formatSaleId, formatCurrency, formatDate, formatId, todayStr } from "../utils/formatters";
 import { Sale } from "../types";
 import { DatePicker } from "../components/sales/forms/TicketForm";
 import NewSaleWizard from "../components/sales/NewSaleWizard";
@@ -42,6 +41,7 @@ export default function Sales() {
     sales,
     meta,
     loading: salesLoading,
+    error: salesError,
     fetchSales,
     searchTerm,
     setSearchTerm,
@@ -64,7 +64,6 @@ export default function Sales() {
   const { canCreate, canEdit } = usePermissions();
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [isSiigoModalOpen, setIsSiigoModalOpen] = useState(false);
   const [paymentsSale, setPaymentsSale] = useState<Sale | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -92,6 +91,24 @@ export default function Sales() {
   // Búsqueda, estado, fechas, orden y alcance por rol los resuelve el servidor.
   // La tabla pinta la página que recibe, sin volver a filtrarla.
   const filteredSales = sales;
+
+  // La búsqueda se escribe aquí y viaja al servidor cuando se deja de teclear: antes cada tecla lanzaba
+  // una petición. Sin espacios a los lados; el tope (100) es el mismo que valida el backend.
+  const [busqueda, setBusqueda] = useState(searchTerm);
+  useEffect(() => {
+    const espera = setTimeout(() => {
+      const limpia = busqueda.trim();
+      if (limpia !== searchTerm) setSearchTerm(limpia);
+    }, 350);
+    return () => clearTimeout(espera);
+  }, [busqueda]);
+
+  // Fechas: "Desde" no pasa de "Hasta" ni de hoy, y "Hasta" no baja de "Desde" (el calendario ya no deja
+  // elegirlas al revés). Una fecha escrita incompleta o fuera de rango se avisa debajo del campo.
+  const hoy = todayStr();
+  const [errorFechas, setErrorFechas] = useState<string | null>(null);
+  const rangoAlReves = !!startDate && !!endDate && startDate > endDate;
+  const mensajeFechas = errorFechas || (rangoAlReves ? 'La fecha "Hasta" no puede ser anterior a "Desde".' : null);
 
   useEffect(() => {
     fetchSales();
@@ -235,16 +252,6 @@ export default function Sales() {
             Control de ingresos, facturación y estados de pago de tus clientes en tiempo real.
           </p>
         </div>
-        <a 
-          href="https://siigonube.siigo.com/#/sales-management/2044" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center justify-center font-black shadow-md hover:shadow-lg transition-all border border-blue-400/30 shrink-0 group relative"
-          title="Abrir facturación electrónica en Siigo Nube"
-        >
-          <span className="font-black tracking-tighter text-xs">S</span>
-          <ExternalLink size={10} className="absolute top-1.5 right-1.5 opacity-70 group-hover:opacity-100" />
-        </a>
       </div>
 
       <div className="flex flex-col gap-6">
@@ -281,20 +288,24 @@ export default function Sales() {
                   <div className="relative w-full lg:w-72">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <input 
+                      type="search"
+                      aria-label="Buscar ventas por cliente, asesor, comisionista o número"
                       placeholder="Buscar por cliente, asesor, comisionista..." 
+                      maxLength={100}
                       className="text-sm border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full transition-all"
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
+                      value={busqueda}
+                      onChange={e => setBusqueda(e.target.value)}
                     />
-                    {searchTerm && (
-                      <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 p-0.5 rounded">
+                    {busqueda && (
+                      <button onClick={() => { setBusqueda(''); setSearchTerm(''); }} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 p-0.5 rounded">
                         <X size={14} />
                       </button>
                     )}
                   </div>
                   <select
-                    value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value as any)}
+                    aria-label="Filtrar por estado"
+                    value={statusFilter || "all"}
+                    onChange={e => setStatusFilter(e.target.value)}
                     className="text-sm border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 bg-slate-50 dark:bg-[#1c1d26] text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#8D99AE]/25 w-full lg:w-auto cursor-pointer"
                   >
                     <option value="all">Todos los estados</option>
@@ -303,13 +314,21 @@ export default function Sales() {
                     <option value="credito">En Crédito</option>
                     <option value="anulado">Anulado</option>
                   </select>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto">
+                  <div className="flex flex-col gap-1 w-full lg:w-auto">
+                  <div
+                    className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto"
+                    role="group"
+                    aria-label="Rango de fechas"
+                    aria-describedby={mensajeFechas ? "error-rango-fechas" : undefined}
+                  >
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Desde:</span>
                       <div className="w-full sm:w-36">
                         <DatePicker
                           value={startDate}
-                          onChange={setStartDate}
+                          onChange={(v) => { setErrorFechas(null); setStartDate(v); }}
+                          max={endDate && endDate < hoy ? endDate : hoy}
+                          triggerError={setErrorFechas}
                           fieldName="Fecha Inicial"
                           popoverDirection="down"
                         />
@@ -320,7 +339,10 @@ export default function Sales() {
                       <div className="w-full sm:w-36">
                         <DatePicker
                           value={endDate}
-                          onChange={setEndDate}
+                          onChange={(v) => { setErrorFechas(null); setEndDate(v); }}
+                          min={startDate || undefined}
+                          max={hoy}
+                          triggerError={setErrorFechas}
                           fieldName="Fecha Final"
                           popoverDirection="down"
                         />
@@ -328,13 +350,20 @@ export default function Sales() {
                     </div>
                     {(startDate || endDate) && (
                       <button 
-                        onClick={() => { setStartDate(""); setEndDate(""); }}
+                        aria-label="Limpiar fechas"
+                        onClick={() => { setErrorFechas(null); setStartDate(""); setEndDate(""); }}
                         className="text-red-500 dark:text-red-300 hover:text-red-600 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center h-[38px] w-[38px] shrink-0 border border-red-100 dark:border-red-900/40 transition-colors shadow-sm"
                         title="Limpiar fechas"
                       >
                         <X size={14} />
                       </button>
                     )}
+                  </div>
+                  {mensajeFechas && (
+                    <p id="error-rango-fechas" role="alert" className="text-xs font-medium text-red-600 dark:text-red-300">
+                      {mensajeFechas}
+                    </p>
+                  )}
                   </div>
                   {canCreate("sales") && (
                     <Button onClick={handleOpenNewSale} className="w-full lg:w-auto justify-center bg-[#2B2D42] hover:bg-[#1e202f] dark:bg-[#8D99AE] dark:hover:bg-[#b2bccb] text-white rounded-xl shadow-md px-5 py-2.5 font-bold">
@@ -347,6 +376,11 @@ export default function Sales() {
             >
               Lista de Ventas {isAdmin ? "(Todas)" : "(Mis Ventas)"}
             </CardHeader>
+            {salesError && (
+              <p role="alert" className="mx-4 mb-3 rounded-xl bg-red-50 dark:bg-red-950/40 px-4 py-2.5 text-sm text-red-700 dark:text-red-300">
+                {salesError}
+              </p>
+            )}
 
             {salesLoading && filteredSales.length === 0 ? (
               <div className={`${SKELETON} p-4 space-y-3`}>
@@ -430,48 +464,10 @@ export default function Sales() {
             setSuccessMessage(msg);
             setShowSuccess(true);
             setShowConfetti(true);
-            setIsSiigoModalOpen(true);
             setTimeout(() => setShowConfetti(false), 3000);
             setTimeout(() => setShowSuccess(false), 3000);
           }}
         />
-      </Modal>
-
-      {/* ===== MODAL FACTURACIÓN SIIGO ===== */}
-      <Modal
-        isOpen={isSiigoModalOpen}
-        onClose={() => setIsSiigoModalOpen(false)}
-        title="Facturación Electrónica"
-        size="md"
-      >
-        <div className="flex flex-col items-center text-center p-4">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-4 animate-bounce">
-            <CheckCircle2 size={36} />
-          </div>
-          <h3 className="text-xl font-bold text-primary mb-2">¡Venta Registrada Exitosamente!</h3>
-          <p className="text-gray-600 text-sm mb-6 max-w-sm">
-            La venta ha sido guardada en el sistema. Para cumplir con la normativa legal, por favor procede a generar la factura electrónica en Siigo Nube.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <Button
-              onClick={() => setIsSiigoModalOpen(false)}
-              variant="outline"
-              className="flex-1 py-3 text-xs sm:text-sm font-bold border-gray-200 text-gray-500 hover:bg-gray-50"
-            >
-              Cerrar
-            </Button>
-            <a
-              href="https://siigonube.siigo.com/#/sales-management/2044"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setIsSiigoModalOpen(false)}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-white font-bold text-xs sm:text-sm bg-accent hover:bg-accent/95 shadow-lg shadow-accent/25 transition-all text-center"
-            >
-              Generar Factura en Siigo
-              <ExternalLink size={16} />
-            </a>
-          </div>
-        </div>
       </Modal>
 
       {/* ===== ABONOS ===== */}

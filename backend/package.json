@@ -18,6 +18,7 @@
     "test:vuelos-api": "node tests/vuelos-api.js",
     "storage:buckets": "node scripts/crear-buckets.js",
     "test:voucher": "node tests/voucher-api.js",
+    "test:ventas-filtros": "node tests/ventas-filtros-api.js",
     "test:validaciones": "node tests/validaciones.js",
     "test:reglas-espejo": "node tests/reglas-espejo.js"
   },

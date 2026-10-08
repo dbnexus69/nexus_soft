@@ -203,6 +203,9 @@ export default function CreditDashboard() {
               aria-hidden
             />
             <input
+              type="search"
+              aria-label="Buscar en la cartera por cliente, documento o venta"
+              maxLength={100}
               placeholder="Buscar cliente, documento o venta"
               className="w-full rounded-lg border border-slate-300 bg-white py-1.5 pl-9 pr-8 text-sm text-slate-700 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
               value={busqueda}

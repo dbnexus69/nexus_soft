@@ -15,17 +15,16 @@ const { authorize } = require('../middleware/authorize');
 const paginate = require('../middleware/paginate');
 const upload = require('../middleware/upload');
 const { validate, validateQuery } = require('../middleware/validate');
-const { dateRangeSchema } = require('../schemas/common.schema');
 const {
   createSaleSchema, updateSaleSchema, registerPaymentSchema,
-  voidSaleSchema, reviewStatusSchema
+  voidSaleSchema, reviewStatusSchema, listSalesQuerySchema, creditQuerySchema
 } = require('../schemas/sales.schema');
 
 router.use(auth);
 
-router.get('/', authorize('sales', 'view'), validateQuery(dateRangeSchema), paginate, salesController.list);
+router.get('/', authorize('sales', 'view'), validateQuery(listSalesQuerySchema), paginate, salesController.list);
 // Va antes de /:id para que 'credit' no se interprete como un id de venta.
-router.get('/credit', authorize('sales', 'view'), paginate, salesController.creditPortfolio);
+router.get('/credit', authorize('sales', 'view'), validateQuery(creditQuerySchema), paginate, salesController.creditPortfolio);
 // Colección e ítem del mismo recurso. Va antes de '/:id': Express resuelve en
 // orden de declaración y '/:id' capturaría 'credit' como si fuera un id.
 router.get('/credit/:clientId', authorize('sales', 'view'), paginate, salesController.creditByClient);

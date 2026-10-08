@@ -10,7 +10,7 @@ const { META } = require('../../catalog/products');
  * contacto, términos y pie). Cada categoría de producto es una entrada de `SECCIONES`: título y pares
  * etiqueta/valor; un valor vacío no se pinta. Subir `PLANTILLA_VERSION` cuando cambie el diseño invalida la caché.
  */
-const PLANTILLA_VERSION = 4;
+const PLANTILLA_VERSION = 5;
 
 const vfs = (vfsFuentes.pdfMake && vfsFuentes.pdfMake.vfs) || vfsFuentes.vfs || vfsFuentes;
 const fuente = (archivo) => Buffer.from(vfs[archivo], 'base64');
@@ -23,7 +23,15 @@ const impresora = new PdfPrinter({
 
 // ── Formatos (hora de Bogotá, como el resto de la aplicación)
 const ZONA = 'America/Bogota';
-const fecha = (v) => (v ? new Intl.DateTimeFormat('es-CO', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(v)) : null);
+// 'AAAA-MM-DD' ya es un día de calendario (así llegan las fechas de los tramos): se pinta tal cual.
+// Pasarlo por `new Date` lo leía como medianoche UTC, que en Bogotá es el día anterior: todos los vuelos
+// del voucher salían un día antes. Un instante (con hora) sí se convierte a la hora de Bogotá.
+const fecha = (v) => {
+  if (!v) return null;
+  const dia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v));
+  if (dia) return `${dia[3]}/${dia[2]}/${dia[1]}`;
+  return new Intl.DateTimeFormat('es-CO', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(v));
+};
 const fechaHora = (v) => (v ? new Intl.DateTimeFormat('es-CO', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(v)) : null);
 const dinero = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(v) || 0);
 const nombres = (lista) => (lista || []).map(p => p?.name).filter(Boolean).join(', ');
@@ -160,11 +168,15 @@ const tarjeta = (contenido, c) => ({
   margin: [0, 0, 0, 6],
 });
 
+// La flecha "→" no está en la Roboto que incrusta pdfmake: se perdía y el voucher decía "MDE CTG12B".
+// La raya (–) sí está.
+const ruta = (l) => `${l.origin} – ${l.destination}`;
+
 function bloqueTiquete(t, aeropuertos, c) {
   const tramos = (t.legs?.length ? [...t.legs, ...(t.outboundStops || []), ...(t.returnLeg ? [t.returnLeg] : []), ...(t.returnStops || [])] : []);
   const ciudad = (codigo) => (aeropuertos[codigo] ? ` (${aeropuertos[codigo]})` : '');
   const filas = tramos.map(l => [
-    { text: `${l.origin}${ciudad(l.origin)} → ${l.destination}${ciudad(l.destination)}`, bold: true },
+    { text: `${l.origin}${ciudad(l.origin)} – ${l.destination}${ciudad(l.destination)}`, bold: true },
     l.flightNumber || '—',
     [fecha(l.date), hora12(l.time)].filter(Boolean).join(' ') || '—',
     [fecha(l.arrivalDate || l.date), hora12(l.arrivalTime)].filter(Boolean).join(' ') || '—',
@@ -181,18 +193,31 @@ function bloqueTiquete(t, aeropuertos, c) {
     });
   }
   if (t.passengers?.length) {
-    // El asiento de cada pasajero en cada tramo (spec 012); en ventas anteriores, el del tramo.
-    const asientosDe = (p) => tramos.map((l, k) => {
-      const propio = (p.asientos || []).find(a => Number(a.tramo) === k + 1)?.asiento;
-      const asiento = propio || l.seat;
-      return asiento ? `${l.origin}→${l.destination} ${asiento}` : null;
-    }).filter(Boolean).join('  ·  ') || '—';
+    // El asiento de cada pasajero en cada tramo (spec 012), emparejado por el `orden` del tramo, que es lo
+    // que guarda `asientos[].tramo`. En ventas anteriores: el del tramo, o el del pasajero en el primero.
+    // Una línea por tramo, con la ruta en gris y el asiento en negrita; con un solo tramo, solo el asiento.
+    const asientosDe = (p) => {
+      const lineas = tramos.map((l, k) => {
+        const propio = (Array.isArray(p.asientos) ? p.asientos : [])
+          .find(a => Number(a.tramo) === Number(l.orden ?? k + 1))?.asiento;
+        const asiento = propio || l.seat || (k === 0 ? p.asiento : null);
+        if (!asiento) return null;
+        return tramos.length === 1
+          ? { text: asiento, bold: true }
+          : { text: [{ text: `${ruta(l)}  `, color: c.tenue }, { text: asiento, bold: true }], noWrap: true };
+      }).filter(Boolean);
+      return lineas.length ? { stack: lineas } : '—';
+    };
+    // La reserva es de cada pasajero; sin la suya (ventas anteriores), la del titular o la del tiquete,
+    // igual que al guardar (`ventaProductos.js`).
+    const titular = t.passengers.find(p => p.esTitular) || t.passengers[0];
+    const reservaDe = (p) => p.nroReserva || titular?.nroReserva || t.reservationNumber || '—';
     contenido.push({
-      table: { headerRows: 1, widths: ['*', 'auto', 'auto', 'auto', '*'],
-        body: [['Pasajero', 'Documento', 'Reserva', 'Tiquete', 'Asientos'].map(h => ({ text: h, style: 'cabecera', fillColor: c.fondo })),
+      table: { headerRows: 1, widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+        body: [['Pasajero', 'Documento', 'Reserva', 'Tiquete', tramos.length === 1 ? 'Asiento' : 'Asientos'].map(h => ({ text: h, style: 'cabecera', fillColor: c.fondo })),
           ...t.passengers.map(p => [
             `${p.name || p.nombreCompleto || '—'}${p.esTitular ? ' (titular)' : ''}`,
-            p.docNumber || p.nroDocumento || '—', p.nroReserva || '—', p.nroTiquete || '—', asientosDe(p),
+            p.docNumber || p.nroDocumento || '—', reservaDe(p), p.nroTiquete || '—', asientosDe(p),
           ])] },
       layout: 'lightHorizontalLines', fontSize: 8, margin: [0, 0, 0, 6],
     });
@@ -281,12 +306,21 @@ function definicion(venta, config, { logo = null, aeropuertos = {}, hoy = new Da
         ['Método de pago', venta.paymentMethod || ((venta.payments || []).length > 1 ? 'Mixto' : venta.payments?.[0]?.method)],
         ['Emisor', agencia],
         ['Valor total', dinero(venta.total)],
-        ['IVA incluido (sobre la ganancia)', Number(venta.iva) > 0 ? dinero(venta.iva) : null],
+        // El valor del IVA no se enseña al cliente: solo que está incluido.
+        ['IVA', 'Incluido'],
         ['Abonado', dinero(pagado)],
         ['Saldo', dinero(Math.max(0, (Number(venta.total) || 0) - pagado))],
       ], c)], c),
       titulo('CONDICIONES DEL SERVICIO', c),
-      ...terminos.map(t => ({ text: [{ text: `${t.titulo}: `, bold: true }, t.texto], fontSize: 8, margin: [0, 0, 0, 4] })),
+      // El título de cada cláusula va encima de su texto, no en la misma línea.
+      ...terminos.map(t => ({
+        stack: [
+          ...(t.titulo ? [{ text: t.titulo, bold: true, fontSize: 8.5, margin: [0, 0, 0, 1] }] : []),
+          { text: t.texto, fontSize: 8, lineHeight: 1.25 },
+        ],
+        margin: [0, 0, 0, 6],
+        unbreakable: true,
+      })),
     ],
   };
 }

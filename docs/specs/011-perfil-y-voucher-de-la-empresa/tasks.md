@@ -138,6 +138,23 @@ Bajar `express.json` de 50 MB tras confirmar qué rutas mandan cuerpos grandes.
 - **Se comprueba:** releída contra el código final.
 - **Hecho:** README (Storage, variables, voucher), `backend/CLAUDE.md` (voucher en el servidor), `CLAUDE.md` (regla de `empresas`, Storage, `test:voucher`).
 
+## T14 · Ajustes del voucher `[x]`
+
+- **Asientos.** La flecha "→" no está en la Roboto que incrusta `pdfmake` y desaparecía: la ruta salía "MDE CTG" y
+  el asiento "MDE CTG12B". Ahora la ruta usa raya (`MDE – CTG`) y los asientos van uno por tramo, ruta en gris y
+  asiento en negrita (con un solo tramo, solo el asiento). Se emparejan por el `orden` del tramo, que es lo que
+  guarda `asientos[].tramo`; en ventas anteriores, el del tramo o el del pasajero.
+- **Reserva por pasajero.** Ya llegaba. Sin la suya (ventas anteriores), la del titular o la del tiquete, igual
+  que al guardar.
+- **IVA.** El resumen dice "IVA: Incluido", sin el valor.
+- **Términos.** El título de cada cláusula va encima de su texto.
+- **Fechas de vuelo un día antes** (encontrado al probar): `fecha('2026-10-10')` era medianoche UTC, que en Bogotá
+  es el 9. Una fecha `AAAA-MM-DD` se pinta tal cual; un instante con hora se sigue convirtiendo a Bogotá.
+- `PLANTILLA_VERSION` 5: los PDF en caché se regeneran.
+
+**Comprobado:** voucher de una venta real (un tramo) y de la venta de ejemplo (dos pasajeros, dos tramos)
+generados y leídos con `pdftotext`, y la página revisada como imagen. `pnpm test:voucher` en verde.
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
@@ -148,3 +165,4 @@ Bajar `express.json` de 50 MB tras confirmar qué rutas mandan cuerpos grandes.
 | 2026-10-04 | T6–T8 | Voucher en el servidor con `pdfmake`, caché por huella en Storage, descarga firmada, envío registrado y vista previa. |
 | 2026-10-04 | T9, T10 | Ventas usa el voucher del servidor (fuera `html2canvas`/`jspdf`); pantalla Mi empresa con vista previa. |
 | 2026-10-04 | T11–T13 | Límite del cuerpo a 5 MB, documentación al día. Spec cerrada salvo la prueba en pantalla. |
+| 2026-10-08 | T14 | Asientos legibles por tramo, reserva por pasajero, IVA "Incluido", título de cláusula encima, y las fechas de vuelo ya no salen un día antes. |

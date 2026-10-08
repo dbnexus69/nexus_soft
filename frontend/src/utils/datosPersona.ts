@@ -9,26 +9,13 @@ const REGLAS_DOCUMENTO: Record<string, ReglaDocumento> = {
   CC: { patron: /^\d{6,10}$/, mensaje: 'La cédula de ciudadanía lleva solo números, de 6 a 10 dígitos', soloNumeros: true },
   TI: { patron: /^\d{10,11}$/, mensaje: 'La tarjeta de identidad lleva solo números, de 10 u 11 dígitos', soloNumeros: true },
   CE: { patron: /^\d{6,10}$/, mensaje: 'La cédula de extranjería lleva solo números, de 6 a 10 dígitos', soloNumeros: true },
-  NIT: { patron: /^\d{9,10}(-?\d)?$/, mensaje: 'El NIT lleva de 9 a 11 números, con o sin guion antes del dígito de verificación (900123456-8)', soloNumeros: true },
+  NIT: { patron: /^\d{9,10}(-?\d)?$/, mensaje: 'El NIT lleva 9 o 10 números; el dígito de verificación es opcional (900123456 o 900123456-8)', soloNumeros: true },
   PA: { patron: /^[A-Z0-9]{5,15}$/, mensaje: 'El pasaporte lleva letras y números, de 5 a 15 caracteres', soloNumeros: false },
 };
 const REGLA_GENERICA: ReglaDocumento = { patron: /^[A-Z0-9]{4,20}$/, mensaje: 'El documento lleva solo letras y números, de 4 a 20 caracteres', soloNumeros: false };
 
-// Dígito de verificación del NIT (DIAN): módulo 11 sobre la base, con estos pesos de derecha a izquierda.
-const PESOS_NIT = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
-const digitoNit = (base: string) => {
-  const r = [...base].reverse().reduce((suma, d, i) => suma + Number(d) * PESOS_NIT[i], 0) % 11;
-  return r > 1 ? 11 - r : r;
-};
-
-// Solo se comprueba cuando se sabe cuál es el dígito sin adivinar: con guion o con 11 cifras. Un NIT de 10 cifras
-// sin guion puede ser de persona natural sin dígito, y no se rechaza.
-function mensajeDigitoNit(numero: string): string | null {
-  const m = /^(\d{9,10})-(\d)$/.exec(numero) || /^(\d{10})(\d)$/.exec(numero);
-  if (!m) return null;
-  const esperado = digitoNit(m[1]);
-  return Number(m[2]) === esperado ? null : `El dígito de verificación del NIT no coincide: para ${m[1]} es ${esperado}`;
-}
+// El NIT se valida por su base (9 o 10 números). El dígito de verificación es opcional y no se comprueba:
+// con la base basta, y exigir que cuadrara el cálculo de la DIAN rechazaba NIT que la agencia sí usa.
 
 const reglaDeDocumento = (tipo?: string) => REGLAS_DOCUMENTO[String(tipo || '').trim().toUpperCase()] || REGLA_GENERICA;
 
@@ -51,7 +38,7 @@ export function mensajeDocumento(tipo: string | undefined, numero: string): stri
   if (!numero) return 'Obligatorio';
   const regla = reglaDeDocumento(tipo);
   if (!regla.patron.test(numero)) return regla.mensaje;
-  return String(tipo).trim().toUpperCase() === 'NIT' ? mensajeDigitoNit(numero) : null;
+  return null;
 }
 
 const PATRON_NOMBRE = /^\p{L}+(?:[ '’-]\p{L}+)*$/u;

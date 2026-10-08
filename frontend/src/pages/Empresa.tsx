@@ -18,7 +18,7 @@ import type { PerfilEmpresa, CambiosPerfil, Clausula } from '../api';
 const COLORES_POR_DEFECTO = { primario: '#1e293b', acento: '#2563eb', realce: '#f59e0b' };
 const CAMPOS: Array<[keyof CambiosPerfil, string, string?]> = [
   ['nombreComercial', 'Nombre comercial'],
-  ['nit', 'NIT', '900123456-8'],
+  ['nit', 'NIT', '900123456'],
   ['direccion', 'Dirección'],
   ['telefono', 'Teléfono', '+57 300 123 4567'],
   ['emailContacto', 'Correo de contacto', 'reservas@agencia.com'],

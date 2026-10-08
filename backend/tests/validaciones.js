@@ -31,10 +31,10 @@ console.log('\nReglas de datos de una persona\n');
 ['123456789', 'A234567890', '123456789012'].forEach(n => rechaza('TI', n));
 ['123456', '1234567890'].forEach(n => acepta('CE', n));
 ['A123456', '12345'].forEach(n => rechaza('CE', n));
-// NIT: sin dígito (9 cifras, o 10 sin guion) pasa; con dígito, tiene que ser el que corresponde (módulo 11 de la DIAN).
-['900123456-8', '890903938-8', '860034313-7', '9001234568', '9001234567', '900123456', '1234567890', '1234567890-2', '12345678902'].forEach(n => acepta('NIT', n));
-['12345678', 'ABC123456', '900123456-77', '900.123.456-8', '90012345-8', '900123456-7', '890903938-9', '1234567890-1', '12345678901'].forEach(n => rechaza('NIT', n));
-comprobar('el mensaje del NIT dice cuál es el dígito', /es 8$/.test(documento('NIT', '900123456-7') || ''), documento('NIT', '900123456-7'));
+// NIT: basta la base (9 o 10 números); el dígito de verificación es opcional y no se comprueba.
+['900123456-8', '890903938-8', '9001234568', '900123456', '1234567890', '1234567890-2', '12345678902',
+ '900123456-7', '890903938-9', '1234567890-1', '12345678901'].forEach(n => acepta('NIT', n));
+['12345678', 'ABC123456', '900123456-77', '900.123.456-8', '90012345-8', '900123456-', '123456789012'].forEach(n => rechaza('NIT', n));
 ['AB123456', 'ab123456', 'XA12345', '123456789012345'].forEach(n => acepta('PA', n));
 ['A123', 'AB-123456', 'AB 123456', '1234567890123456', 'AB12345!'].forEach(n => rechaza('PA', n));
 acepta('cc', '1234567');

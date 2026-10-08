@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { Plane, Loader2 } from 'lucide-react';
+import { Plane, Loader2, Phone, Mail, IdCard, CalendarDays, Receipt } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Responsable, Sale } from '../../types';
 import { Pagination } from '../ui/Pagination';
@@ -15,12 +15,36 @@ interface ResponsableDetailModalProps {
   responsableFlights: any[];
 }
 
+// El estado de una venta en palabras: antes salía el valor crudo ("credito").
+const ESTADO_VENTA: Record<string, string> = {
+  credito: 'En crédito', abonado: 'Abonado', pagado: 'Pagado', anulado: 'Anulada',
+};
+
+const iniciales = (nombre: string) =>
+  nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
+
+/** Un dato de contacto: etiqueta arriba, valor debajo; si falta, se dice. */
+function Dato({ icono, etiqueta, children }: { icono: ReactNode; etiqueta: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 gap-3">
+      <span className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" aria-hidden="true">{icono}</span>
+      <div className="min-w-0">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{etiqueta}</dt>
+        <dd className="mt-0.5 break-words text-sm font-medium text-slate-900 dark:text-white">{children}</dd>
+      </div>
+    </div>
+  );
+}
+
+const sinDato = <span className="font-normal text-slate-400 dark:text-slate-500">Sin registrar</span>;
+
 export default function ResponsableDetailModal({ isOpen, onClose, responsable, responsableFlights }: ResponsableDetailModalProps) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorVentas, setErrorVentas] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && responsable) {
@@ -34,16 +58,18 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
     if (!isOpen) {
       setPage(1);
       setSales([]);
+      setErrorVentas(null);
     }
   }, [isOpen]);
 
   const fetchSales = async () => {
     if (!responsable) return;
     setIsLoading(true);
+    setErrorVentas(null);
     try {
-      const res = await listSales({ 
-        responsableId: responsable.id, 
-        page, 
+      const res = await listSales({
+        responsableId: responsable.id,
+        page,
         perPage: 5,
         sortOrder: 'desc',
         sortBy: 'creadoAt'
@@ -55,8 +81,8 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
           setTotalRecords(res.meta.total || 0);
         }
       }
-    } catch (e) {
-      console.error('Error fetching responsable sales:', e);
+    } catch (e: any) {
+      setErrorVentas(e?.response?.data?.error?.message || 'No se pudieron cargar sus ventas. Vuelve a abrir el detalle en un momento.');
     } finally {
       setIsLoading(false);
     }
@@ -64,120 +90,158 @@ export default function ResponsableDetailModal({ isOpen, onClose, responsable, r
 
   if (!responsable) return null;
 
+  const activo = responsable.status === 'active';
+  const deuda = responsable.deudaTotal || 0;
+  const documento = [responsable.docType, responsable.docNumber].filter(Boolean).join(' ');
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Detalle: ${responsable.name}`}
-      size="md"
+      title="Detalle del responsable"
+      size="xl"
       footer={<Button variant="outline" onClick={onClose}>Cerrar</Button>}
     >
-      <div className="space-y-4">
-        <div className="flex flex-col items-center text-center p-4 bg-gradient-to-b from-accent/5 to-transparent rounded-2xl border border-accent/5 mb-2">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary dark:text-teal-400 text-2xl font-semibold overflow-hidden border-4 border-white dark:border-slate-700 shadow-sm">
-            {responsable.name.charAt(0)}
+      <div className="flex flex-col md:flex-row">
+        {/* Identidad y cifras: lo que se busca al abrir el detalle. */}
+        <aside className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30 p-6 flex flex-col items-center text-center gap-4">
+          <div
+            className="w-24 h-24 rounded-full bg-primary/10 dark:bg-white/10 border-4 border-white dark:border-slate-700 shadow-sm flex items-center justify-center text-3xl font-bold text-primary dark:text-white"
+            aria-hidden="true"
+          >
+            {iniciales(responsable.name)}
           </div>
-          <h2 className="text-lg font-bold text-gray-900 dark:!text-[#ffffff] mt-2">{responsable.name}</h2>
-          <Badge variant={responsable.status} className="mt-1">
-            {responsable.status === 'active' ? 'CLIENTE ACTIVO' : 'CLIENTE INACTIVO'}
-          </Badge>
-        </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{responsable.name}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Responsable de pago{responsable.numero ? ` · N.º ${String(responsable.numero).padStart(4, '0')}` : ''}
+            </p>
+          </div>
+          <Badge variant={responsable.status}>{activo ? 'Activo' : 'Inactivo'}</Badge>
 
-        <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/80 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Tipo Doc:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{responsable.docType}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Numero:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{responsable.docNumber}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Telefono:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{responsable.phone}</span></div>
-          <div className="min-w-0"><span className="text-gray-500 dark:text-slate-400 text-sm block">Correo:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff] block break-all">{responsable.email}</span></div>
-          <div><span className="text-gray-500 dark:text-slate-400 text-sm block">Registro:</span> <span className="font-semibold text-gray-900 dark:!text-[#ffffff]">{formatDate(responsable.creadoAt)}</span></div>
-        </div>
-        
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-gray-900 dark:!text-[#ffffff]">
-              Historial de Ventas ({totalRecords})
-            </h4>
-            {(responsable.deudaTotal || 0) > 0 && (
-              <span className="text-xs font-bold text-primary dark:text-teal-400 bg-primary/10 dark:bg-teal-950/40 px-2 py-1 rounded-lg">
-                Total Deuda: {formatCurrency(responsable.deudaTotal || 0)}
-              </span>
-            )}
-          </div>
-          
-          <div className="min-h-[220px]">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full py-8 text-gray-500">
-                <Loader2 className="animate-spin mr-2" size={20} />
-                <span>Cargando ventas...</span>
-              </div>
-            ) : sales.length > 0 ? (
-              <>
-                <div className="overflow-x-auto">
-                <table className="w-full min-w-[28rem] text-sm">
-                  <thead>
-                    <tr className="text-left bg-gray-50 dark:bg-slate-800 text-xs text-gray-500 dark:text-slate-400 uppercase">
-                      <th className="p-2 font-semibold">ID</th>
-                      <th className="p-2 font-semibold">Fecha</th>
-                      <th className="p-2 font-semibold">Monto Total</th>
-                      <th className="p-2 font-semibold">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                    {sales.map(s => (
-                      <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
-                        <td className="p-2 font-mono text-gray-500 dark:text-slate-400">#{(s.numero ?? s.id).toString().padStart(4, '0')}</td>
-                        <td className="p-2 text-gray-600 dark:text-slate-300">{formatDate(s.date)}</td>
-                        <td className="p-2 font-semibold text-primary">{formatCurrency(s.total)}</td>
-                        <td className="p-2"><Badge variant={s.status}>{s.status}</Badge></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <dl className="w-full grid grid-cols-2 md:grid-cols-1 gap-3 mt-2">
+            <div className="rounded-2xl border border-slate-100 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-4">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Deuda pendiente</dt>
+              <dd className={`mt-1 text-xl font-bold tabular-nums ${deuda > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
+                {formatCurrency(deuda)}
+              </dd>
+              <dd className="text-xs text-slate-500 dark:text-slate-400">{deuda > 0 ? 'En ventas a crédito o abonadas' : 'Al día'}</dd>
+            </div>
+            <div className="rounded-2xl border border-slate-100 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-4">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Ventas a su cargo</dt>
+              <dd className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{totalRecords}</dd>
+            </div>
+          </dl>
+        </aside>
+
+        <div className="w-full md:w-2/3 p-6 space-y-8">
+          <section aria-labelledby="resp-contacto">
+            <h3 id="resp-contacto" className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">Datos de contacto</h3>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Dato icono={<IdCard size={18} />} etiqueta="Documento">{documento || sinDato}</Dato>
+              <Dato icono={<Phone size={18} />} etiqueta="Teléfono">
+                {responsable.phone
+                  ? <a href={`tel:${responsable.phone}`} className="text-primary dark:text-sky-300 underline-offset-2 hover:underline">{responsable.phone}</a>
+                  : sinDato}
+              </Dato>
+              <Dato icono={<Mail size={18} />} etiqueta="Correo">
+                {responsable.email
+                  ? <a href={`mailto:${responsable.email}`} className="text-primary dark:text-sky-300 underline-offset-2 hover:underline break-all">{responsable.email}</a>
+                  : sinDato}
+              </Dato>
+              <Dato icono={<CalendarDays size={18} />} etiqueta="Registrado el">
+                {responsable.creadoAt ? formatDate(responsable.creadoAt) : sinDato}
+              </Dato>
+            </dl>
+          </section>
+
+          <section aria-labelledby="resp-ventas" aria-busy={isLoading}>
+            <h3 id="resp-ventas" className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">Ventas a su cargo</h3>
+            <div className="min-h-[12rem]">
+              {isLoading ? (
+                <div role="status" className="flex items-center justify-center py-10 text-sm text-slate-500 dark:text-slate-400">
+                  <Loader2 className="animate-spin mr-2" size={18} aria-hidden="true" />
+                  Cargando ventas…
                 </div>
-                {totalPages > 1 && (
-                  <div className="mt-4 flex justify-center">
-                    <Pagination 
+              ) : errorVentas ? (
+                <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">{errorVentas}</p>
+              ) : sales.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-700/60">
+                    <table className="w-full min-w-[28rem] text-sm text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-800/80 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <tr>
+                          <th scope="col" className="px-4 py-3 font-semibold">N.º</th>
+                          <th scope="col" className="px-4 py-3 font-semibold">Fecha</th>
+                          <th scope="col" className="px-4 py-3 font-semibold text-right">Valor</th>
+                          <th scope="col" className="px-4 py-3 font-semibold">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                        {sales.map(s => (
+                          <tr key={s.id} className="bg-white dark:bg-slate-900">
+                            <td className="px-4 py-3 font-mono text-slate-500 dark:text-slate-400">#{(s.numero ?? s.id).toString().padStart(4, '0')}</td>
+                            <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatDate(s.date)}</td>
+                            <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900 dark:text-white">{formatCurrency(s.total)}</td>
+                            <td className="px-4 py-3"><Badge variant={s.status}>{ESTADO_VENTA[s.status] || s.status}</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3">
+                    <Pagination
                       currentPage={page}
                       totalPages={totalPages}
+                      total={totalRecords}
+                      perPage={5}
                       onPageChange={setPage}
-                      // Mismo caso que el detalle de cliente: con pocas ventas hay una
-                // sola página y el paginador se ocultaba entero, total incluido.
-                alwaysShowRange
-              />
+                      // Con pocas ventas hay una sola página y el paginador se ocultaría, total incluido.
+                      alwaysShowRange
+                    />
                   </div>
-                )}
-              </>
-            ) : (
-              <p className="text-gray-500 text-sm italic py-4">No hay historial de ventas asociadas</p>
-            )}
-          </div>
-        </div>
-
-        {responsableFlights.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2">
-              <Plane size={14} className="text-accent" /> Vuelos ({responsableFlights.length})
-            </h4>
-            <div className="space-y-2">
-              {responsableFlights.map(flight => (
-                <div key={flight.id} className={`flex items-center justify-between p-2 rounded-lg border text-xs ${
-                  flight.type === 'ida' ? 'bg-blue-50 border-blue-100' : 'bg-indigo-50 border-indigo-100'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <Plane size={12} className={flight.type === 'ida' ? 'text-blue-500' : 'text-indigo-500 rotate-180'} />
-                    <span className="font-semibold">{flight.route}</span>
-                    <span className="text-gray-500">{formatDate(flight.date)} · {flight.time}</span>
-                    <span className="text-gray-500">{flight.airline}</span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full font-bold ${
-                    flight.checkin === 'realizado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {flight.checkin === 'realizado' ? 'Check-in realizado' : 'Pendiente'}
-                  </span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-10 px-6 text-center">
+                  <Receipt size={28} className="text-slate-300 dark:text-slate-600 mb-2" aria-hidden="true" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Aún no tiene ventas a su cargo</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Aparecerán aquí cuando se le asigne como responsable de pago en una venta.</p>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
+          </section>
+
+          {responsableFlights.length > 0 && (
+            <section aria-labelledby="resp-vuelos">
+              <h3 id="resp-vuelos" className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">
+                Vuelos ({responsableFlights.length})
+              </h3>
+              <ul className="space-y-2">
+                {responsableFlights.map(flight => {
+                  const ida = flight.type === 'ida';
+                  const hecho = flight.checkin === 'realizado';
+                  return (
+                    <li key={flight.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-white dark:bg-slate-900 px-4 py-3 text-sm">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Plane size={16} className={`shrink-0 text-slate-500 dark:text-slate-400 ${ida ? '' : 'rotate-180'}`} aria-hidden="true" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 dark:text-white">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mr-2">{ida ? 'Ida' : 'Regreso'}</span>
+                            {flight.route}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {[formatDate(flight.date), flight.time, flight.airline].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={hecho ? 'realizado' : 'pendiente-check'}>{hecho ? 'Check-in realizado' : 'Check-in pendiente'}</Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </div>
       </div>
     </Modal>
   );

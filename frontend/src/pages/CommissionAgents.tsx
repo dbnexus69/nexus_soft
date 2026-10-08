@@ -770,7 +770,7 @@ export default function CommissionAgents() {
                     }}
                     maxLength={20}
                     placeholder={
-                      abreviatura.toUpperCase() === "NIT" ? "Ej. 900123456-8" :
+                      abreviatura.toUpperCase() === "NIT" ? "Ej. 900123456" :
                       abreviatura.toUpperCase() === "PA" ? "Ej. AB1234567" :
                       "Ej. 1234567890"
                     }

@@ -685,7 +685,7 @@ export default function Responsables() {
 
           <section>
             <h3 className="text-sm font-semibold text-primary uppercase tracking-wide mb-3 pb-2 border-b border-gray-border flex items-center gap-2">
-              <Search size={16} className="text-accent" /> Información de Contacto y Estado
+              <Search size={16} className="text-accent" /> Información de Contacto
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Correo Electrónico" error={errors.email}>
@@ -703,16 +703,8 @@ export default function Responsables() {
                   maxLength={40}
                 />
               </FormField>
-              <FormField label="Estado">
-                <Select
-                  value={formData.status}
-                  onChange={e => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                  options={[
-                    { value: 'active', label: 'Activo' },
-                    { value: 'inactive', label: 'Inactivo' }
-                  ]}
-                />
-              </FormField>
+              {/* Sin selector de estado: un responsable nace activo (lo pone el backend) y se activa o
+                  desactiva desde el botón de la tabla. */}
             </div>
           </section>
         </div>

@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   Compass,
   Wallet,
+  FileText,
   Contact,
   Globe,
   BadgePercent,
@@ -99,6 +100,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const mainLinks = [
     { to: "/", icon: Compass, label: "Dashboard", permission: 'dashboard' as const },
     { to: "/sales", icon: Wallet, label: "Ventas", permission: 'sales' as const },
+    { to: "/quotes", icon: FileText, label: "Cotizaciones", permission: 'quotes' as const },
     { to: "/clients", icon: Contact, label: "Clientes", permission: 'clients' as const },
     { to: "/flights", icon: Globe, label: "Vuelos", permission: 'itineraries' as const },
     { to: "/commissions", icon: BadgePercent, label: "Comisionistas", permission: 'commissions' as const },

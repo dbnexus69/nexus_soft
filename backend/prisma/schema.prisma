@@ -39,20 +39,21 @@ model aeropuertos {
 }
 
 model clientes {
-  id             Int       @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   /// El número que ve la agencia. El `id` es global y con huecos —los huecos
   /// son las filas de las otras agencias, contables por cualquiera—; este
   /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
   numero         Int?
-  persona_id     Int       @unique
+  persona_id     Int            @unique
   creado_por_id  Int?
-  fecha_registro DateTime  @default(now())
+  fecha_registro DateTime       @default(now())
   deleted_at     DateTime?
-  usuarios       usuarios? @relation(fields: [creado_por_id], references: [id])
-  personas       personas  @relation(fields: [persona_id], references: [id])
+  usuarios       usuarios?      @relation(fields: [creado_por_id], references: [id])
+  personas       personas       @relation(fields: [persona_id], references: [id])
   ventas         ventas[]
-  empresa_id     Int       @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
-  empresas       empresas  @relation(fields: [empresa_id], references: [id])
+  cotizaciones   cotizaciones[]
+  empresa_id     Int            @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas       empresas       @relation(fields: [empresa_id], references: [id])
 
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
@@ -234,6 +235,8 @@ model empresas {
   ventas                    ventas[]
   ventas_mensuales          ventas_mensuales[]
   vouchers_venta            vouchers_venta[]
+  cotizaciones              cotizaciones[]
+  detalle_cotizacion        detalle_cotizacion[]
 }
 
 enum EstadoEmpresa {
@@ -1045,6 +1048,7 @@ model usuarios {
   personas             personas               @relation(fields: [persona_id], references: [id])
   roles                roles                  @relation(fields: [rol_id], references: [id])
   ventas               ventas[]
+  cotizaciones         cotizaciones[]
   empresa_id           Int                    @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
   empresas             empresas               @relation(fields: [empresa_id], references: [id])
   /// Dar de baja no borra: el número no se reutiliza y el histórico
@@ -1055,7 +1059,8 @@ model usuarios {
 
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
-  vouchers_venta       vouchers_venta[]
+  vouchers_venta vouchers_venta[]
+
   @@unique([id, empresa_id])
   @@unique([empresa_id, numero])
   @@index([empresa_id])
@@ -1104,7 +1109,9 @@ model ventas {
   empresa_id Int      @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
   empresas   empresas @relation(fields: [empresa_id], references: [id])
 
-  vouchers_venta                vouchers_venta[]
+  vouchers_venta vouchers_venta[]
+  cotizaciones   cotizaciones[]
+
   @@unique([empresa_id, numero])
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
@@ -1115,6 +1122,74 @@ model ventas {
   @@index([usuario_id])
   // El listado de ventas ordena siempre por esta columna.
   @@index([creado_at])
+}
+
+/// Propuesta de precio para un cliente, antes de ser una venta (spec 007). Línea simple
+/// —no reutiliza las tablas `prod_*`—, con su propio costo de proveedor y ganancia por línea.
+model cotizaciones {
+  id                 Int                  @id @default(autoincrement())
+  /// El número que ve la agencia. Mismo patrón que `ventas.numero`: lo pone el
+  /// disparador `app_asignar_numero()`, nunca el código.
+  numero             Int?
+  /// Opcional: una cotización no es una venta, así que no exige un cliente. Se
+  /// escoge uno (si no lo tenía) al convertirla en venta.
+  cliente_id         Int?
+  usuario_id         Int
+  estado             CotizacionEstado     @default(borrador)
+  fecha_vencimiento  DateTime?
+  observaciones      String?
+  /// Puesta al convertir en venta (`PATCH /quotes/:id/link-sale`). Nula hasta entonces.
+  venta_id           Int?
+  creado_at          DateTime             @default(now())
+  /// Baja lógica, como `clientes`/`ventas`, para no reutilizar un número.
+  deleted_at         DateTime?
+  clientes           clientes?            @relation(fields: [cliente_id], references: [id])
+  usuarios           usuarios             @relation(fields: [usuario_id], references: [id])
+  ventas             ventas?              @relation(fields: [venta_id], references: [id])
+  detalle_cotizacion detalle_cotizacion[]
+
+  empresa_id Int      @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas   empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([empresa_id, numero])
+  // Necesario para que detalle_cotizacion pueda apuntar a esta fila con su empresa dentro.
+  @@unique([id, empresa_id])
+  @@index([empresa_id])
+  @@index([cliente_id])
+  @@index([usuario_id])
+}
+
+/// Una línea de cotización: categoría de servicio, descripción libre, costo de proveedor
+/// y ganancia por separado. El IVA se deriva de la ganancia con la misma fórmula que una
+/// venta (`saleTotals.js`). Sin tabla por categoría, sin proveedor ni tarifa asociados.
+model detalle_cotizacion {
+  id              String          @id
+  cotizacion_id   Int
+  categoria       ProductCategory
+  descripcion     String
+  /// El objeto completo de esa categoría (el mismo `TicketData`/`HotelData`... que ya
+  /// usa el asistente de venta — spec 007, replanificado). Nulo en líneas de antes de
+  /// este cambio. `descripcion` se genera de aquí al guardar, no se escribe a mano.
+  detalle         Json?
+  costo_proveedor Float           @default(0)
+  ta              Float           @default(0)
+  iva             Float           @default(0)
+  creado_at       DateTime        @default(now())
+  cotizaciones    cotizaciones    @relation(fields: [cotizacion_id], references: [id])
+
+  empresa_id Int      @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas   empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([id, empresa_id])
+  @@index([empresa_id])
+  @@index([cotizacion_id])
+}
+
+enum CotizacionEstado {
+  borrador
+  enviada
+  aceptada
+  rechazada
 }
 
 model ventas_mensuales {

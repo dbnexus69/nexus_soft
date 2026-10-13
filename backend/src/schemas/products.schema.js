@@ -164,9 +164,35 @@ const ESQUEMAS = Object.fromEntries(
   ])
 );
 
-/** El esquema de una categoría. Sin esquema es un fallo de programación. */
-function esquemaDeCategoria(slug) {
-  const esquema = ESQUEMAS[slug];
+/**
+ * La misma forma por categoría, pero sin nada obligatorio (spec 007): una cotización
+ * no es una venta, así que el costo del proveedor —lo único que `EXTRAS` exige
+ * (`costoObligatorio`, > 0)— vuelve a ser dinero opcional como cualquier otro campo.
+ * El resto de `EXTRAS` (enums, cantidades) ya era opcional y se queda igual: una
+ * categoría o un valor fuera de catálogo sigue rechazándose si se manda, solo que
+ * nada se exige por mandar.
+ */
+const EXTRAS_RELAJADOS = Object.fromEntries(
+  Object.entries(EXTRAS).map(([slug, extra]) => [
+    slug,
+    Object.fromEntries(Object.entries(extra).map(([campo, regla]) => [campo, campo === 'supplierCost' ? dinero : regla])),
+  ])
+);
+const ESQUEMAS_RELAJADOS = Object.fromEntries(
+  Object.keys(require('../catalog/products').CATALOG).map(slug => [
+    slug,
+    z.object({ ...SOBRE, ...(EXTRAS_RELAJADOS[slug] || {}) }).passthrough(),
+  ])
+);
+
+/**
+ * El esquema de una categoría. Sin esquema es un fallo de programación.
+ * `relajado`: la variante sin nada obligatorio que usa una cotización — ver
+ * `ESQUEMAS_RELAJADOS`. Al convertir en venta, `POST /sales` valida con el esquema
+ * normal (`sales.schema.js` no pasa `relajado`), así que ahí sí hace falta el costo.
+ */
+function esquemaDeCategoria(slug, { relajado = false } = {}) {
+  const esquema = relajado ? ESQUEMAS_RELAJADOS[slug] : ESQUEMAS[slug];
   if (!esquema) throw new Error(`No hay esquema de producto para la categoría ${slug}`);
   return esquema;
 }

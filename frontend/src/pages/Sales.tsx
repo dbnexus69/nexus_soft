@@ -64,6 +64,10 @@ export default function Sales() {
   const { canCreate, canEdit } = usePermissions();
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  // Al convertir una cotización en venta (spec 007): Quotes.tsx ya dejó el borrador en
+  // localStorage y navegó aquí con `?fromQuote=<id>`. Se abre el asistente una sola vez y
+  // se limpia el parámetro, para que recargar la página no lo vuelva a abrir.
+  const [fromQuoteId, setFromQuoteId] = useState<number | undefined>(undefined);
   const [paymentsSale, setPaymentsSale] = useState<Sale | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -139,6 +143,18 @@ export default function Sales() {
   const handleOpenNewSale = () => {
     setIsWizardOpen(true);
   };
+
+  useEffect(() => {
+    const q = searchParams.get('fromQuote');
+    if (!q) return;
+    setFromQuoteId(Number(q));
+    setIsWizardOpen(true);
+    const siguiente = new URLSearchParams(searchParams);
+    siguiente.delete('fromQuote');
+    setSearchParams(siguiente, { replace: true });
+    // Solo al montar: el efecto limpia el parámetro que lo disparó.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleOpenPayments = (sale: Sale) => {
     if (!canManagePayments(sale)) return;
@@ -459,8 +475,10 @@ export default function Sales() {
         size="panel"
       >
         <NewSaleWizard
-          onClose={() => setIsWizardOpen(false)}
+          fromQuoteId={fromQuoteId}
+          onClose={() => { setIsWizardOpen(false); setFromQuoteId(undefined); }}
           onSuccess={(msg) => {
+            setFromQuoteId(undefined);
             setSuccessMessage(msg);
             setShowSuccess(true);
             setShowConfetti(true);

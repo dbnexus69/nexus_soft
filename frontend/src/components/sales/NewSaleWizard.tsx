@@ -72,6 +72,8 @@ import type { VentaCreada } from "../../api/sales";
 interface Props {
   onClose: () => void;
   onSuccess: (msg: string) => void;
+  /** Si la venta viene de "Convertir en venta" (spec 007), el id de la cotización a enlazar al terminar. */
+  fromQuoteId?: number;
 }
 
 const STEPS = [
@@ -117,7 +119,7 @@ function dataUrlABlob(dataUrl: string): Blob {
 // viva está aquí, con la misma clave (empresa + usuario) que el localStorage.
 const borradoresEnMemoria = new Map<string, WizardFormData>();
 
-export default function NewSaleWizard({ onClose, onSuccess }: Props) {
+export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props) {
   const { data, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig, invalidateDashboard } = useData();
   // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,
   // que es donde vive el listado con su página y sus filtros.
@@ -560,6 +562,13 @@ export default function NewSaleWizard({ onClose, onSuccess }: Props) {
       // porque sus cifras cambian con cada venta nueva.
       const creada = await handleCreateSale(saleData);
       invalidateDashboard();
+      // La venta ya existe y es lo que importa: si el enlace de vuelta falla, se avisa en
+      // consola y no se bloquea el éxito. Un reintento manual (abrir la cotización y
+      // "convertir" de nuevo) lo resuelve sin perder la venta.
+      if (fromQuoteId) {
+        try { await api.linkQuoteSale(fromQuoteId, creada.id); }
+        catch (err) { console.warn('[QUOTE_LINK_FAILED]', err); }
+      }
       borradoresEnMemoria.delete(draftKey);
       localStorage.removeItem(draftKey);
 

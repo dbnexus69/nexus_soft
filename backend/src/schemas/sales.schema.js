@@ -1,11 +1,10 @@
 const { z } = require('zod');
 const { fechaQuery } = require('./common.schema');
 const { diaDeColombia } = require('../utils/fechas');
-const { SLUGS, CATALOG } = require('../catalog/products');
 // La misma regla de precio que usa la venta al guardar: si aquí se calculara
 // aparte, la validación podría discrepar de lo que acaba en la base.
 const { precioProducto } = require('../services/saleTotals');
-const { esquemaDeCategoria } = require('./products.schema');
+const { productArrays: productArraysDe } = require('./productArrays');
 
 // Los ids llegan del frontend como string o número según el formulario.
 const id = z.union([z.string(), z.number()]).nullable().optional();
@@ -34,12 +33,7 @@ const paymentSchema = z.object({
 // fuera del enum, que tumbaba el alta con un 500. Un error nombra el producto:
 // `hotelData.0.hotelType`. Las claves salen del catálogo, así que añadir una
 // categoría no obliga a tocar este archivo.
-const productArrays = Object.fromEntries(
-  SLUGS.map(slug => [
-    CATALOG[slug].responseKey,
-    z.array(esquemaDeCategoria(slug)).max(50, 'Demasiados productos de este tipo en una venta').optional(),
-  ])
-);
+const productArrays = productArraysDe({ mensajeMax: 'Demasiados productos de este tipo en una venta' });
 
 const baseSale = {
   clientId: idRequerido('El cliente'),

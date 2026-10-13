@@ -22,6 +22,7 @@
  */
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
+const { randomUUID } = require('crypto');
 const prisma = require('../src/config/db');
 const { conEmpresa, sinEmpresa } = require('../src/config/tenant');
 
@@ -45,6 +46,10 @@ async function desmontar() {
   const e = await admin.empresas.findFirst({ where: { slug: SLUG } });
   if (!e) return;
   await admin.suplantaciones.deleteMany({ where: { empresa_id: e.id } });
+  // Cotizaciones (spec 007), antes de las ventas: no dependen de ellas, pero da igual el
+  // orden salvo por el detalle, que sí cuelga de la cotización.
+  await admin.detalle_cotizacion.deleteMany({ where: { empresa_id: e.id } });
+  await admin.cotizaciones.deleteMany({ where: { empresa_id: e.id } });
   await admin.pagos_venta.deleteMany({ where: { empresa_id: e.id } });
   await admin.detalle_venta.deleteMany({ where: { empresa_id: e.id } });
   await admin.ventas.deleteMany({ where: { empresa_id: e.id } });
@@ -89,6 +94,11 @@ async function main() {
   const perC = await admin.personas.create({ data: { empresa_id: otra.id, nombres: 'Cliente', apellidos: 'Ajeno', documento: `pa-${otra.id}-c`, status: 'active' } });
   const cli = await admin.clientes.create({ data: { empresa_id: otra.id, persona_id: perC.id, creado_por_id: usr.id } });
   const venta = await admin.ventas.create({ data: { empresa_id: otra.id, cliente_id: cli.id, usuario_id: usr.id, monto_total: 999999, numero: 1 } });
+  // Spec 007: una cotización de la otra agencia, con una línea, para las mismas comprobaciones.
+  const cotizacion = await admin.cotizaciones.create({ data: { empresa_id: otra.id, cliente_id: cli.id, usuario_id: usr.id } });
+  await admin.detalle_cotizacion.create({
+    data: { id: randomUUID(), empresa_id: otra.id, cotizacion_id: cotizacion.id, categoria: 'hotel', descripcion: 'Linea ajena' },
+  });
 
   const propias = await admin.ventas.count({ where: { empresa_id: 1 } });
   const totales = await admin.ventas.count();
@@ -98,6 +108,7 @@ async function main() {
     prisma: await prisma.ventas.count(),
     crudo: Number((await prisma.$queryRawUnsafe('SELECT count(*)::int AS n FROM ventas'))[0].n),
     clientes: await prisma.clientes.count(),
+    cotizaciones: await prisma.cotizaciones.count(),
   }));
   const a = await mirar(1);
   const b = await mirar(otra.id);
@@ -110,6 +121,7 @@ async function main() {
     `${a.crudo} y ${b.crudo}`,
   );
   comprobar('lo mismo con los clientes', b.clientes === 1);
+  comprobar('lo mismo con las cotizaciones (spec 007)', b.cotizaciones === 1);
 
   // ── 3. Leer por id un registro ajeno
   const ajena = await conEmpresa(1, () => prisma.ventas.findFirst({ where: { id: venta.id } }));
@@ -145,16 +157,53 @@ async function main() {
   });
   comprobar('colgar una venta propia de un cliente de otra empresa queda rechazado', cruzada === 'rechazado');
 
+  // ── 4d. Lo mismo, con las tablas de cotizaciones (spec 007)
+  const cotizacionAjena = await conEmpresa(1, () => prisma.cotizaciones.findFirst({ where: { id: cotizacion.id } }));
+  comprobar('pedir por id la cotización de otra empresa no devuelve nada', cotizacionAjena === null);
+
+  const escrituraCot = await conEmpresa(1, async () => {
+    try {
+      await prisma.$executeRawUnsafe(
+        'INSERT INTO cotizaciones (cliente_id, usuario_id, empresa_id) VALUES ($1,$2,$3)',
+        cli.id, usr.id, otra.id,
+      );
+      return 'pasó';
+    } catch { return 'rechazado'; }
+  });
+  comprobar('insertar una cotización con el empresa_id de otra queda rechazado', escrituraCot === 'rechazado');
+
+  const cotizacionCruzada = await conEmpresa(1, async () => {
+    try {
+      await prisma.$executeRawUnsafe(
+        'INSERT INTO cotizaciones (cliente_id, usuario_id) VALUES ($1,$2)',
+        cli.id, usr.id,
+      );
+      return 'pasó';
+    } catch { return 'rechazado'; }
+  });
+  comprobar('colgar una cotización propia de un cliente de otra empresa queda rechazado', cotizacionCruzada === 'rechazado');
+
+  const detalleCruzado = await conEmpresa(1, async () => {
+    try {
+      await prisma.$executeRawUnsafe(
+        'INSERT INTO detalle_cotizacion (id, cotizacion_id, categoria, descripcion) VALUES ($1,$2,$3::"ProductCategory",$4)',
+        randomUUID(), cotizacion.id, 'tour', 'intento cruzado',
+      );
+      return 'pasó';
+    } catch { return 'rechazado'; }
+  });
+  comprobar('colgar una línea propia de una cotización de otra empresa queda rechazado', detalleCruzado === 'rechazado');
+
   // Y que las claves que lo impiden sigan puestas: un diff del schema que las
   // tirara dejaría las pruebas de arriba en verde igualmente, porque la RLS
   // seguiría filtrando. Lo único que avisa es contarlas.
   const [{ n: compuestas }] = await admin.$queryRawUnsafe(`
     SELECT count(*)::int AS n FROM pg_constraint
     WHERE contype = 'f' AND conname LIKE '%_empresa_fkey'`);
-  // 53 de la spec 001 (T3b) + la de la tarjeta de pago al proveedor (spec 002,
-  // `20260925150000_tarjeta_de_pago_al_proveedor`). Una clave compuesta nueva
-  // sube este número; una que desaparece lo baja y pone esto en rojo.
-  const ESPERADAS = 56;
+  // Eran 56 antes de spec 007: +4 nuevas (`cotizaciones`→cliente/usuario/venta y
+  // `detalle_cotizacion`→cotizacion_id). Una clave compuesta nueva sube este número;
+  // una que desaparece lo baja y pone esto en rojo.
+  const ESPERADAS = 60;
   comprobar('siguen las claves ajenas compuestas', compuestas === ESPERADAS, `${compuestas} de ${ESPERADAS}`);
 
   // ── 4c. El número propio de cada agencia
@@ -177,7 +226,8 @@ async function main() {
   const [{ n: disparadores }] = await admin.$queryRawUnsafe(`
     SELECT count(*)::int AS n FROM pg_trigger
     WHERE NOT tgisinternal AND tgfoid = 'app_asignar_numero'::regproc`);
-  comprobar('siguen los disparadores que numeran', disparadores === 9, `${disparadores} de 9`);
+  // Eran 9 antes de spec 007: +1 por `cotizaciones_numero`.
+  comprobar('siguen los disparadores que numeran', disparadores === 10, `${disparadores} de 10`);
 
   // Y los únicos parciales, que son los que dejan que una baja libere su correo
   // sin que su número vuelva a salir.

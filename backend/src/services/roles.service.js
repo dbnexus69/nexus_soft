@@ -19,6 +19,7 @@ const MODULE_ACTIONS = {
   // ahora exactamente el conjunto de pares (módulo, acción) que aparecen en
   // `authorize(...)` en src/routes.
   sales: ['view', 'create', 'edit', 'delete'],
+  quotes: ['view', 'create', 'edit', 'delete'],
   clients: ['view', 'create', 'edit'],
   responsables: ['view', 'create', 'edit', 'delete'],
   itineraries: ['view', 'edit'],
@@ -43,7 +44,7 @@ const MODULE_ACTIONS = {
  * (solo persona_id, status, creado_at, deleted_at), así que un 'own' no se
  * podría aplicar y se comportaría como 'all' sin avisar. Es un sí/no.
  */
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'quotes', 'clients', 'itineraries'];
 
 /**
  * Rótulos de los módulos y de las acciones, para que la API pueda DESCRIBIR el
@@ -63,6 +64,7 @@ const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
 const ETIQUETAS_MODULO = {
   dashboard: 'Panel',
   sales: 'Ventas',
+  quotes: 'Cotizaciones',
   clients: 'Clientes',
   responsables: 'Responsables',
   itineraries: 'Vuelos',
@@ -106,6 +108,7 @@ const DEFAULT_ROLE_VALUES = {
   asesor: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
+    quotes: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
     clients: { view: 'own', create: 'true', edit: 'true' },
     responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     itineraries: { view: 'own', edit: 'false' },
@@ -120,6 +123,7 @@ const DEFAULT_ROLE_VALUES = {
   freelancer: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
+    quotes: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
     clients: { view: 'own', create: 'true', edit: 'true' },
     responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     itineraries: { view: 'own', edit: 'false' },
@@ -131,6 +135,7 @@ const DEFAULT_ROLE_VALUES = {
   admin: {
     dashboard: { view: 'all' },
     sales: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
+    quotes: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
     clients: { view: 'all', create: 'true', edit: 'true' },
     responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     itineraries: { view: 'all', edit: 'true' },
@@ -142,6 +147,7 @@ const DEFAULT_ROLE_VALUES = {
   superadmin: {
     dashboard: { view: 'all' },
     sales: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
+    quotes: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
     clients: { view: 'all', create: 'true', edit: 'true' },
     responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     itineraries: { view: 'all', edit: 'true' },

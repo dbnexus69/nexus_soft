@@ -132,4 +132,6 @@ async function vistaPrevia(borrador) {
   return generarCon(VENTA_DE_EJEMPLO, await empresaYConfig(borrador));
 }
 
-module.exports = { obtenerVoucher, urlDeDescarga, enviarVoucher, vistaPrevia };
+// `empresaYConfig` se reexporta para `services/quotes/index.js` (spec 007): la marca de la agencia
+// se lee una sola vez, no se duplica la lectura del perfil para el PDF de la cotización.
+module.exports = { obtenerVoucher, urlDeDescarga, enviarVoucher, vistaPrevia, empresaYConfig };

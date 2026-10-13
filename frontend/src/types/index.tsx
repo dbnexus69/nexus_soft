@@ -50,6 +50,7 @@ export interface RolePermissions {
   // `delete` faltaba y `authorize('sales','delete')` sí la exige: sin ella en el
   // tipo, la pantalla de permisos no la conocía y la descartaba al guardar.
   sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean; delete: boolean };
+  quotes: { view: "all" | "own" | "none"; create: boolean; edit: boolean; delete: boolean };
   clients: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
   responsables: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   itineraries: { view: "all" | "own" | "none"; edit: boolean };
@@ -69,6 +70,7 @@ export interface RolePermissions {
 export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
   sales: { view: "own", create: true, edit: true, delete: false },
+  quotes: { view: "own", create: true, edit: true, delete: false },
   clients: { view: "own", create: true, edit: true },
   // El backend los niega por defecto; aquí concedían view/create/edit.
   responsables: { view: false, create: false, edit: false, delete: false },
@@ -81,6 +83,7 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
   sales: { view: "own", create: true, edit: true, delete: false },
+  quotes: { view: "own", create: true, edit: true, delete: false },
   clients: { view: "own", create: true, edit: true },
   // El backend los niega por defecto; aquí concedían view/create/edit.
   responsables: { view: false, create: false, edit: false, delete: false },
@@ -94,6 +97,7 @@ export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
 export const ADMIN_PERMISSIONS: RolePermissions = {
   dashboard: { view: "all" },
   sales: { view: "all", create: true, edit: true, delete: true },
+  quotes: { view: "all", create: true, edit: true, delete: true },
   clients: { view: "all", create: true, edit: true },
   responsables: { view: true, create: true, edit: true, delete: true },
   itineraries: { view: "all", edit: true },
@@ -116,7 +120,7 @@ export const SUPERADMIN_PERMISSIONS: RolePermissions = {
   permissions: { view: true, edit: true },
 };
 
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'clients', 'itineraries'];
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'quotes', 'clients', 'itineraries'];
 
 export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTemplate: RolePermissions = DEFAULT_ASESOR_PERMISSIONS): RolePermissions {
   const normalized = JSON.parse(JSON.stringify(baseTemplate)) as RolePermissions;
@@ -643,6 +647,42 @@ export interface PaymentRecord {
   amount: number;
   method: string;
   reference?: string;
+}
+
+/**
+ * Una línea de cotización: categoría, descripción y precio final (costo + ganancia + IVA).
+ * `detalle` es el mismo objeto de categoría que usa el asistente de venta (`TicketData`,
+ * `HotelData`...) — spec 007, replanificada para pedir los mismos datos que una venta.
+ */
+export interface QuoteLine {
+  id: string;
+  categoria: SaleProductId;
+  descripcion: string;
+  costoProveedor: number;
+  ta: number;
+  iva: number;
+  precio: number;
+  detalle?: Record<string, unknown> | null;
+}
+
+/**
+ * Una cotización (spec 007). No es una venta: nada en ella es obligatorio, ni
+ * siquiera el cliente — se exige recién al convertirla. Los totales se derivan al
+ * leer, nunca se guardan ni se suman en el navegador.
+ */
+export interface Quote {
+  id: number;
+  numero?: number | null;
+  clientId: number | null;
+  clientName?: string;
+  asesorId: number;
+  estado: "borrador" | "enviada" | "aceptada" | "rechazada" | "vencida";
+  fechaVencimiento: string | null;
+  observations?: string | null;
+  ventaId?: number | null;
+  creadoAt: string;
+  lines: QuoteLine[];
+  totals: { costoProveedor: number; ta: number; iva: number; total: number };
 }
 
 export interface Sale {

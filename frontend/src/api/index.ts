@@ -23,6 +23,11 @@ export {
   listSettlements, createSettlement,
 } from './commissions';
 export {
+  listQuotes, getQuote, createQuote, updateQuote, deleteQuote, duplicateQuote,
+  sendQuote, respondQuote, convertQuoteToSale, linkQuoteSale, getQuotePdfUrl,
+} from './quotes';
+export type { QuoteDraft } from './quotes';
+export {
   getAllConfig, getConfigSection, getConfigItem, createConfigItem, updateConfigItem, deleteConfigItem,
 } from './config';
 export {

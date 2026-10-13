@@ -11,6 +11,7 @@ const { error } = require('../utils/apiResponse');
 const ADMIN_PERMISSIONS = {
   dashboard: { view: 'all' },
   sales: { view: 'all', create: true, edit: true, delete: true },
+  quotes: { view: 'all', create: true, edit: true, delete: true },
   clients: { view: 'all', create: true, edit: true, delete: true },
   responsables: { view: true, create: true, edit: true, delete: true },
   itineraries: { view: 'all', edit: true, delete: true },
@@ -41,6 +42,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
   asesor: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: true, edit: true, delete: false },
+    quotes: { view: 'own', create: true, edit: true, delete: false },
     clients: { view: 'own', create: true, edit: true },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
@@ -59,6 +61,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
   freelancer: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: true, edit: true, delete: false },
+    quotes: { view: 'own', create: true, edit: true, delete: false },
     clients: { view: 'own', create: true, edit: true },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se

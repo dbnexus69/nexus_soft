@@ -18,6 +18,9 @@ const { empresaActual } = require('../config/tenant');
 const BUCKETS = {
   logos: { public: false, fileSizeLimit: 2 * 1024 * 1024, allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'] },
   vouchers: { public: false, fileSizeLimit: 5 * 1024 * 1024, allowedMimeTypes: ['application/pdf'] },
+  // Spec 007: el PDF de una cotización. El bucket hay que crearlo una vez en Supabase Storage,
+  // igual que `vouchers`/`logos` — esto no lo cubre `prisma migrate deploy`.
+  quotes: { public: false, fileSizeLimit: 5 * 1024 * 1024, allowedMimeTypes: ['application/pdf'] },
 };
 
 let cliente = null;

@@ -14,5 +14,6 @@ router.use('/flights', require('./flights.routes'));
 router.use('/commissions', require('./commissions.routes'));
 router.use('/config', require('./config.routes'));
 router.use('/stats', require('./stats.routes'));
+router.use('/quotes', require('./quotes.routes'));
 
 module.exports = router;

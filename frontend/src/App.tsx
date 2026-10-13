@@ -6,6 +6,7 @@ import { ClientsProvider } from './context/ClientsContext';
 import { UsersProvider } from './context/UsersContext';
 import { SalesProvider } from './context/SalesContext';
 import { CommissionsProvider } from './context/CommissionsContext';
+import { QuotesProvider } from './context/QuotesContext';
 import { PermissionsProvider } from './context/PermissionsContext';
 import { Layout } from './components/layout/Layout';
 import Login from './pages/Login';
@@ -25,6 +26,7 @@ const Companies = lazy(() => import('./pages/Companies'));
 const Config = lazy(() => import('./pages/Config'));
 const Empresa = lazy(() => import('./pages/Empresa'));
 const CommissionAgents = lazy(() => import('./pages/CommissionAgents'));
+const Quotes = lazy(() => import('./pages/Quotes'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -65,6 +67,7 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="stats" element={<StatsView />} />
         <Route path="sales" element={<Sales />} />
+        <Route path="quotes" element={<Quotes />} />
         <Route path="clients" element={<Clients />} />
         <Route path="responsables" element={<AdminRoute><Responsables /></AdminRoute>} />
         <Route path="flights" element={<Itineraries />} />
@@ -97,9 +100,11 @@ export default function App() {
               <ClientsProvider>
                 <SalesProvider>
                   <CommissionsProvider>
-                    <DataProvider>
-                      <AppRoutes />
-                    </DataProvider>
+                    <QuotesProvider>
+                      <DataProvider>
+                        <AppRoutes />
+                      </DataProvider>
+                    </QuotesProvider>
                   </CommissionsProvider>
                 </SalesProvider>
               </ClientsProvider>

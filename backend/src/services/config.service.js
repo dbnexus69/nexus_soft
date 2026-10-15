@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
+const { idPorNombre } = require('../utils/idPorNombre');
 
 const SECTION_MAP = {
   'cards': {
@@ -17,10 +18,7 @@ const SECTION_MAP = {
       // Por id si viene, y si no por nombre. Resolver una clave ajena por
       // texto libre se rompe en cuanto alguien renombra el método de pago.
       let methodId = Number(d.paymentMethodId) || null;
-      if (!methodId && d.paymentMethod) {
-        const m = await prisma.metodos_pago.findFirst({ where: { nombre: d.paymentMethod } });
-        if (m) methodId = m.id;
-      }
+      if (!methodId && d.paymentMethod) methodId = await idPorNombre('metodos_pago', d.paymentMethod, 'paymentMethod');
       return {
         nombre: d.name || 'Sin nombre',
         metodo_pago_id: methodId,
@@ -123,10 +121,7 @@ const SECTION_MAP = {
       // nombre que no casaba atribuía la política de equipaje a la primera
       // aerolínea del catálogo, en silencio y para siempre.
       let airlineId = Number(d.airlineId) || null;
-      if (!airlineId && d.airlineName) {
-        const a = await prisma.aerolineas.findFirst({ where: { nombre: d.airlineName } });
-        if (a) airlineId = a.id;
-      }
+      if (!airlineId && d.airlineName) airlineId = await idPorNombre('aerolineas', d.airlineName, 'airlineName');
       if (!airlineId) {
         throw new BadRequestError(`No existe la aerolínea "${d.airlineName}" en el catálogo`);
       }
@@ -197,16 +192,10 @@ const SECTION_MAP = {
       } : undefined
     }),
     reverseTransform: async (d, actorId) => {
-      let airlineId = null;
-      if (d.flight?.airline) {
-        const a = await prisma.aerolineas.findFirst({ where: { nombre: d.flight.airline } });
-        if (a) airlineId = a.id;
-      }
-      let supplierId = null;
-      if (d.accommodation?.supplier) {
-        const s = await prisma.proveedores.findFirst({ where: { nombre: d.accommodation.supplier } });
-        if (s) supplierId = s.id;
-      }
+      const airlineId = d.flight?.airline ? await idPorNombre('aerolineas', d.flight.airline, 'flight.airline') : null;
+      const supplierId = d.accommodation?.supplier
+        ? await idPorNombre('proveedores', d.accommodation.supplier, 'accommodation.supplier')
+        : null;
 
       return {
         nombre: d.name || 'Sin nombre',

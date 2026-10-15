@@ -5,7 +5,7 @@ Cada tarea deja el sistema funcionando. Ninguna se da por hecha sin su comprobac
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
 **Estado (2026-10-03).** Hechas T0–T11, T15–T23 (T4, T5 y T20 confirmadas en el navegador).
-Pendientes T12 (despliegue, cuando haya hosting) y T14 (deuda menor; hechas la marca por agencia, el ruido del registro y los ids, queda unificar las búsquedas).
+Pendiente T12 (despliegue, cuando haya hosting). T14 (deuda menor) cerrada el 2026-10-15.
 T13 fuera de alcance: `moon-travel` es de otro proyecto.
 
 ---
@@ -405,9 +405,8 @@ asesor da un 400 claro, el rol `admin` no se reescribe (400), y al salir el toke
 
 **El proyecto aún no está desplegado en ningún lado** (todo se prueba en local, ver `CLAUDE.md`);
 esto aplica cuando haya un hosting. `DATABASE_URL` del hosting tiene que usar `app_nexus`; con la comprobación de T1, un despliegue que
-siga con `postgres` **no arrancará**. Además, `backend/.env.production` apunta a otro proyecto de
-Supabase, ajeno a `nexus-bd` y que ese acceso no lista: comprobar que ese entorno tiene el esquema
-multi-tenant antes de desplegar esta rama.
+siga con `postgres` **no arrancará**. `backend/.env.production` (local, apuntaba a otro proyecto de Supabase ajeno a
+`nexus-bd`) se eliminó el 2026-10-15: el entorno de producción se configura cuando haya hosting.
 
 ## T13 · Un proyecto de Supabase sin el multi-tenant — fuera de alcance
 
@@ -419,7 +418,7 @@ Nexus Soft. No se toca. Lo de abajo queda como contexto de por qué se anotó.
 faltan `empresas`, `empresa_id`, `numero` y las funciones `app_*`). Si va a ser un entorno, hay que
 aplicar las migraciones y crear el rol; si no, borrarlo.
 
-## T14 · Deuda menor `[~]`
+## T14 · Deuda menor `[x]`
 
 - **Coherencia de búsquedas:** unas 16 (persona por documento, rol por nombre, método de pago por
   nombre). *Avance (2026-10-03):* la del método de pago principal en `createSale` pasa de `contains` a
@@ -427,6 +426,17 @@ aplicar las migraciones y crear el rol; si no, borrarlo.
   nombre del catálogo, o "Mixto" con varios abonos, que no existe y queda en `NULL` como antes. Falta
   el resto, una por una: unificar el criterio exige decidir cuál es el contrato de cada una (lo mismo
   que anota la spec 003 T4 para el tipo de documento).
+  *Cerrado (2026-10-15), con la regla que eligió el usuario:* método de pago, aerolínea y proveedor por
+  nombre se buscan recortados y sin distinguir mayúsculas, y **un nombre que no existe es un 422 con su
+  campo** en vez de una clave vacía guardada en silencio. Un solo helper, `utils/idPorNombre.js`, en los
+  5 sitios: `config.service.js` (tarjeta → `paymentMethod`, política de equipaje → `airlineName`,
+  paquete → `flight.airline` y `accommodation.supplier`) y `registerPayment` de `sales.service.js`
+  (`method`). Queda como estaba, a propósito, el método principal de `createSale`: "Mixto" no existe y
+  debe seguir en `NULL`. El resto no necesitaba cambio: la persona por documento ya compara el número
+  normalizado (spec 003) contra el único `(empresa_id, documento)`; el rol por nombre se valida contra la
+  base (400 si no existe); y los buscadores de las listas ya son todos sin mayúsculas (`contains` +
+  `insensitive` o `ILIKE`). **Comprobado:** `node --check` y `check:prisma`; sin prueba por la API (toca la
+  BD, pendiente de permiso).
 - ~~**Marca por agencia:** el texto legal del voucher dice "DB Nexus", la marca de la casa parpadea
   mientras carga `/branding`, y el `<title>` es fijo.~~ Hecho (2026-10-03): el texto legal del voucher
   usa el nombre de la agencia (`DB Nexus` solo si no hay marca); el `<title>` lleva el de la agencia y

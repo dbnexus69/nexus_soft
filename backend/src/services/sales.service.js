@@ -17,6 +17,7 @@ const { soloLasSuyas, esDeOtro, ventaVisible } = require('./ventasAlcance');
 const { listSales } = require('./ventasListado');
 const { getCreditPortfolio, getClientCredits } = require('./ventasCartera');
 const { escribirProductos } = require('./ventaProductos');
+const { idPorNombre } = require('../utils/idPorNombre');
 
 /**
  * Lo que se puede editar de la CABECERA de una venta, y lo que no.
@@ -611,10 +612,12 @@ class SalesService {
     let metodo_pago_id = null;
     if (method !== undefined && method !== null && method !== '') {
       const comoId = Number(method);
-      const m = Number.isInteger(comoId) && comoId > 0
-        ? await prisma.metodos_pago.findUnique({ where: { id: comoId } })
-        : await prisma.metodos_pago.findFirst({ where: { nombre: String(method) } });
-      if (m) metodo_pago_id = m.id;
+      if (Number.isInteger(comoId) && comoId > 0) {
+        const m = await prisma.metodos_pago.findUnique({ where: { id: comoId } });
+        if (m) metodo_pago_id = m.id;
+      } else {
+        metodo_pago_id = await idPorNombre('metodos_pago', method, 'method');
+      }
     }
 
     // Antes había dos ramas: si el cuerpo traía `saleTotal` y `currentPaidAmount`

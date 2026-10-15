@@ -6,18 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Skill | Cuándo activar | Instalar si no existe |
 |---|---|---|
-| `ponytail` | SIEMPRE en cualquier corrección, creación de código o cumplimiento de tarea. Favorece la solución más simple y mínima que funciona. | `npx skills add https://github.com/dietrichgebert/ponytail --skill ponytail` |
+| `ponytail` | SIEMPRE en cualquier corrección, creación de código o cumplimiento de tarea. Favorece la solución más simple y mínima que funciona, y es también la regla contra el exceso de tokens: menos código, menos lecturas, menos comandos, respuestas más cortas. | `npx skills add https://github.com/dietrichgebert/ponytail --skill ponytail` |
 | `ui-ux-pro-max` | Al diseñar, construir o revisar interfaces (accesibilidad, interacción, formularios, color, tipografía). Solo la skill principal, auditada el 2026-10-03 (sin red, solo Python estándar). Usar su búsqueda (`python .claude/skills/ui-ux-pro-max/scripts/search.py "<consulta>" --domain ux`) y no las demás skills del paquete. | Ya instalada en `.claude/skills/ui-ux-pro-max` |
 
 ## Reglas de trabajo
+
+- **No asumir: preguntar.** Si algo del pedido, del código o del entorno no está claro (alcance, qué archivo, qué comportamiento se espera, si un dato es real), se pregunta antes de actuar en vez de suponer. Una suposición que no se pudo evitar se dice explícitamente en la respuesta.
+
+- **Ser crítico con lo que se pide.** Si un pedido parece dudoso, contradice una regla de este archivo o del código, duplica algo que ya existe, tiene un riesgo (datos compartidos, seguridad, tenencia) o hay una forma más simple, se dice y se cuestiona antes de hacerlo. No se obedece en silencio algo que se ve mal.
+
+- **Planear con spec → plan → tasks (flujo spec-kit).** Todo trabajo que no sea una corrección puntual se planea en una carpeta nueva numerada de `docs/specs/` con `spec.md` (qué y cómo se comprueba), `plan.md` (cómo) y `tasks.md` (hecho/pendiente y lo verificado), antes de escribir código. No se instala la herramienta `specify` ni se crean `specs/` o `.specify/` en la raíz: el flujo vive en `docs/specs/`.
+
+- **No ejecutar el proyecto sin permiso expreso del usuario.** Sin esa orden no se levantan servidores (`pnpm dev`, `pnpm start`, vite) ni se corre nada que toque la BD compartida: las pruebas con BD (`test:aislamiento`, `test:aislamiento-api`, `test:vuelos-api`, `test:ventas-filtros`, `test:voucher`), `prisma migrate deploy`/`status`, `db:generate`, `db:seed`, `db:studio` ni scripts contra la BD. Sin permiso solo se corre lo que no levanta nada ni toca la BD: `tsc`/`pnpm build` del frontend, `check:prisma`, `test:validaciones` y `test:reglas-espejo`. Se dice qué comando hace falta y para qué, y se espera la orden.
 
 - **Modo cavernícola (ahorro de tokens).** Respuestas cortas y directas: lo hecho, lo que falla, lo que hay que decidir; sin recapitulaciones, sin repetir lo que el usuario ya sabe, sin explicar lo que el código o el commit ya dicen. Leer solo lo necesario, no volver a leer lo ya leído, y agrupar llamadas. Mismo criterio que `ponytail`: la solución mínima que funciona.
 
 - **No hacer commit ni push sin que el usuario lo pida.** Se termina el cambio y se deja en el árbol de trabajo; el commit y el push (y cualquier merge) solo cuando lo ordene.
 
-- **Pruebas solo cuando hacen falta.** No correr todas las suites por rutina: solo la que cubre lo que se tocó (p. ej. `test:aislamiento-api` si cambió tenencia/permisos, `test:vuelos-api` si cambió vuelos o el alta de ventas, `tsc` si cambió el frontend). Si el cambio no lo requiere (docs, comentarios, textos), no se corre nada. Menos comandos por turno.
+- **Pruebas solo cuando hacen falta.** No correr todas las suites por rutina: solo la que cubre lo que se tocó (p. ej. `test:aislamiento-api` si cambió tenencia/permisos, `test:vuelos-api` si cambió vuelos o el alta de ventas, `tsc` si cambió el frontend); las que tocan la BD, solo con permiso (regla anterior). Si el cambio no lo requiere (docs, comentarios, textos), no se corre nada. Menos comandos por turno.
 
-- **No abrir ni manejar el navegador sin permiso expreso del usuario.** Sin esa orden no se usan las herramientas del navegador (ni el integrado ni Chrome) ni se levantan servidores para verlo. Se termina la tarea, se comprueba lo que se pueda sin navegador (`tsc`, `check:prisma`, pruebas, la API) y se explica qué hay que hacer en pantalla para probarla.
+- **No abrir ni manejar el navegador sin permiso expreso del usuario.** Sin esa orden no se usan las herramientas del navegador (ni el integrado ni Chrome) ni se levantan servidores para verlo. Se termina la tarea, se comprueba lo que se pueda sin navegador y sin ejecutar el proyecto (`tsc`, `check:prisma`, `test:validaciones`, `test:reglas-espejo`) y se explica qué hay que hacer en pantalla para probarla.
 
 ## Project overview
 

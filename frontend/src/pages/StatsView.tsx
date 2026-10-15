@@ -243,7 +243,7 @@ function CategoryDistribution() {
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", fontWeight: 700 }} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", fontWeight: 700 }} />
           </PieChart>
         </ResponsiveContainer>
       )}

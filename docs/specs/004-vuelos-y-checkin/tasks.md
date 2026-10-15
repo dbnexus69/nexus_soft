@@ -36,7 +36,7 @@ usa (`checkin: 'realizado'` sin adjuntos) ya era válido desde antes.
 **Por confirmar en navegador:** pulsar el botón en un vuelo pendiente y verificar que pasa a
 "Realizado" sin pedir ningún archivo.
 
-## T11 · Check-in por otro medio, sin correo, con decisión pendiente `[~]`
+## T11 · Check-in por otro medio, sin correo `[x]`
 
 **Qué pasó con T10.** El commit `54977b6` de Bayrol quitó el botón "Check-in realizado" con la
 regla "solo se marca realizado si el correo llega al cliente". Con el merge de `feat-bayrol`,
@@ -51,8 +51,7 @@ el botón desapareció de la lista.
 **Comprobado:** `tsc` sin errores; `pnpm test:vuelos-api` sin fallos. La suite **no cubre
 `sinEnvio`**: el camino nuevo no tiene prueba automática.
 
-**Pendiente:** decidir con Bayrol si el check-in por otro medio puede marcarse sin correo (lo
-que pide esta spec) o si se mantiene su regla y el botón se retira otra vez. Y probar en
+**Decidido (2026-10-15):** el botón se queda como está (marca realizado sin enviar correo); funciona así. Y probar en
 pantalla que el botón deja el vuelo en "Realizado" sin enviar correo.
 
 ## T9 · Creación de ventas intermitente `[x]`

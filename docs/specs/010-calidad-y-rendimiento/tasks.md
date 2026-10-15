@@ -11,7 +11,7 @@ las capas de codificación (`í` valía por `Ã` en el primer byte). **Comprobad
 `frontend/src`, `tsc` limpio, el diff solo toca esas líneas. **Por ver:** un error de validación del asistente
 con tildes bien escritas.
 
-## T2 · Integración continua `[~]` (escrita, sin activar)
+## T2 · Integración continua `[~]` (escrita, sin activar; pospuesta el 2026-10-15 por decisión del usuario)
 `docs/ci/ci.yml` (**sin activar**: el token de git no tiene el permiso `workflow` y GitHub rechazó el push; para activarlo: `gh auth refresh -h github.com -s workflow` y mover el archivo a `.github/workflows/ci.yml`): en cada push y pull request, el frontend corre `pnpm build` (`tsc` + `vite build`)
 y el backend `prisma generate`, `check:prisma`, `test:validaciones` y `test:reglas-espejo`. No necesita
 secretos. Las pruebas que levantan servidor y agencias (`test:aislamiento*`, `test:vuelos-api`) usan la base
@@ -104,7 +104,7 @@ no se tocó: es un documento impreso. **Por ver en pantalla:** etiquetas en may�
 
 ## Pendientes
 
-- Activar la CI (T2): necesita un token con permiso `workflow`.
+- Activar la CI (T2): pospuesta (2026-10-15). Cuando se retome, necesita un token con permiso `workflow`.
 
 ## Registro
 

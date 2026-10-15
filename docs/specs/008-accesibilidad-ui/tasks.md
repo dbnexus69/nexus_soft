@@ -55,8 +55,9 @@ las dos ★ del confeti (decorativas).
 **Confirmado en pantalla** (2026-10-08).
 
 Los 28 usos de `text-[8px]` y `text-[9px]` pasan a `text-[10px]`: ya no hay texto de menos de 10 px.
-**No se subieron** los 108 de `text-[10px]` (etiquetas en mayúscula de pantallas densas) a los 12 px que
-marca la guía: cambia el diseño y hay que verlo en pantalla antes. Pendiente de decidir viéndolo.
+Los 108 de `text-[10px]` subieron después a 12 px (spec 010: `text-[11px]` y luego `text-xs`); el usuario
+confirmó la subida (2026-10-15) y la leyenda de `StatsView.tsx`, que seguía en 11 px, pasó a 12. Ya no queda
+texto por debajo de 12 px en `frontend/src`.
 
 **Comprobado (T2–T4):** `tsc` limpio, `vite build` correcto. **Por ver en pantalla:** los avisos de los
 formularios (el icono junto al texto), el tipo de transporte de un plan, y el calendario de vuelos con el

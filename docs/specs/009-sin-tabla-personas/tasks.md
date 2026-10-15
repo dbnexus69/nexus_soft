@@ -2,6 +2,8 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
+**Pospuesta (2026-10-15)** por decisión del usuario: no se hará por ahora.
+
 **Estado (2026-10-03).** Diseño escrito; **nada implementado y nada aplicado a la base**. Espera la aprobación
 del usuario sobre la spec y el plan.
 

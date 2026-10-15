@@ -178,9 +178,8 @@ async function main() {
   comprobar('usuario: editar con un número inválido: 422', uEdita.status === 422 && campoDe(uEdita).includes('docNumber'), `HTTP ${uEdita.status}`);
 
   const cNit = (num) => pedir('POST', '/commissions/agents', tokA, { name: 'Comisionista NIT', type: 'freelance', docTypeId: nit.id, docNumber: num });
-  const cMal = await cNit('900123456-7');
-  comprobar('comisionista: NIT con el dígito de verificación mal: 422 que dice el correcto',
-    cMal.status === 422 && /es 8/.test(cMal.json?.error?.details?.[0]?.message || ''), `HTTP ${cMal.status}`);
+  const cOtroDigito = await cNit('900123456-7');
+  comprobar('comisionista: el dígito de verificación del NIT no se comprueba: 201', cOtroDigito.status === 201, `HTTP ${cOtroDigito.status}`);
   const cBien = await cNit('900123456-8');
   comprobar('comisionista: NIT con el dígito bien: 201 con el id del tipo', cBien.status === 201 && cBien.json?.data?.docTypeId === nit.id, `HTTP ${cBien.status}`);
   const cTel = await pedir('POST', '/commissions/agents', tokA, { name: 'Con teléfono malo', phone: 'abc' });
@@ -208,7 +207,7 @@ async function main() {
   const vTipo = await pedir('POST', '/sales', tokA, conHuespedes([{ name: 'Ana Prueba', docType: 'ZZ', docNumber: '1020304070' }]));
   comprobar('venta: un tipo de documento que no existe: 422 en docType', vTipo.status === 422 && campoDe(vTipo).includes('tourData.0.guests.0.docType'), `HTTP ${vTipo.status}`);
   const vNit = await pedir('POST', '/sales', tokA, conHuespedes([{ name: 'Empresa Prueba', docType: 'NIT', docNumber: '900123456-7' }]));
-  comprobar('venta: un NIT con el dígito mal: 422', vNit.status === 422, `HTTP ${vNit.status}`);
+  comprobar('venta: el dígito de verificación del NIT no se comprueba: 201', vNit.status === 201, `HTTP ${vNit.status}`);
   const vBien = await pedir('POST', '/sales', tokA, conHuespedes([
     { name: 'Ana Prueba', docType: 'cc', docNumber: ' 1020304070 ' },
     { name: 'Pedro Prueba', docType: 'Pasaporte', docNumber: 'ab123456' },

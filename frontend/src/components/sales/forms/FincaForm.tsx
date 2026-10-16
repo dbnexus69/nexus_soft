@@ -14,9 +14,11 @@ interface FincaFormProps {
   documentTypes?: ConfigData['documentTypes'];
   onChange: (updates: Partial<FincaData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin responsable, documento ni teléfono — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function FincaForm({ finca, client, suppliers, paymentMethods, documentTypes, onChange, triggerError }: FincaFormProps) {
+export function FincaForm({ finca, client, suppliers, paymentMethods, documentTypes, onChange, triggerError, cotizando = false }: FincaFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -60,23 +62,29 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, documentTy
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Responsable">
-            <Input value={finca.responsibleName} onChange={(e) => onChange({ responsibleName: e.target.value })} placeholder="Nombre completo" />
-          </FormField>
-          <FormField label="Tipo de Documento">
-            <Combobox
-              value={finca.docType || ""}
-              onChange={(val) => onChange({ docType: val })}
-              options={(documentTypes || []).map((d) => ({
-                value: d.abbreviation || d.name,
-                label: d.abbreviation || d.name,
-              }))}
-              placeholder="Tipo de documento"
-            />
-          </FormField>
-          <FormField label="Número de Documento">
-            <Input value={finca.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="C.C." />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Responsable">
+              <Input value={finca.responsibleName} onChange={(e) => onChange({ responsibleName: e.target.value })} placeholder="Nombre completo" />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Tipo de Documento">
+              <Combobox
+                value={finca.docType || ""}
+                onChange={(val) => onChange({ docType: val })}
+                options={(documentTypes || []).map((d) => ({
+                  value: d.abbreviation || d.name,
+                  label: d.abbreviation || d.name,
+                }))}
+                placeholder="Tipo de documento"
+              />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Número de Documento">
+              <Input value={finca.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="C.C." />
+            </FormField>
+          )}
           <FormField label="Check-in (Fecha y Hora)">
             <DateTimePicker
               value={finca.checkInDate}
@@ -129,9 +137,11 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, documentTy
               Tiene mascotas
             </label>
           </div>
-          <FormField label="Teléfono">
-            <Input value={finca.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Teléfono">
+              <Input value={finca.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
+            </FormField>
+          )}
           <div className="md:col-span-2">
             <FormField label="Observaciones (Opcional)">
               <div className="relative pb-5">

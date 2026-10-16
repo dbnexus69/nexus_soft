@@ -14,9 +14,11 @@ interface PassportFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<PassportData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin identidad del solicitante — no existe todavía. */
+  cotizando?: boolean;
 }
 
-export function PassportForm({ passport, client, suppliers, paymentMethods, onChange, triggerError }: PassportFormProps) {
+export function PassportForm({ passport, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: PassportFormProps) {
   const todayStr = todayStrHelper();
   return (
     <div className="space-y-6 animate-fade-in">
@@ -27,21 +29,27 @@ export function PassportForm({ passport, client, suppliers, paymentMethods, onCh
           <LuBookOpen size={14} /> Trámite de Pasaporte
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre Completo">
-            <Input value={passport.fullName} onChange={(e) => onChange({ fullName: e.target.value })} placeholder="Como aparece en el ID" />
-          </FormField>
-          <FormField label="Número de Identificación">
-            <Input value={passport.idNumber} onChange={(e) => onChange({ idNumber: e.target.value })} placeholder="Número de documento" />
-          </FormField>
-          <FormField label="Fecha de Nacimiento">
-            <DatePicker
-              value={passport.birthDate}
-              onChange={(val) => onChange({ birthDate: val })}
-              max={todayStr}
-              triggerError={triggerError}
-              fieldName="Nacimiento del solicitante"
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Nombre Completo">
+              <Input value={passport.fullName} onChange={(e) => onChange({ fullName: e.target.value })} placeholder="Como aparece en el ID" />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Número de Identificación">
+              <Input value={passport.idNumber} onChange={(e) => onChange({ idNumber: e.target.value })} placeholder="Número de documento" />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Fecha de Nacimiento">
+              <DatePicker
+                value={passport.birthDate}
+                onChange={(val) => onChange({ birthDate: val })}
+                max={todayStr}
+                triggerError={triggerError}
+                fieldName="Nacimiento del solicitante"
+              />
+            </FormField>
+          )}
           <FormField label="Ciudad de Residencia">
             <Input 
               value={passport.residenceCity} 
@@ -74,21 +82,23 @@ export function PassportForm({ passport, client, suppliers, paymentMethods, onCh
               fieldName="Estimación de viaje"
             />
           </FormField>
-          <FormField label="Teléfono de Contacto" className="md:col-span-2">
-            <Input 
-              value={passport.phone} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[a-zA-Z]/g, "");
-                onChange({ phone: cleaned });
-              }} 
-              placeholder="+57 300 123 4567" 
-              maxLength={15}
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Teléfono de Contacto" className="md:col-span-2">
+              <Input
+                value={passport.phone}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[a-zA-Z]/g, "");
+                  onChange({ phone: cleaned });
+                }}
+                placeholder="+57 300 123 4567"
+                maxLength={15}
+              />
+            </FormField>
+          )}
         </div>
       </div>
 
-      <FinancialSection 
+      <FinancialSection
         supplierName={passport.supplierName}
         supplierCost={passport.supplierCost}
         supplierPaymentMethod={passport.supplierPaymentMethod}

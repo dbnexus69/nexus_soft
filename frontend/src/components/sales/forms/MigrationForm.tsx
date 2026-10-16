@@ -15,9 +15,11 @@ interface MigrationFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<MigrationData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin identidad del pasajero — no existe todavía. */
+  cotizando?: boolean;
 }
 
-export function MigrationForm({ migration, client, suppliers, paymentMethods, onChange, triggerError }: MigrationFormProps) {
+export function MigrationForm({ migration, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: MigrationFormProps) {
   const todayStr = todayStrHelper();
   return (
     <div className="space-y-6 animate-fade-in">
@@ -28,72 +30,84 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
           <LuMapPin size={14} /> Documentación Migratoria
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre del Pasajero">
-            <Input value={migration.passengerName} onChange={(e) => onChange({ passengerName: e.target.value })} placeholder="Nombre completo" />
-          </FormField>
-          <FormField label="Fecha de Nacimiento">
-            <DatePicker
-              value={migration.birthDate}
-              onChange={(val) => onChange({ birthDate: val })}
-              max={todayStr}
-              triggerError={triggerError}
-              fieldName="Nacimiento del pasajero"
-            />
-          </FormField>
-          <FormField label="Nacionalidad">
-            <Input 
-              value={migration.nationality} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
-                onChange({ nationality: cleaned });
-              }} 
-              placeholder="Ej: Colombiana" 
-              maxLength={30}
-            />
-          </FormField>
-          <FormField label="Tipo de Documento">
-            <Combobox
-              value={migration.docType || "CC"}
-              onChange={(val) => onChange({ docType: val, docNumber: "" })}
-              options={[
-                { value: "CC", label: "Cédula de Ciudadanía" },
-                { value: "TI", label: "Tarjeta de Identidad" },
-                { value: "CE", label: "Cédula de Extranjería" },
-                { value: "Pasaporte", label: "Pasaporte" },
-                { value: "Otro", label: "Otro Documento" },
-              ]}
-            />
-          </FormField>
-          <FormField label="Número de Documento">
-            <div className="relative pb-5">
-              <Input 
-                value={migration.docNumber} 
-                onChange={(e) => {
-                  let cleaned = e.target.value;
-                  if (migration.docType === "CC" || migration.docType === "TI") {
-                    cleaned = cleaned.replace(/[^0-9]/g, "");
-                  } else {
-                    cleaned = cleaned.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                  }
-                  onChange({ docNumber: cleaned });
-                }} 
-                placeholder={migration.docType === "Pasaporte" ? "N° Pasaporte" : "Número de documento"} 
-                maxLength={20}
+          {!cotizando && (
+            <FormField label="Nombre del Pasajero">
+              <Input value={migration.passengerName} onChange={(e) => onChange({ passengerName: e.target.value })} placeholder="Nombre completo" />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Fecha de Nacimiento">
+              <DatePicker
+                value={migration.birthDate}
+                onChange={(val) => onChange({ birthDate: val })}
+                max={todayStr}
+                triggerError={triggerError}
+                fieldName="Nacimiento del pasajero"
               />
-              {migration.docNumber !== undefined && migration.docNumber.length > 0 && migration.docNumber.length < 5 && (
-                <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 5 caracteres</p>
-              )}
-            </div>
-          </FormField>
-          <FormField label="Vencimiento de Documento">
-            <DatePicker
-              value={migration.passportExpiry}
-              onChange={(val) => onChange({ passportExpiry: val })}
-              min={todayStr}
-              triggerError={triggerError}
-              fieldName="Vencimiento del documento"
-            />
-          </FormField>
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Nacionalidad">
+              <Input
+                value={migration.nationality}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                  onChange({ nationality: cleaned });
+                }}
+                placeholder="Ej: Colombiana"
+                maxLength={30}
+              />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Tipo de Documento">
+              <Combobox
+                value={migration.docType || "CC"}
+                onChange={(val) => onChange({ docType: val, docNumber: "" })}
+                options={[
+                  { value: "CC", label: "Cédula de Ciudadanía" },
+                  { value: "TI", label: "Tarjeta de Identidad" },
+                  { value: "CE", label: "Cédula de Extranjería" },
+                  { value: "Pasaporte", label: "Pasaporte" },
+                  { value: "Otro", label: "Otro Documento" },
+                ]}
+              />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Número de Documento">
+              <div className="relative pb-5">
+                <Input
+                  value={migration.docNumber}
+                  onChange={(e) => {
+                    let cleaned = e.target.value;
+                    if (migration.docType === "CC" || migration.docType === "TI") {
+                      cleaned = cleaned.replace(/[^0-9]/g, "");
+                    } else {
+                      cleaned = cleaned.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                    }
+                    onChange({ docNumber: cleaned });
+                  }}
+                  placeholder={migration.docType === "Pasaporte" ? "N° Pasaporte" : "Número de documento"}
+                  maxLength={20}
+                />
+                {migration.docNumber !== undefined && migration.docNumber.length > 0 && migration.docNumber.length < 5 && (
+                  <p className="text-amber-500 text-xs mt-1 absolute bottom-0 left-0"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 5 caracteres</p>
+                )}
+              </div>
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Vencimiento de Documento">
+              <DatePicker
+                value={migration.passportExpiry}
+                onChange={(val) => onChange({ passportExpiry: val })}
+                min={todayStr}
+                triggerError={triggerError}
+                fieldName="Vencimiento del documento"
+              />
+            </FormField>
+          )}
           <FormField label="País de Destino">
             <Input 
               value={migration.destinationCountry} 
@@ -120,24 +134,26 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
               ]}
             />
           </FormField>
-          <FormField label="Correo Electrónico">
-            <Input 
-              type="email" 
-              value={migration.email} 
-              onChange={(e) => {
-                let val = e.target.value;
-                if (val.includes(".com")) {
-                  val = val.substring(0, val.indexOf(".com") + 4);
-                }
-                onChange({ email: val.trim() });
-              }} 
-              placeholder="ejemplo@correo.com" 
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Correo Electrónico">
+              <Input
+                type="email"
+                value={migration.email}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (val.includes(".com")) {
+                    val = val.substring(0, val.indexOf(".com") + 4);
+                  }
+                  onChange({ email: val.trim() });
+                }}
+                placeholder="ejemplo@correo.com"
+              />
+            </FormField>
+          )}
         </div>
       </div>
 
-      <FinancialSection 
+      <FinancialSection
         supplierName={migration.supplierName}
         supplierCost={migration.supplierCost}
         supplierPaymentMethod={migration.supplierPaymentMethod}

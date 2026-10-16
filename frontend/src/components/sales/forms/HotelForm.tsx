@@ -14,9 +14,11 @@ interface HotelFormProps {
   data: AppData;
   mainClient?: ClienteDelFormulario;
   suppliers?: { name: string }[];
+  /** Cotizando (spec 007): sin número de reserva ni huéspedes — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function HotelForm({ hotel, onChange, triggerError, data, mainClient, suppliers = [] }: HotelFormProps) {
+export function HotelForm({ hotel, onChange, triggerError, data, mainClient, suppliers = [], cotizando = false }: HotelFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -72,17 +74,19 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
-          <FormField label="Número de Reserva">
-            <Input
-              value={hotel.reservationNumber}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ reservationNumber: cleaned });
-              }}
-              placeholder="Máx 20 caracteres (sin especiales)"
-              maxLength={20}
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Número de Reserva">
+              <Input
+                value={hotel.reservationNumber}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  onChange({ reservationNumber: cleaned });
+                }}
+                placeholder="Máx 20 caracteres (sin especiales)"
+                maxLength={20}
+              />
+            </FormField>
+          )}
           <FormField label="Check-in (Fecha y Hora)">
             <DateTimePicker
               value={hotel.startDate}
@@ -121,6 +125,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
         </div>
       </div>
 
+      {!cotizando && (
       <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
@@ -186,6 +191,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
           ))}
         </div>
       </div>
+      )}
 
       <div className="bg-emerald-50/20 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
         <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">

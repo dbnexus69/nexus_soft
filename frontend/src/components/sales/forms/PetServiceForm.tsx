@@ -15,9 +15,11 @@ interface PetServiceFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<PetServiceData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin dueño ni teléfono — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChange, triggerError }: PetServiceFormProps) {
+export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: PetServiceFormProps) {
   const todayStr = todayStrHelper();
   return (
     <div className="space-y-6 animate-fade-in">
@@ -28,20 +30,22 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
           <LuDog size={14} /> Transporte de Mascotas
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <FormField label="Nombre del Dueño">
-            <Input 
-              value={pet.ownerName} 
-              onChange={(e) => {
-                let cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
-                if (cleaned.length > 0) {
-                  cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-                }
-                onChange({ ownerName: cleaned });
-              }} 
-              placeholder="Nombre completo" 
-              maxLength={50}
-            />
-          </FormField>
+           {!cotizando && (
+            <FormField label="Nombre del Dueño">
+              <Input
+                value={pet.ownerName}
+                onChange={(e) => {
+                  let cleaned = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                  if (cleaned.length > 0) {
+                    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+                  }
+                  onChange({ ownerName: cleaned });
+                }}
+                placeholder="Nombre completo"
+                maxLength={50}
+              />
+            </FormField>
+          )}
           <FormField label="Nombre de la Mascota">
             <Input 
               value={pet.petName} 
@@ -145,17 +149,19 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
               maxLength={30}
             />
           </FormField>
-          <FormField label="Teléfono">
-            <Input 
-              value={pet.phone} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[a-zA-Z]/g, "");
-                onChange({ phone: cleaned });
-              }} 
-              placeholder="+57 300 123 4567" 
-              maxLength={15}
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Teléfono">
+              <Input
+                value={pet.phone}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[a-zA-Z]/g, "");
+                  onChange({ phone: cleaned });
+                }}
+                placeholder="+57 300 123 4567"
+                maxLength={15}
+              />
+            </FormField>
+          )}
           <FormField label="Nombre de la Empresa">
             <div className="relative pb-5">
               <Input 

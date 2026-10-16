@@ -72,10 +72,13 @@ export default function Quotes() {
   const [errorMsg, setErrorMsg] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<Quote | null>(null);
   const [actionId, setActionId] = useState<number | null>(null);
+  // Aceptada o rechazada: el backend ya no deja editarla, así que se muestra en
+  // una vista de solo lectura en vez del mismo formulario de edición.
+  const [readOnlyView, setReadOnlyView] = useState(false);
 
-  // El mismo cuerpo que arma el asistente de venta: cliente + un array por categoría de
-  // producto. `clientName` es aparte porque el combobox async necesita su propio texto.
-  const [clientName, setClientName] = useState("");
+  // El mismo cuerpo que arma el asistente de venta, salvo el cliente: una cotización
+  // no pide ninguno (no se sabe si se va a cerrar) — se elige uno solo al convertirla
+  // en venta, en el asistente de siempre.
   const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [draft, setDraft] = useState<WizardFormData>(() => ({ ...INITIAL_FORM }));
   const [showOtherProducts, setShowOtherProducts] = useState(false);
@@ -103,9 +106,14 @@ export default function Quotes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status]);
 
-  const buscarClientes = useCallback(async (q: string) => {
-    const res = await api.listClients({ search: q || undefined, perPage: 20, status: "active" });
-    return (res?.data || []).map((c: any) => ({ value: c.name, label: c.name, data: c }));
+  // Solo hace falta al crear: el backend no reasigna el asesor al editar
+  // (`updateQuoteSchema` omite `asesorId`). Sin este selector, quien suplanta no
+  // tiene cómo mandar un asesor y el alta siempre daba 400 ("Elige un asesor...").
+  const buscarAsesores = useCallback(async (q: string) => {
+    const res = await api.listUsers({ search: q || undefined, perPage: 20 });
+    return (res?.data || [])
+      .filter((u: any) => u.status === "active")
+      .map((u: any) => ({ value: u.name, label: u.name, data: u }));
   }, []);
 
   const set: FijarCampo = (key, value) => setDraft((prev) => ({ ...prev, [key]: value }));
@@ -129,11 +137,16 @@ export default function Quotes() {
     },
   };
 
+  const puedeEditar = (q: Quote) => q.estado === "borrador" || q.estado === "enviada" || q.estado === "vencida";
+
   const resetForm = () => {
     setEditing(null);
-    setClientName("");
     setFechaVencimiento("");
-    setDraft({ ...INITIAL_FORM });
+    setReadOnlyView(false);
+    // Mismo valor por defecto que `NewSaleWizard.tsx`: el propio usuario. Quien
+    // suplanta tiene que cambiarlo por un asesor real de la agencia suplantada
+    // (el backend rechaza dejarlo sin elegir mientras se suplanta).
+    setDraft({ ...INITIAL_FORM, asesorId: user?.id ? String(user.id) : "", asesorName: user?.name || "" });
     setShowOtherProducts(false);
     setActiveForm(null);
     setActiveIdx(null);
@@ -142,11 +155,18 @@ export default function Quotes() {
 
   const openCreate = () => { resetForm(); setIsModalOpen(true); };
 
+  // Una cotización aceptada o rechazada ya no se puede editar (el backend la
+  // rechaza con 400): se abre en una vista de solo lectura, no en el mismo
+  // formulario — antes se podía intentar "Guardar" y el único aviso era ese 400
+  // genérico después de tocar todo.
   const openEdit = (q: Quote) => {
     setEditing(q);
-    setClientName(q.clientName || "");
+    setReadOnlyView(!puedeEditar(q));
     setFechaVencimiento(q.fechaVencimiento ? q.fechaVencimiento.slice(0, 10) : "");
 
+    // El formulario ya no pide cliente, pero si la cotización ya tenía uno (de antes
+    // de este cambio, o puesto por la API), se conserva sin mostrarlo: guardar no
+    // debe borrarlo en silencio.
     const next: WizardFormData = {
       ...INITIAL_FORM,
       ...(q.clientId ? { clientId: String(q.clientId) } : {}),
@@ -168,8 +188,6 @@ export default function Quotes() {
     setIsModalOpen(true);
   };
 
-  const puedeEditar = (q: Quote) => q.estado === "borrador" || q.estado === "enviada" || q.estado === "vencida";
-
   const handleSave = async () => {
     setSaving(true);
     setErrorMsg("");
@@ -178,6 +196,8 @@ export default function Quotes() {
         clientId: draft.clientId,
         fechaVencimiento: fechaVencimiento || null,
         observations: draft.observations || null,
+        // Solo al crear: editar no reasigna el asesor (`updateQuoteSchema` lo omite).
+        ...(editing ? {} : { asesorId: draft.asesorId || undefined }),
       };
       for (const categoria of Object.keys(CATEGORIA_A_ARRAY)) {
         const { key, requestKey } = CATEGORIA_A_ARRAY[categoria];
@@ -444,7 +464,70 @@ export default function Quotes() {
               onCloseForm={() => { setActiveForm(null); setActiveIdx(null); }}
               onSwitchForm={(productId, idx) => { setActiveForm(productId); setActiveIdx(idx); }}
               triggerError={(msg) => setErrorMsg(msg)}
+              cotizando
             />
+          ) : readOnlyView && editing ? (
+            <>
+              <div
+                className="px-5 py-4 flex items-center justify-between flex-shrink-0 rounded-t-2xl"
+                style={{ background: "linear-gradient(135deg, #2B2D42 0%, #3d4060 100%)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-heading font-semibold text-white truncate tracking-wide">
+                    Cotización #{editing.numero ?? editing.id}
+                  </h2>
+                  <Badge variant={ESTADO_BADGE[editing.estado]}>{ESTADO_LABEL[editing.estado]}</Badge>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  aria-label="Cerrar"
+                  className="text-white/60 hover:text-white transition-all p-1.5 rounded-lg hover:bg-white/10 hover:scale-110"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-5">
+                <p className="text-xs text-gray-500 bg-gray-50 dark:bg-slate-800/50 px-3 py-2 rounded-lg">
+                  Una cotización {ESTADO_LABEL[editing.estado].toLowerCase()} ya no se puede editar.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  {editing.clientName && (
+                    <div><span className="text-gray-500">Cliente: </span>{editing.clientName}</div>
+                  )}
+                  <div><span className="text-gray-500">Vencimiento: </span>{editing.fechaVencimiento ? formatDate(editing.fechaVencimiento) : "—"}</div>
+                </div>
+                {editing.observations && (
+                  <div className="text-sm"><span className="text-gray-500">Observaciones: </span>{editing.observations}</div>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-slate-800 text-left text-xs uppercase text-gray-500">
+                        <th className="py-2 pr-3">Servicio</th>
+                        <th className="py-2 pr-3 text-right">Precio</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                      {editing.lines.map((l) => (
+                        <tr key={l.id}>
+                          <td className="py-2 pr-3">{l.descripcion}</td>
+                          <td className="py-2 pr-3 text-right tabular-nums">{formatCurrency(l.precio)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="rounded-xl bg-primary/5 px-4 py-3 text-right">
+                  <span className="text-xs font-bold uppercase text-gray-500 mr-2">Total</span>
+                  <span className="font-black tabular-nums text-primary">{formatCurrency(editing.totals.total)}</span>
+                </div>
+              </div>
+
+              <div className="px-5 sm:px-6 py-4 bg-white border-t border-gray-100 flex justify-end flex-shrink-0 rounded-b-2xl">
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cerrar</Button>
+              </div>
+            </>
           ) : (
             <>
               <div
@@ -470,21 +553,25 @@ export default function Quotes() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField label="Cliente (opcional)">
-                    <AsyncCombobox
-                      value={clientName}
-                      onChange={(val, opt) => {
-                        setClientName(val);
-                        if (opt?.data) {
-                          setDraft((prev) => ({ ...prev, clientId: String(opt.data.id), clientData: opt.data }));
-                        }
-                      }}
-                      fetchOptions={buscarClientes}
-                      placeholder="Escribe para buscar un cliente..."
-                      emptyText="Ningún cliente coincide"
-                    />
-                  </FormField>
+                <div className={`grid grid-cols-1 gap-4 ${!editing ? "md:grid-cols-2" : ""}`}>
+                  {!editing && (
+                    <FormField label="Asesor">
+                      <AsyncCombobox
+                        value={draft.asesorName}
+                        onChange={(val, opt) => {
+                          if (opt?.data) {
+                            set("asesorId", String(opt.data.id));
+                            set("asesorName", opt.data.name);
+                          } else {
+                            set("asesorName", val);
+                          }
+                        }}
+                        fetchOptions={buscarAsesores}
+                        placeholder="¿Quién cotiza?"
+                        emptyText="Ningún asesor coincide"
+                      />
+                    </FormField>
+                  )}
                   <FormField label="Fecha de vencimiento (opcional)">
                     <DatePicker
                       value={fechaVencimiento}

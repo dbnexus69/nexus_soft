@@ -13,9 +13,11 @@ interface ConventionFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<ConventionData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin el contacto específico — no existe todavía. */
+  cotizando?: boolean;
 }
 
-export function ConventionForm({ convention, client, suppliers, paymentMethods, onChange, triggerError }: ConventionFormProps) {
+export function ConventionForm({ convention, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: ConventionFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -72,9 +74,11 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
               placeholder="Nombre de la empresa" 
             />
           </FormField>
-          <FormField label="Nombre de Contacto">
-            <Input value={convention.contactName} onChange={(e) => onChange({ contactName: e.target.value })} placeholder="Persona de contacto" />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Nombre de Contacto">
+              <Input value={convention.contactName} onChange={(e) => onChange({ contactName: e.target.value })} placeholder="Persona de contacto" />
+            </FormField>
+          )}
           <FormField label="Fecha Inicio">
             <DateTimePicker
               value={convention.startDate}
@@ -130,20 +134,22 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
               )}
             </div>
           </FormField>
-          <FormField label="Correo Electrónico">
-            <Input 
-              type="email" 
-              value={convention.email} 
-              onChange={(e) => {
-                let val = e.target.value;
-                if (val.includes(".com")) {
-                  val = val.substring(0, val.indexOf(".com") + 4);
-                }
-                onChange({ email: val.trim() });
-              }} 
-              placeholder="correo@empresa.com" 
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Correo Electrónico">
+              <Input
+                type="email"
+                value={convention.email}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (val.includes(".com")) {
+                    val = val.substring(0, val.indexOf(".com") + 4);
+                  }
+                  onChange({ email: val.trim() });
+                }}
+                placeholder="correo@empresa.com"
+              />
+            </FormField>
+          )}
           <div className="md:col-span-2 space-y-3">
             <label className="text-sm font-medium text-gray-700">Equipos A/V Requeridos</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

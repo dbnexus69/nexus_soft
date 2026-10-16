@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car, Bus } from "lucide-react";
+import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car, Bus, Building2 } from "lucide-react";
 import * as api from "../../../api";
 import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
@@ -18,6 +18,8 @@ interface PlanFormProps {
   onEditLinkedService?: (productType: SaleProductId, itemIdx: number) => void;
   planIndex?: number;
   linkedServices?: Array<{ productId: SaleProductId; label: string; idx: number }>;
+  /** Cotizando (spec 007): sin números de reserva/vuelo/tiquete/confirmación ni integrantes — no existen todavía. */
+  cotizando?: boolean;
 }
 
 export function PlanForm({
@@ -29,7 +31,8 @@ export function PlanForm({
   onAddLinkedService,
   onEditLinkedService,
   planIndex = 0,
-  linkedServices = []
+  linkedServices = [],
+  cotizando = false,
 }: PlanFormProps) {
   const minDateTime = (() => {
     const now = new Date();
@@ -119,62 +122,16 @@ export function PlanForm({
       <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
         <h4 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
           <Package size={14} />
-          Datos del Plan Vacacional
+          Información General
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre del Plan">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField label="Nombre del Plan" className="md:col-span-3">
             <Input
               value={plan.planName}
               onChange={(e) => onChange({ planName: e.target.value })}
               placeholder="Ej: Plan Cancún Todo Incluido (Máx 50)"
               maxLength={50}
             />
-          </FormField>
-          <FormField label="Tipo de Transporte">
-            <Select
-              value={plan.transportType || "Aereo"}
-              onChange={(e) => onChange({ transportType: e.target.value as 'Aereo' | 'Terrestre' })}
-            >
-              <option value="Aereo">Transporte Aéreo (Vuelo / Aerolínea)</option>
-              <option value="Terrestre">Transporte Terrestre (Bus / Flota / Vehículo)</option>
-            </Select>
-          </FormField>
-          <FormField label="Nombre del Hotel">
-            <Input
-              value={plan.hotelName}
-              onChange={(e) => onChange({ hotelName: e.target.value })}
-              placeholder="Ej: Riu Palace (Máx 50)"
-              maxLength={50}
-            />
-          </FormField>
-
-          <FormField label={plan.transportType === 'Terrestre' ? 'Empresa de Transporte Terrestre' : 'Aerolínea'}>
-            {plan.transportType === 'Terrestre' ? (
-              <Combobox
-                value={plan.airline || ""}
-                onChange={(val) => onChange({ airline: val })}
-                options={[
-                  { value: "Flota Magdalena", label: "Flota Magdalena" },
-                  { value: "Expreso Brasilia", label: "Expreso Brasilia" },
-                  { value: "Berlinas del Fonce", label: "Berlinas del Fonce" },
-                  { value: "Copetran", label: "Copetran" },
-                  { value: "Rápido Ochoa", label: "Rápido Ochoa" },
-                  { value: "Coomotor", label: "Coomotor" },
-                  { value: "Transporte Especial Privado", label: "Transporte Especial Privado" },
-                  { value: "Bus de Turismo", label: "Bus de Turismo" },
-                  { value: "Chiva Turística", label: "Chiva Turística" },
-                  { value: "Van Privada", label: "Van Privada" },
-                ]}
-                placeholder="Seleccionar o escribir empresa de transporte..."
-              />
-            ) : (
-              <Combobox
-                value={plan.airline}
-                onChange={(val) => onChange({ airline: val })}
-                options={(data?.config?.airlines || []).map((a) => ({ value: a.name, label: a.name }))}
-                placeholder="Seleccionar aerolínea..."
-              />
-            )}
           </FormField>
           <FormField label="Adultos">
             <Input
@@ -201,6 +158,57 @@ export function PlanForm({
         </div>
       </div>
 
+      {/* ── Hotel: separado del vuelo/transporte, no se mezclan ─── */}
+      <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+        <h4 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+          <Building2 size={14} />
+          Hotel del Plan
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField label="Nombre del Hotel">
+            <Input
+              value={plan.hotelName}
+              onChange={(e) => onChange({ hotelName: e.target.value })}
+              placeholder="Ej: Riu Palace (Máx 50)"
+              maxLength={50}
+            />
+          </FormField>
+          {!cotizando && (
+            <FormField label={<span>Número de Reservación <span className="text-red-500">*</span></span>}>
+              <Input
+                required
+                value={plan.reservationNumber}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  onChange({ reservationNumber: cleaned });
+                }}
+                placeholder="Código de hotel / voucher (Máx 20)"
+                maxLength={20}
+              />
+            </FormField>
+          )}
+          <FormField label={<span>Check-in {!cotizando && <span className="text-red-500">*</span>}</span>}>
+            <DateTimePicker
+              value={plan.startDate || ""}
+              onChange={(val) => onChange({ startDate: val })}
+              min={minDateTime}
+              triggerError={triggerError}
+              fieldName="Ingreso al hotel del plan"
+            />
+          </FormField>
+          <FormField label={<span>Check-out {!cotizando && <span className="text-red-500">*</span>}</span>}>
+            <DateTimePicker
+              value={plan.endDate || ""}
+              onChange={(val) => onChange({ endDate: val })}
+              min={minDateTime}
+              triggerError={triggerError}
+              fieldName="Salida del hotel del plan"
+            />
+          </FormField>
+        </div>
+      </div>
+
+      {/* ── Vuelo / Transporte: separado del hotel, no se mezclan ─── */}
       <div className={`p-4 rounded-xl border transition-all ${
         plan.transportType === 'Terrestre'
           ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40'
@@ -211,7 +219,7 @@ export function PlanForm({
               plan.transportType === 'Terrestre' ? 'text-emerald-700 dark:text-emerald-300' : 'text-blue-700 dark:text-blue-300'
             }`}>
               {plan.transportType === 'Terrestre' ? <Car size={16} /> : <Plane size={16} />}
-              {plan.transportType === 'Terrestre' ? 'Reservación y Transporte Terrestre' : 'Reservación y Transporte Aéreo'}
+              {plan.transportType === 'Terrestre' ? 'Transporte Terrestre del Plan' : 'Vuelo del Plan'}
             </h4>
             <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
               <button
@@ -239,18 +247,35 @@ export function PlanForm({
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField label={<span>Número de Reservación <span className="text-red-500">*</span></span>}>
-              <Input
-                required
-                value={plan.reservationNumber}
-                onChange={(e) => {
-                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                  onChange({ reservationNumber: cleaned });
-                }}
-                placeholder="Código de hotel / voucher (Máx 20)"
-                maxLength={20}
-              />
+            <FormField label={plan.transportType === 'Terrestre' ? 'Empresa de Transporte Terrestre' : 'Aerolínea'}>
+              {plan.transportType === 'Terrestre' ? (
+                <Combobox
+                  value={plan.airline || ""}
+                  onChange={(val) => onChange({ airline: val })}
+                  options={[
+                    { value: "Flota Magdalena", label: "Flota Magdalena" },
+                    { value: "Expreso Brasilia", label: "Expreso Brasilia" },
+                    { value: "Berlinas del Fonce", label: "Berlinas del Fonce" },
+                    { value: "Copetran", label: "Copetran" },
+                    { value: "Rápido Ochoa", label: "Rápido Ochoa" },
+                    { value: "Coomotor", label: "Coomotor" },
+                    { value: "Transporte Especial Privado", label: "Transporte Especial Privado" },
+                    { value: "Bus de Turismo", label: "Bus de Turismo" },
+                    { value: "Chiva Turística", label: "Chiva Turística" },
+                    { value: "Van Privada", label: "Van Privada" },
+                  ]}
+                  placeholder="Seleccionar o escribir empresa de transporte..."
+                />
+              ) : (
+                <Combobox
+                  value={plan.airline}
+                  onChange={(val) => onChange({ airline: val })}
+                  options={(data?.config?.airlines || []).map((a) => ({ value: a.name, label: a.name }))}
+                  placeholder="Seleccionar aerolínea..."
+                />
+              )}
             </FormField>
+            {!cotizando && (
             <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Placa / Vehículo / Bus' : 'Número de Vuelo'} <span className="text-red-500">*</span></span>}>
               <Input
                 required
@@ -263,6 +288,8 @@ export function PlanForm({
                 maxLength={8}
               />
             </FormField>
+            )}
+            {!cotizando && (
             <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Silla / Puesto' : 'Número de Tiquete'} <span className="text-red-500">*</span></span>}>
               <Input
                 required
@@ -275,6 +302,8 @@ export function PlanForm({
                 maxLength={14}
               />
             </FormField>
+            )}
+            {!cotizando && (
              <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Código Reserva Terrestre' : 'Confirmación Vuelo'} <span className="text-red-500">*</span></span>}>
                <Input
                  required
@@ -287,6 +316,7 @@ export function PlanForm({
                  maxLength={8}
                />
              </FormField>
+            )}
             <FormField label={<span>{plan.transportType === 'Terrestre' ? 'Salida Origen (Ida)' : 'Fecha Ida (Vuelo)'} <span className="text-red-500">*</span></span>}>
               <DateTimePicker
                 value={plan.flightDepartureDate || ""}
@@ -321,24 +351,6 @@ export function PlanForm({
                 min={minDateTime}
                 triggerError={triggerError}
                 fieldName={plan.transportType === 'Terrestre' ? 'Llegada a origen en bus' : 'Llegada de vuelta del vuelo'}
-              />
-            </FormField>
-            <FormField label={<span>Ingreso Hotel <span className="text-red-500">*</span></span>}>
-              <DateTimePicker
-                value={plan.startDate || ""}
-                onChange={(val) => onChange({ startDate: val })}
-                min={minDateTime}
-                triggerError={triggerError}
-                fieldName="Ingreso al hotel del plan"
-              />
-            </FormField>
-            <FormField label={<span>Salida Hotel <span className="text-red-500">*</span></span>}>
-              <DateTimePicker
-                value={plan.endDate || ""}
-                onChange={(val) => onChange({ endDate: val })}
-                min={minDateTime}
-                triggerError={triggerError}
-                fieldName="Salida del hotel del plan"
               />
             </FormField>
           </div>
@@ -395,6 +407,7 @@ export function PlanForm({
       </div>
 
       <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+        {!cotizando && (
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
             <Users size={14} />
@@ -405,6 +418,8 @@ export function PlanForm({
             Agregar
           </Button>
         </div>
+        )}
+        {!cotizando && (
         <div className="space-y-3">
           {plan.guests.map((guest, gIdx) => (
             <div key={gIdx} className="flex gap-2 items-start">
@@ -463,6 +478,7 @@ export function PlanForm({
             </div>
           ))}
         </div>
+        )}
         <div className="mt-4">
           <FormField label="Observaciones">
             <textarea

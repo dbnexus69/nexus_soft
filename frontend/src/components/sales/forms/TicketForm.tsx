@@ -30,6 +30,8 @@ interface TicketFormProps {
   }[];
   clients: Client[];
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin pasajeros ni número de vuelo/tiquete — no existen todavía. */
+  cotizando?: boolean;
 }
 
 const FLIGHT_MODE_TABS = [
@@ -284,6 +286,7 @@ export function TicketForm({
   clients,
   mainClient,
   triggerError,
+  cotizando = false,
 }: TicketFormProps & { mainClient?: ClienteDelFormulario }) {
   const { data } = useData();
   const airportOptions = airports.map((a) => ({
@@ -292,6 +295,10 @@ export function TicketForm({
   }));
 
   React.useEffect(() => {
+    // Cotizando no hay titular que ponerle (spec 007): un pasajero en blanco con
+    // `esTitular: true` igual exige su número de reserva al convertir en venta —
+    // y aquí todavía no hay ninguna. En una venta real este efecto no cambia nada.
+    if (cotizando) return;
     const pax = ticket.passengers || ((ticket as any).passengerInfo ? [{ ...(ticket as any).passengerInfo, esTitular: true, asiento: '', nroReserva: '', nroTiquete: '' }] : []);
     if (pax.length === 0) {
       onChange({
@@ -307,7 +314,7 @@ export function TicketForm({
         }]
       });
     }
-  }, [ticket.passengers, (ticket as any).passengerInfo, mainClient]);
+  }, [ticket.passengers, (ticket as any).passengerInfo, mainClient, cotizando]);
 
   // Obtener fecha y hora actual en la zona horaria local para la validación de min
   const minDateTime = (() => {
@@ -458,6 +465,7 @@ export function TicketForm({
                     />
                   </FormField>
                   
+                  {!cotizando && (
                   <FormField label={<span>N° Vuelo <span className="text-red-500">*</span></span>}>
                     <Input
                       required
@@ -474,7 +482,8 @@ export function TicketForm({
                       <p className="text-xs text-amber-500 mt-1 font-medium animate-fade-in"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 3 caracteres.</p>
                     )}
                   </FormField>
-                  
+                  )}
+
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -522,6 +531,7 @@ export function TicketForm({
                     />
                   </FormField>
 
+                  {!cotizando && (
                   <FormField label="N° Tiquete (Opcional)">
                     <Input
                       minLength={8}
@@ -540,6 +550,7 @@ export function TicketForm({
                       </p>
                     )}
                   </FormField>
+                  )}
                 </div>
               </div>
             </div>
@@ -706,6 +717,7 @@ export function TicketForm({
                       className="text-xs"
                     />
                   </FormField>
+                  {!cotizando && (
                   <FormField label={<span>N° Vuelo <span className="text-red-500">*</span></span>}>
                     <Input
                       required
@@ -722,6 +734,7 @@ export function TicketForm({
                       <p className="text-xs text-amber-500 mt-1 font-medium animate-fade-in"><TriangleAlert size={12} aria-hidden="true" className="inline -mt-0.5 mr-1" /> Mínimo 3 caracteres.</p>
                     )}
                   </FormField>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField label="Aerolínea">
@@ -809,6 +822,7 @@ export function TicketForm({
                     className="text-xs"
                   />
                 </FormField>
+                {!cotizando && (
                 <FormField label={<span>N° Vuelo <span className="text-red-500">*</span></span>}>
                   <Input
                     required
@@ -822,6 +836,7 @@ export function TicketForm({
                     className="text-xs"
                   />
                 </FormField>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Aerolínea">
@@ -879,6 +894,7 @@ export function TicketForm({
       )}
         
       {/* ── Información de Pasajeros ─────────────────────────── */}
+      {!cotizando && (
       <div className="bg-violet-50/30 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-500/30">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-widest flex items-center gap-2">
@@ -1085,7 +1101,8 @@ export function TicketForm({
           )}
         </div>
       </div>
-        
+      )}
+
       {/* ── Detalles Financieros ──────────────────────────────── */}
       <div className="bg-emerald-50/20 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
         <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">

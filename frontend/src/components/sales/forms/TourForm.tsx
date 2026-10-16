@@ -15,9 +15,11 @@ interface TourFormProps {
   data: AppData;
   onChange: (updates: Partial<TourData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin teléfono, integrantes ni vouchers — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function TourForm({ tour, mainClient, data, onChange, triggerError }: TourFormProps) {
+export function TourForm({ tour, mainClient, data, onChange, triggerError, cotizando = false }: TourFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Hora local en el formato que espera el selector (`AAAA-MM-DDTHH:mm`), como en la SIM card.
   const minDateTime = (() => {
@@ -145,9 +147,11 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
               ]}
             />
           </FormField>
-          <FormField label="Teléfono">
-            <Input value={tour.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Teléfono">
+              <Input value={tour.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
+            </FormField>
+          )}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -180,6 +184,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
         </div>
       </div>
 
+      {!cotizando && (
       <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
@@ -250,8 +255,9 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
           ))}
         </div>
       </div>
+      )}
 
-      <FinancialSection 
+      <FinancialSection
         supplierName={tour.supplierName}
         supplierCost={tour.supplierCost}
         supplierPaymentMethod={tour.supplierPaymentMethod}
@@ -262,6 +268,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
         onChange={(updates) => onChange(updates)}
       />
 
+      {!cotizando && (
       <div className="mt-6 p-5 bg-accent/5 rounded-2xl border border-accent/10 space-y-4">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-accent uppercase tracking-widest flex items-center gap-2">
@@ -358,6 +365,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError }: Tou
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

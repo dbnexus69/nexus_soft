@@ -14,9 +14,11 @@ interface SimCardFormProps {
   documentTypes?: ConfigData['documentTypes'];
   onChange: (updates: Partial<SimCardData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin identidad del titular — no existe todavía. */
+  cotizando?: boolean;
 }
 
-export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTypes, onChange, triggerError }: SimCardFormProps) {
+export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTypes, onChange, triggerError, cotizando = false }: SimCardFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -31,23 +33,29 @@ export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTy
           <LuSmartphone size={14} /> Configuración de SIM Card
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre del Titular">
-            <Input value={sim.passengerName} onChange={(e) => onChange({ passengerName: e.target.value })} placeholder="Nombre completo" />
-          </FormField>
-          <FormField label="Tipo de Documento">
-            <Combobox
-              value={sim.docType || ""}
-              onChange={(val) => onChange({ docType: val })}
-              options={(documentTypes || []).map((d) => ({
-                value: d.abbreviation || d.name,
-                label: d.abbreviation || d.name,
-              }))}
-              placeholder="Tipo de documento"
-            />
-          </FormField>
-          <FormField label="Número de Documento">
-            <Input value={sim.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="C.C. o Pasaporte" />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Nombre del Titular">
+              <Input value={sim.passengerName} onChange={(e) => onChange({ passengerName: e.target.value })} placeholder="Nombre completo" />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Tipo de Documento">
+              <Combobox
+                value={sim.docType || ""}
+                onChange={(val) => onChange({ docType: val })}
+                options={(documentTypes || []).map((d) => ({
+                  value: d.abbreviation || d.name,
+                  label: d.abbreviation || d.name,
+                }))}
+                placeholder="Tipo de documento"
+              />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Número de Documento">
+              <Input value={sim.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="C.C. o Pasaporte" />
+            </FormField>
+          )}
           <FormField label="País de Destino">
             <Input 
               value={sim.destinationCountry} 
@@ -108,24 +116,26 @@ export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTy
               ]}
             />
           </FormField>
-          <FormField label="Correo Electrónico" className="md:col-span-2">
-            <Input 
-              type="email" 
-              value={sim.email} 
-              onChange={(e) => {
-                let val = e.target.value;
-                if (val.includes(".com")) {
-                  val = val.substring(0, val.indexOf(".com") + 4);
-                }
-                onChange({ email: val.trim() });
-              }} 
-              placeholder="ejemplo@correo.com" 
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Correo Electrónico" className="md:col-span-2">
+              <Input
+                type="email"
+                value={sim.email}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (val.includes(".com")) {
+                    val = val.substring(0, val.indexOf(".com") + 4);
+                  }
+                  onChange({ email: val.trim() });
+                }}
+                placeholder="ejemplo@correo.com"
+              />
+            </FormField>
+          )}
         </div>
       </div>
 
-      <FinancialSection 
+      <FinancialSection
         supplierName={sim.supplierName}
         supplierCost={sim.supplierCost}
         supplierPaymentMethod={sim.supplierPaymentMethod}

@@ -20,6 +20,19 @@ está en `plan.md`; el reparto en tareas, en `tasks.md`.
 > formularios simplificados y sin selector de cliente — ver el registro en
 > `tasks.md`; esta vuelta no toca ni los formularios ni el selector, solo afloja la
 > validación.)
+>
+> **Segundo ajuste (2026-10-16):** no bastaba con que los campos fueran opcionales —
+> seguían *apareciendo*. El criterio, confirmado con el usuario: un campo se quita si
+> depende de una venta que todavía no existe (número de tiquete/reserva/vuelo,
+> asiento, identidad de cliente o pasajero); se queda si describe el servicio en sí
+> (tipo de hotel, fechas, cantidades, costo, ganancia). Un primer intento construyó
+> formularios mínimos propios por categoría para aplicar ese criterio — el usuario
+> pidió deshacerlo en la misma conversación: quería **el mismo diseño** de los
+> formularios de venta, solo sin esos campos puntuales. La versión que quedó (ver
+> decisión 13 de `plan.md`) esconde esos campos *dentro* de `forms/TicketForm.tsx` y
+> los demás, con un prop `cotizando` que por defecto es `false` — el asistente de
+> venta real nunca lo manda, así que no le cambia nada. El selector de cliente se
+> quitó del todo de `Quotes.tsx` — ya no se pide ni se muestra ninguno al cotizar.
 
 ## Problema
 
@@ -32,12 +45,14 @@ en el asistente (`POST /sales`); no hay ningún estado intermedio.
 
 ## Qué será posible al terminar
 
-1. El asesor arma una cotización para un cliente con **la misma pantalla de productos
-   que usa una venta**: elige la categoría (tiquete, hotel, seguro, paquete...) y
-   llena el mismo formulario — para un tiquete, de dónde a dónde, ida o ida y vuelta,
-   fecha y hora, pasajeros; para un hotel, fechas y huéspedes; etc. — con costo de
-   proveedor y ganancia por servicio. El IVA se calcula solo (19% sobre la ganancia,
-   igual que en una venta) y el total se ve en vivo.
+1. El asesor arma una cotización **sin elegir ningún cliente**: elige la categoría
+   (tiquete, hotel, seguro, paquete...) y llena un formulario propio, mínimo, con
+   solo lo que describe el servicio — para un tiquete, de dónde a dónde, ida o ida y
+   vuelta, fecha y hora; para un hotel, nombre, destino, tipo y fechas; etc. — y
+   costo de proveedor y ganancia por servicio. **Nunca** lo que depende de una venta
+   que todavía no existe: número de tiquete, número de reserva, número de vuelo,
+   asiento, ni la identidad de ningún cliente o pasajero. El IVA se calcula solo
+   (19% sobre la ganancia, igual que en una venta) y el total se ve en vivo.
 2. **La descripción de cada línea se genera sola**, a partir de ese detalle (p. ej.
    "BOG → CTG (ida y vuelta)", "Hotel Caribe · Cartagena") — nadie la escribe a mano.
 3. **Editar**: la misma cotización se puede modificar mientras esté en borrador o ya
@@ -50,21 +65,20 @@ en el asistente (`POST /sales`); no hay ningún estado intermedio.
 6. El PDF tiene la marca de la agencia (igual que el voucher de una venta) y muestra el
    **precio por servicio** de cada línea — nunca el costo de proveedor ni la ganancia.
 7. **Convertir en venta**: al aceptar, un botón abre el asistente de venta con **el
-   detalle completo de cada servicio ya puesto** (los mismos tramos, pasajeros, fechas
-   que se cotizaron, no solo el costo y la ganancia), listo para revisar y terminar la
-   venta por el camino normal. Si la cotización tenía cliente, lo trae puesto; si no,
-   el asistente lo pide en su primer paso, como en cualquier venta nueva. La venta
-   resultante queda enlazada a la cotización.
+   detalle de cada servicio ya puesto** (ruta, fechas, costo, ganancia), listo para
+   completar ahí mismo lo que falta — número de tiquete, reserva, pasajeros — y
+   terminar la venta por el camino normal. El asistente siempre pide el cliente en
+   su primer paso, como en cualquier venta nueva (la cotización nunca tuvo uno). La
+   venta resultante queda enlazada a la cotización.
 8. Cada agencia decide, por rol, quién puede ver (todo o solo lo propio), crear, editar
    o borrar cotizaciones — el mismo sistema de permisos que ya rige todo lo demás.
-9. **Una cotización no es una venta: nada en ella es obligatorio.** Ni el cliente, ni
-   el costo de proveedor de un servicio, ni la reserva del titular de un tiquete — se
-   puede cotizar con la información que haya en ese momento, aunque sea incompleta.
-   Lo que sí se manda se sigue validando (un aeropuerto o un tipo de hotel que no
-   existen se rechazan igual que en una venta), pero nada fuerza a completarlo
-   mientras se cotiza. Esos mismos campos vuelven a ser obligatorios al convertir en
-   venta, con la validación de siempre de `POST /sales` — así "convertir en venta"
-   solo avanza cuando los datos ya están completos.
+9. **Una cotización no es una venta: nada en ella es obligatorio, y lo que depende de
+   una venta ni siquiera se muestra.** Ni el cliente (no tiene selector), ni el costo
+   de proveedor, ni nada que requiera una reserva ya hecha. Lo que sí se pide (tipo
+   de hotel, destino, fechas...) se sigue validando si se manda (un aeropuerto que no
+   existe se rechaza igual que en una venta), pero nada fuerza a completarlo. Al
+   convertir en venta, el asistente completo —con cliente, pasajeros, números de
+   reserva— es quien exige todo lo que a la cotización no le hacía falta.
 
 ## Criterios de aceptación
 
@@ -76,11 +90,12 @@ en el asistente (`POST /sales`); no hay ningún estado intermedio.
 | C4 | El número visible de una cotización es propio de la agencia, no el id global | Dos agencias cotizando a la vez: cada una numera desde 1, como `ventas.numero` |
 | C5 | El PDF de una cotización muestra el precio y la descripción autogenerada de cada línea, nunca el costo de proveedor ni la ganancia | Generar el PDF y revisar su contenido |
 | C6 | Lo que SÍ se manda en un producto de cotización se valida igual que en una venta (aeropuertos, enums), pero nada se exige por estar ausente — ni siquiera el costo de proveedor | `POST /quotes` con un aeropuerto inexistente da 422; el mismo cuerpo sin `supplierCost` ni cliente da 201 |
-| C7 | Convertir una cotización aceptada en venta no pierde cliente (si lo tenía) ni detalle de ningún servicio, y la venta queda enlazada | El asistente abre con el detalle completo (p. ej. tramos de un tiquete) ya puesto, y con el cliente si la cotización tenía uno; tras crear la venta, `cotizaciones.venta_id` queda con su id |
+| C7 | Convertir una cotización aceptada en venta trae el detalle de cada servicio, y el asistente pide el cliente como en cualquier venta nueva; la venta queda enlazada | El asistente abre con el detalle (p. ej. ruta y fechas de un tiquete) ya puesto y el paso 1 pidiendo cliente; tras crear la venta, `cotizaciones.venta_id` queda con su id |
 | C8 | Los permisos se respetan como en cualquier otro módulo | Un rol sin `quotes.create` recibe 403 al intentar `POST /quotes` |
 | C9 | Ninguna agencia ve cotizaciones de otra | La prueba de aislamiento (`pnpm test:aislamiento`) pasa a incluir `cotizaciones` y `detalle_cotizacion` |
 | C10 | Una cotización se crea y se edita sin cliente, sin costo de proveedor y con un tiquete sin reserva del titular | `POST`/`PUT /quotes` con ese cuerpo responde 201/200, no 422 |
 | C11 | `POST /sales` sigue exigiendo el costo del proveedor y la reserva del titular exactamente igual que antes — no se relajó nada del lado de la venta | `pnpm test:vuelos-api` en verde, en particular "titular sin reserva: 422" |
+| C12 | La pantalla de cotizaciones no tiene ningún selector de cliente, y el formulario de cada categoría no pide número de tiquete/reserva/vuelo, asiento, ni identidad de pasajero/huésped | Revisión visual de `Quotes.tsx`; los campos reaparecen al abrir el mismo formulario desde una venta real (`cotizando` no se manda ahí) |
 
 ## Fuera de alcance de esta entrega
 
@@ -96,3 +111,10 @@ en el asistente (`POST /sales`); no hay ningún estado intermedio.
 - Más de una moneda real (conversión, tipo de cambio).
 - Vouchers/archivos adjuntos por servicio dentro de una cotización (sí existen en una
   venta): cotizar no sube ningún archivo, solo datos.
+- **Un cliente en la cotización.** No hay selector ni campo: la cotización no se
+  liga a nadie. Si se le pone uno por otra vía (API), es solo informativo hasta que
+  se convierte en venta.
+- **Identidad de pasajero/huésped/titular y números de reserva/tiquete/vuelo/asiento
+  dentro de una cotización.** Los mismos formularios de venta (`forms/TicketForm.tsx`
+  y los demás) los esconden cuando reciben `cotizando` — se llenan recién al
+  convertir en venta, con esos mismos formularios ya sin esa bandera.

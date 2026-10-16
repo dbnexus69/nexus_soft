@@ -14,9 +14,11 @@ interface CheckInFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<CheckInData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin pasajero, vuelo/reserva, silla ni celular — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethods, onChange, triggerError }: CheckInFormProps) {
+export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethods, onChange, triggerError, cotizando = false }: CheckInFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -31,36 +33,42 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
           <LuPlane size={14} /> Gestión de Check-in
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre del Pasajero">
-            <Input value={checkIn.passengerName} onChange={(e) => onChange({ passengerName: e.target.value })} placeholder="Nombre completo" />
-          </FormField>
-          <div className="grid grid-cols-3 gap-2">
-            <FormField label="Tipo Doc" className="col-span-1">
-              <Combobox
-                value={checkIn.docType}
-                onChange={(val) => onChange({ docType: val })}
-                options={[
-                  { value: "CC", label: "C.C." },
-                  { value: "CE", label: "C.E." },
-                  { value: "PP", label: "P.P." },
-                ]}
+          {!cotizando && (
+            <FormField label="Nombre del Pasajero">
+              <Input value={checkIn.passengerName} onChange={(e) => onChange({ passengerName: e.target.value })} placeholder="Nombre completo" />
+            </FormField>
+          )}
+          {!cotizando && (
+            <div className="grid grid-cols-3 gap-2">
+              <FormField label="Tipo Doc" className="col-span-1">
+                <Combobox
+                  value={checkIn.docType}
+                  onChange={(val) => onChange({ docType: val })}
+                  options={[
+                    { value: "CC", label: "C.C." },
+                    { value: "CE", label: "C.E." },
+                    { value: "PP", label: "P.P." },
+                  ]}
+                />
+              </FormField>
+              <FormField label="Nº Documento" className="col-span-2">
+                <Input value={checkIn.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="Número" />
+              </FormField>
+            </div>
+          )}
+          {!cotizando && (
+            <FormField label="Vuelo o Reserva">
+              <Input
+                value={checkIn.flightOrReservation}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  onChange({ flightOrReservation: cleaned });
+                }}
+                placeholder="Ej: AV123 o XYZ789"
+                maxLength={8}
               />
             </FormField>
-            <FormField label="Nº Documento" className="col-span-2">
-              <Input value={checkIn.docNumber} onChange={(e) => onChange({ docNumber: e.target.value })} placeholder="Número" />
-            </FormField>
-          </div>
-          <FormField label="Vuelo o Reserva">
-            <Input 
-              value={checkIn.flightOrReservation} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ flightOrReservation: cleaned });
-              }} 
-              placeholder="Ej: AV123 o XYZ789" 
-              maxLength={8}
-            />
-          </FormField>
+          )}
           <FormField label="Fecha de Viaje">
             <DateTimePicker
               value={checkIn.travelDate}
@@ -70,17 +78,19 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
               fieldName="Viaje del check-in"
             />
           </FormField>
-          <FormField label="Silla Preferida">
-            <Input 
-              value={checkIn.seat} 
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ seat: cleaned });
-              }} 
-              placeholder="Ej: 12A" 
-              maxLength={10}
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Silla Preferida">
+              <Input
+                value={checkIn.seat}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  onChange({ seat: cleaned });
+                }}
+                placeholder="Ej: 12A"
+                maxLength={10}
+              />
+            </FormField>
+          )}
           <FormField label="Equipaje">
             <Combobox
               value={checkIn.baggage}
@@ -95,9 +105,11 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
               ]}
             />
           </FormField>
-          <FormField label="Celular">
-            <Input value={checkIn.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Celular">
+              <Input value={checkIn.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
+            </FormField>
+          )}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"

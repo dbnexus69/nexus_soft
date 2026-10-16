@@ -105,7 +105,11 @@ export const INITIAL_TICKET = (client?: ClienteDelFormulario): TicketData => ({
   outboundStops: [],
   returnStops: [],
   legs: [{ origin: "", destination: "", flightNumber: "", seat: "", date: "", airline: "", baggagePlan: "" }],
-  passengers: [
+  // Sin cliente (cotizando, spec 007) no hay titular que ponerle: un pasajero en
+  // blanco con `esTitular: true` igual exige su número de reserva al validar en una
+  // venta. En una venta real siempre hay cliente para este punto (el paso 1 lo
+  // exige antes de llegar aquí), así que esto no le cambia nada a ese camino.
+  passengers: client ? [
     {
       name: client?.name || "",
       docType: client?.docType || "",
@@ -116,7 +120,7 @@ export const INITIAL_TICKET = (client?: ClienteDelFormulario): TicketData => ({
       nroReserva: "",
       nroTiquete: ""
     }
-  ],
+  ] : [],
 });
 
 export const INITIAL_HOTEL = (client?: ClienteDelFormulario): HotelData => ({
@@ -131,13 +135,14 @@ export const INITIAL_HOTEL = (client?: ClienteDelFormulario): HotelData => ({
   supplierPaymentMethod: "",
   hotelType: "",
   observations: "",
-  guests: [
+  // Sin cliente (cotizando, spec 007) no hay huésped que precargar.
+  guests: client ? [
     {
       name: client?.name || "",
       docType: client?.docType || "",
       docNumber: client?.docNumber || "",
     },
-  ],
+  ] : [],
 });
 
 export const INITIAL_INSURANCE = (client?: ClienteDelFormulario): InsuranceData => ({
@@ -151,13 +156,14 @@ export const INITIAL_INSURANCE = (client?: ClienteDelFormulario): InsuranceData 
   coverageDays: 0,
   startDate: "",
   endDate: "",
-  members: [
+  // Sin cliente (cotizando, spec 007) no hay asegurado que precargar.
+  members: client ? [
     {
       name: client?.name || "",
       docType: client?.docType || "",
       docNumber: client?.docNumber || "",
     },
-  ],
+  ] : [],
 });
 
 export const INITIAL_PLAN = (client?: ClienteDelFormulario): PlanData => ({
@@ -186,13 +192,14 @@ export const INITIAL_PLAN = (client?: ClienteDelFormulario): PlanData => ({
   hotelCheckIn: "",
   hotelCheckOut: "",
   airline: "",
-  guests: [
+  // Sin cliente (cotizando, spec 007) no hay huésped que precargar.
+  guests: client ? [
     {
       name: client?.name || "",
       docType: client?.docType || "",
       docNumber: client?.docNumber || "",
     },
-  ],
+  ] : [],
   packageType: "own",
   voucher: undefined,
   sendVoucher: false,
@@ -309,7 +316,8 @@ export const INITIAL_TOUR = (client?: ClienteDelFormulario): TourData => ({
   supplierName: "",
   supplierCost: 0,
   ta: 0,
-  guests: [{ name: client?.name || "", docType: client?.docType || "CC", docNumber: client?.docNumber || "" }],
+  // Sin cliente (cotizando, spec 007) no hay acompañante que precargar.
+  guests: client ? [{ name: client?.name || "", docType: client?.docType || "CC", docNumber: client?.docNumber || "" }] : [],
   vouchers: [],
 });
 

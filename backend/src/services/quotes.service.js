@@ -282,6 +282,9 @@ class QuotesService {
     if (cotizacion.estado !== 'aceptada') {
       throw new BadRequestError('Solo se puede convertir en venta una cotización aceptada');
     }
+    if (cotizacion.venta_id) {
+      throw new BadRequestError('Esta cotización ya fue convertida en una venta');
+    }
     const [cliente, lineas] = await Promise.all([
       cotizacion.cliente_id ? clientsService.getClientById(cotizacion.cliente_id) : null,
       prisma.detalle_cotizacion.findMany({ where: { cotizacion_id: cotizacion.id }, orderBy: { creado_at: 'asc' } }),
@@ -297,6 +300,11 @@ class QuotesService {
   /** Llamado por el frontend justo después de que `POST /sales` cree la venta. */
   async linkSale(id, { saleId }, alcance = {}) {
     const cotizacion = await cotizacionVisible(id, alcance, { paraEscribir: true });
+    // No pisar un enlace ya puesto: dejaría la cotización apuntando a una venta
+    // distinta de la que realmente se generó a partir de ella.
+    if (cotizacion.venta_id) {
+      throw new BadRequestError('Esta cotización ya está enlazada a una venta');
+    }
     const venta = await prisma.ventas.findFirst({ where: { id: Number(saleId), deleted_at: null }, select: { id: true } });
     if (!venta) throw new BadRequestError('La venta no existe');
     await prisma.cotizaciones.update({ where: { id: cotizacion.id }, data: { venta_id: venta.id } });

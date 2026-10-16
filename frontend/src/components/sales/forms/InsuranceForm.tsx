@@ -12,9 +12,11 @@ interface InsuranceFormProps {
   data: AppData;
   client?: ClienteDelFormulario;
   suppliers?: { name: string }[];
+  /** Cotizando (spec 007): sin teléfono del cliente ni miembros del grupo — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function InsuranceForm({ insurance, onChange, data, client, suppliers = [] }: InsuranceFormProps) {
+export function InsuranceForm({ insurance, onChange, data, client, suppliers = [], cotizando = false }: InsuranceFormProps) {
   useEffect(() => {
     if (!insurance.phone && client?.phone) {
       onChange({ phone: client.phone });
@@ -61,18 +63,20 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               )}
             </div>
           </FormField>
-          <FormField label="Teléfono del Cliente">
-            <Input
-              value={insurance.phone}
-              onChange={(e) => {
-                // Only allow numbers, spaces, plus, minus, and parentheses
-                const cleaned = e.target.value.replace(/[^0-9\s+\-()]/g, "");
-                onChange({ phone: cleaned });
-              }}
-              placeholder="Ej: +57 300 123 4567"
-              maxLength={20}
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Teléfono del Cliente">
+              <Input
+                value={insurance.phone}
+                onChange={(e) => {
+                  // Only allow numbers, spaces, plus, minus, and parentheses
+                  const cleaned = e.target.value.replace(/[^0-9\s+\-()]/g, "");
+                  onChange({ phone: cleaned });
+                }}
+                placeholder="Ej: +57 300 123 4567"
+                maxLength={20}
+              />
+            </FormField>
+          )}
           <FormField label="Proveedor">
             <Combobox
               value={insurance.supplier || ""}
@@ -114,6 +118,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
         </div>
       </div>
 
+      {!cotizando && (
       <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
@@ -185,6 +190,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
           ))}
         </div>
       </div>
+      )}
 
       <div className="bg-emerald-50/20 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
         <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">

@@ -13,9 +13,11 @@ interface RestaurantFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<RestaurantData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin a nombre de quién ni celular — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, onChange, triggerError }: RestaurantFormProps) {
+export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: RestaurantFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -36,9 +38,11 @@ export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, 
           <LuUtensils size={14} /> Reserva de Restaurante
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Nombre de la Reserva *">
-            <Input value={restaurant.reservationName} onChange={(e) => onChange({ reservationName: e.target.value })} placeholder="A nombre de..." />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Nombre de la Reserva *">
+              <Input value={restaurant.reservationName} onChange={(e) => onChange({ reservationName: e.target.value })} placeholder="A nombre de..." />
+            </FormField>
+          )}
           <FormField label="Fecha y Hora *">
             <DateTimePicker
               value={restaurant.dateTime}
@@ -93,9 +97,11 @@ export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, 
               ]}
             />
           </FormField>
-          <FormField label="Celular *">
-            <Input type="tel" value={restaurant.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Celular *">
+              <Input type="tel" value={restaurant.phone} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+57 300 123 4567" />
+            </FormField>
+          )}
           <div className="md:col-span-2 space-y-3">
             <label className="text-sm font-medium text-gray-700">Restricciones Alimentarias</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

@@ -197,6 +197,102 @@ cotizar incluso antes de esta vuelta. `openEdit`/`convertirEnVenta` ganan el gua
 `q.clientId ? {...} : {}` para no mandar `clientId: "null"` como texto cuando la
 cotización no tiene cliente.
 
+### 12. Segundo ajuste (2026-10-16): fuera lo que depende de una venta, y fuera el cliente
+
+T11 relajó la validación pero dejó los formularios tal cual (decisión 10: los
+mismos `forms/TicketForm.tsx` y compañía, con pasajeros, números de reserva y un
+selector de cliente). El usuario, al verlo descrito, pidió más: esos campos no solo
+no deben ser obligatorios, no deben **aparecer**. El criterio, confirmado con él:
+se quita un campo si depende de una venta que todavía no existe (identidad de
+cliente/pasajero, número de tiquete/reserva/vuelo, asiento); se queda si describe
+el servicio en sí (tipo, destino, fechas, cantidades, costo, ganancia).
+
+Esto ya se había construido una vez (una primera versión de
+`QuoteProductForm.tsx`/`QuoteProductFormsModal.tsx` con cliente opcional) y se
+revirtió por completo a pedido del usuario — sin llegar a verla en pantalla, según
+aclaró después. La causa real, aclarada en esta vuelta: no fue el enfoque, fue que
+el campo "cliente" seguía ahí (solo opcional, no retirado) y la tabla de campos por
+categoría no se había confirmado con él antes de construirla. Esta vez:
+
+- **Sin selector de cliente, en ningún punto.** `Quotes.tsx` no tiene ningún
+  `AsyncCombobox` de cliente ni estado `clientName`. El cuerpo de `POST`/`PUT
+  /quotes` nunca manda `clientId` desde la pantalla (sigue aceptándolo si llega por
+  otra vía, decisión 11, pero nada en la UI lo pone). `openEdit` conserva
+  internamente el `clientId` de una cotización que ya tuviera uno (de antes de este
+  cambio, o puesto por la API) para no borrarlo en silencio al guardar, pero no lo
+  muestra. La vista de solo lectura (T8) solo imprime la fila "Cliente" si hay uno.
+  Sin cambio de esquema ni migración: `cliente_id` ya era opcional desde T7.
+- **Los campos que dependen de una venta se esconden *dentro* de los formularios de
+  venta — no hay formularios nuevos.** Un primer intento dentro de esta misma
+  decisión reconstruyó `QuoteProductForm.tsx`/`QuoteProductFormsModal.tsx` (otro
+  diseño, propio para cotizar); el usuario pidió deshacerlo en la misma conversación:
+  quería el formulario real de cada categoría, con su mismo diseño, solo sin esos
+  campos puntuales. Queda resuelto en la decisión 13: `Quotes.tsx` sigue usando
+  `ProductFormsModal` (como en la decisión 10), que le pasa a cada
+  `forms/TicketForm.tsx`/`HotelForm.tsx`/etc. un prop `cotizando` que por defecto es
+  `false` — el asistente de venta real nunca lo manda.
+- **`wizardData.ts`**: los `INITIAL_*` que antes precargaban un pasajero/huésped
+  desde el cliente (`INITIAL_TICKET`, `_HOTEL`, `_INSURANCE`, `_PLAN`, `_TOUR`)
+  vuelven a poner `client ? [...] : []` — necesario porque `Step2Products.tsx`
+  (reutilizado sin cambios) llama estas factorías directamente al añadir el primer
+  ítem de una categoría, y sin cliente (ya no hay ninguno) el array queda vacío en
+  vez de traer un pasajero en blanco. No cambia nada en una venta real (ahí siempre
+  hay cliente para este punto).
+- **El campo Asesor (T8) se queda.** No es el mismo problema: identifica quién
+  cotiza dentro de la agencia, no a quién se le cotiza, y sin él la suplantación
+  sigue rota (decisión del T8).
+
+### 13. Corrección el mismo día: el mismo diseño, con un prop `cotizando`
+
+El usuario, tras ver el plan de la decisión 12, fue explícito: *"necesito que quede
+el mismo diseño de las modales solo quitar los campos que no son necesarios [...]
+pero de resto dejar todo"*. Los formularios propios (`QuoteProductForm.tsx`) tenían
+exactamente los campos correctos (sin pasajeros ni números de reserva), pero se
+veían distinto — inputs sueltos en vez del diseño real de cada categoría (iconos,
+secciones, el manejo de escalas de un tiquete, etc.). Se borraron y se reemplazó el
+enfoque:
+
+- **`forms/*.tsx` gana un prop `cotizando?: boolean` (default `false`) en las 15
+  categorías.** Cada campo que depende de una venta que no existe queda envuelto en
+  `{!cotizando && (...)}` dentro del mismo formulario, sin cambiar su estructura ni
+  su estilo. Lo que se esconde, por categoría:
+  - **Ticket:** toda la sección "Información de Pasajeros", y el campo "N° Vuelo"
+    de cada tramo (ida, vuelta, escalas) y "N° Tiquete" de cada escala. El
+    `useEffect` que precarga un pasajero en blanco también se salta
+    (`if (cotizando) return;`) — sin esto, seguía creando un pasajero titular sin
+    cliente al que atribuírselo.
+  - **Hotel:** "Número de Reserva" y la sección "Huéspedes".
+  - **Seguro:** "Teléfono del Cliente" y "Miembros del Grupo".
+  - **Paquete:** los 4 campos de la reserva (número de reservación, vuelo/placa,
+    tiquete/silla, confirmación) y "Integrantes del Plan" — las fechas y el resto de
+    "Reservación y Transporte" se quedan, son del servicio, no de la reserva.
+  - **Check-in:** nombre y documento del pasajero, "Vuelo o Reserva", "Silla
+    Preferida", "Celular".
+  - **Trámite migratorio / Visa:** identidad completa del solicitante (nombre,
+    nacimiento, nacionalidad, documento, vencimiento, correo) — solo quedan los
+    campos del trámite en sí (país, tipo, fecha estimada).
+  - **SimCard:** nombre y documento del titular, correo.
+  - **Renta de auto:** conductor principal, número de licencia, tarjeta de
+    garantía.
+  - **Finca:** responsable, documento, teléfono.
+  - **Tour:** teléfono, "Integrantes del Tour" y la sección de subir vouchers (un
+    archivo no existe antes de una venta).
+  - **Convención:** nombre de contacto, correo.
+  - **Restaurante:** "Nombre de la Reserva", celular.
+  - **Pasaporte:** nombre, número de identificación, nacimiento, teléfono.
+  - **Mascota:** nombre del dueño, teléfono (el nombre de la mascota se queda: no
+    identifica a ningún cliente).
+  - Sin cambios en ningún campo financiero (`supplierCost`, `ta`, método de pago) ni
+    en los que describen el servicio (destino, fechas, tipo, cantidades) — eso es
+    exactamente lo que sí hace falta para cotizar.
+- **`wizard/ProductFormsModal.tsx` reenvía `cotizando` a cada formulario**, con el
+  mismo valor por defecto `false`.
+- **`Quotes.tsx` vuelve a usar `ProductFormsModal`** (como en la decisión 10), con
+  `cotizando` fijo en `true`. `QuoteProductForm.tsx`/`QuoteProductFormsModal.tsx`
+  (de la decisión 12) se borraron.
+- `NewSaleWizard.tsx` no se tocó y nunca manda `cotizando`: con el valor por defecto
+  en `false`, el asistente de venta real queda exactamente igual que antes.
+
 ## Superficie de API
 
 Misma superficie y mismos permisos desde la primera replanificación; el cuerpo de

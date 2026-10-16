@@ -13,9 +13,11 @@ interface CarRentalFormProps {
   paymentMethods?: ConfigData['cards'];
   onChange: (updates: Partial<CarRentalData>) => void;
   triggerError?: (msg: string) => void;
+  /** Cotizando (spec 007): sin conductor, licencia ni tarjeta de garantía — no existen todavía. */
+  cotizando?: boolean;
 }
 
-export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange, triggerError }: CarRentalFormProps) {
+export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: CarRentalFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -30,23 +32,27 @@ export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange
           <Car size={14} /> Renta de Vehículo
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Conductor Principal">
-            <Input
-              value={car.mainDriver}
-              onChange={(e) => onChange({ mainDriver: e.target.value })}
-              placeholder="Nombre completo"
-            />
-          </FormField>
-          <FormField label="Número de Licencia">
-            <Input
-              value={car.licenseNumber}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9\-\s]/g, "").toUpperCase();
-                onChange({ licenseNumber: cleaned });
-              }}
-              placeholder="Ej: A123-4567"
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Conductor Principal">
+              <Input
+                value={car.mainDriver}
+                onChange={(e) => onChange({ mainDriver: e.target.value })}
+                placeholder="Nombre completo"
+              />
+            </FormField>
+          )}
+          {!cotizando && (
+            <FormField label="Número de Licencia">
+              <Input
+                value={car.licenseNumber}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9\-\s]/g, "").toUpperCase();
+                  onChange({ licenseNumber: cleaned });
+                }}
+                placeholder="Ej: A123-4567"
+              />
+            </FormField>
+          )}
           <FormField label="Recogida (Fecha y Hora)">
             <DateTimePicker
               value={car.pickupDate}
@@ -114,17 +120,19 @@ export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange
               ]}
             />
           </FormField>
-          <FormField label="Tarjeta de Garantía">
-            <Input
-              value={car.guaranteeCreditCard}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                onChange({ guaranteeCreditCard: cleaned });
-              }}
-              placeholder="Últimos 4 dígitos"
-              maxLength={4}
-            />
-          </FormField>
+          {!cotizando && (
+            <FormField label="Tarjeta de Garantía">
+              <Input
+                value={car.guaranteeCreditCard}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                  onChange({ guaranteeCreditCard: cleaned });
+                }}
+                placeholder="Últimos 4 dígitos"
+                maxLength={4}
+              />
+            </FormField>
+          )}
         </div>
       </div>
 

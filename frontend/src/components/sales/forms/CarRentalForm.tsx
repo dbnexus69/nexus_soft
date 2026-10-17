@@ -145,6 +145,7 @@ export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange
         ta={car.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

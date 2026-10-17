@@ -144,6 +144,7 @@ export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTy
         ta={sim.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

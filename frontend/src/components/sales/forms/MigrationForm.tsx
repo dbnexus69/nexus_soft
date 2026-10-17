@@ -162,6 +162,7 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
         ta={migration.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

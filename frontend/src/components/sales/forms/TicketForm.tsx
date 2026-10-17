@@ -1109,6 +1109,7 @@ export function TicketForm({
           <Briefcase size={14} /> Detalles Financieros
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!cotizando && (
           <FormField label="Proveedor" required>
             <Combobox
               value={ticket.supplier || ""}
@@ -1117,6 +1118,7 @@ export function TicketForm({
               placeholder="Ej: Viajes Éxito"
             />
           </FormField>
+          )}
           <FormField label="Valor Pagado al Proveedor">
             <CurrencyInput
               required
@@ -1131,6 +1133,7 @@ export function TicketForm({
               onChange={(val) => onChange({ ta: val === "" ? 0 : Number(val) })}
             />
           </FormField>
+          {!cotizando && (
           <FormField label="Método de Pago Proveedor">
             <Combobox
               value={ticket.supplierPaymentMethod || ""}
@@ -1143,6 +1146,7 @@ export function TicketForm({
               direction="up"
             />
           </FormField>
+          )}
         </div>
       </div>
     </div>

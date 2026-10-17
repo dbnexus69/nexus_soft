@@ -207,6 +207,7 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
         ta={pet.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

@@ -313,10 +313,100 @@ lados (venta real y cotización).
 
 ---
 
+## T12 · En la sección financiera de cada formulario, Proveedor y Método de Pago también se ocultan al cotizar `[~]`
+
+Mismo principio que T9/T10: "Proveedor" y "Método de Pago Proveedor" son decisiones
+de compra que no hacen falta para cotizar un precio al cliente — solo costo y
+ganancia sí. `FinancialSection` (`VoucherField.tsx`, compartida por 11 de las 15
+categorías) ganó el mismo prop `cotizando?: boolean` (default `false`) y esconde esos
+dos campos; los 11 formularios que la llaman (`CarRentalForm`, `CheckInForm`,
+`ConventionForm`, `FincaForm`, `MigrationForm`, `PassportForm`, `PetServiceForm`,
+`RestaurantForm`, `SimCardForm`, `TourForm`, `VisaForm`) le pasan `cotizando={cotizando}`.
+Los 4 formularios con bloque financiero propio (`TicketForm`, `HotelForm`,
+`InsuranceForm`, `PlanForm`) envuelven sus campos de Proveedor/Método de Pago en
+`{!cotizando && (...)}` donde ya estaban — en Hotel e Insurance, "Proveedor" vive en
+la sección de datos principales, separado de "Método de Pago" en la financiera, así
+que son dos envoltorios independientes. Costo Proveedor y Ganancia quedan siempre
+visibles en los quince.
+
+**Comprobado:** `tsc` sin errores. **Pendiente:** verlo en pantalla.
+
+---
+
+## T13 · Nombre libre de la cotización `[x]`
+
+Pedido del usuario: poder ponerle un nombre a la cotización al crearla (ejemplo:
+"Cartagena plan para 2") para identificarla en la lista, en vez de depender solo del
+cliente o del número. Mismo criterio que el resto de la cabecera (`fechaVencimiento`,
+`observaciones`): opcional, nada se exige.
+
+- **Migración** `20261016120000_nombre_de_cotizacion`: `cotizaciones.nombre` (`TEXT`,
+  nullable). `schema.prisma` → `cotizaciones.nombre String?`.
+- **Backend**: `quotes.schema.js` agrega `name` (string, 1-120, opcional/nulo) a
+  `createQuoteSchema` (heredado por `updateQuoteSchema`). `quotes.service.js` lo lee
+  en `createQuote`/`updateQuote`, lo copia en `duplicateQuote`, y lo expone como
+  `name` en `mapCotizacion`. El PDF (`services/quotes/plantilla.js`) lo muestra bajo
+  "COTIZACIÓN" en el encabezado y en el título del documento, cuando existe.
+- **Frontend**: `types/index.tsx` (`Quote.name`), `Quotes.tsx` — campo "Nombre
+  (opcional)" en el formulario de alta/edición, columna "Nombre" en la lista, y el
+  nombre (si existe) sustituye a "Cotización #N" en los encabezados del modal y en la
+  vista de solo lectura (que ahora también muestra el N.º aparte, para no perderlo).
+
+**Comprobado:** migración aplicada (`prisma migrate deploy`, con permiso del usuario)
+y cliente regenerado (`pnpm db:generate` — necesitó parar antes el backend, que
+tenía bloqueado el motor de Prisma en Windows); `check:prisma` y `tsc` en verde.
+Confirmado además por la API real: `PUT /quotes/43` con `name` quedó en `200` (antes
+daba 500 por faltar la migración) y `GET /quotes/43/pdf` en `200`. **Pendiente:**
+verlo en pantalla.
+
+---
+
+## T14 · El PDF de la cotización muestra el detalle completo de cada servicio, no solo el resumen `[~]`
+
+El usuario notó que el PDF solo mostraba el resumen corto de una línea (p. ej. un
+tiquete solo enseñaba el destino) en vez de todo lo que se llenó en el formulario de
+cada servicio. La información completa ya existía (`detalle_cotizacion.detalle`, el
+mismo `TicketData`/`HotelData`... que usa el asistente de venta) — solo faltaba
+pintarla en el PDF, igual que ya hace el voucher de una venta (spec 011).
+
+- **`backend/src/services/voucher/secciones.js` (nuevo)**: se extrajo de
+  `voucher/plantilla.js` todo lo que describe una categoría de producto en PDF
+  —`SECCIONES` (título y pares etiqueta/valor por categoría), `bloqueTiquete`
+  (itinerario con tramos, pasajeros y asientos), `rejilla`/`tarjeta`/`titulo` y los
+  formatos de fecha/dinero—, para que el voucher de una venta y el PDF de una
+  cotización describan la MISMA categoría con el MISMO mapeo de campos, en vez de
+  mantener dos copias que puedan desalinearse (la nota de spec 015 ya advertía de
+  esto: "mantener las dos listas sincronizadas al agregar una categoría").
+  `voucher/plantilla.js` pasó a importar de ahí, sin cambiar su resultado.
+- **`services/quotes/plantilla.js`**: agrupa las líneas de la cotización por
+  categoría y, antes de la tabla de precios, arma un bloque completo por cada
+  servicio con las mismas `SECCIONES` — itinerario de vuelo con tramos para
+  tiquetes, y el resto de categorías con su rejilla de campos llenados (vacíos no se
+  pintan, así que lo que una cotización no pide —reserva, confirmación— simplemente
+  no aparece). Nunca se agregó nada de costo de proveedor, ganancia ni método de
+  pago al proveedor: ninguna sección los incluye, igual que en el voucher de venta.
+  La tabla de precio por servicio se mantiene (eso sí es propio de una cotización;
+  un voucher de venta no la tiene). `PLANTILLA_VERSION` subió a 2 (invalida la
+  caché).
+- **`services/voucher/index.js`**: `ciudades()` (nombres de aeropuerto por código
+  IATA) generalizada para tomar un array de tiquetes en vez de una venta completa,
+  y exportada — reutilizada por `services/quotes/index.js` para que el itinerario
+  de la cotización también muestre nombre de ciudad junto al código.
+
+**Comprobado:** `node -e require(...)` de los tres módulos sin error; PDF de prueba
+generado en memoria (tiquete ida/vuelta + hotel, sin tocar la base) — 23.852 bytes
+sin excepciones. `check:prisma` en verde. **Pendiente:** descargarlo desde una
+cotización real y verlo en pantalla.
+
+---
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-17 | T14 | El PDF de la cotización pasó de mostrar solo el resumen corto de cada línea a mostrar el detalle completo por categoría, igual que el voucher de una venta: se extrajo `SECCIONES`/`bloqueTiquete`/etc. del voucher a un módulo compartido nuevo (`voucher/secciones.js`) para no mantener dos copias del mapeo de campos. `ciudades()` generalizada y reutilizada para resolver nombres de aeropuerto también en la cotización. Verificado generando un PDF de prueba en memoria sin tocar la base; pendiente de pantalla. |
+| 2026-10-16 | T13 | Nombre libre y opcional para la cotización ("Cartagena plan para 2"): migración `nombre` en `cotizaciones`, `name` en el esquema/servicio/PDF, campo y columna nuevos en `Quotes.tsx`. Aplicada y confirmada por la API real (`PUT`/`PDF` en 200). |
+| 2026-10-16 | T12 | Proveedor y Método de Pago también se ocultan al cotizar, mismo patrón que T9/T10: prop `cotizando` en `FinancialSection` (11 formularios que la usan) y envoltorios propios en los 4 que no (Ticket, Hotel, Insurance, Plan). Costo Proveedor y Ganancia siguen siempre visibles. Verificado con `tsc`; pendiente de pantalla. |
 | 2026-10-16 | T11 | Paréntesis fuera de spec 007: `forms/PlanForm.tsx` (compartido con la venta real) tenía el hotel mezclado con el vuelo/transporte en las mismas secciones. Reorganizado en tres: Información General (plan, adultos, menores), Hotel del Plan (nombre, reserva, check-in/out) y Vuelo del Plan / Transporte Terrestre (aerolínea o empresa, números, fechas de vuelo). Se quitó un `<Select>` de tipo de transporte duplicado (ya existía el toggle Aéreo/Terrestre). Sin tocar Finanzas/Integrantes/Vinculados. `tsc` sin errores; pendiente de pantalla. |
 | 2026-10-16 | T10 | Corrección el mismo día de T9: el usuario quería el mismo diseño de los formularios de venta, no unos nuevos. Se borraron `QuoteProductForm.tsx`/`QuoteProductFormsModal.tsx`; las 15 categorías en `forms/*.tsx` ganan un prop `cotizando` (default `false`) que esconde los mismos campos de T9 dentro del formulario real; `ProductFormsModal.tsx` lo reenvía; `Quotes.tsx` vuelve a usar `ProductFormsModal` con `cotizando` fijo en `true`. `NewSaleWizard.tsx` no se tocó y nunca lo manda, así que el asistente de venta real queda igual. Verificado con `tsc` y un `grep` que confirma que `NewSaleWizard.tsx` no menciona `cotizando`; pendiente de pantalla. |
 | 2026-10-16 | T9 | Fuera el selector de cliente (en ningún punto de `Quotes.tsx`) y fuera de cada formulario de servicio lo que depende de una venta inexistente (número de tiquete/reserva/vuelo, asiento, identidad de pasajero/huésped). Confirmado el criterio con el usuario antes de tocar código. `QuoteProductForm.tsx`/`QuoteProductFormsModal.tsx` reconstruidos; `wizardData.ts` con los guards de T7-reverted reaplicados. Sin cambios en backend ni migración (ya era opcional desde T7). Verificado con `tsc`; pendiente de pantalla. |

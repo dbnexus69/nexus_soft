@@ -167,6 +167,7 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, documentTy
         ta={finca.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

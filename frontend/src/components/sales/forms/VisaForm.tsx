@@ -175,6 +175,7 @@ export function VisaForm({ visa, client, suppliers, paymentMethods, onChange, tr
         ta={visa.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

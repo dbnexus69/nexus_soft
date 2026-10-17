@@ -66,6 +66,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
               placeholder="Ej: Berlín, Alemania"
             />
           </FormField>
+          {!cotizando && (
           <FormField label="Proveedor">
             <Combobox
               value={hotel.supplier || ""}
@@ -74,6 +75,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
+          )}
           {!cotizando && (
             <FormField label="Número de Reserva">
               <Input
@@ -220,6 +222,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
               }}
             />
           </FormField>
+          {!cotizando && (
           <FormField label="Método de Pago">
             <Combobox
               value={hotel.supplierPaymentMethod || ""}
@@ -232,6 +235,7 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
               direction="up"
             />
           </FormField>
+          )}
         </div>
       </div>
 

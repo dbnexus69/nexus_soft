@@ -14,6 +14,9 @@ const createQuoteSchema = z.object({
   // Sin asesor explícito, el servicio lo toma de quien crea. Igual patrón que
   // `createSale`: rechaza si quien suplanta se quedaría como el asesor.
   asesorId: id,
+  // Libre, para identificarla en la lista ("Cartagena plan para 2"); opcional como
+  // el resto de la cabecera.
+  name: z.string().trim().min(1).max(120).nullable().optional(),
   fechaVencimiento: z.string().nullable().optional(),
   observations: z.string().nullable().optional(),
   ...productArrays({ mensajeMax: 'Demasiados productos de este tipo en una cotización', relajado: true }),

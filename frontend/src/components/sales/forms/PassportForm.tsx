@@ -107,6 +107,7 @@ export function PassportForm({ passport, client, suppliers, paymentMethods, onCh
         ta={passport.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

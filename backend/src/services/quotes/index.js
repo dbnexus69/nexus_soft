@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const almacenamiento = require('../../utils/almacenamiento');
 const { PLANTILLA_VERSION, generar } = require('./plantilla');
-const { empresaYConfig } = require('../voucher');
+const { empresaYConfig, ciudades } = require('../voucher');
 const quotesService = require('../quotes.service');
 
 /**
@@ -11,8 +11,12 @@ const quotesService = require('../quotes.service');
 const DESCARGA_SEGUNDOS = 300;
 
 async function generarCon(cotizacion, { config, logo }) {
-  const buffer = logo ? await almacenamiento.leer('logos', logo) : null;
-  return generar(cotizacion, config, { logo: buffer });
+  const tiquetes = cotizacion.lines.filter(l => l.categoria === 'ticket' && l.detalle).map(l => l.detalle);
+  const [buffer, aeropuertos] = await Promise.all([
+    logo ? almacenamiento.leer('logos', logo) : null,
+    ciudades(tiquetes),
+  ]);
+  return generar(cotizacion, config, { logo: buffer, aeropuertos });
 }
 
 /** El PDF guardado de la cotización (generándolo si hace falta): `{ nombre, huella, cotizacion, buffer? }`. */

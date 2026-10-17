@@ -44,10 +44,14 @@ async function empresaYConfig(borrador = {}) {
   };
 }
 
-/** Los nombres de ciudad de los aeropuertos de los tiquetes, por código IATA. */
-async function ciudades(venta) {
+/**
+ * Los nombres de ciudad de los aeropuertos de un conjunto de tiquetes, por código IATA.
+ * Toma el array de tiquetes directamente (no una venta completa) para poder reutilizarse
+ * también en el PDF de una cotización (spec 007), que no tiene venta.
+ */
+async function ciudades(tickets) {
   const codigos = new Set();
-  for (const t of venta.ticketData || []) {
+  for (const t of tickets || []) {
     for (const l of [...(t.legs || []), ...(t.outboundStops || []), ...(t.returnLeg ? [t.returnLeg] : []), ...(t.returnStops || [])]) {
       if (l?.origin) codigos.add(l.origin);
       if (l?.destination) codigos.add(l.destination);
@@ -70,7 +74,7 @@ async function ventaCompleta(ventaId, alcance) {
 async function generarCon(venta, { config, logo }) {
   const [buffer, aeropuertos] = await Promise.all([
     logo ? almacenamiento.leer('logos', logo) : null,
-    ciudades(venta),
+    ciudades(venta.ticketData),
   ]);
   return generar(venta, config, { logo: buffer, aeropuertos });
 }
@@ -134,4 +138,4 @@ async function vistaPrevia(borrador) {
 
 // `empresaYConfig` se reexporta para `services/quotes/index.js` (spec 007): la marca de la agencia
 // se lee una sola vez, no se duplica la lectura del perfil para el PDF de la cotización.
-module.exports = { obtenerVoucher, urlDeDescarga, enviarVoucher, vistaPrevia, empresaYConfig };
+module.exports = { obtenerVoucher, urlDeDescarga, enviarVoucher, vistaPrevia, empresaYConfig, ciudades };

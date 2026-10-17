@@ -137,6 +137,7 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
         ta={checkIn.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

@@ -130,6 +130,7 @@ export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, 
         ta={restaurant.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

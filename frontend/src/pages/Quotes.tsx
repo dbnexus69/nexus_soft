@@ -79,6 +79,7 @@ export default function Quotes() {
   // El mismo cuerpo que arma el asistente de venta, salvo el cliente: una cotización
   // no pide ninguno (no se sabe si se va a cerrar) — se elige uno solo al convertirla
   // en venta, en el asistente de siempre.
+  const [name, setName] = useState("");
   const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [draft, setDraft] = useState<WizardFormData>(() => ({ ...INITIAL_FORM }));
   const [showOtherProducts, setShowOtherProducts] = useState(false);
@@ -141,6 +142,7 @@ export default function Quotes() {
 
   const resetForm = () => {
     setEditing(null);
+    setName("");
     setFechaVencimiento("");
     setReadOnlyView(false);
     // Mismo valor por defecto que `NewSaleWizard.tsx`: el propio usuario. Quien
@@ -162,6 +164,7 @@ export default function Quotes() {
   const openEdit = (q: Quote) => {
     setEditing(q);
     setReadOnlyView(!puedeEditar(q));
+    setName(q.name || "");
     setFechaVencimiento(q.fechaVencimiento ? q.fechaVencimiento.slice(0, 10) : "");
 
     // El formulario ya no pide cliente, pero si la cotización ya tenía uno (de antes
@@ -194,6 +197,7 @@ export default function Quotes() {
     try {
       const body: Record<string, unknown> = {
         clientId: draft.clientId,
+        name: name.trim() || null,
         fechaVencimiento: fechaVencimiento || null,
         observations: draft.observations || null,
         // Solo al crear: editar no reasigna el asesor (`updateQuoteSchema` lo omite).
@@ -329,6 +333,7 @@ export default function Quotes() {
               <thead>
                 <tr className="border-b border-gray-200 dark:border-slate-800 text-left text-xs uppercase text-gray-500">
                   <th className="py-2 pr-3">N.º</th>
+                  <th className="py-2 pr-3">Nombre</th>
                   <th className="py-2 pr-3">Cliente</th>
                   <th className="py-2 pr-3">Estado</th>
                   <th className="py-2 pr-3">Vencimiento</th>
@@ -338,12 +343,13 @@ export default function Quotes() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                 {loadingQuotes && quotes.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-gray-500">Cargando…</td></tr>
+                  <tr><td colSpan={7} className="py-8 text-center text-gray-500">Cargando…</td></tr>
                 ) : quotes.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-gray-500">No hay cotizaciones.</td></tr>
+                  <tr><td colSpan={7} className="py-8 text-center text-gray-500">No hay cotizaciones.</td></tr>
                 ) : quotes.map(q => (
                   <tr key={q.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/40">
                     <td className="py-2 pr-3 font-semibold text-primary">#{q.numero ?? q.id}</td>
+                    <td className="py-2 pr-3">{q.name || "—"}</td>
                     <td className="py-2 pr-3">{q.clientName || "—"}</td>
                     <td className="py-2 pr-3"><Badge variant={ESTADO_BADGE[q.estado]}>{ESTADO_LABEL[q.estado]}</Badge></td>
                     <td className="py-2 pr-3">{q.fechaVencimiento ? formatDate(q.fechaVencimiento) : "—"}</td>
@@ -472,9 +478,9 @@ export default function Quotes() {
                 className="px-5 py-4 flex items-center justify-between flex-shrink-0 rounded-t-2xl"
                 style={{ background: "linear-gradient(135deg, #2B2D42 0%, #3d4060 100%)" }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <h2 className="text-base sm:text-lg font-heading font-semibold text-white truncate tracking-wide">
-                    Cotización #{editing.numero ?? editing.id}
+                    {editing.name || `Cotización #${editing.numero ?? editing.id}`}
                   </h2>
                   <Badge variant={ESTADO_BADGE[editing.estado]}>{ESTADO_LABEL[editing.estado]}</Badge>
                 </div>
@@ -492,6 +498,7 @@ export default function Quotes() {
                   Una cotización {ESTADO_LABEL[editing.estado].toLowerCase()} ya no se puede editar.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-gray-500">N.º: </span>#{editing.numero ?? editing.id}</div>
                   {editing.clientName && (
                     <div><span className="text-gray-500">Cliente: </span>{editing.clientName}</div>
                   )}
@@ -535,7 +542,7 @@ export default function Quotes() {
                 style={{ background: "linear-gradient(135deg, #2B2D42 0%, #3d4060 100%)" }}
               >
                 <h2 className="text-base sm:text-lg font-heading font-semibold text-white truncate tracking-wide">
-                  {editing ? `Cotización #${editing.numero ?? editing.id}` : "Nueva Cotización"}
+                  {editing ? (editing.name || `Cotización #${editing.numero ?? editing.id}`) : "Nueva Cotización"}
                 </h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -552,6 +559,15 @@ export default function Quotes() {
                     {errorMsg}
                   </div>
                 )}
+
+                <FormField label="Nombre (opcional)">
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ej: Cartagena plan para 2"
+                    maxLength={120}
+                  />
+                </FormField>
 
                 <div className={`grid grid-cols-1 gap-4 ${!editing ? "md:grid-cols-2" : ""}`}>
                   {!editing && (

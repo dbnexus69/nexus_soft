@@ -361,6 +361,7 @@ export function PlanForm({
           <Briefcase size={14} /> Finanzas
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!cotizando && (
           <FormField label="Nombre del Proveedor">
             <Combobox
               value={plan.supplier}
@@ -369,6 +370,7 @@ export function PlanForm({
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
+          )}
           <FormField label="Costo Proveedor">
             <CurrencyInput
               required
@@ -391,6 +393,7 @@ export function PlanForm({
               }
             />
           </FormField>
+          {!cotizando && (
           <FormField label="Método de Pago">
             <Combobox
               value={plan.supplierPaymentMethod || ""}
@@ -403,6 +406,7 @@ export function PlanForm({
               direction="up"
             />
           </FormField>
+          )}
         </div>
       </div>
 

@@ -94,10 +94,35 @@ desde el asistente:
 
 ---
 
+## T11 · Planteada y descartada: que la TA ya incluya el IVA (no se le suma) `[x]`
+
+El usuario preguntó si había que ajustar la regla: según le dijo un cliente, el IVA
+"se saca de la TA", no se le suma. Se investigó a fondo antes de tocar nada:
+
+- **Fórmula alternativa evaluada**: `iva = TA × 19/119` (extraído de una TA que ya es
+  el precio final con IVA adentro) en vez de `iva = TA × 19%` sumado encima. Implicaba
+  cambiar `saleTotals.js` (`calcularIva`, `precioProducto`), su espejo
+  `frontend/src/utils/iva.ts`, la base de la comisión en `useSaleCalculations.ts`
+  (pasaría de la TA completa a TA menos su IVA) y la "ganancia" mostrada en
+  `SaleDetailModal.tsx` (pasaría a restar también el IVA).
+- **Consecuencia encontrada al investigar, no pedida**: el dashboard
+  (`prisma/sql/dashboardAggregates.sql`: `totalRevenue`, `creditTa`) y el desglose de
+  cartera en `stats.service.js` ("agency" vs "supplier") suman `ta_total` asumiendo
+  que ya es margen puro sin IVA — con la TA incluyendo IVA, esas cifras quedarían
+  infladas, y las ventas ya guardadas (bajo la regla vieja) necesitarían una migración
+  de datos para no quedar inconsistentes con las nuevas en los mismos agregados.
+- Las cuatro fórmulas se implementaron y se verificaron a mano (TA 119.000 → IVA
+  19.000, precio = costo + 119.000, sin sumar nada encima), con `tsc`/`check:prisma`
+  en verde. Antes de tocar el dashboard o los datos históricos, el usuario pidió
+  revertir todo y **dejarlo como estaba** (IVA sumado sobre la TA, la regla de T1-T10
+  de este spec sigue vigente tal cual). Revertido sin dejar diferencia: `git diff`
+  contra el estado anterior, vacío en los cuatro archivos.
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-17 | T11 | Planteado (por un comentario de un cliente) que el IVA se saque de la TA en vez de sumarse. Implementado y verificado a mano; al investigar aparecieron consecuencias no pedidas en el dashboard/cartera (`ta_total` como margen puro) y en los datos históricos (necesitarían migración). El usuario pidió revertirlo y dejar la regla de T1-T10 tal cual estaba. Revertido sin diferencia neta en el código. |
 | 2026-10-03 | T10 | Confirmado en el navegador: IVA en el resumen del asistente, comisión y "Ganancia Oficina" sobre TA neta en el paso 3, el detalle y los abonos. |
 | 2026-09-27 | T2–T9 | Implementado y probado por API (C1, C2, C3, C6, C8). Falta confirmar en pantalla C4, C5, C7 — sin navegador disponible en esta sesión. |
 | 2026-09-27 | T1 | Migración aplicada y schema al día; cliente de Prisma regenerado. |

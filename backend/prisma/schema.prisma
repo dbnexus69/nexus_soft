@@ -1131,6 +1131,9 @@ model cotizaciones {
   /// El número que ve la agencia. Mismo patrón que `ventas.numero`: lo pone el
   /// disparador `app_asignar_numero()`, nunca el código.
   numero             Int?
+  /// Nombre libre para identificarla en la lista ("Cartagena plan para 2"); opcional,
+  /// como el resto de la cabecera.
+  nombre             String?
   /// Opcional: una cotización no es una venta, así que no exige un cliente. Se
   /// escoge uno (si no lo tenía) al convertirla en venta.
   cliente_id         Int?

@@ -224,9 +224,14 @@ interface FinancialSectionProps {
   paymentMethods?: ConfigData['cards'];
   suppliers?: { id: number; name: string }[];
   onChange: (updates: { supplierName?: string; supplierCost?: number; ta?: number; supplierPaymentMethod?: string }) => void;
+  /**
+   * Cotizando (spec 007): sin proveedor ni método de pago al proveedor — son
+   * decisiones de compra que no hacen falta para cotizar, solo costo y ganancia.
+   */
+  cotizando?: boolean;
 }
 
-export function FinancialSection({ supplierName, supplierCost, ta, supplierPaymentMethod, isPaymentMethodRequired, paymentMethods = [], suppliers = [], onChange }: FinancialSectionProps) {
+export function FinancialSection({ supplierName, supplierCost, ta, supplierPaymentMethod, isPaymentMethodRequired, paymentMethods = [], suppliers = [], onChange, cotizando = false }: FinancialSectionProps) {
   const supplierOptions = suppliers.map(s => ({ value: s.name, label: s.name }));
 
   const handleNumericChange = (field: 'supplierCost' | 'ta', value: string) => {
@@ -249,12 +254,13 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {!cotizando && (
         <FormField label="Proveedor">
           <div className="relative">
             <LuBuilding className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 z-10" size={16} />
-            <Combobox 
-              value={supplierName || ""} 
-              onChange={(val) => onChange({ supplierName: val })} 
+            <Combobox
+              value={supplierName || ""}
+              onChange={(val) => onChange({ supplierName: val })}
               options={supplierOptions}
               placeholder="Seleccionar proveedor..."
               inputClassName="pl-8"
@@ -262,6 +268,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
             />
           </div>
         </FormField>
+        )}
         <FormField label="Costo Proveedor">
           <div className="relative group">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
@@ -284,6 +291,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
             />
           </div>
         </FormField>
+        {!cotizando && (
         <FormField label={`Método de Pago${isPaymentMethodRequired ? ' *' : ''}`}>
           <div className="relative group">
             <LuCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 z-10" size={16} />
@@ -301,6 +309,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
             />
           </div>
         </FormField>
+        )}
       </div>
       
       <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm animate-fade-in">

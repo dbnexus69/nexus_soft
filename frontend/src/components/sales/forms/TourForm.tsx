@@ -266,6 +266,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError, cotiz
         ta={tour.ta}
         suppliers={data.config.suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
 
       {!cotizando && (

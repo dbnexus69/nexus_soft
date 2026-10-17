@@ -199,6 +199,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
         ta={convention.ta}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
+        cotizando={cotizando}
       />
     </div>
   );

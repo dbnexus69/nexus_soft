@@ -71,6 +71,7 @@ function mapCotizacion(cotizacion, lineas) {
   return {
     id: cotizacion.id,
     numero: cotizacion.numero,
+    name: cotizacion.nombre,
     clientId: cotizacion.cliente_id,
     clientName: cotizacion.clientes
       ? `${cotizacion.clientes.personas.nombres} ${cotizacion.clientes.personas.apellidos}`
@@ -134,7 +135,7 @@ class QuotesService {
   }
 
   async createQuote(body, alcance = {}) {
-    const { clientId, asesorId, fechaVencimiento, observations } = body;
+    const { clientId, asesorId, name, fechaVencimiento, observations } = body;
 
     // Mismo resguardo que `createSale`: sin asesor explícito, `usuario_id` cae en
     // quien crea; suplantando, ese id es del superadministrador, de otra agencia.
@@ -166,6 +167,7 @@ class QuotesService {
         data: {
           cliente_id: clienteId,
           usuario_id: usuarioId,
+          nombre: name || null,
           fecha_vencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null,
           observaciones: observations || null,
         },
@@ -184,7 +186,7 @@ class QuotesService {
     if (ESTADOS_CERRADOS.includes(cotizacion.estado)) {
       throw new BadRequestError('No se puede editar una cotización aceptada o rechazada');
     }
-    const { clientId, fechaVencimiento, observations } = body;
+    const { clientId, name, fechaVencimiento, observations } = body;
     const clienteId = clientId !== undefined ? await idDeClienteExistente(clientId) : undefined;
 
     const catalogos = await productValidation.precargarCatalogos(body);
@@ -199,6 +201,7 @@ class QuotesService {
         where: { id: cotizacion.id },
         data: {
           ...(clientId !== undefined ? { cliente_id: clienteId } : {}),
+          nombre: name || null,
           fecha_vencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null,
           observaciones: observations || null,
         },
@@ -236,6 +239,7 @@ class QuotesService {
         data: {
           cliente_id: original.cliente_id,
           usuario_id: original.usuario_id,
+          nombre: original.nombre,
           fecha_vencimiento: fechaVencimiento,
           observaciones: original.observaciones,
         },

@@ -77,6 +77,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               />
             </FormField>
           )}
+          {!cotizando && (
           <FormField label="Proveedor">
             <Combobox
               value={insurance.supplier || ""}
@@ -85,6 +86,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               placeholder="Seleccionar proveedor..."
             />
           </FormField>
+          )}
           <FormField label="Cobertura (USD)">
             <CurrencyInput
               value={insurance.coverage === 0 ? "" : insurance.coverage}
@@ -219,6 +221,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               }
             />
           </FormField>
+          {!cotizando && (
           <FormField label="Método de Pago">
             <Combobox
               value={insurance.supplierPaymentMethod || ""}
@@ -231,6 +234,7 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
               direction="up"
             />
           </FormField>
+          )}
         </div>
       </div>
     </div>

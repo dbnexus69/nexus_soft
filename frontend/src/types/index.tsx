@@ -673,6 +673,7 @@ export interface QuoteLine {
 export interface Quote {
   id: number;
   numero?: number | null;
+  name?: string | null;
   clientId: number | null;
   clientName?: string;
   asesorId: number;

@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { NotFoundError, ForbiddenError } = require('../errors/AppError');
+const { alcanceDeEscritura } = require('../utils/alcancePermisos');
 
 /**
  * La venta, comprobada contra el alcance de quien pide.
@@ -27,8 +28,12 @@ const { NotFoundError, ForbiddenError } = require('../errors/AppError');
 const soloLasSuyas = (alcance = {}) =>
   (alcance.viewScope || alcance.permissionScope) === 'own' && Boolean(alcance.user);
 
+/**
+ * Al ESCRIBIR manda el alcance de la acción (editar, borrar), con el tope del de ver
+ * (spec 020): "ver todas, editar solo las suyas" ya se puede.
+ */
 function esDeOtro(venta, alcance = {}) {
-  return soloLasSuyas(alcance) && venta.usuario_id !== alcance.user.id;
+  return alcanceDeEscritura(alcance) === 'own' && Boolean(alcance.user) && venta.usuario_id !== alcance.user.id;
 }
 
 async function ventaVisible(id, alcance = {}, { paraEscribir = false } = {}) {

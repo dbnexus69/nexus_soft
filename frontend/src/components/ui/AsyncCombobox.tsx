@@ -21,6 +21,8 @@ interface AsyncComboboxProps {
   /** Texto cuando no hay resultados. */
   emptyText?: string;
   disabled?: boolean;
+  /** Nombre accesible del campo cuando no hay `<label>` conectado. */
+  ariaLabel?: string;
 }
 
 const DEBOUNCE_MS = 300;
@@ -42,6 +44,7 @@ export function AsyncCombobox({
   inputClassName = '',
   emptyText = 'Sin resultados',
   disabled = false,
+  ariaLabel,
 }: AsyncComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
@@ -105,6 +108,7 @@ export function AsyncCombobox({
         <input
           type="text"
           disabled={disabled}
+          aria-label={ariaLabel}
           className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all disabled:opacity-60 ${
             error ? 'border-red-500' : 'border-gray-border'
           } ${inputClassName}`}

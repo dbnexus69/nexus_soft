@@ -19,7 +19,7 @@ ejecutar('Filtros del listado de ventas', PREFIJO, async () => {
   const persona = await admin.personas.create({ data: { empresa_id: A.id, nombres: 'Cliente', apellidos: 'Filtros', status: 'active' } });
   const cliente = await admin.clientes.create({ data: { empresa_id: A.id, persona_id: persona.id, creado_por_id: usuario.id } });
   // 2026-10-08T03:00Z son las 22:00 del 7 de octubre en Bogotá.
-  await admin.ventas.create({
+  const venta = await admin.ventas.create({
     data: { empresa_id: A.id, cliente_id: cliente.id, usuario_id: usuario.id, monto_total: 100, status: 'credito', creado_at: new Date('2026-10-08T03:00:00Z') },
   });
 
@@ -54,4 +54,15 @@ ejecutar('Filtros del listado de ventas', PREFIJO, async () => {
   comprobar('búsqueda de 100 caracteres', typeof (await total(`search=${'x'.repeat(100)}`)) === 'number');
   const cartera = await pedir('GET', '/sales/credit?search=abc', token);
   comprobar('cartera con búsqueda normal: 200', cartera.status === 200, `${cartera.status}`);
+
+  console.log('\n  Créditos de un cliente: número de la agencia, asesor, último abono y teléfono');
+  await admin.personas.update({ where: { id: persona.id }, data: { telefono: '3001234567' } });
+  await admin.pagos_venta.create({ data: { id: `${A.slug}-p1`, empresa_id: A.id, venta_id: venta.id, monto: 10, fecha_pago: new Date('2026-10-09T15:00:00Z') } });
+  await admin.pagos_venta.create({ data: { id: `${A.slug}-p2`, empresa_id: A.id, venta_id: venta.id, monto: 30, fecha_pago: new Date('2026-10-10T15:00:00Z') } });
+  const creditos = await pedir('GET', `/sales/credit/${cliente.id}`, token);
+  const c = creditos.json?.data?.[0];
+  comprobar('el crédito trae el número de la agencia, no el id global', c?.numero === 1 && c?.saleId === venta.id, `numero ${c?.numero}`);
+  comprobar('…el asesor que la atendió', c?.advisor?.id === usuario.id && c?.advisor?.name === 'Admin a', JSON.stringify(c?.advisor));
+  comprobar('…y el último abono, no el primero', c?.lastPayment?.amount === 30, JSON.stringify(c?.lastPayment));
+  comprobar('el cliente trae su teléfono', creditos.json?.meta?.client?.phone === '3001234567', creditos.json?.meta?.client?.phone);
 });

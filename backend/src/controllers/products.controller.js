@@ -3,6 +3,8 @@ const path = require('path');
 const prisma = require('../config/db');
 const { success } = require('../utils/apiResponse');
 const { BadRequestError, ForbiddenError, NotFoundError } = require('../errors/AppError');
+const { getEffectivePermissions } = require('../middleware/authorize');
+const { masEstrecho } = require('../utils/alcancePermisos');
 
 /**
  * Los productos de una venta se crean con ella, en un solo `POST /sales`: el
@@ -37,8 +39,13 @@ async function getSale(saleId, req) {
   const id = parseInt(saleId);
   const venta = await prisma.ventas.findFirst({ where: { id, deleted_at: null } });
   if (!venta) return null;
-  if (req?.viewScope === 'own' && req.user && venta.usuario_id !== req.user.id) {
-    throw new ForbiddenError('No puede modificar una venta de otro asesor');
+  // Su propia venta, siempre (es el paso que sigue a crearla). La de otro asesor, solo
+  // con editar ventas en 'all' —con el tope de ver— (spec 020).
+  if (req?.user && venta.usuario_id !== req.user.id) {
+    const ventas = getEffectivePermissions(req.user).permissions.sales || {};
+    if (masEstrecho(ventas.edit, ventas.view) !== 'all') {
+      throw new ForbiddenError('No puede modificar una venta de otro asesor');
+    }
   }
   return venta;
 }

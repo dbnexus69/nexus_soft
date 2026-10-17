@@ -1,4 +1,5 @@
 const { error } = require('../utils/apiResponse');
+const { tieneAlcance, aAlcance, masEstrecho } = require('../utils/alcancePermisos');
 
 /**
  * Punto de partida por rol. NO es la fuente: `getEffectivePermissions`
@@ -10,11 +11,12 @@ const { error } = require('../utils/apiResponse');
  */
 const ADMIN_PERMISSIONS = {
   dashboard: { view: 'all' },
-  sales: { view: 'all', create: true, edit: true, delete: true },
-  quotes: { view: 'all', create: true, edit: true, delete: true },
-  clients: { view: 'all', create: true, edit: true, delete: true },
+  // Editar y borrar con alcance (spec 020): 'all' | 'own' | 'none'.
+  sales: { view: 'all', create: true, edit: 'all', delete: 'all' },
+  quotes: { view: 'all', create: true, edit: 'all', delete: 'all' },
+  clients: { view: 'all', create: true, edit: 'all', delete: true },
   responsables: { view: true, create: true, edit: true, delete: true },
-  itineraries: { view: 'all', edit: true, delete: true },
+  itineraries: { view: 'all', edit: 'all', delete: true },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
   config: { view: true, create: true, edit: true, delete: true },
@@ -41,15 +43,16 @@ const SUPERADMIN_PERMISSIONS = {
 const ROLE_DEFAULT_PERMISSIONS = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: true, edit: true, delete: false },
-    quotes: { view: 'own', create: true, edit: true, delete: false },
-    clients: { view: 'own', create: true, edit: true },
+    // 'own' donde antes era `true` con `view: 'own'`: es lo mismo que ya valía (spec 020).
+    sales: { view: 'own', create: true, edit: 'own', delete: 'none' },
+    quotes: { view: 'own', create: true, edit: 'own', delete: 'none' },
+    clients: { view: 'own', create: true, edit: 'own' },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
     // puede delegar desde la interfaz.
     responsables: { view: false, create: false, edit: false, delete: false },
     permissions: { view: false, edit: false },
-    itineraries: { view: 'own', edit: false },
+    itineraries: { view: 'own', edit: 'none' },
     commissions: { view: false, create: false, edit: false, delete: false },
     // Las acciones tienen que APARECER aquí aunque sean false: la superposición
     // de la base solo aplica un valor `if (pr.accion in mod)`, así que sin la
@@ -60,15 +63,16 @@ const ROLE_DEFAULT_PERMISSIONS = {
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: true, edit: true, delete: false },
-    quotes: { view: 'own', create: true, edit: true, delete: false },
-    clients: { view: 'own', create: true, edit: true },
+    // 'own' donde antes era `true` con `view: 'own'`: es lo mismo que ya valía (spec 020).
+    sales: { view: 'own', create: true, edit: 'own', delete: 'none' },
+    quotes: { view: 'own', create: true, edit: 'own', delete: 'none' },
+    clients: { view: 'own', create: true, edit: 'own' },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
     // puede delegar desde la interfaz.
     responsables: { view: false, create: false, edit: false, delete: false },
     permissions: { view: false, edit: false },
-    itineraries: { view: 'own', edit: false },
+    itineraries: { view: 'own', edit: 'none' },
     commissions: { view: false, create: false, edit: false, delete: false },
     // Las acciones tienen que APARECER aquí aunque sean false: la superposición
     // de la base solo aplica un valor `if (pr.accion in mod)`, así que sin la
@@ -96,7 +100,11 @@ function getEffectivePermissions(user) {
       const mod = permissions[pr.modulo];
       if (mod && pr.accion in mod) {
         const currentVal = mod[pr.accion];
-        if (typeof currentVal === 'boolean') {
+        if (pr.accion !== 'view' && tieneAlcance(pr.modulo, pr.accion)) {
+          // Editar/borrar con alcance: un `true`/`false` guardado antes de la spec 020
+          // vale 'all'/'none' (y con el tope de ver, lo mismo que antes).
+          mod[pr.accion] = aAlcance(pr.valor);
+        } else if (typeof currentVal === 'boolean') {
           mod[pr.accion] = pr.valor === 'true' || pr.valor === true;
         } else {
           mod[pr.accion] = ['all', 'own', 'none'].includes(pr.valor) ? pr.valor : 'own';
@@ -137,8 +145,17 @@ function authorize(modulo, accion) {
       return error(res, 'No tienes permiso para realizar esta acción', 403);
     }
 
-    // Usar directamente el scope de la acción (ya corregido en getEffectivePermissions)
-    req.permissionScope = actionScope;
+    const alcanceDeVer = permissions?.[modulo]?.view;
+
+    // Editar y borrar con alcance (spec 020): nunca más amplio que ver. Con ver
+    // 'none' no se escribe nada, aunque la acción diga otra cosa.
+    if (accion !== 'view' && tieneAlcance(modulo, accion) && typeof alcanceDeVer === 'string') {
+      const efectivo = masEstrecho(actionScope, alcanceDeVer);
+      if (efectivo === 'none') return error(res, 'No tienes permiso para realizar esta acción', 403);
+      req.permissionScope = efectivo;
+    } else {
+      req.permissionScope = actionScope;
+    }
 
     // El alcance de VER ese módulo, que es el que dice sobre qué registros
     // puede actuar este usuario.
@@ -149,7 +166,6 @@ function authorize(modulo, accion) {
     // cumplía nunca. Con un asesor de alcance 'own' se veía: los GET daban 404
     // y el PUT, el cobro y el alta de producto sobre la MISMA venta daban 200.
     // Quien no puede ver un registro tampoco puede escribirlo.
-    const alcanceDeVer = permissions?.[modulo]?.view;
     req.viewScope = typeof alcanceDeVer === 'string' ? alcanceDeVer : null;
 
     next();

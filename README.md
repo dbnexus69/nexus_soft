@@ -426,7 +426,10 @@ que los guardaba nunca llegó a funcionar.
   `001-multi-tenant`, `002-estabilizacion-multi-tenant`, `003-validacion-de-datos-de-personas`,
   `004-vuelos-y-checkin`, `005-iva-sobre-ta`, `006-calendario-y-modales`,
   `007-cotizaciones` (en diseño, sin implementar), `013-iva-en-dashboard`,
-  `014-ajustes-del-asistente-de-venta` y `015-servicios-dentro-del-paquete`.
+  `014-ajustes-del-asistente-de-venta`, `015-servicios-dentro-del-paquete`,
+  `016-filtros-de-ventas-sin-siigo`, `017-destinos-de-preferencia`,
+  `018-cartera-asesor-y-contacto`, `019-alcance-al-escribir-clientes` y
+  `020-alcance-de-editar-y-borrar`.
 
 ## Herramientas de agentes
 

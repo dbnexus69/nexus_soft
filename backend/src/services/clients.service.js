@@ -1,8 +1,65 @@
 const prisma = require('../config/db');
-const { AppError, NotFoundError, BadRequestError } = require('../errors/AppError');
+const { transaccion } = require('../config/db');
+const { claveDestino, limpiarDestino } = require('../utils/destinos');
+const { alcanceDeEscritura } = require('../utils/alcancePermisos');
+const { AppError, NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 
 const { validarDocumento } = require('../utils/tipoDocumento');
+
+/**
+ * Reemplaza los destinos de preferencia del cliente y su copia `destino_reciente`
+ * (spec 017). Único sitio que los escribe; `lista` ya viene normalizada por el esquema,
+ * del más viejo al más nuevo.
+ */
+async function escribirDestinos(clienteId, entrada) {
+  // Un destino que la agencia ya tiene escrito de otra forma ("pEreira" frente a
+  // "Pereira") toma la escritura existente, la más antigua: así el destino es uno
+  // solo en el filtro y en las sugerencias.
+  const existentes = entrada.length ? await prisma.cliente_destinos.findMany({
+    where: { OR: entrada.map(d => ({ destino: { equals: d, mode: 'insensitive' } })) },
+    select: { destino: true },
+    orderBy: { creado_at: 'asc' },
+  }) : [];
+  const canonico = new Map();
+  for (const { destino } of existentes) {
+    if (!canonico.has(claveDestino(destino))) canonico.set(claveDestino(destino), limpiarDestino(destino));
+  }
+  const lista = entrada.map(d => canonico.get(claveDestino(d)) ?? d);
+
+  await transaccion(async (tx) => {
+    await tx.cliente_destinos.deleteMany({ where: { cliente_id: clienteId } });
+    if (lista.length) {
+      await tx.cliente_destinos.createMany({
+        data: lista.map((destino, i) => ({ cliente_id: clienteId, destino, orden: i + 1 })),
+      });
+    }
+    await tx.clientes.update({ where: { id: clienteId }, data: { destino_reciente: lista.at(-1) ?? null } });
+  });
+  return lista;
+}
+
+const destinosOrdenados = { select: { destino: true }, orderBy: { orden: 'asc' } };
+const destinosDe = (c) => (c.cliente_destinos || []).map(d => d.destino);
+
+/**
+ * Con alcance de ver 'own', el cliente es "suyo" si lo creó él (spec 019), igual que en
+ * `listClients`. Es el alcance de VER, no el de la acción: las de escritura son booleanas.
+ * Sin alcance (llamadas internas), no se restringe.
+ */
+const soloLosSuyos = (alcance = {}) =>
+  (alcance.viewScope || alcance.permissionScope) === 'own' && Boolean(alcance.user);
+
+/**
+ * Para escribir: 404 si no existe, 403 si es de otro asesor (quien escribe ya tiene su
+ * id). Manda el alcance de editar, con el tope del de ver (spec 020).
+ */
+function comprobarQueEsSuyo(cliente, alcance = {}) {
+  if (!cliente) throw new NotFoundError('Cliente no encontrado');
+  if (alcanceDeEscritura(alcance) === 'own' && alcance.user && cliente.creado_por_id !== alcance.user.id) {
+    throw new ForbiddenError('No puede modificar un cliente de otro asesor');
+  }
+}
 
 // Errores que la pantalla pinta junto a su campo (`error.details`).
 const documentoRepetido = (mensaje) => new BadRequestError(mensaje, 'DUPLICATE_DOCUMENT', [{ field: 'docNumber', message: mensaje }]);
@@ -11,7 +68,7 @@ class ClientsService {
   /**
    * Obtener lista paginada y filtrada de clientes
    */
-  async listClients({ pagination, search, status, permissionScope, user, sortBy, sortOrder }) {
+  async listClients({ pagination, search, status, permissionScope, user, sortBy, sortOrder, destination, destinationAll }) {
     const { page, perPage, skip } = pagination;
 
     // UN solo `where`, compartido por el count y por las filas.
@@ -45,6 +102,14 @@ class ClientsService {
       where.OR = porTexto;
     }
 
+    // Por defecto, el destino reciente; con `destinationAll`, cualquiera de los del
+    // cliente (spec 017). Mismo `where` para la cuenta y las filas.
+    if (destination) {
+      const como = { contains: destination, mode: 'insensitive' };
+      if (destinationAll) where.cliente_destinos = { some: { destino: como } };
+      else where.destino_reciente = como;
+    }
+
     const dir = sortOrder === 'desc' ? 'desc' : 'asc';
     // Ordenar por nombre ahora ordena por el nombre. El SQL anterior ordenaba
     // por `persona_id`, que es la clave ajena, no el nombre.
@@ -64,6 +129,8 @@ class ClientsService {
           numero: true,
           fecha_registro: true,
           creado_por_id: true,
+          destino_reciente: true,
+          cliente_destinos: destinosOrdenados,
           personas: {
             select: {
               nombres: true, apellidos: true, documento: true, telefono: true,
@@ -91,6 +158,8 @@ class ClientsService {
       avatar: c.personas.avatar_url,
       registrationDate: c.fecha_registro,
       createdBy: c.creado_por_id,
+      destinations: destinosDe(c),
+      recentDestination: c.destino_reciente,
     }));
 
     return {
@@ -102,14 +171,15 @@ class ClientsService {
   /**
    * Obtener cliente por ID
    */
-  async getClientById(id, includeSales = false) {
+  async getClientById(id, includeSales = false, alcance = {}) {
     // includeSales ya no arrastra las ventas: devuelve solo el resumen
     // (cuántas y cuánto suman). El historial se pide paginado con
     // GET /sales?clientId=:id, que es donde vive ese listado.
     const [cliente, resumen] = await Promise.all([
-      prisma.clientes.findUnique({
-        where: { id },
-        include: { personas: { include: { tipos_documento: true } }, empresas: true }
+      // Al leer, el de otro asesor responde 404, como si no existiera (spec 019).
+      prisma.clientes.findFirst({
+        where: { id, ...(soloLosSuyos(alcance) ? { creado_por_id: alcance.user.id } : {}) },
+        include: { personas: { include: { tipos_documento: true } }, empresas: true, cliente_destinos: destinosOrdenados }
       }),
       includeSales
         ? prisma.ventas.aggregate({
@@ -144,6 +214,8 @@ class ClientsService {
       avatar: cliente.personas.avatar_url,
       registrationDate: cliente.fecha_registro,
       createdBy: cliente.creado_por_id,
+      destinations: destinosDe(cliente),
+      recentDestination: cliente.destino_reciente,
       // La agencia a la que pertenece el cliente.
       //
       // Va el id Y el nombre, no solo el id. Un id suelto obligaría a quien
@@ -221,6 +293,7 @@ class ClientsService {
       data: { persona_id: persona.id, creado_por_id: userId },
       include: { personas: true }
     });
+    const destinos = data.destinations?.length ? await escribirDestinos(cliente.id, data.destinations) : [];
 
     return {
       id: cliente.id,
@@ -237,22 +310,21 @@ class ClientsService {
       avatar: persona.avatar_url,
       status: 'active',
       registrationDate: cliente.fecha_registro,
-      createdBy: cliente.creado_por_id
+      createdBy: cliente.creado_por_id,
+      destinations: destinos,
+      recentDestination: destinos.at(-1) ?? null,
     };
   }
 
   /**
    * Actualizar cliente existente
    */
-  async updateClient(id, data) {
+  async updateClient(id, data, alcance = {}) {
     const cliente = await prisma.clientes.findUnique({
       where: { id },
       include: { personas: true }
     });
-
-    if (!cliente) {
-      throw new NotFoundError('Cliente no encontrado');
-    }
+    comprobarQueEsSuyo(cliente, alcance);
 
     const personaData = {};
     if (data.firstName) personaData.nombres = data.firstName;
@@ -284,21 +356,46 @@ class ClientsService {
       });
     }
 
+    if (data.destinations) await escribirDestinos(cliente.id, data.destinations);
+
     return { message: 'Cliente actualizado' };
+  }
+
+  /**
+   * Sugerencias de destino (spec 017): hasta 10 distintos de la agencia que contengan
+   * el texto, los más usados primero. Sin alcance por asesor: solo el nombre del
+   * destino, nunca el cliente; la RLS ya limita a la agencia.
+   */
+  async suggestDestinations(search) {
+    const filas = await prisma.cliente_destinos.groupBy({
+      by: ['destino'],
+      where: search ? { destino: { contains: search, mode: 'insensitive' } } : {},
+      _count: { destino: true },
+      orderBy: [{ _count: { destino: 'desc' } }, { destino: 'asc' }],
+      take: 50,
+    });
+    // `groupBy` separa "Pereira" de "pEreira" (y de escrituras guardadas antes de unificarlas):
+    // se juntan por su clave, con la escritura más usada.
+    const vistos = new Set();
+    const unicos = [];
+    for (const f of filas) {
+      const clave = claveDestino(f.destino);
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      unicos.push(limpiarDestino(f.destino));
+    }
+    return unicos.slice(0, 10);
   }
 
   /**
    * Cambiar estado activo/inactivo
    */
-  async toggleClientStatus(id) {
+  async toggleClientStatus(id, alcance = {}) {
     const cliente = await prisma.clientes.findUnique({
       where: { id },
       include: { personas: true }
     });
-
-    if (!cliente) {
-      throw new NotFoundError('Cliente no encontrado');
-    }
+    comprobarQueEsSuyo(cliente, alcance);
 
     const newStatus = cliente.personas.status === 'active' ? 'inactive' : 'active';
     await prisma.personas.update({
@@ -312,15 +409,13 @@ class ClientsService {
   /**
    * Actualizar avatar de cliente
    */
-  async uploadAvatar(id, file) {
+  async uploadAvatar(id, file, alcance = {}) {
     if (!file) {
       throw new BadRequestError('Archivo requerido');
     }
 
     const cliente = await prisma.clientes.findUnique({ where: { id } });
-    if (!cliente) {
-      throw new NotFoundError('Cliente no encontrado');
-    }
+    comprobarQueEsSuyo(cliente, alcance);
 
     const avatarUrl = `/uploads/${file.filename}`;
     await prisma.personas.update({

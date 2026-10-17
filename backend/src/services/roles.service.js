@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { olvidarTodo } = require('../middleware/authCache');
+const { tieneAlcance, aAlcance, masEstrecho } = require('../utils/alcancePermisos');
 
 /**
  * Lo que se puede configurar por rol. Es la ÚNICA lista: `getPermissions`
@@ -32,7 +33,9 @@ const MODULE_ACTIONS = {
 };
 
 /**
- * Módulos cuyo `view` tiene alcance (all / own / none) en vez de sí/no.
+ * Módulos cuyo `view` tiene alcance (all / own / none) en vez de sí/no. Desde la
+ * spec 020, también editar y borrar en algunos: la lista completa vive en
+ * `utils/alcancePermisos.js` (`SCOPED_ACTIONS`), compartida con `authorize.js`.
  *
  * `itineraries` estaba fuera y no debía: `authorize.js` respeta un 'own'
  * guardado y `flights.service.js` lo aplica de verdad, pero la LECTURA
@@ -107,11 +110,11 @@ const ROLES_FIJOS = ROLES_ADMINISTRATIVOS;
 const DEFAULT_ROLE_VALUES = {
   asesor: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
-    quotes: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
-    clients: { view: 'own', create: 'true', edit: 'true' },
+    sales: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
+    quotes: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
+    clients: { view: 'own', create: 'true', edit: 'own' },
     responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    itineraries: { view: 'own', edit: 'false' },
+    itineraries: { view: 'own', edit: 'none' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     // Se mantienen en true: el asistente de ventas necesita los catálogos
     // (aerolíneas, métodos de pago) y la lista de asesores para asignar la
@@ -122,11 +125,11 @@ const DEFAULT_ROLE_VALUES = {
   },
   freelancer: {
     dashboard: { view: 'own' },
-    sales: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
-    quotes: { view: 'own', create: 'true', edit: 'true', delete: 'false' },
-    clients: { view: 'own', create: 'true', edit: 'true' },
+    sales: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
+    quotes: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
+    clients: { view: 'own', create: 'true', edit: 'own' },
     responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    itineraries: { view: 'own', edit: 'false' },
+    itineraries: { view: 'own', edit: 'none' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     users: { view: 'true', create: 'false', edit: 'false', delete: 'false' },
     config: { view: 'true', edit: 'false' },
@@ -134,11 +137,11 @@ const DEFAULT_ROLE_VALUES = {
   },
   admin: {
     dashboard: { view: 'all' },
-    sales: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
-    quotes: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
-    clients: { view: 'all', create: 'true', edit: 'true' },
+    sales: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
+    quotes: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
+    clients: { view: 'all', create: 'true', edit: 'all' },
     responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
-    itineraries: { view: 'all', edit: 'true' },
+    itineraries: { view: 'all', edit: 'all' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     users: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     config: { view: 'true', edit: 'true' },
@@ -146,11 +149,11 @@ const DEFAULT_ROLE_VALUES = {
   },
   superadmin: {
     dashboard: { view: 'all' },
-    sales: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
-    quotes: { view: 'all', create: 'true', edit: 'true', delete: 'true' },
-    clients: { view: 'all', create: 'true', edit: 'true' },
+    sales: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
+    quotes: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
+    clients: { view: 'all', create: 'true', edit: 'all' },
     responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
-    itineraries: { view: 'all', edit: 'true' },
+    itineraries: { view: 'all', edit: 'all' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     users: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     config: { view: 'true', edit: 'true' },
@@ -173,6 +176,8 @@ function parseValor(accion, modulo, valor, role) {
     }
     return 'none';
   }
+  // Editar/borrar con alcance (spec 020); un `true`/`false` de antes vale 'all'/'none'.
+  if (tieneAlcance(modulo, accion)) return aAlcance(valor);
   return valor === 'true' || valor === true;
 }
 
@@ -203,7 +208,7 @@ class RolesService {
       actions: ORDEN_ACCIONES.filter(a => acciones.includes(a)).map(a => ({
         key: a,
         label: ETIQUETAS_ACCION[a] || a,
-        type: a === 'view' && SCOPED_VIEW_MODULES.includes(clave) ? 'scope' : 'boolean',
+        type: (a === 'view' ? SCOPED_VIEW_MODULES.includes(clave) : tieneAlcance(clave, a)) ? 'scope' : 'boolean',
       })),
     }));
 
@@ -317,7 +322,12 @@ class RolesService {
             data: { modulo, accion, descripcion: `${modulo} - ${accion}` }
           });
         }
-        aEscribir.push({ rol_id: roles.id, permiso_id: permiso.id, valor: encodeValor(value) });
+        // Editar o borrar nunca más amplio que ver (spec 020): se recorta, que es lo que
+        // `authorize` haría igual al aplicarlo.
+        const valor = accion !== 'view' && tieneAlcance(modulo, accion)
+          ? masEstrecho(value, accs.view)
+          : value;
+        aEscribir.push({ rol_id: roles.id, permiso_id: permiso.id, valor: encodeValor(valor) });
       }
     }
 

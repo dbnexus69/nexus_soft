@@ -8,6 +8,8 @@ import { formatCurrency } from '../../../utils/formatters';
 
 export interface CreditoACobrar {
   saleId: number;
+  /** El número que ve la agencia, para el título. */
+  numero?: number | null;
   pendingAmount: number;
 }
 
@@ -77,7 +79,7 @@ export function CollectPaymentDialog({
     <Modal
       isOpen={abierto}
       onClose={cerrar}
-      title={credito ? `Cobrar la venta ${credito.saleId}` : ''}
+      title={credito ? `Cobrar la venta #${credito.numero ?? '—'}` : ''}
       size="sm"
       footer={
         <div className="flex justify-end gap-2">

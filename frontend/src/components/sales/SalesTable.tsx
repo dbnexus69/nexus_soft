@@ -15,6 +15,8 @@ interface SalesTableProps {
   onDelete: (sale: Sale) => void;
   canManagePayments: (sale: Sale) => boolean;
   isAdmin: boolean;
+  /** Anular la venta, según el alcance de borrar (spec 020). */
+  canVoid: (sale: Sale) => boolean;
   onReviewStatusChange?: (saleId: number, isReviewed: boolean) => void;
   /** Filas fantasma mientras llegan los datos. */
   loading?: boolean;
@@ -29,6 +31,7 @@ export default function SalesTable({
   onDelete,
   canManagePayments,
   isAdmin,
+  canVoid,
   onReviewStatusChange,
 }: SalesTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
@@ -172,7 +175,7 @@ export default function SalesTable({
                 >
                   <RxUpdate size={14} className={canManagePayments(sale) ? "text-primary" : "text-gray-500"} />
                 </Button>
-                {isAdmin && (
+                {canVoid(sale) && (
                   <Button
                     variant="outline"
                     size="icon"

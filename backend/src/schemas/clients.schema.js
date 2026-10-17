@@ -5,6 +5,7 @@ const {
   mensajeTelefono, mensajeNacimiento,
 } = require('../utils/datosPersona');
 const { idTipoDocumento, tipoDocumentoPorTexto } = require('./personaCampos');
+const { normalizarDestinos, MAX_LARGO } = require('../utils/destinos');
 
 // Las reglas viven en utils/datosPersona.js; aquí solo se cablean. El servicio recibe `req.validatedBody`, ya normalizado.
 
@@ -36,6 +37,15 @@ const campos = {
   phone: z.preprocess(vacioAUndefined, z.string().trim().superRefine(validar(mensajeTelefono)).optional()),
   birthDate: z.preprocess(vacioAUndefined, z.string().superRefine(validar(mensajeNacimiento)).optional()),
   avatar: z.string().nullable().optional(),
+  // Destinos de preferencia (spec 017), del más viejo al más nuevo: el último es el
+  // reciente. Sale ya normalizado (recortado, sin repetidos); en PUT reemplaza la lista.
+  destinations: z.array(z.string({ invalid_type_error: 'Debe ser texto' })).transform((lista, ctx) => {
+    const { destinos, errores } = normalizarDestinos(lista);
+    for (const e of errores) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: e.field === '' ? [] : [Number(e.field)], message: e.message });
+    }
+    return destinos;
+  }).optional(),
 };
 
 // El número solo se puede juzgar sabiendo el tipo: por eso viajan juntos.
@@ -76,7 +86,18 @@ const createClientSchema = z.object({ ...campos, docNumber: numeroDocumento.opti
 
 const updateClientSchema = z.object(campos).partial().superRefine(tipoYNumeroJuntos);
 
+// `destination` filtra por el destino reciente; con `destinationAll=true`, por
+// cualquiera de los del cliente (spec 017). El resto de la query lo valida `paginate`.
+const textoDeDestino = z.string().trim().max(MAX_LARGO, `Máximo ${MAX_LARGO} caracteres`).optional();
+const listClientsQuerySchema = z.object({
+  destination: textoDeDestino,
+  destinationAll: z.enum(['true', 'false']).optional(),
+}).passthrough();
+const destinationsQuerySchema = z.object({ search: textoDeDestino }).passthrough();
+
 module.exports = {
   createClientSchema,
   updateClientSchema,
+  listClientsQuerySchema,
+  destinationsQuerySchema,
 };

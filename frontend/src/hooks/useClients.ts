@@ -12,12 +12,18 @@ export function useClients() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // Destino de preferencia (spec 017): el reciente, o cualquiera con `destinationAll`.
+  const [destination, setDestination] = useState('');
+  const [destinationAll, setDestinationAll] = useState(false);
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await listClients({ search: searchTerm, status: statusFilter });
+      const res = await listClients({
+        search: searchTerm, status: statusFilter,
+        ...(destination ? { destination, destinationAll: destinationAll || undefined } : {}),
+      });
       if (res.success && Array.isArray(res.data)) {
         setClients(res.data);
       }
@@ -27,7 +33,7 @@ export function useClients() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, destination, destinationAll]);
 
   useEffect(() => {
     fetchClients();
@@ -78,6 +84,10 @@ export function useClients() {
     setSearchTerm,
     statusFilter,
     setStatusFilter,
+    destination,
+    setDestination,
+    destinationAll,
+    setDestinationAll,
     fetchClients,
     handleCreateClient,
     handleUpdateClient,

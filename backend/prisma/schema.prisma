@@ -39,21 +39,25 @@ model aeropuertos {
 }
 
 model clientes {
-  id             Int            @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   /// El número que ve la agencia. El `id` es global y con huecos —los huecos
   /// son las filas de las otras agencias, contables por cualquiera—; este
   /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
-  numero         Int?
-  persona_id     Int            @unique
-  creado_por_id  Int?
-  fecha_registro DateTime       @default(now())
-  deleted_at     DateTime?
-  usuarios       usuarios?      @relation(fields: [creado_por_id], references: [id])
-  personas       personas       @relation(fields: [persona_id], references: [id])
-  ventas         ventas[]
-  cotizaciones   cotizaciones[]
-  empresa_id     Int            @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
-  empresas       empresas       @relation(fields: [empresa_id], references: [id])
+  numero           Int?
+  persona_id       Int                @unique
+  creado_por_id    Int?
+  fecha_registro   DateTime           @default(now())
+  deleted_at       DateTime?
+  /// Copia del destino de mayor `orden` de `cliente_destinos` (spec 017), para filtrar
+  /// y listar sin subconsulta. La escribe solo `clients.service.js`.
+  destino_reciente String?
+  usuarios         usuarios?          @relation(fields: [creado_por_id], references: [id])
+  personas         personas           @relation(fields: [persona_id], references: [id])
+  ventas           ventas[]
+  cotizaciones     cotizaciones[]
+  cliente_destinos cliente_destinos[]
+  empresa_id       Int                @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas         empresas           @relation(fields: [empresa_id], references: [id])
 
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
@@ -237,6 +241,7 @@ model empresas {
   vouchers_venta            vouchers_venta[]
   cotizaciones              cotizaciones[]
   detalle_cotizacion        detalle_cotizacion[]
+  cliente_destinos          cliente_destinos[]
 }
 
 enum EstadoEmpresa {
@@ -1186,6 +1191,25 @@ model detalle_cotizacion {
   @@unique([id, empresa_id])
   @@index([empresa_id])
   @@index([cotizacion_id])
+}
+
+/// Destinos de preferencia de un cliente (spec 017): hasta 5, `orden` 1..5 en el orden
+/// en que se añadieron. La clave ajena real es compuesta `(cliente_id, empresa_id)`, en
+/// el SQL de la migración.
+model cliente_destinos {
+  id         Int      @id @default(autoincrement())
+  cliente_id Int
+  destino    String
+  orden      Int
+  creado_at  DateTime @default(now())
+  clientes   clientes @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+
+  empresa_id Int      @default(dbgenerated("NULLIF(current_setting('app.empresa_id', true), '')::integer"))
+  empresas   empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([cliente_id, orden])
+  @@index([empresa_id])
+  @@index([cliente_id])
 }
 
 enum CotizacionEstado {

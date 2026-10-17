@@ -3,6 +3,7 @@ import { SKELETON } from '../ui/Skeleton';
 import { Search, X } from 'lucide-react';
 import * as api from '../../api';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useAuth } from '../../context/AuthContext';
 import { useSalesContext } from '../../context/SalesContext';
 import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils/formatters';
@@ -55,9 +56,15 @@ const TOTALES_VACIOS = {
  *   a saturarse. Antes competían rojo, naranja, amarillo y el color de marca.
  */
 export default function CreditDashboard() {
-  const { canEdit } = usePermissions();
+  const { scopeOf, permissions } = usePermissions();
+  const { user } = useAuth();
+  // Con alcance 'own' todas las ventas son del mismo asesor: decirlo en cada una sobra.
+  const mostrarAsesor = (permissions.sales as { view?: unknown } | undefined)?.view !== 'own';
   // Cobrar es editar la venta: mismo permiso, decidido así a propósito.
-  const puedeCobrar = canEdit('sales');
+  // Cobrar es editar la venta: con alcance 'own', solo las que atendió (spec 020).
+  const alcanceCobro = scopeOf('sales', 'edit');
+  const puedeCobrar = (asesorId?: number | null) =>
+    alcanceCobro === 'all' || (alcanceCobro === 'own' && asesorId === user?.id);
 
   // Un cobro no solo mueve la cartera: cambia la venta en el listado y las
   // cifras de crédito del panel. Sin avisarles, la pantalla de cartera se
@@ -330,6 +337,7 @@ export default function CreditDashboard() {
                     puedeCobrar={puedeCobrar}
                     onCobrar={setCobrando}
                     tokenRefresco={tokenRefresco}
+                    mostrarAsesor={mostrarAsesor}
                   />
                 ))
               )}

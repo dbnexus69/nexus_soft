@@ -45,15 +45,32 @@ export interface User {
  * columna de dueño, así que un 'own' se habría comportado como 'all' sin
  * avisar. `users` y `config` faltaban, y son configurables desde el backend.
  */
+/** Alcance de una acción: toda la agencia, solo lo suyo o nada. */
+export type Alcance = "all" | "own" | "none";
+
+/**
+ * Acciones con alcance en vez de sí/no. Espejo de `SCOPED_ACTIONS` en
+ * `backend/src/utils/alcancePermisos.js`; cambiar los dos juntos (spec 020).
+ */
+export const SCOPED_ACTIONS: Record<string, string[]> = {
+  dashboard: ['view'],
+  sales: ['view', 'edit', 'delete'],
+  quotes: ['view', 'edit', 'delete'],
+  clients: ['view', 'edit'],
+  itineraries: ['view', 'edit'],
+};
+export const tieneAlcance = (modulo: string, accion: string) => (SCOPED_ACTIONS[modulo] || []).includes(accion);
+
 export interface RolePermissions {
   dashboard: { view: "all" | "own" | "none" };
   // `delete` faltaba y `authorize('sales','delete')` sí la exige: sin ella en el
   // tipo, la pantalla de permisos no la conocía y la descartaba al guardar.
-  sales: { view: "all" | "own" | "none"; create: boolean; edit: boolean; delete: boolean };
-  quotes: { view: "all" | "own" | "none"; create: boolean; edit: boolean; delete: boolean };
-  clients: { view: "all" | "own" | "none"; create: boolean; edit: boolean };
+  // Editar y borrar con alcance (spec 020).
+  sales: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
+  quotes: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
+  clients: { view: Alcance; create: boolean; edit: Alcance };
   responsables: { view: boolean; create: boolean; edit: boolean; delete: boolean };
-  itineraries: { view: "all" | "own" | "none"; edit: boolean };
+  itineraries: { view: Alcance; edit: Alcance };
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   config: { view: boolean; edit: boolean };
@@ -69,12 +86,12 @@ export interface RolePermissions {
 
 export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
-  sales: { view: "own", create: true, edit: true, delete: false },
-  quotes: { view: "own", create: true, edit: true, delete: false },
-  clients: { view: "own", create: true, edit: true },
+  sales: { view: "own", create: true, edit: "own", delete: "none" },
+  quotes: { view: "own", create: true, edit: "own", delete: "none" },
+  clients: { view: "own", create: true, edit: "own" },
   // El backend los niega por defecto; aquí concedían view/create/edit.
   responsables: { view: false, create: false, edit: false, delete: false },
-  itineraries: { view: "own", edit: false },
+  itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: true, create: false, edit: false, delete: false },
   config: { view: true, edit: false },
@@ -82,12 +99,12 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
 };
 export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   dashboard: { view: "own" },
-  sales: { view: "own", create: true, edit: true, delete: false },
-  quotes: { view: "own", create: true, edit: true, delete: false },
-  clients: { view: "own", create: true, edit: true },
+  sales: { view: "own", create: true, edit: "own", delete: "none" },
+  quotes: { view: "own", create: true, edit: "own", delete: "none" },
+  clients: { view: "own", create: true, edit: "own" },
   // El backend los niega por defecto; aquí concedían view/create/edit.
   responsables: { view: false, create: false, edit: false, delete: false },
-  itineraries: { view: "own", edit: false },
+  itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: true, create: false, edit: false, delete: false },
   config: { view: true, edit: false },
@@ -96,11 +113,11 @@ export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
 
 export const ADMIN_PERMISSIONS: RolePermissions = {
   dashboard: { view: "all" },
-  sales: { view: "all", create: true, edit: true, delete: true },
-  quotes: { view: "all", create: true, edit: true, delete: true },
-  clients: { view: "all", create: true, edit: true },
+  sales: { view: "all", create: true, edit: "all", delete: "all" },
+  quotes: { view: "all", create: true, edit: "all", delete: "all" },
+  clients: { view: "all", create: true, edit: "all" },
   responsables: { view: true, create: true, edit: true, delete: true },
-  itineraries: { view: "all", edit: true },
+  itineraries: { view: "all", edit: "all" },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
   config: { view: true, edit: true },
@@ -119,8 +136,6 @@ export const SUPERADMIN_PERMISSIONS: RolePermissions = {
   ...ADMIN_PERMISSIONS,
   permissions: { view: true, edit: true },
 };
-
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'quotes', 'clients', 'itineraries'];
 
 export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTemplate: RolePermissions = DEFAULT_ASESOR_PERMISSIONS): RolePermissions {
   const normalized = JSON.parse(JSON.stringify(baseTemplate)) as RolePermissions;
@@ -145,8 +160,9 @@ export function normalizeRolePermissions(perms: Partial<RolePermissions>, baseTe
       for (const key of new Set([...Object.keys(dst), ...Object.keys(src)])) {
         if (src[key] !== undefined) {
           const val = src[key];
-          if (key === 'view' && SCOPED_VIEW_MODULES.includes(mod)) {
-            dst[key] = val === true ? 'all' : val === false ? 'none' : val;
+          if (tieneAlcance(mod, key)) {
+            // `true`/`false` de antes de la spec 020 valen 'all'/'none'.
+            dst[key] = val === true || val === 'true' ? 'all' : val === false || val === 'false' ? 'none' : val;
           } else {
             dst[key] = typeof val === 'string' ? val !== 'none' && val !== 'false' : !!val;
           }
@@ -182,6 +198,10 @@ export interface Client {
   address?: string;
   status: "active" | "inactive";
   avatar?: string;
+  /** Destinos de preferencia, del más viejo al más nuevo (spec 017). */
+  destinations?: string[];
+  /** El último añadido: el que se muestra y por el que se filtra. */
+  recentDestination?: string | null;
   registrationDate: string;
   createdBy?: number;
 }
@@ -768,6 +788,8 @@ export interface Flight {
   // `(flight as any)`. Declararlos quita los casts y deja que el compilador
   // avise si el contrato cambia.
   saleId?: string | null;
+  /** El asesor de la venta del vuelo (spec 020). */
+  asesorId?: number | null;
   clientId?: string | null;
   clientName?: string | null;
   clientAvatar?: string | null;

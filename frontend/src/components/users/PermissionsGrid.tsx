@@ -54,6 +54,11 @@ interface PermissionsGridProps {
 
 const CELDA = 'px-3 py-2.5 text-center';
 
+/** Editar y borrar nunca más amplios que ver (spec 020): el mismo orden que el servidor. */
+const RANGO: Record<string, number> = { none: 0, own: 1, all: 2 };
+const comoAlcance = (v: unknown) => (typeof v === 'string' ? v : v ? 'all' : 'none');
+const AVISO_TOPE = 'No puede ser más amplio que Ver';
+
 const Casilla = memo(function Casilla({
   activo, onToggle, readOnly, etiqueta,
 }: { activo: boolean; onToggle: () => void; readOnly: boolean; etiqueta: string }) {
@@ -77,13 +82,15 @@ const Casilla = memo(function Casilla({
 });
 
 const Alcance = memo(function Alcance({
-  valor, opciones, onChange, readOnly, etiqueta,
+  valor, opciones, onChange, readOnly, etiqueta, maximo,
 }: {
   valor: string;
   opciones: { value: string; label: string }[];
   onChange: (v: string) => void;
   readOnly: boolean;
   etiqueta: string;
+  /** El alcance de Ver: las opciones más amplias se desactivan. Sin él, no hay tope. */
+  maximo?: string;
 }) {
   return (
     <div
@@ -93,19 +100,22 @@ const Alcance = memo(function Alcance({
     >
       {opciones.map(o => {
         const activo = valor === o.value;
+        const sobrepasa = maximo !== undefined && RANGO[o.value] > RANGO[maximo];
         return (
           <button
             key={o.value}
             type="button"
             role="radio"
             aria-checked={activo}
-            disabled={readOnly}
+            disabled={readOnly || sobrepasa}
+            title={sobrepasa ? AVISO_TOPE : undefined}
+            aria-description={sobrepasa ? AVISO_TOPE : undefined}
             onClick={() => onChange(o.value)}
             className={`px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight ${
               activo
                 ? 'bg-highlight text-white'
                 : 'text-accent hover:bg-slate-100 dark:hover:bg-white/5'
-            } ${readOnly ? 'cursor-not-allowed' : ''}`}
+            } ${readOnly || sobrepasa ? 'cursor-not-allowed' : ''} ${sobrepasa ? 'opacity-40 hover:bg-transparent dark:hover:bg-transparent' : ''}`}
           >
             {o.label}
           </button>
@@ -154,9 +164,10 @@ const Fila = memo(function Fila({
           <td key={col.key} className={CELDA}>
             {decl.type === 'scope' ? (
               <Alcance
-                valor={typeof valor === 'string' ? valor : valor ? 'all' : 'none'}
+                valor={comoAlcance(valor)}
                 opciones={scopes}
                 readOnly={readOnly}
+                maximo={col.key !== 'view' && modulo.actions.some(a => a.key === 'view' && a.type === 'scope') ? comoAlcance(valores.view) : undefined}
                 etiqueta={`${modulo.label}: alcance de ${decl.label.toLowerCase()}`}
                 onChange={v => onCambiar(modulo.key, col.key, v)}
               />
@@ -188,11 +199,16 @@ export default function PermissionsGrid({ permissions, onChange, readOnly = fals
 
   const cambiar = useCallback((modulo: string, accion: string, valor: unknown) => {
     if (readOnly) return;
-    onChange({
-      ...permissions,
-      [modulo]: { ...((permissions as any)[modulo] || {}), [accion]: valor },
-    } as RolePermissions);
-  }, [permissions, onChange, readOnly]);
+    const actual = { ...((permissions as any)[modulo] || {}), [accion]: valor };
+    // Bajar Ver baja también editar y borrar (spec 020): nunca más amplios que Ver.
+    if (accion === 'view' && typeof valor === 'string' && esquema) {
+      const decl = esquema.modules.find(m => m.key === modulo);
+      for (const a of decl?.actions || []) {
+        if (a.key !== 'view' && a.type === 'scope' && RANGO[comoAlcance(actual[a.key])] > RANGO[valor]) actual[a.key] = valor;
+      }
+    }
+    onChange({ ...permissions, [modulo]: actual } as RolePermissions);
+  }, [permissions, onChange, readOnly, esquema]);
 
   if (!esquema) {
     return (

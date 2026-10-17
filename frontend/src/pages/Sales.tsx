@@ -61,7 +61,12 @@ export default function Sales() {
   } = useSalesContext();
   const { fetchClients } = useClientsContext();
   const { user, isAdmin, marca } = useAuth();
-  const { canCreate, canEdit } = usePermissions();
+  const { canCreate, scopeOf } = usePermissions();
+  // Editar (cobrar) y anular según su alcance (spec 020): todas, o solo las que atendió.
+  const puedeSobre = (accion: "edit" | "delete", sale: Sale) => {
+    const alcance = scopeOf("sales", accion);
+    return alcance === "all" || (alcance === "own" && sale.asesorId === user?.id);
+  };
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   // Al convertir una cotización en venta (spec 007): Quotes.tsx ya dejó el borrador en
@@ -134,10 +139,8 @@ export default function Sales() {
     // El permiso se llama `sales.edit` porque así está guardado en
     // `permisos_rol`, y es el que el backend exige para cobrar; lo que se
     // gestiona aquí son abonos, y solo si queda algo por cobrar.
-    if (!canEdit("sales")) return false;
-    if (sale.status === "pagado" || sale.status === "anulado") return false;
-    if (isAdmin) return true;
-    return sale.asesorId === user?.id;
+    if (!puedeSobre("edit", sale)) return false;
+    return sale.status !== "pagado" && sale.status !== "anulado";
   };
 
   const handleOpenNewSale = () => {
@@ -434,6 +437,7 @@ export default function Sales() {
                 onManagePayments={handleOpenPayments}
                 onDelete={(sale) => setVoidConfirm(sale)}
                 canManagePayments={canManagePayments}
+                canVoid={(sale) => puedeSobre("delete", sale)}
                 isAdmin={isAdmin}
                 onReviewStatusChange={(saleId, isReviewed) => {
                   updateReviewStatus(saleId, isReviewed)

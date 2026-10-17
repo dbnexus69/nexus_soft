@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { SKELETON } from '../../ui/Skeleton';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Mail, MessageCircle, Phone, UserRound, Wallet } from 'lucide-react';
 import * as api from '../../../api';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { AgingBar } from './AgingBar';
@@ -9,7 +9,7 @@ import { N_COLUMNAS } from './tabla';
 import type { CreditoACobrar } from './CollectPaymentDialog';
 
 export interface ClienteEnCartera {
-  client: { id: number; name: string; docNumber?: string | null; email?: string | null };
+  client: { id: number; name: string; docNumber?: string | null; email?: string | null; phone?: string | null };
   pendingAmount: number;
   overdueAmount: number;
   daysOverdue: number;
@@ -21,6 +21,10 @@ export interface ClienteEnCartera {
 
 export interface Credito {
   saleId: number;
+  /** El número de la venta en la agencia; `saleId` es el id global y no se muestra. */
+  numero?: number | null;
+  advisor?: { id: number; name: string | null } | null;
+  lastPayment?: { date: string; amount: number } | null;
   dueDate: string | null;
   total: number;
   paidAmount: number;
@@ -33,11 +37,27 @@ interface ClientCreditRowProps {
   fila: ClienteEnCartera;
   abierta: boolean;
   onAlternar: (clientId: number) => void;
-  puedeCobrar: boolean;
+  /** Si puede cobrar una venta, por el asesor que la atendió (spec 020). */
+  puedeCobrar: (asesorId?: number | null) => boolean;
   onCobrar: (credito: CreditoACobrar) => void;
   /** Cambia tras cada cobro para que el desplegable abierto se recargue. */
   tokenRefresco: number;
+  /** Con alcance "solo las suyas" todas son del mismo asesor: no hace falta decirlo. */
+  mostrarAsesor: boolean;
 }
+
+/**
+ * Enlace de WhatsApp. ponytail: un móvil colombiano de 10 dígitos (3xx) recibe el 57;
+ * otro número sin "+" se usa tal cual. Si hay clientes de otros países sin "+", habría
+ * que guardar el indicativo aparte.
+ */
+function enlaceWhatsApp(telefono: string) {
+  const digitos = telefono.replace(/\D/g, '');
+  const conPais = !telefono.trim().startsWith('+') && /^3\d{9}$/.test(digitos) ? `57${digitos}` : digitos;
+  return `https://wa.me/${conPais}`;
+}
+
+const ENLACE_CONTACTO = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-accent dark:hover:text-accent';
 
 const CELDA_DINERO = 'px-3 py-2.5 text-right tabular-nums whitespace-nowrap';
 
@@ -48,6 +68,7 @@ export const ClientCreditRow = memo(function ClientCreditRow({
   puedeCobrar,
   onCobrar,
   tokenRefresco,
+  mostrarAsesor,
 }: ClientCreditRowProps) {
   const [creditos, setCreditos] = useState<Credito[] | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -141,6 +162,32 @@ export const ClientCreditRow = memo(function ClientCreditRow({
       {abierta && (
         <tr className="bg-slate-50/60 dark:bg-slate-900/40">
           <td colSpan={N_COLUMNAS} className="px-3 pb-4 pt-1">
+            {(fila.client.phone || fila.client.email) && (
+              <div className="flex flex-wrap items-center gap-2 py-2 pl-6">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Contactar:</span>
+                {fila.client.phone && (
+                  <>
+                    <a href={`tel:${fila.client.phone.replace(/[^\d+]/g, '')}`} className={ENLACE_CONTACTO}>
+                      <Phone size={14} aria-hidden /> <span className="tabular-nums">{fila.client.phone}</span>
+                    </a>
+                    <a
+                      href={enlaceWhatsApp(fila.client.phone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Abrir WhatsApp con ${fila.client.name} (se abre en otra pestaña)`}
+                      className={ENLACE_CONTACTO}
+                    >
+                      <MessageCircle size={14} aria-hidden /> WhatsApp
+                    </a>
+                  </>
+                )}
+                {fila.client.email && (
+                  <a href={`mailto:${fila.client.email}`} className={`${ENLACE_CONTACTO} min-w-0`}>
+                    <Mail size={14} aria-hidden /> <span className="truncate">{fila.client.email}</span>
+                  </a>
+                )}
+              </div>
+            )}
             {cargando && !creditos ? (
               <div className="space-y-2 py-2">
                 {[0, 1].map(i => (
@@ -158,13 +205,30 @@ export const ClientCreditRow = memo(function ClientCreditRow({
                       className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 pl-6 text-sm"
                     >
                       <span className="w-20 font-semibold tabular-nums text-slate-700 dark:text-slate-200">
-                        Venta {c.saleId}
+                        Venta #{c.numero ?? '—'}
                       </span>
+
+                      {mostrarAsesor && (
+                        <span
+                          className="flex w-40 min-w-0 items-center gap-1 text-xs text-slate-500 dark:text-slate-400"
+                          title={c.advisor?.name ? `Atendió: ${c.advisor.name}` : undefined}
+                        >
+                          <UserRound size={13} className="shrink-0" aria-hidden />
+                          <span className="truncate">{c.advisor?.name ? `Atendió: ${c.advisor.name}` : 'Sin asesor'}</span>
+                        </span>
+                      )}
 
                       <span className={`w-48 text-xs ${sinFecha ? t.texto : 'text-slate-500 dark:text-slate-400'}`}>
                         {sinFecha
                           ? 'Sin fecha de vencimiento: no se puede reclamar'
                           : `${c.daysOverdue > 0 ? 'Venció el' : 'Vence el'} ${formatDate(c.dueDate || '')}`}
+                      </span>
+
+                      <span className="flex w-44 items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                        <Wallet size={13} className="shrink-0" aria-hidden />
+                        {c.lastPayment
+                          ? <span>Último abono: {formatDate(c.lastPayment.date)} · <span className="tabular-nums">{formatCurrency(c.lastPayment.amount)}</span></span>
+                          : <span>Sin abonos</span>}
                       </span>
 
                       <span className="flex-1 min-w-[10rem] text-right tabular-nums text-slate-500 dark:text-slate-400">
@@ -174,10 +238,10 @@ export const ClientCreditRow = memo(function ClientCreditRow({
                         </span>
                       </span>
 
-                      {puedeCobrar && (
+                      {puedeCobrar(c.advisor?.id) && (
                         <button
                           type="button"
-                          onClick={() => onCobrar({ saleId: c.saleId, pendingAmount: c.pendingAmount })}
+                          onClick={() => onCobrar({ saleId: c.saleId, numero: c.numero, pendingAmount: c.pendingAmount })}
                           className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-200 dark:hover:border-accent dark:hover:text-accent"
                         >
                           Cobrar

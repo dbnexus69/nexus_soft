@@ -117,5 +117,18 @@ for (const slug of ['ticket', 'hotel', 'insurance', 'plan']) {
   comprobar(`${slug} con costo en texto "1500" pasa`, !(conCosto(slug, '1500').error?.issues || []).some(i => i.path[0] === 'supplierCost'));
 }
 
+// ── Destinos de preferencia del cliente (spec 017)
+const { normalizarDestinos } = require('../src/utils/destinos');
+const destinos = (l) => normalizarDestinos(l).destinos;
+comprobar('destinos: se recortan y colapsan espacios', destinos(['  San   Andrés ']).join() === 'San Andrés');
+comprobar('destinos: un repetido queda en su última aparición', destinos(['Cartagena', 'Medellín', 'cartagena']).join() === 'Medellín,cartagena');
+comprobar('destinos: 5 pasan', normalizarDestinos(['Aa', 'Bb', 'Cc', 'Dd', 'Ee']).errores.length === 0);
+comprobar('destinos: un sexto se rechaza', normalizarDestinos(['Aa', 'Bb', 'Cc', 'Dd', 'Ee', 'Ff']).errores.length === 1);
+comprobar('destinos: 6 con un repetido son 5 y pasan', normalizarDestinos(['Aa', 'Bb', 'Cc', 'Dd', 'Ee', 'aa']).errores.length === 0);
+comprobar('destinos: 1 carácter se rechaza', normalizarDestinos(['A']).errores[0]?.field === '0');
+comprobar('destinos: 61 caracteres se rechazan', normalizarDestinos(['x'.repeat(61)]).errores.length === 1);
+const conDestinos = updateClientSchema.safeParse({ destinations: ['Cali', 'B'] });
+comprobar('destinos: el esquema nombra el campo', !conDestinos.success && conDestinos.error.issues[0].path.join('.') === 'destinations.1');
+
 console.log(fallos === 0 ? `\nTodo en orden (${total} comprobaciones).\n` : `\n${fallos} de ${total} comprobación(es) en rojo.\n`);
 process.exit(fallos === 0 ? 0 : 1);

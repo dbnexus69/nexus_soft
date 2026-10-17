@@ -1,13 +1,15 @@
 const prisma = require('../config/db');
 const { NotFoundError, ForbiddenError } = require('../errors/AppError');
+const { alcanceDeEscritura } = require('../utils/alcancePermisos');
 
 // Mismo patrón que `ventasAlcance.js`: el alcance es el de VER, no el de la acción
 // pedida (las acciones de escritura son booleanas y no tienen alcance).
 const soloLasSuyas = (alcance = {}) =>
   (alcance.viewScope || alcance.permissionScope) === 'own' && Boolean(alcance.user);
 
+// Al escribir, el alcance de la acción con el tope del de ver (spec 020).
 function esDeOtro(cotizacion, alcance = {}) {
-  return soloLasSuyas(alcance) && cotizacion.usuario_id !== alcance.user.id;
+  return alcanceDeEscritura(alcance) === 'own' && Boolean(alcance.user) && cotizacion.usuario_id !== alcance.user.id;
 }
 
 /**

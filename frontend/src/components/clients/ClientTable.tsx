@@ -10,7 +10,8 @@ interface ClientTableProps {
   clients: Client[];
   sortBy: string;
   sortOrder: 'asc' | 'desc';
-  canEdit: boolean;
+  /** Por cliente: con alcance 'own', solo los que creó (spec 020). */
+  canEdit: (client: Client) => boolean;
   onSort: (field: string) => void;
   onViewDetail: (client: Client) => void;
   onEdit: (client: Client) => void;
@@ -100,7 +101,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     >
                       <Eye size={16} />
                     </button>
-                    {canEdit && (
+                    {canEdit(client) && (
                       <button
                         onClick={() => onEdit(client)}
                         className="p-1 text-slate-500 hover:text-amber-600 transition-colors"
@@ -109,7 +110,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                         <Pencil size={16} />
                       </button>
                     )}
-                    {canEdit && (
+                    {canEdit(client) && (
                       <button
                         onClick={() => onToggleStatus(client)}
                         className={`p-1 transition-colors ${

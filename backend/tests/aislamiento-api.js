@@ -128,6 +128,48 @@ async function main() {
   comprobar('…ni se edita', una((await pedir('PUT', `/sales/${ventaA.id}`, tokAsesor, { observations: 'x' })).status, 403, 404));
   comprobar('…ni se anula', una((await pedir('POST', `/sales/${ventaA.id}/cancellation`, tokAsesor, { reason: 'prueba de aislamiento' })).status, 400, 403, 404));
 
+  // Spec 019: el alcance 'own' de clientes vale también por id, no solo en la lista.
+  const estado = async (metodo, ruta, cuerpo) => (await pedir(metodo, ruta, tokAsesor, cuerpo)).status;
+  comprobar('el cliente del admin no se lee por id: 404', (await estado('GET', `/clients/${cliA.id}`)) === 404);
+  comprobar('…ni se edita: 403', (await estado('PUT', `/clients/${cliA.id}`, { phone: '3009998877' })) === 403);
+  comprobar('…ni se le cambian los destinos: 403', (await estado('PUT', `/clients/${cliA.id}`, { destinations: ['Cali'] })) === 403);
+  comprobar('…ni se desactiva: 403', (await estado('PATCH', `/clients/${cliA.id}/toggle-status`)) === 403);
+  const cliAsesor = (await pedir('POST', '/clients', tokAsesor, { firstName: 'Cliente', lastName: 'Asesor', docType: 'CC', docNumber: '930000001' })).json?.data;
+  comprobar('su propio cliente sí se lee: 200', (await estado('GET', `/clients/${cliAsesor?.id}`)) === 200);
+  comprobar('…y se edita: 200', (await estado('PUT', `/clients/${cliAsesor?.id}`, { phone: '3009998877' })) === 200);
+  comprobar('el admin sigue leyendo el cliente del asesor: 200', (await pedir('GET', `/clients/${cliAsesor?.id}`, tokA)).status === 200);
+
+  // Spec 020: editar y borrar con alcance propio. El superadmin reconfigura el rol
+  // asesor de A: "ver todas, editar solo las suyas, no borrar".
+  console.log('\n  Editar y borrar con alcance propio (spec 020)');
+  const tokPermisos = await entrar(correoSuper);
+  const guardarAsesor = async (cambios) => {
+    const actuales = (await pedir('GET', '/roles/asesor/permissions', tokPermisos)).json?.data || {};
+    const permisos = Object.fromEntries(Object.entries(actuales).map(([m, a]) => [m, { ...a, ...(cambios[m] || {}) }]));
+    return pedir('PUT', '/roles/asesor/permissions', tokPermisos, { permissions: permisos });
+  };
+  const r1 = await guardarAsesor({ sales: { view: 'all', edit: 'own', delete: 'none' }, clients: { view: 'all', edit: 'own' } });
+  comprobar('el superadmin guarda "ver todas · editar las suyas · borrar ninguna"', r1.status === 200, `HTTP ${r1.status}`);
+  comprobar('el asesor ve la venta del admin: 200', (await estado('GET', `/sales/${ventaA.id}`)) === 200);
+  comprobar('…pero no la edita: 403', (await estado('PUT', `/sales/${ventaA.id}`, { observations: 'spec 020' })) === 403);
+  comprobar('…ni la cobra: 403', (await estado('POST', `/sales/${ventaA.id}/payments`, { amount: 1 })) === 403);
+  comprobar('…ni la borra: 403', (await estado('DELETE', `/sales/${ventaA.id}`)) === 403);
+  comprobar('edita la suya: 200', (await estado('PUT', `/sales/${ventaPropia?.id}`, { observations: 'spec 020' })) === 200);
+  comprobar('borrar la suya tampoco (borrar: ninguna): 403', (await estado('DELETE', `/sales/${ventaPropia?.id}`)) === 403);
+  comprobar('ve el cliente del admin: 200', (await estado('GET', `/clients/${cliA.id}`)) === 200);
+  comprobar('…pero no lo edita: 403', (await estado('PUT', `/clients/${cliA.id}`, { phone: '3009998877' })) === 403);
+  comprobar('edita el suyo: 200', (await estado('PUT', `/clients/${cliAsesor?.id}`, { phone: '3009998866' })) === 200);
+
+  await guardarAsesor({ sales: { view: 'all', edit: 'all' } });
+  comprobar('con "editar: todas" edita la del admin: 200', (await estado('PUT', `/sales/${ventaA.id}`, { observations: 'spec 020' })) === 200);
+
+  await guardarAsesor({ clients: { view: 'own', edit: 'all' } });
+  const recortado = (await pedir('GET', '/roles/asesor/permissions', tokPermisos)).json?.data?.clients;
+  comprobar('"ver: las suyas · editar: todas" se guarda recortado a "las suyas"', recortado?.edit === 'own', JSON.stringify(recortado));
+  const esquema = (await pedir('GET', '/roles/schema', tokPermisos)).json?.data;
+  const tiposVentas = esquema?.modules?.find(m => m.key === 'sales')?.actions?.map(a => `${a.key}:${a.type}`).join(',');
+  comprobar('el esquema del panel describe editar y borrar de ventas como alcance', tiposVentas === 'view:scope,create:boolean,edit:scope,delete:scope', tiposVentas);
+
   // ── 5. Liquidaciones de comisiones
   console.log('\n  Liquidación de comisiones');
   const agente = (await pedir('POST', '/commissions/agents', tokA, { name: 'Comisionista A', type: 'freelance', docType: 'CC', docNumber: '920000001', paymentThreshold: 1000 })).json?.data;

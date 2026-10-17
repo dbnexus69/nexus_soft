@@ -12,6 +12,10 @@ const MOTIVO_SIN_ENVIO = {
 };
 const emailService = require('../utils/emailService');
 const { enHoraColombia, fechaEnColombia, rangoDeDias } = require('../utils/fechas');
+const { alcanceDeEscritura } = require('../utils/alcancePermisos');
+
+// El check-in con el alcance de EDITAR (spec 020), con el tope de ver: no el de ver solo.
+const escribeSoloLasSuyas = (alcance = {}) => alcanceDeEscritura(alcance) === 'own' && Boolean(alcance.user);
 
 // Los formateadores se crean una vez, no en cada petición: construir un
 // Intl.DateTimeFormat es caro y antes se hacían dos por llamada.
@@ -262,6 +266,9 @@ function mapearTramo(t, tipo) {
     // cancelación con motivo. Un vuelo de plan, de momento, no.
     source: 'ticket',
     saleId: venta?.id || null,
+    // Quién atendió la venta: la pantalla oculta el check-in de las ajenas cuando el
+    // alcance de editar es 'own' (spec 020).
+    asesorId: venta?.usuario_id ?? null,
     pnr: t.prod_tiqueteria?.nro_reserva || '',
     reservationNumber: t.prod_tiqueteria?.nro_reserva || '',
     // La aerolínea del TRAMO manda: un itinerario puede mezclar aerolíneas y el
@@ -514,6 +521,7 @@ function expandirPlan(plan) {
       source: 'plan',
       planId: plan.id,
       saleId: venta?.id || null,
+      asesorId: venta?.usuario_id ?? null,
       pnr: plan.nro_reserva || '',
       reservationNumber: plan.nro_reserva || '',
       planName: plan.nombre_plan || plan.paquetes?.nombre || '',
@@ -851,7 +859,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
+    if (escribeSoloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede registrar el check-in de una venta de otro asesor');
     }
 
@@ -957,7 +965,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
+    if (escribeSoloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede registrar el check-in de una venta de otro asesor');
     }
 
@@ -1000,7 +1008,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
+    if (escribeSoloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede cancelar el check-in de una venta de otro asesor');
     }
 
@@ -1044,7 +1052,7 @@ class FlightsService {
     if (!venta || venta.deleted_at || venta.status === 'anulado') {
       throw new BadRequestError('La venta de este vuelo no está vigente');
     }
-    if (soloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
+    if (escribeSoloLasSuyas({ permissionScope, viewScope, user }) && venta.usuario_id !== user.id) {
       throw new ForbiddenError('No puede cancelar el check-in de una venta de otro asesor');
     }
     if (tramo.checkin_status === 'cancelado') {

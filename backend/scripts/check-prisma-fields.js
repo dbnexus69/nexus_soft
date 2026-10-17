@@ -19,7 +19,6 @@
  */
 const { Prisma } = require('@prisma/client');
 const fs = require('fs');
-const { execSync } = require('child_process');
 
 const modelos = new Map();
 for (const m of Prisma.dmmf.datamodel.models) {
@@ -105,7 +104,10 @@ function clavesDe(txt) {
 }
 
 const hallazgos = [];
-const archivos = execSync('find src -name "*.js"').toString().trim().split('\n');
+// Sin `find`: en PowerShell/cmd es el `find.exe` de Windows ("Access denied - SRC").
+const archivos = fs.readdirSync('src', { recursive: true })
+  .filter(f => f.endsWith('.js'))
+  .map(f => `src/${f.replace(/\\/g, '/')}`);
 
 for (const f of archivos) {
   const src = sinComentarios(fs.readFileSync(f, 'utf8'));

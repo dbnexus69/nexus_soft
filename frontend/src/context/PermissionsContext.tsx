@@ -13,7 +13,17 @@ interface PermissionsContextType {
   canDelete: (module: keyof RolePermissions) => boolean;
   canCreate: (module: keyof RolePermissions) => boolean;
   canView: (module: keyof RolePermissions) => boolean;
+  /**
+   * Sobre qué registros puede hacer `action` (spec 020): el de la acción con el tope
+   * del de ver, igual que `authorize` en el servidor. 'all' en las acciones sí/no
+   * concedidas; 'none' en las denegadas.
+   */
+  scopeOf: (module: keyof RolePermissions, action: string) => 'all' | 'own' | 'none';
 }
+
+const RANGO = { none: 0, own: 1, all: 2 } as const;
+const aAlcance = (v: unknown): 'all' | 'own' | 'none' =>
+  v === 'all' || v === 'own' || v === 'none' ? v : v === true || v === 'true' ? 'all' : 'none';
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
@@ -78,7 +88,7 @@ export function PermissionsProvider({
     if (atajo(module)) return true;
     const perm = permissions[module] as ModulePermission;
     if (!perm) return false;
-    if ('delete' in perm) return perm.delete === true;
+    if ('delete' in perm) return perm.delete === true || perm.delete === 'all' || perm.delete === 'own';
     return false;
   };
 
@@ -102,8 +112,18 @@ export function PermissionsProvider({
     return true;
   };
 
+  const scopeOf = (module: keyof RolePermissions, action: string): 'all' | 'own' | 'none' => {
+    if (atajo(module)) return 'all';
+    const perm = permissions[module] as ModulePermission | undefined;
+    if (!perm || !(action in perm)) return 'none';
+    const accion = aAlcance(perm[action]);
+    if (action === 'view' || typeof perm.view !== 'string') return accion;
+    const ver = aAlcance(perm.view);
+    return RANGO[accion] <= RANGO[ver] ? accion : ver;
+  };
+
   return (
-    <PermissionsContext.Provider value={{ permissions, can, canEdit, canDelete, canCreate, canView }}>
+    <PermissionsContext.Provider value={{ permissions, can, canEdit, canDelete, canCreate, canView, scopeOf }}>
       {children}
     </PermissionsContext.Provider>
   );

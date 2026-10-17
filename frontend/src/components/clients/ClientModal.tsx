@@ -5,6 +5,7 @@ import { Input, Select, FormField } from "../ui/Form";
 import { DatePicker } from "../sales/forms/TicketForm";
 import AvatarPicker, { AVATARS } from "../ui/AvatarPicker";
 import { Client } from "../../types";
+import { DestinosField } from "./DestinosField";
 import { capitalizeName, todayStr } from "../../utils/formatters";
 import {
   documentoSoloNumeros, limpiarDocumento, limpiarNombre, limpiarTelefono,
@@ -39,6 +40,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     address: "",
     birthDate: "",
     avatar: AVATARS[0],
+    destinations: [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -56,6 +58,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         address: editingClient.address,
         birthDate: editingClient.birthDate,
         avatar: editingClient.avatar || AVATARS[0],
+        destinations: editingClient.destinations || [],
       });
     } else {
       setFormData({
@@ -68,6 +71,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         address: "",
         birthDate: "",
         avatar: AVATARS[0],
+        destinations: [],
       });
     }
     setErrors({});
@@ -141,8 +145,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
       const sueltos: string[] = [];
       for (const d of detalles) {
         // El servidor nombra el tipo `docTypeId`; en esta pantalla su campo es `docType`.
-        const campo = d.field === "docTypeId" ? "docType" : d.field;
-        if (CAMPOS_DEL_FORMULARIO.includes(campo)) porCampo[campo] = d.message;
+        // `destinations` y `destinations.<i>` se pintan juntos, bajo el campo de destinos.
+        const campo = d.field === "docTypeId" ? "docType" : d.field.startsWith("destinations") ? "destinations" : d.field;
+        if (CAMPOS_DEL_FORMULARIO.includes(campo) || campo === "destinations") porCampo[campo] = d.message;
         else sueltos.push(d.message);
       }
       const general = detalles.length === 0 ? respuesta?.message || err?.message || "Error al guardar" : sueltos.join(". ");
@@ -289,6 +294,14 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                   />
                 </FormField>
               </div>
+              <DestinosField
+                value={formData.destinations || []}
+                onChange={(destinations) => {
+                  setFormData((prev) => ({ ...prev, destinations }));
+                  setErrors((prev) => ({ ...prev, destinations: "" }));
+                }}
+                error={errors.destinations}
+              />
             </div>
           </div>
 

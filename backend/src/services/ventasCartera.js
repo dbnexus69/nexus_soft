@@ -250,6 +250,7 @@ async function getCreditPortfolio({ pagination, search, status, bucket, sortBy, 
           cp.nombres || ' ' || cp.apellidos AS "clientName",
           cp.documento  AS "clientDocNumber",
           cp.email      AS "clientEmail",
+          cp.telefono   AS "clientPhone",
           cp.avatar_url AS "clientAvatar"
         FROM clasificados c2
         JOIN clientes c ON c2.cliente_id = c.id
@@ -306,6 +307,7 @@ async function getCreditPortfolio({ pagination, search, status, bucket, sortBy, 
       name: f.clientName,
       docNumber: f.clientDocNumber,
       email: f.clientEmail,
+      phone: f.clientPhone,
       avatar: f.clientAvatar,
     },
     ...mapearResumenCliente(f),
@@ -384,6 +386,7 @@ async function getClientCredits(clientId, { pagination, permissionScope, viewSco
           cp.nombres || ' ' || cp.apellidos AS "clientName",
           cp.documento  AS "clientDocNumber",
           cp.email      AS "clientEmail",
+          cp.telefono   AS "clientPhone",
           cp.avatar_url AS "clientAvatar"
         FROM clasificados c2
         JOIN clientes c ON c2.cliente_id = c.id
@@ -393,14 +396,26 @@ async function getClientCredits(clientId, { pagination, permissionScope, viewSco
       tx.$queryRawUnsafe(`
         ${baseSql}
         SELECT
-          venta_id, creado_at, venta_status, fecha_vence_credito,
-          monto_total::float AS total, pagado::float AS paid, pendiente::float AS pending,
-          COALESCE(dias_mora, 0)::int AS "daysOverdue", liquidada, tramo
-        FROM por_credito
-        WHERE NOT liquidada
+          pc.venta_id, pc.creado_at, pc.venta_status, pc.fecha_vence_credito,
+          pc.monto_total::float AS total, pc.pagado::float AS paid, pc.pendiente::float AS pending,
+          COALESCE(pc.dias_mora, 0)::int AS "daysOverdue", pc.liquidada, pc.tramo,
+          -- El número de la agencia, no el id global; quién la atendió; y el último abono.
+          v.numero, v.usuario_id AS "advisorId",
+          NULLIF(btrim(COALESCE(ap.nombres, '') || ' ' || COALESCE(ap.apellidos, '')), '') AS "advisorName",
+          ult.fecha_pago AS "lastPaymentDate", ult.monto::float AS "lastPaymentAmount"
+        FROM por_credito pc
+        JOIN ventas v ON v.id = pc.venta_id
+        LEFT JOIN usuarios au ON au.id = v.usuario_id
+        LEFT JOIN personas ap ON ap.id = au.persona_id
+        LEFT JOIN LATERAL (
+          SELECT p.fecha_pago, p.monto FROM pagos_venta p
+          WHERE p.venta_id = pc.venta_id
+          ORDER BY p.fecha_pago DESC LIMIT 1
+        ) ult ON true
+        WHERE NOT pc.liquidada
         -- Lo más atrasado primero, que es el orden en que se cobra. Los sin
         -- fecha van al final: no tienen vencimiento con el que ordenarlos.
-        ORDER BY dias_mora DESC NULLS LAST, fecha_vence_credito ASC NULLS LAST, venta_id ASC
+        ORDER BY pc.dias_mora DESC NULLS LAST, pc.fecha_vence_credito ASC NULLS LAST, pc.venta_id ASC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `, ...params, perPage, skip),
 
@@ -417,6 +432,9 @@ async function getClientCredits(clientId, { pagination, permissionScope, viewSco
   return {
     data: creditos.map(c => ({
       saleId: c.venta_id,
+      numero: c.numero,
+      advisor: c.advisorId ? { id: c.advisorId, name: c.advisorName } : null,
+      lastPayment: c.lastPaymentDate ? { date: c.lastPaymentDate, amount: c.lastPaymentAmount } : null,
       date: c.creado_at,
       saleStatus: c.venta_status,
       dueDate: c.fecha_vence_credito,
@@ -433,6 +451,7 @@ async function getClientCredits(clientId, { pagination, permissionScope, viewSco
         name: r.clientName,
         docNumber: r.clientDocNumber,
         email: r.clientEmail,
+        phone: r.clientPhone,
         avatar: r.clientAvatar,
       },
       summary: mapearResumenCliente(r),

@@ -6,6 +6,7 @@ import { Badge } from '../ui/Badge';
 import { Pagination } from '../ui/Pagination';
 import { useData } from '../../context/DataContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatDate, formatDateTime } from '../../utils/formatters';
 import * as api from '../../api';
 import type { Flight, CheckinCounts, CheckinStatusFilter } from '../../types';
@@ -32,6 +33,12 @@ interface Props {
 export function ListaCheckin({ refresco, onCambio, onContadores, avisar }: Props) {
   const { data, updateFlight } = useData();
   const { canEdit: canEditItinerary } = usePermissions();
+  const { scopeOf } = usePermissions();
+  const { user } = useAuth();
+  // El check-in de un vuelo ajeno se oculta con alcance de editar 'own' (spec 020).
+  const alcanceCheckin = scopeOf('itineraries', 'edit');
+  const puedeEditarVuelo = (flight: Flight) =>
+    alcanceCheckin === 'all' || (alcanceCheckin === 'own' && flight.asesorId === user?.id);
   const [checkinSearch, setCheckinSearch] = useState('');
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [selectedFlightForCheckin, setSelectedFlightForCheckin] = useState<Flight | null>(null);
@@ -409,7 +416,7 @@ export function ListaCheckin({ refresco, onCambio, onContadores, avisar }: Props
                                     {flight.checkinAt ? formatDateTime(flight.checkinAt) : 'Realizado'}
                                   </span>
                                   {/* Deshacer un check-in marcado por error. */}
-                                  {canEditItinerary('itineraries') ? (
+                                  {puedeEditarVuelo(flight) ? (
                                     <button
                                       onClick={() => handleRevertCheckin(flight)}
                                       disabled={revirtiendoId === flight.id}
@@ -419,7 +426,7 @@ export function ListaCheckin({ refresco, onCambio, onContadores, avisar }: Props
                                     </button>
                                   ) : null}
                                 </>
-                              ) : canEditItinerary('itineraries') ? (
+                              ) : puedeEditarVuelo(flight) ? (
                                 <>
                                   <Button
                                     size="sm"
@@ -442,7 +449,7 @@ export function ListaCheckin({ refresco, onCambio, onContadores, avisar }: Props
                                 </>
                               ) : null}
                               {/* Los vuelos de paquete también se cancelan con motivo (spec 004, T6). */}
-                              {canEditItinerary('itineraries') ? (
+                              {puedeEditarVuelo(flight) ? (
                                 <button
                                   onClick={() => handleOpenCancel(flight)}
                                   title="Cancelar el check-in de este vuelo"

@@ -1,6 +1,9 @@
 const clientsService = require('../services/clients.service');
 const { success } = require('../utils/apiResponse');
 
+// El alcance de quien pide, para leer y escribir un cliente por id (spec 019).
+const alcanceDe = (req) => ({ permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user });
+
 exports.list = async (req, res, next) => {
   try {
     const result = await clientsService.listClients({
@@ -10,9 +13,19 @@ exports.list = async (req, res, next) => {
       permissionScope: req.permissionScope,
       user: req.user,
       sortBy: req.sortBy,
-      sortOrder: req.sortOrder
+      sortOrder: req.sortOrder,
+      destination: req.query.destination?.trim() || undefined,
+      destinationAll: req.query.destinationAll === 'true',
     });
     success(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.destinations = async (req, res, next) => {
+  try {
+    success(res, await clientsService.suggestDestinations(req.query.search?.trim() || ''));
   } catch (err) {
     next(err);
   }
@@ -22,7 +35,7 @@ exports.getById = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     const includeSales = req.query.includeSales === 'true';
-    const data = await clientsService.getClientById(id, includeSales);
+    const data = await clientsService.getClientById(id, includeSales, alcanceDe(req));
     success(res, data);
   } catch (err) {
     next(err);
@@ -48,7 +61,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await clientsService.updateClient(id, req.validatedBody);
+    const result = await clientsService.updateClient(id, req.validatedBody, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);
@@ -58,7 +71,7 @@ exports.update = async (req, res, next) => {
 exports.toggleStatus = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await clientsService.toggleClientStatus(id);
+    const result = await clientsService.toggleClientStatus(id, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);
@@ -68,7 +81,7 @@ exports.toggleStatus = async (req, res, next) => {
 exports.uploadAvatar = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await clientsService.uploadAvatar(id, req.file);
+    const result = await clientsService.uploadAvatar(id, req.file, alcanceDe(req));
     success(res, result);
   } catch (err) {
     next(err);

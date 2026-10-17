@@ -5,7 +5,7 @@ export {
   updateRolePermissions, getRolePermissions, getRolesSchema,
 } from './users';
 export {
-  listClients, getClient, createClient, updateClient, toggleClientStatus,
+  listClients, getClient, createClient, updateClient, toggleClientStatus, suggestDestinations,
 } from './clients';
 export {
   listResponsables, getResponsable, createResponsable, updateResponsable, deleteResponsable,

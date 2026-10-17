@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Pagination } from '../ui/Pagination';
-import { Plane } from 'lucide-react';
+import { ChevronDown, MapPin, Plane } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import * as api from '../../api';
 import { Client, Sale } from '../../types';
@@ -16,6 +16,49 @@ interface ClientDetailModalProps {
 }
 
 const PER_PAGE = 5;
+
+/**
+ * El destino reciente y, si hay más, "+N" que despliega todos, del más nuevo al más viejo
+ * (spec 017).
+ */
+function DestinosDePreferencia({ destinos }: { destinos: string[] }) {
+  const [abierto, setAbierto] = useState(false);
+  const idLista = useId();
+  if (!destinos.length) return <span className="font-semibold text-gray-500 dark:text-slate-400">Sin destinos de preferencia</span>;
+  const recientesPrimero = [...destinos].reverse();
+  const otros = recientesPrimero.length - 1;
+  return (
+    <div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-semibold text-gray-900 dark:text-white flex items-center gap-1">
+          <MapPin size={14} className="text-accent" aria-hidden="true" /> {recientesPrimero[0]}
+        </span>
+        {otros > 0 && (
+          <button
+            type="button"
+            onClick={() => setAbierto(a => !a)}
+            aria-expanded={abierto}
+            aria-controls={idLista}
+            aria-label={`Ver los ${destinos.length} destinos`}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+          >
+            +{otros} <ChevronDown size={12} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      {abierto && (
+        <ol id={idLista} className="mt-2 space-y-1 text-sm text-gray-700 dark:text-slate-300">
+          {recientesPrimero.map((d, i) => (
+            <li key={d} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-4 text-right">{i + 1}.</span> {d}
+              {i === 0 && <span className="text-xs text-accent">(reciente)</span>}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
 
 export default function ClientDetailModal({ isOpen, onClose, client, clientFlights }: ClientDetailModalProps) {
   // Las compras del cliente se piden aquí, paginadas y filtradas por su id.
@@ -129,6 +172,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, clientFligh
                 <div className="min-w-0"><span className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Correo</span> <span className="font-semibold text-gray-900 dark:text-white block break-all">{client.email}</span></div>
                 <div><span className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">F. Nacimiento</span> <span className="font-semibold text-gray-900 dark:text-white">{client.birthDate ? formatDate(client.birthDate) : 'N/A'}</span></div>
                 <div><span className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Registro</span> <span className="font-semibold text-gray-900 dark:text-white">{formatDate(client.registrationDate)}</span></div>
+                <div className="sm:col-span-2"><span className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Destino de preferencia</span> <DestinosDePreferencia destinos={client.destinations || []} /></div>
               </div>
             </div>
 

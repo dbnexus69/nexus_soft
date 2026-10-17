@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Search, X, Users as UsersIcon, UserX, UserCheck } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Form';
+import { AsyncCombobox } from '../components/ui/AsyncCombobox';
+import { suggestDestinations } from '../api/clients';
 import { ClientTable } from '../components/clients/ClientTable';
 import ClientDetailModal from '../components/clients/ClientDetailModal';
 import { ClientModal } from '../components/clients/ClientModal';
@@ -11,6 +13,7 @@ import { useData } from '../context/DataContext';
 import { useClientsContext } from '../context/ClientsContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { Client } from '../types';
 
 export default function Clients() {
@@ -20,9 +23,27 @@ export default function Clients() {
     loading: clientsLoading, 
     handleCreateClient: addClient, 
     handleUpdateClient: updateClient, 
-    handleToggleStatus: toggleClientStatus 
+    handleToggleStatus: toggleClientStatus,
+    setDestination,
+    destinationAll,
+    setDestinationAll,
   } = useClientsContext();
-  const { canCreate, canEdit } = usePermissions();
+  // El filtro de destino va al servidor (spec 017), con espera de 350 ms como la búsqueda de ventas.
+  const [destinoEscrito, setDestinoEscrito] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDestination(destinoEscrito.trim().slice(0, 60)), 350);
+    return () => clearTimeout(t);
+  }, [destinoEscrito, setDestination]);
+  const buscarDestinos = useCallback(
+    async (q: string) => (await suggestDestinations(q.trim().slice(0, 60))).map(d => ({ value: d, label: d })),
+    [],
+  );
+  const { canCreate, scopeOf } = usePermissions();
+  const { user } = useAuth();
+  // Editar según su alcance (spec 020): todos, o solo los que creó.
+  const alcanceEditar = scopeOf('clients', 'edit');
+  const puedeEditar = (client: Client) =>
+    alcanceEditar === 'all' || (alcanceEditar === 'own' && client.createdBy === user?.id);
   const { success, error } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -166,6 +187,24 @@ export default function Clients() {
               <option value="active">Solo Activos</option>
               <option value="inactive">Solo Inactivos</option>
             </select>
+            <AsyncCombobox
+              className="w-56"
+              value={destinoEscrito}
+              onChange={(v) => setDestinoEscrito(v)}
+              fetchOptions={buscarDestinos}
+              placeholder="Destino de preferencia"
+              emptyText="Sin sugerencias"
+              ariaLabel="Filtrar por destino de preferencia"
+            />
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={destinationAll}
+                onChange={e => setDestinationAll(e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              Incluir destinos anteriores
+            </label>
             {canCreate('clients') && (
               <Button 
                 onClick={() => handleOpenModal()}
@@ -189,7 +228,7 @@ export default function Clients() {
             onViewDetail={handleViewDetail}
             onEdit={handleOpenModal}
             onToggleStatus={handleToggleStatus}
-            canEdit={canEdit('clients')}
+            canEdit={puedeEditar}
           />
         </div>
       </Card>

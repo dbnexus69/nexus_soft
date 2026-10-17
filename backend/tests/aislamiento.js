@@ -99,6 +99,8 @@ async function main() {
   await admin.detalle_cotizacion.create({
     data: { id: randomUUID(), empresa_id: otra.id, cotizacion_id: cotizacion.id, categoria: 'hotel', descripcion: 'Linea ajena' },
   });
+  // Spec 017: un destino de preferencia del cliente ajeno.
+  await admin.cliente_destinos.create({ data: { empresa_id: otra.id, cliente_id: cli.id, destino: 'Destino ajeno', orden: 1 } });
 
   const propias = await admin.ventas.count({ where: { empresa_id: 1 } });
   const totales = await admin.ventas.count();
@@ -109,6 +111,7 @@ async function main() {
     crudo: Number((await prisma.$queryRawUnsafe('SELECT count(*)::int AS n FROM ventas'))[0].n),
     clientes: await prisma.clientes.count(),
     cotizaciones: await prisma.cotizaciones.count(),
+    destinoAjeno: await prisma.cliente_destinos.count({ where: { destino: 'Destino ajeno' } }),
   }));
   const a = await mirar(1);
   const b = await mirar(otra.id);
@@ -122,6 +125,7 @@ async function main() {
   );
   comprobar('lo mismo con los clientes', b.clientes === 1);
   comprobar('lo mismo con las cotizaciones (spec 007)', b.cotizaciones === 1);
+  comprobar('el destino de preferencia ajeno no se ve (spec 017)', a.destinoAjeno === 0 && b.destinoAjeno === 1, `${a.destinoAjeno} y ${b.destinoAjeno}`);
 
   // ── 3. Leer por id un registro ajeno
   const ajena = await conEmpresa(1, () => prisma.ventas.findFirst({ where: { id: venta.id } }));
@@ -194,6 +198,14 @@ async function main() {
   });
   comprobar('colgar una línea propia de una cotización de otra empresa queda rechazado', detalleCruzado === 'rechazado');
 
+  const destinoCruzado = await conEmpresa(1, async () => {
+    try {
+      await prisma.$executeRawUnsafe('INSERT INTO cliente_destinos (cliente_id, destino, orden) VALUES ($1,$2,1)', cli.id, 'intento cruzado');
+      return 'pasó';
+    } catch { return 'rechazado'; }
+  });
+  comprobar('colgar un destino propio de un cliente de otra empresa queda rechazado (spec 017)', destinoCruzado === 'rechazado');
+
   // Y que las claves que lo impiden sigan puestas: un diff del schema que las
   // tirara dejaría las pruebas de arriba en verde igualmente, porque la RLS
   // seguiría filtrando. Lo único que avisa es contarlas.
@@ -201,9 +213,9 @@ async function main() {
     SELECT count(*)::int AS n FROM pg_constraint
     WHERE contype = 'f' AND conname LIKE '%_empresa_fkey'`);
   // Eran 56 antes de spec 007: +4 nuevas (`cotizaciones`→cliente/usuario/venta y
-  // `detalle_cotizacion`→cotizacion_id). Una clave compuesta nueva sube este número;
-  // una que desaparece lo baja y pone esto en rojo.
-  const ESPERADAS = 60;
+  // `detalle_cotizacion`→cotizacion_id), y +1 en spec 017 (`cliente_destinos`→cliente).
+  // Una clave compuesta nueva sube este número; una que desaparece lo baja y pone esto en rojo.
+  const ESPERADAS = 61;
   comprobar('siguen las claves ajenas compuestas', compuestas === ESPERADAS, `${compuestas} de ${ESPERADAS}`);
 
   // ── 4c. El número propio de cada agencia

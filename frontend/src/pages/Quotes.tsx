@@ -13,6 +13,8 @@ import { Badge } from "../components/ui/Badge";
 import { Pagination } from "../components/ui/Pagination";
 import { Step2Products } from "../components/sales/steps/Step2Products";
 import { ProductFormsModal } from "../components/sales/wizard/ProductFormsModal";
+import { ServiceRow } from "../components/sales/detail/ServiceRow";
+import { olvidarBorradorEnMemoria } from "../components/sales/NewSaleWizard";
 import { useQuotesContext } from "../context/QuotesContext";
 import { usePermissions } from "../context/PermissionsContext";
 import { useAuth } from "../context/AuthContext";
@@ -29,6 +31,25 @@ const ESTADO_BADGE: Record<string, string> = {
 const ESTADO_LABEL: Record<string, string> = {
   borrador: "Borrador", enviada: "Enviada", aceptada: "Aceptada", rechazada: "Rechazada", vencida: "Vencida",
 };
+
+/**
+ * Las líneas de la cotización agrupadas por categoría, en la forma que espera `ServiceRow`
+ * (la misma fila desplegable del detalle de una venta — spec 007, T15: antes la vista de
+ * solo lectura solo mostraba el resumen corto de una línea, no el detalle completo del
+ * servicio). `iva`/`subtotal` no viven en `detalle` (eso lo pone la cotización al guardar,
+ * no el formulario), así que se agregan aquí para que el precio que pinta la fila sea el
+ * mismo que ya cobra la cotización.
+ */
+function lineasPorCategoria(lines: Quote["lines"]) {
+  const grupos = new Map<string, { cantidad: number; items: Record<string, unknown>[] }>();
+  for (const l of lines) {
+    const g = grupos.get(l.categoria) ?? { cantidad: 0, items: [] };
+    g.cantidad += 1;
+    g.items.push({ ...(l.detalle || {}), iva: l.iva, subtotal: l.precio });
+    grupos.set(l.categoria, g);
+  }
+  return Array.from(grupos, ([categoria, g]) => ({ categoria, ...g }));
+}
 
 /**
  * Cada categoría, a qué array de `WizardFormData` corresponde y con qué clave viaja en el
@@ -75,6 +96,8 @@ export default function Quotes() {
   // Aceptada o rechazada: el backend ya no deja editarla, así que se muestra en
   // una vista de solo lectura en vez del mismo formulario de edición.
   const [readOnlyView, setReadOnlyView] = useState(false);
+  // Qué categoría está desplegada en la vista de solo lectura (spec 007, T15).
+  const [categoriaAbierta, setCategoriaAbierta] = useState<string | null>(null);
 
   // El mismo cuerpo que arma el asistente de venta, salvo el cliente: una cotización
   // no pide ninguno (no se sabe si se va a cerrar) — se elige uno solo al convertirla
@@ -164,6 +187,7 @@ export default function Quotes() {
   const openEdit = (q: Quote) => {
     setEditing(q);
     setReadOnlyView(!puedeEditar(q));
+    setCategoriaAbierta(null);
     setName(q.name || "");
     setFechaVencimiento(q.fechaVencimiento ? q.fechaVencimiento.slice(0, 10) : "");
 
@@ -180,7 +204,9 @@ export default function Quotes() {
       const mapa = CATEGORIA_A_ARRAY[linea.categoria];
       if (!mapa || !linea.detalle) continue;
       if (!seleccionadas.includes(linea.categoria)) seleccionadas.push(linea.categoria);
-      (next as any)[mapa.key] = [...(next as any)[mapa.key], linea.detalle];
+      // `lineId` (spec 021): sin el id ya guardado de esta línea, `ImagesField` no tiene a
+      // dónde subir una foto. Un producto recién agregado, todavía sin guardar, no lo trae.
+      (next as any)[mapa.key] = [...(next as any)[mapa.key], { ...linea.detalle, lineId: linea.id }];
     }
     next.selectedProducts = seleccionadas;
     setDraft(next);
@@ -206,7 +232,12 @@ export default function Quotes() {
       for (const categoria of Object.keys(CATEGORIA_A_ARRAY)) {
         const { key, requestKey } = CATEGORIA_A_ARRAY[categoria];
         const items = (draft as any)[key] as unknown[];
-        if (items && items.length > 0) body[requestKey] = items;
+        // `lineId` es puro acompañamiento de pantalla (spec 021, para que `ImagesField` sepa a
+        // qué línea subir); no es un campo del servicio y no tiene que guardarse dentro de
+        // `detalle` — quedaría apuntando a una línea distinta en cuanto se reemplacen los ids.
+        if (items && items.length > 0) {
+          body[requestKey] = items.map(({ lineId, ...resto }: any) => resto);
+        }
       }
       if (editing) await handleUpdateQuote(editing.id, body);
       else await handleCreateQuote(body);
@@ -276,6 +307,10 @@ export default function Quotes() {
       form.selectedProducts = seleccionadas;
 
       localStorage.setItem(draftKey, JSON.stringify(form));
+      // Si un asistente anterior quedó abierto (y cerrado sin terminar la venta) para
+      // otra cotización, su copia en memoria pesa más que este localStorage recién
+      // escrito — sin esto, el asistente seguía mostrando la cotización vieja.
+      olvidarBorradorEnMemoria(draftKey);
       navigate(`/sales?fromQuote=${q.id}`);
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.error?.message || "No se pudo convertir la cotización");
@@ -471,6 +506,7 @@ export default function Quotes() {
               onSwitchForm={(productId, idx) => { setActiveForm(productId); setActiveIdx(idx); }}
               triggerError={(msg) => setErrorMsg(msg)}
               cotizando
+              quoteId={editing?.id}
             />
           ) : readOnlyView && editing ? (
             <>
@@ -507,24 +543,19 @@ export default function Quotes() {
                 {editing.observations && (
                   <div className="text-sm"><span className="text-gray-500">Observaciones: </span>{editing.observations}</div>
                 )}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-slate-800 text-left text-xs uppercase text-gray-500">
-                        <th className="py-2 pr-3">Servicio</th>
-                        <th className="py-2 pr-3 text-right">Precio</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                      {editing.lines.map((l) => (
-                        <tr key={l.id}>
-                          <td className="py-2 pr-3">{l.descripcion}</td>
-                          <td className="py-2 pr-3 text-right tabular-nums">{formatCurrency(l.precio)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ul className="border border-gray-100 dark:border-slate-800 rounded-xl overflow-hidden">
+                  {lineasPorCategoria(editing.lines).map((g) => (
+                    <ServiceRow
+                      key={g.categoria}
+                      categoria={g.categoria}
+                      cantidad={g.cantidad}
+                      items={g.items}
+                      abierta={categoriaAbierta === g.categoria}
+                      cargando={false}
+                      onToggle={(c) => setCategoriaAbierta((prev) => (prev === c ? null : c))}
+                    />
+                  ))}
+                </ul>
                 <div className="rounded-xl bg-primary/5 px-4 py-3 text-right">
                   <span className="text-xs font-bold uppercase text-gray-500 mr-2">Total</span>
                   <span className="font-black tabular-nums text-primary">{formatCurrency(editing.totals.total)}</span>

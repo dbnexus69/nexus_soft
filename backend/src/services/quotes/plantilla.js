@@ -40,14 +40,28 @@ function porCategoria(lineas) {
 }
 
 /**
+ * Las fotos de un servicio (spec 021), una fila de miniaturas debajo de su bloque de detalle.
+ * `rutas` son las que trae `detalle.images`; `porRuta` es el mapa ruta→Buffer que ya descargó
+ * `services/quotes/index.js` (pdfmake necesita los bytes, no una URL). Una ruta sin Buffer
+ * (falló la descarga) simplemente no se pinta, no rompe el documento.
+ */
+function bloqueImagenes(rutas, porRuta) {
+  if (!Array.isArray(rutas) || !rutas.length) return [];
+  const columnas = rutas.map(r => porRuta[r]).filter(Boolean)
+    .map(buffer => ({ image: buffer, fit: [150, 110], margin: [0, 0, 8, 8] }));
+  if (!columnas.length) return [];
+  return [{ columns: columnas, margin: [0, 0, 0, 6] }];
+}
+
+/**
  * La definición del documento.
  * @param cotizacion  como la devuelve `quotes.service.js` (`mapCotizacion`): { numero, name,
  *                    clientName, estado, fechaVencimiento, observations, creadoAt, lines:
  *                    [{categoria, descripcion, detalle, precio}], totals: { total } }
  * @param config      { nombre, nit, direccion, telefono, emailContacto, sitioWeb, colores, pie }
- * @param extra       { logo: Buffer|null, aeropuertos: { BOG: 'Bogotá' }, hoy: Date }
+ * @param extra       { logo: Buffer|null, aeropuertos: { BOG: 'Bogotá' }, imagenes: { ruta: Buffer }, hoy: Date }
  */
-function definicion(cotizacion, config, { logo = null, aeropuertos = {}, hoy = new Date() } = {}) {
+function definicion(cotizacion, config, { logo = null, aeropuertos = {}, imagenes = {}, hoy = new Date() } = {}) {
   const c = {
     primario: config.colores?.primario || '#1e293b',
     acento: config.colores?.acento || '#2563eb',
@@ -63,12 +77,21 @@ function definicion(cotizacion, config, { logo = null, aeropuertos = {}, hoy = n
   const grupos = porCategoria(cotizacion.lines);
   const cuerpo = [];
   if (grupos.ticket?.length) {
-    cuerpo.push(titulo('ITINERARIO DE VUELO', c), ...grupos.ticket.map(t => bloqueTiquete(t, aeropuertos, c)));
+    cuerpo.push(titulo('ITINERARIO DE VUELO', c));
+    for (const t of grupos.ticket) {
+      cuerpo.push(bloqueTiquete(t, aeropuertos, c), ...bloqueImagenes(t.images, imagenes));
+    }
   }
   for (const [clave, nombreSeccion, campos] of SECCIONES) {
     const slug = Object.keys(META).find(s => META[s].responseKey === clave);
-    const items = (grupos[slug] || []).map(x => rejilla(campos(x), c)).filter(Boolean);
-    if (items.length) cuerpo.push(titulo(nombreSeccion, c), ...items.map(i => tarjeta([i], c)));
+    const itemsDeCategoria = grupos[slug] || [];
+    if (!itemsDeCategoria.length) continue;
+    cuerpo.push(titulo(nombreSeccion, c));
+    for (const x of itemsDeCategoria) {
+      const bloque = rejilla(campos(x), c);
+      if (bloque) cuerpo.push(tarjeta([bloque], c));
+      cuerpo.push(...bloqueImagenes(x.images, imagenes));
+    }
   }
 
   // La tabla de precios por servicio: la ve el cliente en una cotización (no en un voucher de

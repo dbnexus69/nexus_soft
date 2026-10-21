@@ -2,7 +2,7 @@ import { LuMapPin } from "react-icons/lu";
 import { TriangleAlert } from "lucide-react";
 import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { MigrationData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DatePicker } from "./TicketForm";
 import { todayStr as todayStrHelper } from "../../../utils/formatters";
 import type { ConfigData } from "../../../types";
@@ -17,9 +17,12 @@ interface MigrationFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin identidad del pasajero — no existe todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function MigrationForm({ migration, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: MigrationFormProps) {
+export function MigrationForm({ migration, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false, quoteId, lineId }: MigrationFormProps) {
   const todayStr = todayStrHelper();
   return (
     <div className="space-y-6 animate-fade-in">
@@ -164,6 +167,16 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={migration.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

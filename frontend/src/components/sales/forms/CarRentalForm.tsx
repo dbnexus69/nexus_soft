@@ -1,7 +1,7 @@
 import { Car } from "lucide-react";
 import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { CarRentalData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -15,9 +15,12 @@ interface CarRentalFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin conductor, licencia ni tarjeta de garantía — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: CarRentalFormProps) {
+export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false, quoteId, lineId }: CarRentalFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -147,6 +150,16 @@ export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={car.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

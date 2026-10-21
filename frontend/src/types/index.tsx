@@ -344,6 +344,10 @@ export interface HotelData {
   observations?: string;
   guests: GuestInfo[];
   linkedToPlanIndex?: number;
+  /** Hasta 5 fotos del servicio, solo mientras se cotiza (spec 021) — rutas/URLs, nunca base64. */
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface PlanData {
@@ -378,6 +382,9 @@ export interface PlanData {
   voucher?: { name: string; base64: string };
   vouchers?: Array<{ name: string; base64: string }>;
   sendVoucher?: boolean;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface InsuranceData {
@@ -393,6 +400,9 @@ export interface InsuranceData {
   startDate: string;
   endDate: string;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface TicketData {
@@ -430,6 +440,9 @@ export interface TicketData {
     nroTiquete?: string;
   }[];
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface CheckInData {
@@ -450,6 +463,9 @@ export interface CheckInData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface MigrationData {
@@ -469,6 +485,9 @@ export interface MigrationData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface SimCardData {
@@ -489,6 +508,9 @@ export interface SimCardData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface CarRentalData {
@@ -508,6 +530,9 @@ export interface CarRentalData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface FincaData {
@@ -533,6 +558,9 @@ export interface FincaData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface TourData {
@@ -557,6 +585,9 @@ export interface TourData {
   guests: GuestInfo[];
   vouchers?: Array<{ name: string; base64: string }>;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface ConventionData {
@@ -581,6 +612,9 @@ export interface ConventionData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface RestaurantData {
@@ -599,6 +633,9 @@ export interface RestaurantData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface VisaData {
@@ -619,6 +656,9 @@ export interface VisaData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface PassportData {
@@ -636,6 +676,9 @@ export interface PassportData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface PetServiceData {
@@ -659,6 +702,9 @@ export interface PetServiceData {
   supplierPaymentMethod?: string;
   ta?: number;
   linkedToPlanIndex?: number;
+  images?: string[];
+  /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
+  lineId?: string;
 }
 
 export interface PaymentRecord {

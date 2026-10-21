@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { AlertCircle, Users, Briefcase, Trash2, PlusCircle, TriangleAlert } from "lucide-react";
 import { FormField, Input, Select, CurrencyInput, Combobox } from "../../ui/Form";
 import { Button } from "../../ui/Button";
+import { ImagesField } from "./VoucherField";
 import { InsuranceData, GuestInfo } from "../../../types";
 import type { AppData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -14,9 +15,12 @@ interface InsuranceFormProps {
   suppliers?: { name: string }[];
   /** Cotizando (spec 007): sin teléfono del cliente ni miembros del grupo — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function InsuranceForm({ insurance, onChange, data, client, suppliers = [], cotizando = false }: InsuranceFormProps) {
+export function InsuranceForm({ insurance, onChange, data, client, suppliers = [], cotizando = false, quoteId, lineId }: InsuranceFormProps) {
   useEffect(() => {
     if (!insurance.phone && client?.phone) {
       onChange({ phone: client.phone });
@@ -237,6 +241,15 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
           )}
         </div>
       </div>
+
+      {cotizando && (
+        <ImagesField
+          images={insurance.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+        />
+      )}
     </div>
   );
 }

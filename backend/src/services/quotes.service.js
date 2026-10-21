@@ -1,6 +1,7 @@
 const { randomUUID: uuidv4 } = require('crypto');
 const prisma = require('../config/db');
-const { BadRequestError, ForbiddenError } = require('../errors/AppError');
+const { BadRequestError, ForbiddenError, NotFoundError } = require('../errors/AppError');
+const almacenamiento = require('../utils/almacenamiento');
 const { datosFinancieros } = require('./saleTotals');
 const { soloLasSuyas, cotizacionVisible } = require('./quotesAlcance');
 const clientsService = require('./clients.service');
@@ -11,6 +12,14 @@ const { buildMeta } = require('../utils/paginationHelper');
 const { fechaEnColombia } = require('../utils/fechas');
 
 const ESTADOS_CERRADOS = ['aceptada', 'rechazada'];
+
+// Spec 021: fotos de un servicio cotizado, para que el cliente vea cómo es.
+const BUCKET_IMAGENES = 'cotizacion-imagenes';
+const MAX_IMAGENES_POR_LINEA = 5;
+const EXT_IMAGEN = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+// Cuánto dura la URL firmada que ve el navegador al abrir la cotización — igual de corta que
+// la del PDF (`urlDeDescarga`); se vuelve a pedir cada vez que se abre.
+const IMAGEN_SEGUNDOS = 300;
 
 /** `null` si no se mandó cliente (una cotización no es una venta: no es obligatorio); si se mandó uno, comprueba que exista. */
 async function idDeClienteExistente(clientId) {
@@ -98,6 +107,23 @@ function mapCotizacion(cotizacion, lineas) {
   };
 }
 
+/**
+ * Las rutas guardadas en `detalle.images` de cada línea, convertidas a URLs firmadas de corta
+ * duración — igual que ya se hace con el PDF. Nunca se manda al navegador la ruta cruda del
+ * bucket. Muta `lines` en el sitio; se usa después de `mapCotizacion`, nunca antes (el PDF
+ * necesita las rutas crudas para descargar los bytes, no una URL que expira).
+ */
+async function resolverImagenesDeLineas(lines) {
+  for (const l of lines) {
+    const rutas = l.detalle?.images;
+    if (!Array.isArray(rutas) || !rutas.length) continue;
+    l.detalle = {
+      ...l.detalle,
+      images: await Promise.all(rutas.map(r => almacenamiento.firmar(BUCKET_IMAGENES, r, IMAGEN_SEGUNDOS))),
+    };
+  }
+}
+
 class QuotesService {
   async listQuotes({ pagination, search, status, alcance = {} }) {
     const { page, perPage, skip } = pagination;
@@ -125,13 +151,20 @@ class QuotesService {
     return { data: filas.map(f => mapCotizacion(f, f.detalle_cotizacion)), meta: buildMeta(total, page, perPage) };
   }
 
-  async getQuoteById(id, alcance = {}) {
+  /**
+   * `resolverImagenes` en `false` solo lo usa el PDF (`services/quotes/index.js`): necesita la
+   * ruta cruda de cada imagen para descargar sus bytes con el service role, no una URL firmada
+   * que de todos modos tendría que volver a bajar por HTTP.
+   */
+  async getQuoteById(id, alcance = {}, { resolverImagenes = true } = {}) {
     const visible = await cotizacionVisible(id, alcance);
     const [cotizacion, lineas] = await Promise.all([
       prisma.cotizaciones.findFirst({ where: { id: visible.id }, include: { clientes: { include: { personas: true } } } }),
       prisma.detalle_cotizacion.findMany({ where: { cotizacion_id: visible.id }, orderBy: { creado_at: 'asc' } }),
     ]);
-    return mapCotizacion(cotizacion, lineas);
+    const mapeada = mapCotizacion(cotizacion, lineas);
+    if (resolverImagenes) await resolverImagenesDeLineas(mapeada.lines);
+    return mapeada;
   }
 
   async createQuote(body, alcance = {}) {
@@ -312,6 +345,71 @@ class QuotesService {
     const venta = await prisma.ventas.findFirst({ where: { id: Number(saleId), deleted_at: null }, select: { id: true } });
     if (!venta) throw new BadRequestError('La venta no existe');
     await prisma.cotizaciones.update({ where: { id: cotizacion.id }, data: { venta_id: venta.id } });
+    return this.getQuoteById(cotizacion.id, alcance);
+  }
+
+  /** La línea, comprobando que de verdad sea de esta cotización (spec 021, mismo resguardo que un producto de venta). */
+  async _lineaDeLaCotizacion(cotizacionId, lineId) {
+    const linea = await prisma.detalle_cotizacion.findFirst({ where: { id: lineId, cotizacion_id: cotizacionId } });
+    if (!linea) throw new NotFoundError('Servicio no encontrado en esta cotización');
+    return linea;
+  }
+
+  /**
+   * Sube una foto de un servicio cotizado (spec 021): primero el archivo al bucket, después la
+   * ruta a `detalle.images` de la línea. Si falla escribir la línea, se borra el archivo recién
+   * subido — no se queda un huérfano por un fallo a mitad de camino.
+   */
+  async addLineImage(id, lineId, fichero, alcance = {}) {
+    const cotizacion = await cotizacionVisible(id, alcance, { paraEscribir: true });
+    if (ESTADOS_CERRADOS.includes(cotizacion.estado)) {
+      throw new BadRequestError('No se puede editar una cotización aceptada o rechazada');
+    }
+    const linea = await this._lineaDeLaCotizacion(cotizacion.id, lineId);
+    if (!fichero?.buffer?.length) {
+      throw new BadRequestError('No llegó ningún archivo', 'VALIDATION_ERROR', [{ field: 'image', message: 'Elige una imagen' }]);
+    }
+    const ext = EXT_IMAGEN[fichero.mimetype];
+    if (!ext) throw new BadRequestError('La imagen tiene que ser PNG, JPG o WebP');
+
+    const imagenes = Array.isArray(linea.detalle?.images) ? linea.detalle.images : [];
+    if (imagenes.length >= MAX_IMAGENES_POR_LINEA) {
+      throw new BadRequestError(`Esta línea ya tiene el máximo de ${MAX_IMAGENES_POR_LINEA} imágenes`);
+    }
+
+    const nombre = `${cotizacion.id}/${lineId}/${uuidv4()}.${ext}`;
+    await almacenamiento.subir(BUCKET_IMAGENES, nombre, fichero.buffer, fichero.mimetype);
+    try {
+      await prisma.detalle_cotizacion.update({
+        where: { id: lineId },
+        data: { detalle: { ...(linea.detalle || {}), images: [...imagenes, nombre] } },
+      });
+    } catch (err) {
+      await almacenamiento.borrar(BUCKET_IMAGENES, nombre).catch(() => {});
+      throw err;
+    }
+    return this.getQuoteById(cotizacion.id, alcance);
+  }
+
+  /** Borra una foto de un servicio cotizado (spec 021). No fallar si el archivo ya no está en el bucket. */
+  async removeLineImage(id, lineId, indice, alcance = {}) {
+    const cotizacion = await cotizacionVisible(id, alcance, { paraEscribir: true });
+    if (ESTADOS_CERRADOS.includes(cotizacion.estado)) {
+      throw new BadRequestError('No se puede editar una cotización aceptada o rechazada');
+    }
+    const linea = await this._lineaDeLaCotizacion(cotizacion.id, lineId);
+    const imagenes = Array.isArray(linea.detalle?.images) ? [...linea.detalle.images] : [];
+    const i = Number(indice);
+    if (!Number.isInteger(i) || i < 0 || i >= imagenes.length) {
+      throw new BadRequestError('Esa imagen no existe');
+    }
+    const [quitada] = imagenes.splice(i, 1);
+    await prisma.detalle_cotizacion.update({
+      where: { id: lineId },
+      data: { detalle: { ...(linea.detalle || {}), images: imagenes } },
+    });
+    await almacenamiento.borrar(BUCKET_IMAGENES, quitada)
+      .catch(err => console.warn('[QUOTE_IMAGE_DELETE_FAILED]', err.message));
     return this.getQuoteById(cotizacion.id, alcance);
   }
 }

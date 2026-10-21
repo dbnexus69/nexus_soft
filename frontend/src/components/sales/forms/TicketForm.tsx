@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import { Plane, MapPin, User, Briefcase, Trash2, PlusCircle, ArrowRight, ArrowLeftRight, ArrowLeft, Calendar, TriangleAlert } from "lucide-react";
 import { FormField, Input, Combobox, Select, CurrencyInput } from "../../ui/Form";
 import { Button } from "../../ui/Button";
+import { ImagesField } from "./VoucherField";
 import { TicketData, FlightLeg } from "../../../types";
 import { DateTimePicker } from "./ticket/DateTimePicker";
 export { DateTimePicker };
@@ -32,6 +33,9 @@ interface TicketFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin pasajeros ni número de vuelo/tiquete — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
 const FLIGHT_MODE_TABS = [
@@ -287,6 +291,8 @@ export function TicketForm({
   mainClient,
   triggerError,
   cotizando = false,
+  quoteId,
+  lineId,
 }: TicketFormProps & { mainClient?: ClienteDelFormulario }) {
   const { data } = useData();
   const airportOptions = airports.map((a) => ({
@@ -1149,6 +1155,16 @@ export function TicketForm({
           )}
         </div>
       </div>
+
+      {cotizando && (
+        <ImagesField
+          images={ticket.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

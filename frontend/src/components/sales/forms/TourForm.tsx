@@ -4,7 +4,7 @@ import { Users, Trash2, PlusCircle } from "lucide-react";
 import { FormField, Input, Combobox, Textarea, Select } from "../../ui/Form";
 import { Button } from "../../ui/Button";
 import { TourData, GuestInfo } from "../../../types";
-import { ClientInfoSection, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { AppData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -17,9 +17,12 @@ interface TourFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin teléfono, integrantes ni vouchers — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function TourForm({ tour, mainClient, data, onChange, triggerError, cotizando = false }: TourFormProps) {
+export function TourForm({ tour, mainClient, data, onChange, triggerError, cotizando = false, quoteId, lineId }: TourFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Hora local en el formato que espera el selector (`AAAA-MM-DDTHH:mm`), como en la SIM card.
   const minDateTime = (() => {
@@ -366,6 +369,16 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError, cotiz
           </div>
         )}
       </div>
+      )}
+
+      {cotizando && (
+        <ImagesField
+          images={tour.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
       )}
     </div>
   );

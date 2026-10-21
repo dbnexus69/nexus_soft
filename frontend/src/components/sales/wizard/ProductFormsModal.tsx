@@ -31,6 +31,8 @@ interface ProductFormsModalProps {
    * cambio no le afecta en nada.
    */
   cotizando?: boolean;
+  /** Spec 021: para que `ImagesField` sepa a dónde subir. Solo lo manda `Quotes.tsx`. */
+  quoteId?: number;
 }
 
 const PRODUCT_ICONS: Record<SaleProductId, any> = {
@@ -79,6 +81,7 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
   onSwitchForm,
   triggerError,
   cotizando = false,
+  quoteId,
 }) => {
   if (!activeForm || activeIdx === null) return null;
 
@@ -342,6 +345,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   mainClient={client}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.tickets[activeIdx]?.lineId}
                 />
               );
             case "hotel":
@@ -358,6 +363,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   triggerError={triggerError}
                   suppliers={data.config.suppliers}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.hotels[activeIdx]?.lineId}
                 />
               );
             case "insurance":
@@ -373,6 +380,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   client={client}
                   suppliers={data.config.suppliers}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.insurances[activeIdx]?.lineId}
                 />
               );
             case "plan":
@@ -391,6 +400,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   planIndex={activeIdx}
                   linkedServices={getLinkedServicesForPlan(activeIdx)}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.plans[activeIdx]?.lineId}
                 />
               );
             case "checkin":
@@ -408,6 +419,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.checkIns[activeIdx]?.lineId}
                 />
               );
             case "migration":
@@ -424,6 +437,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.migrations[activeIdx]?.lineId}
                 />
               );
             case "simcard":
@@ -441,6 +456,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.simCards[activeIdx]?.lineId}
                 />
               );
             case "car":
@@ -457,6 +474,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.carRentals[activeIdx]?.lineId}
                 />
               );
             case "finca":
@@ -474,6 +493,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.fincas[activeIdx]?.lineId}
                 />
               );
             case "tour":
@@ -489,6 +510,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.tours[activeIdx]?.lineId}
                 />
               );
             case "convention":
@@ -505,6 +528,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.conventions[activeIdx]?.lineId}
                 />
               );
             case "restaurant":
@@ -521,6 +546,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.restaurants[activeIdx]?.lineId}
                 />
               );
             case "visa":
@@ -537,6 +564,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.visas[activeIdx]?.lineId}
                 />
               );
             case "passport":
@@ -553,6 +582,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.passports[activeIdx]?.lineId}
                 />
               );
             case "pet":
@@ -569,6 +600,8 @@ export const ProductFormsModal: React.FC<ProductFormsModalProps> = ({
                   }}
                   triggerError={triggerError}
                   cotizando={cotizando}
+                  quoteId={quoteId}
+                  lineId={form.petServices[activeIdx]?.lineId}
                 />
               );
             default:

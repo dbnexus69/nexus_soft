@@ -1,8 +1,9 @@
-import { LuFileText, LuSend, LuUser, LuUpload, LuX, LuFileCheck, LuDollarSign, LuBuilding, LuCreditCard } from "react-icons/lu";
+import { LuFileText, LuSend, LuUser, LuUpload, LuX, LuFileCheck, LuDollarSign, LuBuilding, LuCreditCard, LuImage } from "react-icons/lu";
 import { Input, Combobox , CurrencyInput, Select} from "../../ui/Form";
 import { FormField } from "../../ui/Form";
-import { useRef } from "react";
-import type { Client, ConfigData } from "../../../types";
+import { useRef, useState } from "react";
+import * as api from "../../../api";
+import type { Client, ConfigData, Quote } from "../../../types";
 
 interface VoucherFieldProps {
   voucher?: { name: string; base64: string };
@@ -324,6 +325,132 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
           {totalCost > 0 && <span className="text-xs text-emerald-600 font-bold uppercase">Valor Liquidado</span>}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface ImagesFieldProps {
+  images?: string[];
+  /** Sin estos dos, la línea todavía no existe en el servidor (sin guardar) y no hay a dónde subir. */
+  quoteId?: number;
+  lineId?: string;
+  onChange: (images: string[]) => void;
+  onError?: (msg: string) => void;
+}
+
+const TIPOS_IMAGEN_PERMITIDOS = ["image/png", "image/jpeg", "image/webp"];
+const MAX_IMAGENES_POR_SERVICIO = 5;
+const MAX_BYTES_IMAGEN = 3 * 1024 * 1024;
+
+/**
+ * Hasta 5 fotos de un servicio cotizado, para que el cliente vea cómo es (spec 021). A
+ * diferencia de todo lo demás del formulario, cada imagen sube y se borra al toque (no espera
+ * al "Guardar" de la cotización): un archivo no puede viajar dentro del JSON de la cotización,
+ * así que necesita el `lineId` que le puso el servidor al guardarla por primera vez — una línea
+ * recién agregada, sin guardar, no lo tiene todavía, y el campo queda deshabilitado hasta
+ * entonces (mismo límite que ya tienen los vouchers de producto de una venta real).
+ *
+ * Exclusivo de cotizar: cada uno de los 15 `forms/*.tsx` lo envuelve en `{cotizando && (...)}`,
+ * al revés del resto de ese prop.
+ */
+export function ImagesField({ images = [], quoteId, lineId, onChange, onError }: ImagesFieldProps) {
+  const [subiendo, setSubiendo] = useState(false);
+  const [borrandoIdx, setBorrandoIdx] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const puedeSubir = Boolean(quoteId && lineId);
+  const imagenesDe = (cotizacion: Quote): string[] =>
+    (cotizacion.lines.find((l) => l.id === lineId)?.detalle?.images as string[] | undefined) ?? [];
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file || !quoteId || !lineId) return;
+    if (!TIPOS_IMAGEN_PERMITIDOS.includes(file.type)) {
+      onError?.("La imagen tiene que ser PNG, JPG o WebP");
+      return;
+    }
+    if (file.size > MAX_BYTES_IMAGEN) {
+      onError?.("La imagen no puede pesar más de 3 MB");
+      return;
+    }
+    setSubiendo(true);
+    try {
+      const cotizacion = await api.uploadQuoteLineImage(quoteId, lineId, file, file.name);
+      onChange(imagenesDe(cotizacion));
+    } catch (err: any) {
+      onError?.(err?.response?.data?.error?.message || "No se pudo subir la imagen");
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  const quitar = async (idx: number) => {
+    if (!quoteId || !lineId) return;
+    setBorrandoIdx(idx);
+    try {
+      const cotizacion = await api.deleteQuoteLineImage(quoteId, lineId, idx);
+      onChange(imagenesDe(cotizacion));
+    } catch (err: any) {
+      onError?.(err?.response?.data?.error?.message || "No se pudo borrar la imagen");
+    } finally {
+      setBorrandoIdx(null);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700 space-y-3">
+      <h4 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+        <LuImage size={14} /> Imágenes del Servicio
+      </h4>
+      {!puedeSubir ? (
+        <p className="text-xs text-gray-500 italic">Guardá la cotización primero para poder agregar fotos.</p>
+      ) : (
+        <>
+          {images.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {images.map((url, idx) => (
+                <div key={`${url}-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+                  <img src={url} alt={`Imagen ${idx + 1} del servicio`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => quitar(idx)}
+                    disabled={borrandoIdx !== null}
+                    className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+                    aria-label={`Quitar imagen ${idx + 1}`}
+                  >
+                    {borrandoIdx === idx
+                      ? <span className="block w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      : <LuX size={12} />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {images.length < MAX_IMAGENES_POR_SERVICIO ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={subiendo}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+              >
+                <LuUpload size={16} />
+                {subiendo ? "Subiendo..." : "Agregar imagen"}
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-gray-500 italic">Ya tiene el máximo de {MAX_IMAGENES_POR_SERVICIO} imágenes.</p>
+          )}
+        </>
+      )}
     </div>
   );
 }

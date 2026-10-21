@@ -119,6 +119,18 @@ function dataUrlABlob(dataUrl: string): Blob {
 // viva está aquí, con la misma clave (empresa + usuario) que el localStorage.
 const borradoresEnMemoria = new Map<string, WizardFormData>();
 
+/**
+ * Para quien escribe un borrador nuevo sin pasar por este componente —
+ * `Quotes.tsx` al convertir una cotización en venta (spec 007)—: si un
+ * asistente anterior se abrió y se cerró sin terminar la venta, esta clave
+ * sigue en memoria con ESE borrador, y el próximo montaje lo antepone al que
+ * se acaba de escribir en localStorage (la cotización nunca se ve). Hay que
+ * llamarla justo después de escribir el nuevo borrador en localStorage.
+ */
+export function olvidarBorradorEnMemoria(draftKey: string) {
+  borradoresEnMemoria.delete(draftKey);
+}
+
 export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props) {
   const { data, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig, invalidateDashboard } = useData();
   // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,

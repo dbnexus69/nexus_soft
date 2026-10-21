@@ -109,6 +109,15 @@ export const ServiceRow = memo(function ServiceRow({
                   </p>
                 ) : null}
                 <Detalle item={item} />
+                {Array.isArray(item.images) && item.images.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {item.images.map((url: string, k: number) => (
+                      <a key={url + k} href={url} target="_blank" rel="noreferrer" className="block w-16 h-16 rounded-lg overflow-hidden border border-gray-border dark:border-slate-700 shrink-0">
+                        <img src={url} alt={`Imagen ${k + 1} del servicio`} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
                 {item.supplier ? (
                   <p className="text-xs text-accent dark:text-slate-500 mt-3">
                     Proveedor: <span className="text-primary dark:text-slate-300">{item.supplier}</span>

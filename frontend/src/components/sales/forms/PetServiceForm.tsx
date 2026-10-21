@@ -2,7 +2,7 @@ import { LuDog } from "react-icons/lu";
 import { TriangleAlert } from "lucide-react";
 import { FormField, Input, Combobox, Textarea, CurrencyInput} from "../../ui/Form";
 import { PetServiceData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DatePicker } from "./TicketForm";
 import { todayStr as todayStrHelper } from "../../../utils/formatters";
 import type { ConfigData } from "../../../types";
@@ -17,9 +17,12 @@ interface PetServiceFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin dueño ni teléfono — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: PetServiceFormProps) {
+export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false, quoteId, lineId }: PetServiceFormProps) {
   const todayStr = todayStrHelper();
   return (
     <div className="space-y-6 animate-fade-in">
@@ -209,6 +212,16 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={pet.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

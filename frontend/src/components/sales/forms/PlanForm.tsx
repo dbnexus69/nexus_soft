@@ -3,6 +3,7 @@ import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car,
 import * as api from "../../../api";
 import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
+import { ImagesField } from "./VoucherField";
 import { PlanData, GuestInfo, SaleProductId } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
 import type { AppData, TravelPackage } from "../../../types";
@@ -20,6 +21,9 @@ interface PlanFormProps {
   linkedServices?: Array<{ productId: SaleProductId; label: string; idx: number }>;
   /** Cotizando (spec 007): sin números de reserva/vuelo/tiquete/confirmación ni integrantes — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
 export function PlanForm({
@@ -33,6 +37,8 @@ export function PlanForm({
   planIndex = 0,
   linkedServices = [],
   cotizando = false,
+  quoteId,
+  lineId,
 }: PlanFormProps) {
   const minDateTime = (() => {
     const now = new Date();
@@ -574,6 +580,16 @@ export function PlanForm({
           </div>
         )}
       </div>
+
+      {cotizando && (
+        <ImagesField
+          images={plan.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

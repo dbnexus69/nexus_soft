@@ -1,6 +1,7 @@
 const quotesService = require('../services/quotes.service');
 const quotesPdf = require('../services/quotes');
 const { success, noContent } = require('../utils/apiResponse');
+const { BadRequestError } = require('../errors/AppError');
 
 const alcanceDe = (req) => ({
   permissionScope: req.permissionScope,
@@ -100,6 +101,25 @@ exports.linkSale = async (req, res, next) => {
 exports.pdfUrl = async (req, res, next) => {
   try {
     success(res, await quotesPdf.urlDeDescarga(parseInt(req.params.id), alcanceDe(req)));
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.addLineImage = async (req, res, next) => {
+  try {
+    if (!req.file) throw new BadRequestError('Falta la imagen (campo "image")');
+    const data = await quotesService.addLineImage(parseInt(req.params.id), req.params.lineId, req.file, alcanceDe(req));
+    success(res, data, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.removeLineImage = async (req, res, next) => {
+  try {
+    const data = await quotesService.removeLineImage(parseInt(req.params.id), req.params.lineId, req.params.indice, alcanceDe(req));
+    success(res, data);
   } catch (err) {
     next(err);
   }

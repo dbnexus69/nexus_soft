@@ -10,18 +10,33 @@ const quotesService = require('../quotes.service');
  */
 const DESCARGA_SEGUNDOS = 300;
 
+/**
+ * Las fotos de cada línea (spec 021), descargadas del bucket como Buffer y por ruta: pdfmake
+ * necesita los bytes, no una URL. `cotizacion.lines[].detalle.images` son rutas crudas aquí
+ * porque `obtenerPdf` pide la cotización con `resolverImagenes: false`.
+ */
+async function imagenesDeLineas(lines) {
+  const rutas = lines.flatMap(l => Array.isArray(l.detalle?.images) ? l.detalle.images : []);
+  if (!rutas.length) return {};
+  const pares = await Promise.all(rutas.map(async (r) => [r, await almacenamiento.leer('cotizacion-imagenes', r)]));
+  return Object.fromEntries(pares.filter(([, buffer]) => buffer));
+}
+
 async function generarCon(cotizacion, { config, logo }) {
   const tiquetes = cotizacion.lines.filter(l => l.categoria === 'ticket' && l.detalle).map(l => l.detalle);
-  const [buffer, aeropuertos] = await Promise.all([
+  const [buffer, aeropuertos, imagenes] = await Promise.all([
     logo ? almacenamiento.leer('logos', logo) : null,
     ciudades(tiquetes),
+    imagenesDeLineas(cotizacion.lines),
   ]);
-  return generar(cotizacion, config, { logo: buffer, aeropuertos });
+  return generar(cotizacion, config, { logo: buffer, aeropuertos, imagenes });
 }
 
 /** El PDF guardado de la cotización (generándolo si hace falta): `{ nombre, huella, cotizacion, buffer? }`. */
 async function obtenerPdf(quoteId, alcance) {
-  const cotizacion = await quotesService.getQuoteById(quoteId, alcance);
+  // Rutas crudas de las imágenes, no URLs firmadas: el PDF las descarga directo con el service
+  // role, no tiene sentido pasar por una URL que de todos modos habría que volver a bajar.
+  const cotizacion = await quotesService.getQuoteById(quoteId, alcance, { resolverImagenes: false });
   const agencia = await empresaYConfig();
   const huella = crypto.createHash('sha256')
     .update(JSON.stringify({ v: PLANTILLA_VERSION, cotizacion, ...agencia }))

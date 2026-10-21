@@ -1,7 +1,7 @@
 import { LuSmartphone } from "react-icons/lu";
 import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
 import { SimCardData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -16,9 +16,12 @@ interface SimCardFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin identidad del titular — no existe todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTypes, onChange, triggerError, cotizando = false }: SimCardFormProps) {
+export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTypes, onChange, triggerError, cotizando = false, quoteId, lineId }: SimCardFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -146,6 +149,16 @@ export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTy
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={sim.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

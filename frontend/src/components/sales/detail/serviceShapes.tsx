@@ -241,6 +241,8 @@ export const FORMAS: Record<string, Forma> = {
           ["Entrada / salida", rango(h.startDate, h.endDate)],
         ]} />
         <Personas titulo="Huéspedes" gente={h.guests} />
+        {/* Una venta guardada no trae observaciones de hotel; una cotización sí (viene tal cual del formulario). */}
+        <Nota titulo="Observaciones" texto={h.observations} />
       </Bloque>
     ),
   },
@@ -250,7 +252,9 @@ export const FORMAS: Record<string, Forma> = {
     Icono: ShieldCheck,
     resumen: (s) => ({
       titulo: s.insuranceType || "Asistencia",
-      meta: unir([s.coverageAmount ? `Cobertura ${formatCurrency(s.coverageAmount)}` : null,
+      // `coverageAmount`/`contactNumber` es como queda una venta ya guardada; `coverage`/`phone`
+      // es el campo crudo del formulario (cotización, o venta aún sin guardar).
+      meta: unir([(s.coverageAmount ?? s.coverage) ? `Cobertura ${formatCurrency(s.coverageAmount ?? s.coverage)}` : null,
                   s.coverageDays ? `${s.coverageDays} días` : null]),
       cuando: rango(s.startDate, s.endDate),
     }),
@@ -258,12 +262,12 @@ export const FORMAS: Record<string, Forma> = {
       <Bloque>
         <Datos items={[
           ["Plan", s.insuranceType],
-          ["Cobertura", s.coverageAmount ? formatCurrency(s.coverageAmount) : null],
+          ["Cobertura", (s.coverageAmount ?? s.coverage) ? formatCurrency(s.coverageAmount ?? s.coverage) : null],
           ["Días", s.coverageDays],
           ["Vigencia", rango(s.startDate, s.endDate)],
-          ["Contacto", s.contactNumber],
+          ["Contacto", s.contactNumber ?? s.phone],
         ]} />
-        <Personas titulo="Asegurados" gente={s.members} />
+        <Personas titulo="Asegurados" gente={s.members ?? s.passengers} />
       </Bloque>
     ),
   },
@@ -271,20 +275,26 @@ export const FORMAS: Record<string, Forma> = {
   plan: {
     label: "Paquete",
     Icono: Package,
-    resumen: (p) => ({
-      titulo: p.packageName || "Paquete",
-      meta: unir([p.destination, p.travelersCount ? `${p.travelersCount} viajeros` : null]),
-      cuando: rango(p.startDate, p.endDate),
-    }),
+    resumen: (p) => {
+      // `packageName`/`travelersCount` es como queda una venta ya guardada; `planName` +
+      // `adultsCount`/`childrenCount` por separado es el formulario crudo (cotización).
+      const viajeros = p.travelersCount ?? ((Number(p.adultsCount) || 0) + (Number(p.childrenCount) || 0) || null);
+      return {
+        titulo: p.packageName || p.planName || "Paquete",
+        meta: unir([p.destination, viajeros ? `${viajeros} viajeros` : null]),
+        cuando: rango(p.startDate, p.endDate),
+      };
+    },
     Detalle: ({ item: p }) => {
       // Los hijos del paquete (tiquetes, hoteles, seguros…) se muestran dentro de él.
       const incluidos = Object.entries(p.includedProducts || {}) as [string, any[]][];
+      const viajeros = p.travelersCount ?? ((Number(p.adultsCount) || 0) + (Number(p.childrenCount) || 0) || null);
       return (
         <Bloque>
           <Datos items={[
             ["Destino", p.destination],
             ["Fechas", rango(p.startDate, p.endDate)],
-            ["Viajeros", p.travelersCount],
+            ["Viajeros", viajeros],
             ["Hotel", p.hotelName],
             ["Transporte", p.transportType],
             ["Aerolínea", p.airline],
@@ -303,7 +313,8 @@ export const FORMAS: Record<string, Forma> = {
               ["Check-in del regreso", ESTADO_CHECKIN[p.checkinStatusReturn] ? `${ESTADO_CHECKIN[p.checkinStatusReturn]}${p.checkinStatusReturn === "cancelado" && p.checkinReasonReturn ? `: ${p.checkinReasonReturn}` : ""}` : null],
             ]} />
           )}
-          <Personas titulo="Viajeros" gente={p.travelers} />
+          <Personas titulo="Viajeros" gente={p.travelers ?? p.guests} />
+          <Nota titulo="Observaciones" texto={p.observations} />
           {incluidos.map(([slug, items]) => {
             const forma = FORMAS[slug];
             if (!forma) return null;
@@ -336,7 +347,8 @@ export const FORMAS: Record<string, Forma> = {
           ["Asiento", c.seat],
           ["Equipaje", c.baggage],
           ["Teléfono", c.phone],
-          ["Silla de ruedas", c.usesWheelchair ? "Sí" : null],
+          // `usesWheelchair` en una venta guardada; `needsWheelchair` es el campo crudo del formulario.
+          ["Silla de ruedas", (c.usesWheelchair ?? c.needsWheelchair) ? "Sí" : null],
         ]} />
         <Nota titulo="Necesidades especiales" texto={c.specialNeeds} />
       </Bloque>
@@ -413,7 +425,8 @@ export const FORMAS: Record<string, Forma> = {
     Icono: Warehouse,
     resumen: (f) => ({
       titulo: f.fincaName || "Finca",
-      meta: unir([f.city, f.responsibleName,
+      // `city`/`address` en una venta guardada; `fincaCity`/`fincaAddress` es el formulario crudo.
+      meta: unir([f.city ?? f.fincaCity, f.responsibleName,
                   unir([f.adultsCount ? `${f.adultsCount} adultos` : null,
                         f.childrenCount ? `${f.childrenCount} niños` : null], ", ")]),
       cuando: rango(f.checkInDate, f.checkOutDate),
@@ -422,8 +435,8 @@ export const FORMAS: Record<string, Forma> = {
       <Bloque>
         <Datos items={[
           ["Finca", f.fincaName],
-          ["Ciudad", f.city],
-          ["Dirección", f.address],
+          ["Ciudad", f.city ?? f.fincaCity],
+          ["Dirección", f.address ?? f.fincaAddress],
           ["Responsable", unir([f.responsibleName, f.docNumber])],
           ["Entrada", f.checkInDate ? formatDateTime(f.checkInDate) : null],
           ["Salida", f.checkOutDate ? formatDateTime(f.checkOutDate) : null],
@@ -441,7 +454,8 @@ export const FORMAS: Record<string, Forma> = {
     label: "Tour",
     Icono: Compass,
     resumen: (t) => ({
-      titulo: t.tourName || "Tour",
+      // `tourName` en una venta guardada; `selectedTour` es el campo crudo del formulario.
+      titulo: t.tourName || t.selectedTour || "Tour",
       meta: unir([t.passengerName,
                   unir([t.adultsCount ? `${t.adultsCount} adultos` : null,
                         t.childrenCount ? `${t.childrenCount} niños` : null], ", "),
@@ -451,7 +465,7 @@ export const FORMAS: Record<string, Forma> = {
     Detalle: ({ item: t }) => (
       <Bloque>
         <Datos items={[
-          ["Tour", t.tourName],
+          ["Tour", t.tourName ?? t.selectedTour],
           ["Fecha", fecha(t.preferredDate)],
           ["Participantes", unir([t.adultsCount ? `${t.adultsCount} adultos` : null,
                                   t.childrenCount ? `${t.childrenCount} niños` : null], ", ")],
@@ -472,7 +486,8 @@ export const FORMAS: Record<string, Forma> = {
     label: "Evento",
     Icono: Users,
     resumen: (c) => ({
-      titulo: c.venueName || c.eventType || "Evento",
+      // `venueName` en una venta guardada; `placeName` es el campo crudo del formulario.
+      titulo: c.venueName || c.placeName || c.eventType || "Evento",
       meta: unir([c.organization, c.city,
                   c.estimatedAttendance ? `${c.estimatedAttendance} asistentes` : null]),
       cuando: rango(c.startDate, c.endDate),
@@ -480,7 +495,7 @@ export const FORMAS: Record<string, Forma> = {
     Detalle: ({ item: c }) => (
       <Bloque>
         <Datos items={[
-          ["Sede", c.venueName],
+          ["Sede", c.venueName ?? c.placeName],
           ["Organización", c.organization],
           ["Contacto", unir([c.contactName, c.email])],
           ["Tipo", c.eventType],
@@ -516,7 +531,10 @@ export const FORMAS: Record<string, Forma> = {
           ["Ocasión", r.specialOccasion],
           ["Teléfono", r.phone],
         ]} />
-        <Nota titulo="Restricciones alimentarias" texto={r.dietaryRestrictions} />
+        <Nota
+          titulo="Restricciones alimentarias"
+          texto={Array.isArray(r.dietaryRestrictions) ? r.dietaryRestrictions.join(", ") : r.dietaryRestrictions}
+        />
       </Bloque>
     ),
   },

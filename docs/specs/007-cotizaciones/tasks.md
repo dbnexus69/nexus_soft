@@ -400,10 +400,116 @@ cotización real y verlo en pantalla.
 
 ---
 
+## T15 · La vista de solo lectura también muestra el detalle completo de cada servicio `[~]`
+
+Mismo problema que T14, pero en pantalla en vez del PDF: `Quotes.tsx` solo pintaba
+una tabla plana "Servicio / Precio" con el resumen corto de cada línea (`descripcion`)
+para una cotización aceptada/rechazada — ni fechas, ni destino, ni nada de lo que se
+llenó en el formulario de cada servicio.
+
+En vez de reconstruir esa rejilla a mano (ya existe, y es justo lo que pinta el
+detalle de una venta real): la vista de solo lectura ahora reutiliza
+`components/sales/detail/ServiceRow` + `serviceShapes.tsx` — la misma fila
+desplegable por categoría de `SaleDetailModal.tsx`, con el `Detalle` propio de cada
+una de las 15 categorías (tramos de vuelo, rango de fechas, huéspedes...), en vez de
+la rejilla genérica etiqueta/valor. `lineasPorCategoria` (nueva, en `Quotes.tsx`)
+agrupa `editing.lines` por categoría y les agrega `iva`/`subtotal` (que viven en la
+línea de la cotización, no dentro de `detalle`) para que el precio que pinta cada
+fila sea el mismo que ya cobra la cotización. Una categoría a la vez desplegada,
+igual que en una venta.
+
+**Comprobado:** `tsc` sin errores. **Pendiente:** verlo en pantalla.
+
+---
+
+## T16 · Verificación: las otras 14 categorías también muestran todo lo llenado `[~]`
+
+A pedido del usuario, tras aprobar T15 con tiquete y hotel: revisar las 15 categorías
+una por una, comparando qué campo escribe cada `forms/*.tsx` (el crudo que guarda una
+cotización en `detalle`) contra qué campo lee `serviceShapes.tsx` (pensado para una
+venta YA GUARDADA, que pasa antes por el `transform` de `catalog/products.js` en el
+backend). Donde el transform renombra un campo al guardar, una cotización —que nunca
+pasa por ahí— se queda con el nombre del formulario, y esa fila salía vacía aunque el
+dato sí se hubiera escrito.
+
+Encontrados y corregidos en `serviceShapes.tsx` (con *fallback* al nombre viejo, nunca
+reemplazo, para no tocar cómo se ve una venta ya guardada):
+
+- **checkin**: "Silla de ruedas" leía `usesWheelchair` (nombre de la venta guardada);
+  el formulario escribe `needsWheelchair`. `?? needsWheelchair`.
+- **insurance**: "Cobertura" leía `coverageAmount` (el formulario escribe `coverage`),
+  "Contacto" leía `contactNumber` (el formulario escribe `phone`), y "Asegurados"
+  leía `members` cuando ni una venta guardada lo trae con ese nombre (el `transform`
+  deja la lista genérica en `passengers`, nunca renombrada para esta categoría) — los
+  tres con *fallback*.
+- **finca**: "Ciudad" y "Dirección" leían `city`/`address` (la venta ya guardada); el
+  formulario escribe `fincaCity`/`fincaAddress`.
+- **tour**: el título y la fila "Tour" leían `tourName` (la venta ya guardada); el
+  formulario escribe `selectedTour`.
+- **convention**: el título y la fila "Sede" leían `venueName` (la venta ya guardada);
+  el formulario escribe `placeName`.
+- **plan**: "Viajeros" dependía de `travelersCount`, que solo existe una vez que la
+  venta se guarda (se calcula ahí); en una cotización se deriva de
+  `adultsCount + childrenCount`. El título dependía de `packageName` (ídem); ahora
+  cae a `planName`, el campo del formulario.
+- **hotel** y **plan** no tenían ninguna fila para "Observaciones" (el campo existe en
+  el formulario de los dos, y en plan se autocompleta al importar un paquete del
+  catálogo) — agregadas.
+- **restaurant**: "Restricciones alimentarias" es una lista (casillas marcadas) y se
+  pasaba entera a un componente de texto — salía todo pegado sin separador, o una
+  etiqueta vacía con la lista en cero. Se une con coma antes de pintarla, igual que ya
+  hace el PDF (`voucher/secciones.js`).
+
+**Revisadas sin cambios** (el o los campos visibles mientras se cotiza ya coincidían
+con lo que lee `serviceShapes.tsx`): ticket, simcard, car, migration, visa, passport,
+pet. En varias de ellas casi todo el formulario queda oculto al cotizar (identidad del
+titular/pasajero) — lo que sigue visible (destino, tipo, fechas, categoría...) ya se
+pintaba bien.
+
+**Comprobado:** `tsc` sin errores; cada corrección es un *fallback* (`a ?? b`), así
+que una venta ya guardada —donde el campo "nuevo" nunca existe— sigue leyendo
+exactamente el mismo valor que antes. **Pendiente:** verlo en pantalla, cotización por
+categoría.
+
+---
+
+## T17 · Bug: convertir una cotización en venta mostraba la de otra cotización `[x]`
+
+Reportado por el usuario: crea una cotización ("San Andrés"), la convierte en venta, y
+el asistente abre con los datos de la cotización anterior ("Cartagena"), no los de
+San Andrés.
+
+**Causa:** `NewSaleWizard.tsx` guarda su borrador en dos sitios con la misma clave
+(`nexus_new_sale_draft_<empresa>_<usuario>`): `localStorage` (sobrevive a recargar la
+página) y un `Map` en memoria a nivel de módulo, `borradoresEnMemoria` (sobrevive a
+que el asistente se desmonte, porque los vouchers en base64 pueden superar el cupo de
+`localStorage`). Al abrir, el asistente mira PRIMERO la memoria y solo cae a
+`localStorage` si no hay nada ahí. Esa memoria solo se borra cuando la venta se crea
+con éxito — nunca si el asistente se cierra sin terminarla.
+
+Secuencia real: el usuario convierte Cartagena → el asistente abre, la cachea en
+memoria → la cierra sin terminar la venta → crea y convierte San Andrés → `Quotes.tsx`
+escribe el borrador de San Andrés en `localStorage` (nunca tocó la memoria, no tiene
+acceso a esa variable de otro módulo) → el asistente abre, mira la memoria primero, y
+ahí sigue Cartagena.
+
+**Arreglo:** `NewSaleWizard.tsx` exporta `olvidarBorradorEnMemoria(draftKey)` (borra
+esa clave de la memoria); `Quotes.tsx::convertirEnVenta` la llama justo después de
+escribir el `localStorage` nuevo, antes de navegar. Así el próximo montaje del
+asistente no tiene nada en memoria y cae a leer el `localStorage` recién escrito.
+
+**Comprobado:** `tsc` sin errores. **Pendiente:** repetir en pantalla la secuencia
+exacta del reporte (convertir una cotización, cerrar sin terminar, convertir otra).
+
+---
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-20 | T17 | Bug reportado: convertir una cotización en venta abría el asistente con los datos de una cotización distinta, ya convertida antes en la misma sesión. Causa: `NewSaleWizard.tsx` prioriza un caché en memoria (`borradoresEnMemoria`, sobrevive a que el asistente se cierre sin terminar la venta) sobre el `localStorage` que `Quotes.tsx` sí actualiza al convertir. Arreglo: `olvidarBorradorEnMemoria(draftKey)` exportada y llamada desde `convertirEnVenta` antes de navegar. `tsc` sin errores; pendiente repetir la secuencia en pantalla. |
+| 2026-10-20 | T16 | Verificadas las 15 categorías contra `serviceShapes.tsx` (pensado para una venta ya guardada, con nombres de campo que a veces difieren del formulario crudo que guarda una cotización). Corregidos con *fallback* (sin tocar el caso de una venta real): checkin (silla de ruedas), insurance (cobertura, contacto, asegurados), finca (ciudad, dirección), tour (nombre del tour), convention (sede), plan (viajeros, nombre, observaciones), hotel (observaciones), restaurant (restricciones como lista, no texto pegado). Sin cambios en ticket/simcard/car/migration/visa/passport/pet, ya coincidían. `tsc` sin errores; pendiente de pantalla. |
+| 2026-10-20 | T15 | La vista de solo lectura de una cotización cerrada mostraba solo el resumen corto de cada línea (como el PDF antes de T14). Ahora reutiliza `ServiceRow`/`serviceShapes.tsx` del detalle de una venta real: una fila desplegable por categoría con su propio `Detalle` (tramos, fechas, huéspedes...), no una tabla plana. Verificado con `tsc`; pendiente de pantalla. |
 | 2026-10-17 | T14 | El PDF de la cotización pasó de mostrar solo el resumen corto de cada línea a mostrar el detalle completo por categoría, igual que el voucher de una venta: se extrajo `SECCIONES`/`bloqueTiquete`/etc. del voucher a un módulo compartido nuevo (`voucher/secciones.js`) para no mantener dos copias del mapeo de campos. `ciudades()` generalizada y reutilizada para resolver nombres de aeropuerto también en la cotización. Verificado generando un PDF de prueba en memoria sin tocar la base; pendiente de pantalla. |
 | 2026-10-16 | T13 | Nombre libre y opcional para la cotización ("Cartagena plan para 2"): migración `nombre` en `cotizaciones`, `name` en el esquema/servicio/PDF, campo y columna nuevos en `Quotes.tsx`. Aplicada y confirmada por la API real (`PUT`/`PDF` en 200). |
 | 2026-10-16 | T12 | Proveedor y Método de Pago también se ocultan al cotizar, mismo patrón que T9/T10: prop `cotizando` en `FinancialSection` (11 formularios que la usan) y envoltorios propios en los 4 que no (Ticket, Hotel, Insurance, Plan). Costo Proveedor y Ganancia siguen siempre visibles. Verificado con `tsc`; pendiente de pantalla. |

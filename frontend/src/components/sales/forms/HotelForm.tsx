@@ -2,6 +2,7 @@ import { Building2, Users, Briefcase, Trash2, PlusCircle } from "lucide-react";
 import * as LuIcons from "react-icons/lu";
 import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
 import { Button } from "../../ui/Button";
+import { ImagesField } from "./VoucherField";
 import { HotelData, GuestInfo } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
 import type { AppData } from "../../../types";
@@ -16,9 +17,12 @@ interface HotelFormProps {
   suppliers?: { name: string }[];
   /** Cotizando (spec 007): sin número de reserva ni huéspedes — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function HotelForm({ hotel, onChange, triggerError, data, mainClient, suppliers = [], cotizando = false }: HotelFormProps) {
+export function HotelForm({ hotel, onChange, triggerError, data, mainClient, suppliers = [], cotizando = false, quoteId, lineId }: HotelFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -250,6 +254,16 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
           onChange={(e) => onChange({ observations: e.target.value })}
         />
       </div>
+
+      {cotizando && (
+        <ImagesField
+          images={hotel.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

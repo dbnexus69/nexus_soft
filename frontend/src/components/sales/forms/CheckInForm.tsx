@@ -1,7 +1,7 @@
 import { LuPlane } from "react-icons/lu";
 import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
 import { CheckInData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -16,9 +16,12 @@ interface CheckInFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin pasajero, vuelo/reserva, silla ni celular — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethods, onChange, triggerError, cotizando = false }: CheckInFormProps) {
+export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethods, onChange, triggerError, cotizando = false, quoteId, lineId }: CheckInFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -139,6 +142,16 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={checkIn.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

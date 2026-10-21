@@ -25,6 +25,7 @@ export {
 export {
   listQuotes, getQuote, createQuote, updateQuote, deleteQuote, duplicateQuote,
   sendQuote, respondQuote, convertQuoteToSale, linkQuoteSale, getQuotePdfUrl,
+  uploadQuoteLineImage, deleteQuoteLineImage,
 } from './quotes';
 export type { QuoteDraft } from './quotes';
 export {

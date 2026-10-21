@@ -1,7 +1,7 @@
 import { Home, TriangleAlert } from "lucide-react";
 import { FormField, Input, Combobox, CurrencyInput} from "../../ui/Form";
 import { FincaData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -16,9 +16,12 @@ interface FincaFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin responsable, documento ni teléfono — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function FincaForm({ finca, client, suppliers, paymentMethods, documentTypes, onChange, triggerError, cotizando = false }: FincaFormProps) {
+export function FincaForm({ finca, client, suppliers, paymentMethods, documentTypes, onChange, triggerError, cotizando = false, quoteId, lineId }: FincaFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -169,6 +172,16 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, documentTy
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={finca.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

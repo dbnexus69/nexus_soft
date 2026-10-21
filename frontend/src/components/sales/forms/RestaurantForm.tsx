@@ -1,7 +1,7 @@
 import { LuUtensils } from "react-icons/lu";
 import { FormField, Input, Combobox , CurrencyInput} from "../../ui/Form";
 import { RestaurantData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -15,9 +15,12 @@ interface RestaurantFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin a nombre de quién ni celular — no existen todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: RestaurantFormProps) {
+export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false, quoteId, lineId }: RestaurantFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -132,6 +135,16 @@ export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, 
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={restaurant.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

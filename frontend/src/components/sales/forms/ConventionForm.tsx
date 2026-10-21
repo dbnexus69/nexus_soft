@@ -1,7 +1,7 @@
 import { Building2, TriangleAlert } from "lucide-react";
 import { FormField, Input, Combobox, Textarea, CurrencyInput} from "../../ui/Form";
 import { ConventionData } from "../../../types";
-import { ClientInfoSection, VoucherField, FinancialSection } from "./VoucherField";
+import { ClientInfoSection, VoucherField, FinancialSection, ImagesField } from "./VoucherField";
 import { DateTimePicker } from "./TicketForm";
 import type { ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
@@ -15,9 +15,12 @@ interface ConventionFormProps {
   triggerError?: (msg: string) => void;
   /** Cotizando (spec 007): sin el contacto específico — no existe todavía. */
   cotizando?: boolean;
+  /** Spec 021: para las fotos del servicio, solo mientras se cotiza. */
+  quoteId?: number;
+  lineId?: string;
 }
 
-export function ConventionForm({ convention, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false }: ConventionFormProps) {
+export function ConventionForm({ convention, client, suppliers, paymentMethods, onChange, triggerError, cotizando = false, quoteId, lineId }: ConventionFormProps) {
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -201,6 +204,16 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}
       />
+
+      {cotizando && (
+        <ImagesField
+          images={convention.images}
+          quoteId={quoteId}
+          lineId={lineId}
+          onChange={(images) => onChange({ images })}
+          onError={triggerError}
+        />
+      )}
     </div>
   );
 }

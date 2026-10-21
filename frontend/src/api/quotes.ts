@@ -70,3 +70,23 @@ export async function getQuotePdfUrl(id: number) {
   const res = await api.get<Recurso<{ url: string; expiraEn: number }>>(`/quotes/${id}/pdf`);
   return res.data.data;
 }
+
+/**
+ * Fotos de un servicio cotizado (spec 021): solo se puede una vez la cotización y esa línea
+ * (`lineId`, el id de `detalle_cotizacion`) ya existen en el servidor — una línea recién
+ * agregada, sin guardar, no tiene `lineId` todavía. Las dos devuelven la cotización entera
+ * (igual que el resto de acciones), con las imágenes de la línea ya como URLs firmadas.
+ */
+export async function uploadQuoteLineImage(quoteId: number, lineId: string, file: Blob, nombre: string) {
+  const cuerpo = new FormData();
+  cuerpo.append('image', file, nombre);
+  const res = await api.post<Recurso<Quote>>(`/quotes/${quoteId}/lines/${lineId}/images`, cuerpo, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data;
+}
+
+export async function deleteQuoteLineImage(quoteId: number, lineId: string, indice: number) {
+  const res = await api.delete<Recurso<Quote>>(`/quotes/${quoteId}/lines/${lineId}/images/${indice}`);
+  return res.data.data;
+}

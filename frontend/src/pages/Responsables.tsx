@@ -211,7 +211,7 @@ export default function Responsables() {
         setSuccessMessage('Responsable actualizado exitosamente');
       } else {
         await addResponsable(responsableData);
-        setSuccessMessage('Nuevo responsablee registrado correctamente');
+        setSuccessMessage('Nuevo responsable registrado correctamente');
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 3000);
       }
@@ -224,7 +224,7 @@ export default function Responsables() {
       const porCampo: Record<string, string> = {};
       for (const d of detalles) if (['firstName', 'lastName', 'docTypeId', 'docNumber', 'phone', 'email'].includes(d.field)) porCampo[d.field] = d.message;
       if (Object.keys(porCampo).length > 0) setErrors(porCampo);
-      const msg = err?.response?.data?.error?.message || err?.message || 'Error al guardar el responsablee';
+      const msg = err?.response?.data?.error?.message || err?.message || 'Error al guardar el responsable';
       setErrorMessage(msg);
       setShowError(true);
       setTimeout(() => setShowError(false), 5000);

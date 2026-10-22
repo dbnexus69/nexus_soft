@@ -6,6 +6,7 @@ const emailService = require('../utils/emailService');
 const { olvidarUsuario } = require('../middleware/authCache');
 const { formatName } = require('../utils/stringUtils');
 const { validarDocumento } = require('../utils/tipoDocumento');
+const { reutilizarPersona } = require('./personaCompartida');
 
 class UsersService {
   async listUsers({ pagination, search, role, status }) {
@@ -218,28 +219,13 @@ class UsersService {
         }
     }
 
-    let persona;
-    if (data.docNumber) {
-      const existingPersona = await prisma.personas.findFirst({
-        where: { documento: data.docNumber }
-      });
-      if (existingPersona) {
-        persona = await prisma.personas.update({
-          where: { id: existingPersona.id },
-          data: {
-            nombres: formatName(data.firstName || data.name?.split(' ')[0] || existingPersona.nombres),
-            apellidos: formatName(data.lastName || data.name?.split(' ').slice(1).join(' ') || existingPersona.apellidos),
-            tipo_documento_id: tipo_documento_id || existingPersona.tipo_documento_id,
-            email: data.email || existingPersona.email,
-            telefono: data.phone || existingPersona.telefono,
-            birth_date: data.birthDate ? new Date(data.birthDate) : existingPersona.birth_date,
-            avatar_url: data.avatar || existingPersona.avatar_url,
-            status: data.status || 'active',
-            deleted_at: null
-          }
-        });
-      }
-    }
+    let { persona, aviso } = await reutilizarPersona(prisma, data.docNumber, {
+      nombres: formatName(data.firstName || data.name?.split(' ')[0]),
+      apellidos: formatName(data.lastName || data.name?.split(' ').slice(1).join(' ')),
+      tipo_documento_id, email: data.email, telefono: data.phone,
+      birth_date: data.birthDate ? new Date(data.birthDate) : null,
+      avatar_url: data.avatar, status: data.status,
+    });
 
     if (!persona) {
       persona = await prisma.personas.create({
@@ -318,7 +304,8 @@ class UsersService {
       birth_date: usuario.personas.birth_date,
       avatar: usuario.personas.avatar_url,
       creado_at: usuario.creadoAt,
-      lastLogin: usuario.ultimo_login
+      lastLogin: usuario.ultimo_login,
+      aviso,
     };
   }
 

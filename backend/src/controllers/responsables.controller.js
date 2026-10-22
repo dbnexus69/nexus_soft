@@ -29,8 +29,8 @@ exports.getById = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await responsablesService.createResponsable(req.validatedBody);
-    success(res, result, null, 201);
+    const { aviso, ...result } = await responsablesService.createResponsable(req.validatedBody);
+    success(res, result, aviso ? { aviso } : null, 201);
   } catch (err) {
     next(err);
   }

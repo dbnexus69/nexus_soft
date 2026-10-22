@@ -16,8 +16,8 @@ exports.listAgents = async (req, res, next) => {
 
 exports.createAgent = async (req, res, next) => {
   try {
-    const data = await commissionsService.createAgent(req.validatedBody);
-    success(res, data, null, 201);
+    const { aviso, ...data } = await commissionsService.createAgent(req.validatedBody);
+    success(res, data, aviso ? { aviso } : null, 201);
   } catch (err) {
     next(err);
   }

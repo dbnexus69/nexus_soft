@@ -3,6 +3,7 @@ const { NotFoundError, BadRequestError, ConflictError } = require('../errors/App
 const { buildMeta } = require('../utils/paginationHelper');
 const { formatName } = require('../utils/stringUtils');
 const { validarDocumento } = require('../utils/tipoDocumento');
+const { reutilizarPersona } = require('./personaCompartida');
 const { aCentimos } = require('./saleTotals');
 const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
 
@@ -162,28 +163,11 @@ class CommissionsService {
       }
     }
 
-    let persona;
-    if (data.docNumber) {
-      const existingPersona = await prisma.personas.findFirst({
-        where: { documento: data.docNumber }
-      });
-      if (existingPersona) {
-        const { firstName, lastName } = splitFullName(data.name || `${existingPersona.nombres} ${existingPersona.apellidos}`);
-        persona = await prisma.personas.update({
-          where: { id: existingPersona.id },
-          data: {
-            nombres: formatName(firstName) || existingPersona.nombres,
-            apellidos: formatName(lastName) || existingPersona.apellidos,
-            tipo_documento_id: tipo_documento_id || existingPersona.tipo_documento_id,
-            email: data.email || existingPersona.email,
-            telefono: data.phone || existingPersona.telefono,
-            avatar_url: data.avatar || existingPersona.avatar_url,
-            status: 'active',
-            deleted_at: null
-          }
-        });
-      }
-    }
+    const nombreForm = data.name ? splitFullName(data.name) : {};
+    let { persona, aviso } = await reutilizarPersona(prisma, data.docNumber, {
+      nombres: formatName(nombreForm.firstName), apellidos: formatName(nombreForm.lastName), tipo_documento_id,
+      email: data.email, telefono: data.phone, avatar_url: data.avatar,
+    });
 
     if (!persona) {
       const { firstName, lastName } = splitFullName(data.name);
@@ -229,7 +213,8 @@ class CommissionsService {
       avatar: agent.personas.avatar_url || null,
       banco: agent.banco || null,
       tipoCuenta: agent.tipo_cuenta || null,
-      numeroCuenta: agent.numero_cuenta || null
+      numeroCuenta: agent.numero_cuenta || null,
+      aviso,
     };
   }
 

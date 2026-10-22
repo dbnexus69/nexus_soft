@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-21).** Hechas T1 a T5 (T2: pantalla ok). Pendiente T6.
+**Estado (2026-10-21).** Completada: T1 a T5, y T6 resuelta en la spec 024.
 
 ## T1 · Cerrar la 014 T7 como no reproducible `[x]`
 Marcada `[x]` en `014/tasks.md` con el motivo y una fila en su registro (orden expresa del usuario). Falta
@@ -55,7 +55,7 @@ voucher, `itineraries` para el check-in) con `getEffectivePermissions`/`getActio
 venta → 200, el admin abre el del asesor → 200. **Comprobado:** `node --check` en los dos archivos. **Verificado (2026-10-21):** `pnpm test:aislamiento-api` en verde, corrido por el usuario. El documento de check-in no tiene prueba
 propia (montarlo pide un vuelo con check-in); usa la misma condición que el voucher.
 
-## T6 · Crear un cliente sobrescribe la `persona` de otro rol `[ ]`
+## T6 · Crear un cliente sobrescribe la `persona` de otro rol `[x]` (resuelta en la [spec 024](../024-persona-compartida-sin-sobrescribir/spec.md))
 Problema heredado de la 009 (archivada). `createClient` (`clients.service.js:257`): si el documento ya existe
 en `personas` (p. ej. es de un usuario o un comisionista), hace `personas.update` con el nombre, correo,
 teléfono, etc. del formulario del cliente y la reactiva (`status: 'active'`, `deleted_at: null`), sin aviso.
@@ -75,3 +75,4 @@ tres servicios que crean personas. Sin diseño todavía.
 | 2026-10-21 | T3 | Flujo movido a `.github/workflows/`; falta push y primera corrida. |
 | 2026-10-21 | T3 | Push y primera corrida de la CI en verde. T2: lista de pantalla escrita. |
 | 2026-10-21 | T2 | Pantalla ok en 008, 011, 017 y 020; specs marcadas completadas (012 ya lo estaba). |
+| 2026-10-21 | T6 | Resuelta en la spec 024 (reutilizar sin sobrescribir, con aviso). |

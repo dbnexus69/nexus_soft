@@ -26,8 +26,16 @@ api.interceptors.request.use((config) => {
  */
 export const SESION_CADUCADA = 'nexus:sesion-caducada';
 
+// Un aviso del servidor junto a una respuesta correcta (p. ej. el alta que reutilizó una persona
+// ya registrada, spec 024) lo enseña `ToastProvider`, sea cual sea la pantalla que hizo la llamada.
+export const EVENTO_AVISO = 'nexus:aviso';
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const aviso = response.data?.meta?.aviso;
+    if (typeof aviso === 'string') window.dispatchEvent(new CustomEvent(EVENTO_AVISO, { detail: aviso }));
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('nexus_token');

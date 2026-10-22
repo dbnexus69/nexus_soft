@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { ToastContainer, ToastMessage } from "../components/ui/ToastContainer";
+import { EVENTO_AVISO } from "../api/client";
 
 interface ToastContextType {
   toast: {
@@ -27,6 +28,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  useEffect(() => {
+    const mostrar = (e: Event) => addToast("info", (e as CustomEvent<string>).detail);
+    window.addEventListener(EVENTO_AVISO, mostrar);
+    return () => window.removeEventListener(EVENTO_AVISO, mostrar);
+  }, [addToast]);
 
   const value = {
     toast: {

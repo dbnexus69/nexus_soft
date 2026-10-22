@@ -27,8 +27,8 @@ exports.getById = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const data = await usersService.createUser(req.validatedBody);
-    success(res, data, null, 201);
+    const { aviso, ...data } = await usersService.createUser(req.validatedBody);
+    success(res, data, aviso ? { aviso } : null, 201);
   } catch (err) {
     next(err);
   }

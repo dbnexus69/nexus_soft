@@ -51,8 +51,8 @@ exports.create = async (req, res, next) => {
     // ajena. Sin él, el cliente queda sin "creado por" de esta agencia, que
     // es lo correcto — nadie de su equipo lo creó; quién lo hizo de verdad
     // consta en `suplantaciones`.
-    const data = await clientsService.createClient(req.validatedBody, req.suplantacion ? null : req.user.id);
-    success(res, data, null, 201);
+    const { aviso, ...data } = await clientsService.createClient(req.validatedBody, req.suplantacion ? null : req.user.id);
+    success(res, data, aviso ? { aviso } : null, 201);
   } catch (err) {
     next(err);
   }

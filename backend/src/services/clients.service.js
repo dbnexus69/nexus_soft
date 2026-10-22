@@ -6,6 +6,7 @@ const { AppError, NotFoundError, BadRequestError, ForbiddenError } = require('..
 const { buildMeta } = require('../utils/paginationHelper');
 
 const { validarDocumento } = require('../utils/tipoDocumento');
+const { reutilizarPersona } = require('./personaCompartida');
 
 /**
  * Reemplaza los destinos de preferencia del cliente y su copia `destino_reciente`
@@ -248,30 +249,12 @@ class ClientsService {
       }
     }
 
-    let persona;
-    if (data.docNumber) {
-      const existingPersona = await prisma.personas.findFirst({
-        where: { documento: data.docNumber }
-      });
-      if (existingPersona) {
-        persona = await prisma.personas.update({
-          where: { id: existingPersona.id },
-          data: {
-            nombres: data.firstName || existingPersona.nombres,
-            apellidos: data.lastName || existingPersona.apellidos,
-            tipo_documento_id: tipo_documento_id || existingPersona.tipo_documento_id,
-            email: data.email || existingPersona.email,
-            telefono: data.phone || existingPersona.telefono,
-            avatar_url: data.avatar || existingPersona.avatar_url,
-            birth_date: data.birthDate && !isNaN(new Date(data.birthDate).getTime()) ? new Date(data.birthDate) : existingPersona.birth_date,
-            status: 'active',
-            deleted_at: null
-          }
-        });
-      }
-    }
-
     const parsedBirthDate = data.birthDate && !isNaN(new Date(data.birthDate).getTime()) ? new Date(data.birthDate) : null;
+
+    let { persona, aviso } = await reutilizarPersona(prisma, data.docNumber, {
+      nombres: data.firstName, apellidos: data.lastName, tipo_documento_id,
+      email: data.email, telefono: data.phone, avatar_url: data.avatar, birth_date: parsedBirthDate,
+    });
 
     if (!persona) {
       persona = await prisma.personas.create({
@@ -304,15 +287,17 @@ class ClientsService {
       docTypeId: tipo_documento_id,
       docType: tipoDoc?.abreviatura || null,
       docNumber: data.docNumber,
-      phone: data.phone,
-      email: data.email,
-      birthDate: data.birthDate,
+      // Lo guardado, no lo del formulario: con una persona compartida se conservan sus datos (spec 024).
+      phone: persona.telefono,
+      email: persona.email,
+      birthDate: persona.birth_date,
       avatar: persona.avatar_url,
-      status: 'active',
+      status: persona.status,
       registrationDate: cliente.fecha_registro,
       createdBy: cliente.creado_por_id,
       destinations: destinos,
       recentDestination: destinos.at(-1) ?? null,
+      aviso,
     };
   }
 

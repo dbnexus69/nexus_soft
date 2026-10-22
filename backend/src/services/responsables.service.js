@@ -2,6 +2,7 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { validarDocumento } = require('../utils/tipoDocumento');
+const { reutilizarPersona } = require('./personaCompartida');
 
 class ResponsablesService {
   /**
@@ -184,12 +185,19 @@ class ResponsablesService {
     const docTypeId = tipo ? tipo.id : null;
 
     const result = await prisma.transaccion(async (tx) => {
-      let personas = docNumber ? await tx.personas.findFirst({
-        where: { documento: docNumber }
-      }) : null;
+      const previo = docNumber
+        ? await tx.responsables.findFirst({ where: { personas: { documento: docNumber } } })
+        : null;
+      if (previo && !previo.deleted_at) {
+        throw new BadRequestError('Ya existe un responsable con este documento');
+      }
 
-      if (!personas) {
-        personas = await tx.personas.create({
+      // Si el documento ya es de otra persona de la agencia, se conservan sus datos (spec 024).
+      let { persona, aviso } = await reutilizarPersona(tx, docNumber, {
+        nombres: firstName, apellidos: lastName, tipo_documento_id: docTypeId, telefono: phone, email,
+      });
+      if (!persona) {
+        persona = await tx.personas.create({
           data: {
             nombres: firstName,
             apellidos: lastName,
@@ -199,51 +207,14 @@ class ResponsablesService {
             email: email
           }
         });
-      } else {
-        const existingResponsable = await tx.responsables.findFirst({
-          where: { persona_id: personas.id }
-        });
-        if (existingResponsable) {
-          if (!existingResponsable.deleted_at) {
-            throw new BadRequestError('Ya existe un responsable con este documento');
-          } else {
-            await tx.responsables.update({
-              where: { id: existingResponsable.id },
-              data: { deleted_at: null, status: 'active' }
-            });
-            await tx.personas.update({
-              where: { id: personas.id },
-              data: {
-                nombres: firstName,
-                apellidos: lastName,
-                tipo_documento_id: docTypeId || personas.tipo_documento_id,
-                telefono: phone || personas.telefono,
-                email: email || personas.email
-              }
-            });
-            return existingResponsable;
-          }
-        }
-        await tx.personas.update({
-          where: { id: personas.id },
-          data: {
-            nombres: firstName,
-            apellidos: lastName,
-            tipo_documento_id: docTypeId || personas.tipo_documento_id,
-            telefono: phone || personas.telefono,
-            email: email || personas.email
-          }
-        });
       }
 
-      const responsable = await tx.responsables.create({
-        data: {
-          persona_id: personas.id,
-          status: 'active'
-        }
-      });
+      // Un responsable dado de baja con ese documento se revive en vez de crear otro.
+      const responsable = previo
+        ? await tx.responsables.update({ where: { id: previo.id }, data: { deleted_at: null, status: 'active' } })
+        : await tx.responsables.create({ data: { persona_id: persona.id, status: 'active' } });
 
-      return responsable;
+      return { ...responsable, aviso };
     });
 
     return result;

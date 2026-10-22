@@ -37,6 +37,12 @@
       "skillPath": "prisma-client-api/SKILL.md",
       "computedHash": "cbbabff961c8e16b2d59f8c1ffb4e7e20be52154e778ab95121e0211d6d09969"
     },
+    "spec-kit": {
+      "source": "akillness/jeo-skills",
+      "sourceType": "github",
+      "skillPath": ".agent-skills/spec-kit/SKILL.md",
+      "computedHash": "a1cc39307629dad727a39409062a16088949c02162dd0ab1a26bc2c4d72591aa"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

@@ -2,14 +2,17 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-21).** Hechas T1, T4 y T5. Pendientes T2, T3 y T6.
+**Estado (2026-10-21).** Hechas T1, T4 y T5. T3 a falta del push y la primera corrida. Pendientes T2 y T6.
 
 ## T1 · Cerrar la 014 T7 como no reproducible `[x]`
 Marcada `[x]` en `014/tasks.md` con el motivo y una fila en su registro (orden expresa del usuario). Falta
 avisar a Darío.
 
 ## T2 · Pruebas en pantalla de 008, 011, 012, 017 y 020 (y lista para Darío) `[ ]`
-## T3 · Activar la CI `[ ]` — necesita que el usuario corra `gh auth refresh` y ordene el push
+## T3 · Activar la CI `[~]`
+`docs/ci/ci.yml` → `.github/workflows/ci.yml` (`git mv`), sin el comentario "PENDIENTE DE ACTIVAR". No hizo falta
+`gh auth refresh`: la cuenta activa de `gh` (`bmunoz-dev`) ya tenía el permiso `workflow`. Actualizados `CLAUDE.md`
+y la 010 T2. **Por confirmar:** el push y la primera corrida en verde en GitHub (`gh run list`).
 
 ## T4 · Archivar la 009 `[x]`
 Encabezados de `009/spec.md` y `009/tasks.md` en "archivada (2026-10-21)", con enlace a T6. Sin código.
@@ -39,3 +42,4 @@ tres servicios que crean personas. Sin diseño todavía.
 | 2026-10-21 | T5 | Alcance del rol en los ficheros y prueba ampliada; `node --check`. Falta correr la prueba. |
 | 2026-10-21 | T6 | Registrado el efecto cruzado sobre `personas` como problema por resolver. |
 | 2026-10-21 | T5 | `test:aislamiento-api` en verde (corrido por el usuario). |
+| 2026-10-21 | T3 | Flujo movido a `.github/workflows/`; falta push y primera corrida. |

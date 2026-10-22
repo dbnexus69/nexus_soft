@@ -1,6 +1,4 @@
-# PENDIENTE DE ACTIVAR: el token de git no tiene el permiso `workflow` y GitHub rechaza crear archivos en
-# .github/workflows/. Para activarlo: `gh auth refresh -h github.com -s workflow`, luego
-# `mkdir -p .github/workflows && git mv docs/ci/ci.yml .github/workflows/ci.yml` y push.
+# Activa desde el 2026-10-21 (spec 022 T3; antes vivía en docs/ci/ci.yml, ver spec 010 T2).
 # Lo que se puede comprobar sin la base de datos ni secretos: tipos, build y las reglas puras.
 # Las pruebas que levantan servidor y agencias (test:aislamiento*, test:vuelos-api) necesitan
 # DATABASE_URL/DIRECT_URL de la base compartida y se siguen corriendo a mano (CLAUDE.md, "Commands").

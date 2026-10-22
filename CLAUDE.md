@@ -58,7 +58,7 @@ pnpm dev                 # vite, http://localhost:5173
 pnpm build               # tsc && vite build — tsc is the type check
 ```
 
-CI is written in `docs/ci/ci.yml` but **not active yet** (git's token lacks the `workflow` scope; see `docs/specs/010-calidad-y-rendimiento/tasks.md` T2): once moved to `.github/workflows/` it runs the frontend build and, in the backend, `check:prisma`, `test:validaciones` and `test:reglas-espejo` on every push; the DB-backed suites stay manual. No lint config and no test framework. Run `pnpm check:prisma` after touching Prisma queries and `pnpm test:aislamiento` and `pnpm test:aislamiento-api` after touching tenancy/RLS/auth/permissions; run `pnpm build` in `frontend/` for a type check. `db:push` / `db:reset` exist in `package.json` but must not be run against the shared DB (see below).
+CI lives in `.github/workflows/ci.yml` (active since 2026-10-21, spec 022 T3): it runs the frontend build and, in the backend, `check:prisma`, `test:validaciones` and `test:reglas-espejo` on every push; the DB-backed suites stay manual. No lint config and no test framework. Run `pnpm check:prisma` after touching Prisma queries and `pnpm test:aislamiento` and `pnpm test:aislamiento-api` after touching tenancy/RLS/auth/permissions; run `pnpm build` in `frontend/` for a type check. `db:push` / `db:reset` exist in `package.json` but must not be run against the shared DB (see below).
 
 ## Database and migrations
 

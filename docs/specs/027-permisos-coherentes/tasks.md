@@ -2,8 +2,8 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-22).** Implementada. Falta solo T8 (advisors de Supabase: el conector no tiene acceso) y la prueba en
-pantalla como asesor/freelancer.
+**Estado (2026-10-22).** Completada. Los advisors de Supabase y la prueba en pantalla los confirmó el usuario (no
+verificados por Claude: el conector de Supabase no tiene acceso y el navegador no se maneja sin orden).
 
 ## T1 · Medir los valores heredados en `permisos_rol` `[x]`
 ## T2 · Una sola lectura (`leerValor`) en `authorize.js` y `roles.service.js` `[x]`
@@ -12,7 +12,7 @@ pantalla como asesor/freelancer.
 ## T5 · Frontend: permisos propios desde la API y carga inicial según permisos `[x]` `tsc` limpio
 ## T6 · Valores por defecto del asesor (D2) `[x]`
 ## T7 · Pruebas `[x]` `test:aislamiento-api` en verde
-## T8 · Advisors de Supabase `[ ]` pendiente: revisar en el panel de Supabase
+## T8 · Advisors de Supabase `[x]` revisados por el usuario en el panel de Supabase
 
 ## Registro
 
@@ -24,3 +24,4 @@ pantalla como asesor/freelancer.
 | 2026-10-22 | T3 | La migración deja admin y superadmin fuera de la conversión de "ver": su autorización no sale de la base y el panel los muestra desde esas filas; un `'own'` los mostraría recortados. Aplicada (`20261022130000_permisos_coherentes`); después: 0 valores fuera de all/own/none, asesor `users.view` = `'false'` en las 4, freelancer de la 1 en `own`. |
 | 2026-10-22 | T2, T4–T7 | `leerValor` en `alcancePermisos.js`; `authorize.js` y `parseValor` lo usan (un valor desconocido ya no da `'own'`). `GET /auth/me/permissions`. `DataContext`: `fetchMisPermisos` (una petición por sesión), los tres roles del panel solo con `permissions.view`, y users/responsables/comisionistas al arrancar solo con permiso de verlos. La prueba de `GET /users` del asesor pasó de 200 a 403 (D2). `check:prisma`, `test:validaciones`, `test:reglas-espejo`, `tsc` y `test:aislamiento-api` limpios. |
 | 2026-10-22 | T5 | Asistente de venta: `NewSaleWizard` pide los comisionistas solo con `commissions.view`, y `Step3Payment` muestra el campo de responsable solo con ver responsables distinto de `none` (la búsqueda daba 403 y el servidor tampoco deja asignarlo, spec 026). `tsc` limpio; sin probar en pantalla. |
+| 2026-10-22 | T8 | El usuario confirma que los advisors de Supabase y la prueba en pantalla (asesor y freelancer: arranque y asistente sin 403, permisos del panel reflejados) están hechos. Cierre de la spec. |

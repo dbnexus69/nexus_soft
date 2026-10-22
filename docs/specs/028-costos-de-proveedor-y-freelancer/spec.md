@@ -1,6 +1,6 @@
 # Spec 028 — El freelancer y los costos de proveedor
 
-**Estado:** decidida (2026-10-22): sin código nuevo; se cierra con una prueba. Las preguntas de abajo ya están respondidas · **Rama:** `feat-bayrol` · **Relacionadas:**
+**Estado:** completada (2026-10-22): sin código nuevo; se cerró con una prueba. Las preguntas de abajo ya están respondidas · **Rama:** `feat-bayrol` · **Relacionadas:**
 [`026`](../026-rol-freelancer/spec.md) (la dejó fuera), [`027`](../027-permisos-coherentes/spec.md)
 
 ## Por qué

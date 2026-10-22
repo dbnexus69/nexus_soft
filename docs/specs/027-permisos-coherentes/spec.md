@@ -1,6 +1,6 @@
 # Spec 027 — Permisos coherentes: lo que ves es lo que se aplica
 
-**Estado:** implementada (2026-10-22); falta revisar los advisors de Supabase (H4) · **Rama:** `feat-bayrol` ·
+**Estado:** completada (2026-10-22) · **Rama:** `feat-bayrol` ·
 **Toca la base compartida** (migración de datos en `permisos_rol`) · **Relacionadas:**
 [`020`](../020-alcance-de-editar-y-borrar/spec.md), [`025`](../025-auditoria-de-permisos/spec.md),
 [`026`](../026-rol-freelancer/spec.md)

@@ -2,7 +2,8 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-22).** Completada: `test:aislamiento-api` en verde y prueba en pantalla hecha por el usuario.
+**Estado (2026-10-22).** Completada: `test:aislamiento-api` en verde, prueba en pantalla y advisors de Supabase
+confirmados por el usuario.
 
 ## T1 · Migración `responsables.creado_por_id` `[x]` aplicada
 ## T2 · Migración de datos de `permisos_rol` (freelancer de todas las agencias) `[x]` aplicada
@@ -21,3 +22,4 @@ Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 | 2026-10-22 | T1–T3, T6 | `sales.service.js`: con responsables en `own`, crear o editar una venta con un responsable ajeno da 403 (`comprobarResponsablePropio`). `migrate deploy` de las dos migraciones, `db:generate`, `migrate status` al día, `check:prisma` limpio. `test:aislamiento-api`: todo verde en lo visible (incluida la suplantación con `createdBy` null), 1 fallida fuera del tramo de salida leído; volver a correrlo lo bloqueó el filtro del entorno. |
 | 2026-10-22 | T6 | La fallida era la prueba: el PUT ajeno mandaba `lastName: 'X'` y la validación (422) corta antes de mirar el dueño. Con un nombre válido, 403. `test:aislamiento-api`: todo en orden. |
 | 2026-10-22 | T3 | También el asesor: con ver responsables en `none`, poner un responsable en una venta da 403; con `own`, solo uno suyo. Al editar una venta solo se comprueba si el responsable cambia. `test:aislamiento-api`: todo en orden. |
+| 2026-10-22 | — | Cierre: el usuario confirma los advisors de Supabase y la prueba en pantalla. La 027 corrige después la lectura de los permisos y el `users.view` del asesor. |

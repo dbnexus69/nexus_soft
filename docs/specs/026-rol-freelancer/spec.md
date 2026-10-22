@@ -1,6 +1,6 @@
 # Spec 026 — El rol freelancer: lo suyo, su ganancia y sus responsables
 
-**Estado:** implementada (2026-10-22) · **Rama:** `feat-bayrol` · **Toca la base
+**Estado:** completada (2026-10-22) · **Rama:** `feat-bayrol` · **Toca la base
 compartida** (columna nueva en `responsables` y migración de datos en `permisos_rol`) · **Relacionadas:**
 [`020`](../020-alcance-de-editar-y-borrar/spec.md) (alcance de editar y borrar), [`025`](../025-auditoria-de-permisos/spec.md) (H2: el freelancer no lista usuarios)
 

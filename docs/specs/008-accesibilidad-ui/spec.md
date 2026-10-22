@@ -1,6 +1,6 @@
 # Spec 008 — Accesibilidad e interacción de la interfaz
 
-**Estado:** en ejecución · **Rama:** `feat-bayrol` · **Herramienta:** skill `ui-ux-pro-max`
+**Estado:** completada (2026-10-21), confirmada en pantalla por el usuario (2026-10-21, spec 022 T2) · **Rama:** `feat-bayrol` · **Herramienta:** skill `ui-ux-pro-max`
 (`.claude/skills/ui-ux-pro-max`, solo la skill principal; auditada el 2026-10-03: sin red, sin
 ejecutables, solo Python estándar sobre sus CSV).
 

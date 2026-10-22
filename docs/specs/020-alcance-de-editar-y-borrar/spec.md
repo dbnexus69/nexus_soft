@@ -1,6 +1,6 @@
 # Spec 020 — Editar y borrar con alcance propio (Todos · Solo los suyos · Ninguno)
 
-**Estado:** implementada (2026-10-17), probada por la API; falta probar en pantalla · **Rama:** `feat-bayrol` · **No toca el
+**Estado:** completada (2026-10-21), confirmada en pantalla por el usuario (2026-10-21, spec 022 T2) · **Rama:** `feat-bayrol` · **No toca el
 esquema** (`permisos_rol.valor` ya es texto) · **Relacionadas:** [`019`](../019-alcance-al-escribir-clientes/spec.md)
 (alcance al escribir clientes), `ventasAlcance.js`, `quotesAlcance.js`
 

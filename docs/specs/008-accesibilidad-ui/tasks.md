@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-03).** Hechas T1 a T4, por confirmar en pantalla. Los textos de 10 px ya están en 12 px (010), por ver en pantalla.
+**Estado (2026-10-21).** Completada: T1 a T5 confirmadas en pantalla por el usuario (2026-10-21, spec 022 T2).
 
 ## T1 · Lo crítico: campos, nombres, foco y movimiento `[x]`
 
@@ -81,6 +81,7 @@ texto de 10 px (por si algún chip se desborda).
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-21 | T1–T5 | Confirmadas en pantalla por el usuario (spec 022 T2): foco por teclado, etiquetas, avisos con icono, textos de 12 px sin desbordes y detalle de responsables. |
 | 2026-10-08 | T5 | Responsables: sin selector de estado al crear y modal de detalle rediseñada. |
 | 2026-10-03 | T2–T4 | `Combobox` como combobox ARIA, emojis por iconos de lucide, y ni un texto por debajo de 10 px. |
 | 2026-10-03 | T1 | Auditoría con la skill `ui-ux-pro-max`: campos conectados a su etiqueta y su error, 7 botones con nombre, foco visible por teclado, movimiento reducido global. |

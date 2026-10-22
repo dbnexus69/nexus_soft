@@ -1,6 +1,6 @@
 # Spec 017 — Destinos de preferencia del cliente
 
-**Estado:** implementada (2026-10-17), probada por la API; falta probar en pantalla · **Rama:** `feat-bayrol` · **Toca la base
+**Estado:** completada (2026-10-21), confirmada en pantalla por el usuario (2026-10-21, spec 022 T2) · **Rama:** `feat-bayrol` · **Toca la base
 compartida** (una tabla y una columna nuevas, aditivas) · **Relacionadas:** [`003`](../003-validacion-de-datos-de-personas/spec.md)
 (datos del cliente), [`009`](../009-sin-tabla-personas/spec.md) (diseño, no cambia esto: la tabla nueva cuelga de
 `clientes`, no de `personas`)

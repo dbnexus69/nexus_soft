@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-17).** Implementada y probada por la API; falta probar el panel y los botones en pantalla.
+**Estado (2026-10-21).** Completada: probada por la API, y el panel y los botones confirmados en pantalla por el usuario (2026-10-21, spec 022 T2).
 
 ### T1 · Modelo de permisos en el servidor `[x]`
 `utils/alcancePermisos.js` (nuevo: `SCOPED_ACTIONS`, `aAlcance`, `masEstrecho`, `alcanceDeEscritura`), compartido por
@@ -28,13 +28,13 @@ el cliente del admin (200), no los edita, no cobra ni borra la venta (403), edit
 (403); con "editar: todas" edita la del admin; "ver: las suyas · editar: todas" se guarda como `own`; el esquema marca
 `edit`/`delete` de ventas como alcance. En verde.
 
-### T5 · Panel de permisos `[~]`
+### T5 · Panel de permisos `[x]`
 `types/index.tsx` (`Alcance`, `SCOPED_ACTIONS` espejo, valores por defecto, `normalizeRolePermissions` respeta los
 alcances — si no, `own` se volvía `true` y se guardaba como `all`); `PermissionsGrid.tsx`: las opciones más amplias que
 Ver se desactivan con el aviso "No puede ser más amplio que Ver" (`title` y `aria-description`), y bajar Ver baja
 editar y borrar. **Comprobado:** `tsc`. **En pantalla:** falta.
 
-### T6 · Botones por registro `[~]`
+### T6 · Botones por registro `[x]`
 `PermissionsContext.scopeOf(módulo, acción)` (tope de ver, como el servidor). Ventas: cobrar con alcance de editar y
 anular con el de borrar (antes anular era solo para admin y cobrar solo las propias para todo no-admin). Cartera:
 "Cobrar" por el asesor de cada venta. Clientes: editar y cambiar estado por `createdBy`. Vuelos: check-in, marcar
@@ -51,3 +51,4 @@ pendiente y cancelar por `asesorId` del vuelo (nuevo en la respuesta de `/flight
 |---|---|---|
 | 2026-10-17 | — | Diseño aprobado (opción B: editar y borrar con alcance; ventas, cotizaciones, clientes y vuelos; nunca más amplio que Ver); spec, plan y tareas escritos. |
 | 2026-10-17 | T1–T7 | Implementada. Suites actuales en verde sin cambios; 13 comprobaciones nuevas en `test:aislamiento-api` en verde; `tsc` limpio. Falta la prueba en pantalla. |
+| 2026-10-21 | T5, T6 | Confirmadas en pantalla por el usuario (spec 022 T2): panel de permisos y botones por registro. |

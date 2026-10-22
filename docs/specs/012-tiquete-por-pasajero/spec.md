@@ -1,6 +1,6 @@
 # Spec 012 — Tiquete ordenado por pasajero: reserva y asientos
 
-**Estado:** implementada (2026-10-05), pendiente de probar en pantalla · **Rama:** `feat-bayrol` · **Toca la base
+**Estado:** completada (T5 confirmada en pantalla el 2026-10-08) · **Rama:** `feat-bayrol` · **Toca la base
 compartida** (una columna nueva) · **Relacionadas:** [`004`](../004-vuelos-y-checkin/spec.md) (tramos y check-in),
 [`011`](../011-perfil-y-voucher-de-la-empresa/spec.md) (voucher en el servidor)
 

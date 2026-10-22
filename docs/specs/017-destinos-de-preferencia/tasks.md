@@ -2,8 +2,8 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-17).** Código escrito en servidor y pantalla; migración aplicada; pruebas por la API y de
-aislamiento en verde. Falta probar en pantalla (T6–T8).
+**Estado (2026-10-21).** Completada: migración aplicada, pruebas por la API y de aislamiento en verde, y T6–T8
+confirmadas en pantalla por el usuario (2026-10-21, spec 022 T2).
 
 ### T1 · Migración `[x]`
 `20261017120000_destinos_de_preferencia`: tabla `cliente_destinos` (RLS `FORCE`, `empresa_id` sin respaldo, clave
@@ -32,17 +32,17 @@ recorte, repetido por la última aparición, 5 sí y 6 no, 6 con repetido pasan,
 destino ajeno no se ve, colgar uno de un cliente ajeno se rechaza, claves compuestas 60 → 61). **Comprobado:** las dos
 en verde, corridas por el usuario (2026-10-17).
 
-### T6 · Formulario del cliente `[~]`
+### T6 · Formulario del cliente `[x]`
 `DestinosField.tsx` en `ClientModal.tsx`: sugerencias (`AsyncCombobox`, ahora con `ariaLabel`), "+" y Enter, elegir
 una sugerencia la añade, etiquetas con "Quitar X", reciente primero y marcado, contador `n/5`, tope con aviso, 422 de
 `destinations*` junto al campo. **Comprobado:** `tsc`. **En pantalla:** añadir, quitar, repetido que pasa a reciente,
 tope de 5.
 
-### T7 · Detalle del cliente `[~]`
+### T7 · Detalle del cliente `[x]`
 "Destino de preferencia" en `ClientDetailModal.tsx`: el reciente, "+N" con `aria-expanded` que despliega la lista
 numerada (más nuevo primero); "Sin destinos de preferencia" si no hay. **Comprobado:** `tsc`. **En pantalla.**
 
-### T8 · Filtro en la lista `[~]`
+### T8 · Filtro en la lista `[x]`
 `Clients.tsx` + `useClients.ts`: filtro "Destino de preferencia" con sugerencias y espera de 350 ms, y casilla
 "Incluir destinos anteriores"; va al servidor. **Comprobado:** `tsc`. **En pantalla.** **Aviso (previo a esta spec):**
 la pantalla de clientes pide solo la primera página (10) y filtra el resto en el navegador; el filtro de destino sí
@@ -62,3 +62,4 @@ estado de la spec y este archivo.
 | 2026-10-17 | T3 | Al probar: "pEreira" en otro cliente quedaba como destino distinto de "Pereira". Ahora `escribirDestinos` toma la escritura que la agencia ya tiene (la más antigua, sin mayúsculas). Caso nuevo en `test:clientes-destinos` (20 comprobaciones). |
 | 2026-10-17 | T1, T3–T5 | Migración aplicada; `check:prisma`, `test:clientes-destinos` y `test:aislamiento` en verde. |
 | 2026-10-17 | T1–T9 | Implementada. `test:validaciones` y `tsc` en verde. Sin aplicar la migración ni correr las pruebas con BD (el clasificador de permisos frenó `migrate deploy`). |
+| 2026-10-21 | T6–T8 | Confirmadas en pantalla por el usuario (spec 022 T2): formulario, detalle y filtro de destinos. |

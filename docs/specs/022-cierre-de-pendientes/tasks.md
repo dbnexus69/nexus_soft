@@ -2,17 +2,47 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-21).** Hechas T1, T4 y T5. T3 a falta del push y la primera corrida. Pendientes T2 y T6.
+**Estado (2026-10-21).** Hechas T1 a T5 (T2: pantalla ok). Pendiente T6.
 
 ## T1 · Cerrar la 014 T7 como no reproducible `[x]`
 Marcada `[x]` en `014/tasks.md` con el motivo y una fila en su registro (orden expresa del usuario). Falta
 avisar a Darío.
 
-## T2 · Pruebas en pantalla de 008, 011, 012, 017 y 020 (y lista para Darío) `[ ]`
-## T3 · Activar la CI `[~]`
+## T2 · Pruebas en pantalla de 008, 011, 017 y 020 (y lista para Darío) `[x]` (recorrida por el usuario el 2026-10-21: todo ok)
+
+La 012 sale de la lista: su T5 ya está "Confirmado en pantalla" (2026-10-08); solo su encabezado quedó viejo.
+Con `pnpm dev` en `backend/` y `frontend/`. Marcar ok/falla:
+
+**008 · Accesibilidad**
+1. Recorrer una pantalla con Tab: el anillo de foco se ve al tabular, no al hacer clic.
+2. Pulsar la etiqueta de un campo: el cursor va al campo.
+3. Avisos de los formularios: el icono va junto al texto.
+4. Tipo de transporte de un plan y chips del calendario de vuelos con texto de 12 px: nada se desborda.
+5. Responsables → detalle: iniciales, estado en texto, deuda, ventas con estado en palabras, teléfono y correo
+   enlazados, "Ida/Regreso" en texto.
+
+**011 · Perfil y voucher de la empresa**
+6. Detalle de una venta → "Descargar" voucher: abre el PDF. "Enviar": avisa a quién se envió y el detalle muestra
+   "Voucher enviado".
+7. "Mi empresa" como asesor: solo Perfil. Como admin: editar, ver la vista previa, guardar y ver el logo nuevo en
+   la barra lateral.
+
+**017 · Destinos de preferencia**
+8. Cliente → editar: añadir destinos (con "+" y con Enter, y eligiendo una sugerencia), quitar uno, repetir uno
+   (pasa a reciente), tope de 5 con aviso.
+9. Detalle del cliente: el reciente, "+N" despliega la lista numerada; sin destinos dice "Sin destinos de preferencia".
+10. Lista de clientes: filtro "Destino de preferencia" con sugerencias; "Incluir destinos anteriores" amplía el filtro.
+
+**020 · Alcance de editar y borrar**
+11. Roles y permisos (superadmin): en asesor, con Ver "las suyas", las opciones más amplias de editar/borrar salen
+    desactivadas con "No puede ser más amplio que Ver"; bajar Ver baja editar y borrar.
+12. Como asesor con editar "las suyas": en ventas, cartera, clientes y vuelos, los botones de cobrar, anular,
+    editar, cambiar estado, check-in y cancelar solo aparecen en sus registros.
+13. Con editar "todas" (ver "todas"): aparecen también en los de otros.
+## T3 · Activar la CI `[x]`
 `docs/ci/ci.yml` → `.github/workflows/ci.yml` (`git mv`), sin el comentario "PENDIENTE DE ACTIVAR". No hizo falta
 `gh auth refresh`: la cuenta activa de `gh` (`bmunoz-dev`) ya tenía el permiso `workflow`. Actualizados `CLAUDE.md`
-y la 010 T2. **Por confirmar:** el push y la primera corrida en verde en GitHub (`gh run list`).
+y la 010 T2. **Verificado:** primera corrida en verde (run 39705180146: backend 16 s, frontend 26 s). Avisos sin efecto: las acciones `@v4` corren en Node 24 por la retirada de Node 20.
 
 ## T4 · Archivar la 009 `[x]`
 Encabezados de `009/spec.md` y `009/tasks.md` en "archivada (2026-10-21)", con enlace a T6. Sin código.
@@ -43,3 +73,5 @@ tres servicios que crean personas. Sin diseño todavía.
 | 2026-10-21 | T6 | Registrado el efecto cruzado sobre `personas` como problema por resolver. |
 | 2026-10-21 | T5 | `test:aislamiento-api` en verde (corrido por el usuario). |
 | 2026-10-21 | T3 | Flujo movido a `.github/workflows/`; falta push y primera corrida. |
+| 2026-10-21 | T3 | Push y primera corrida de la CI en verde. T2: lista de pantalla escrita. |
+| 2026-10-21 | T2 | Pantalla ok en 008, 011, 017 y 020; specs marcadas completadas (012 ya lo estaba). |

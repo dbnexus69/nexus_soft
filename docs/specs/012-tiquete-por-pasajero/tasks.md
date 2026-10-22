@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-05).** Implementada; falta probar el formulario en pantalla (T5).
+**Estado (2026-10-21).** Completada: T5 confirmada en pantalla el 2026-10-08 (el encabezado se puso al día en la spec 022 T2).
 
 ### T1 · Migración `asientos` `[x]`
 Columna `asientos JSONB` en `pasajeros_detalle`. **Se comprueba:** `migrate status`, `check:prisma`.

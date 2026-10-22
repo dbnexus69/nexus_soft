@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-04).** Hechas todas (T5 descartada). Falta probar en pantalla T9 y T10.
+**Estado (2026-10-21).** Completada (T5 descartada); T9 y T10 confirmadas en pantalla por el usuario (2026-10-21, spec 022 T2).
 
 Cada tarea deja la aplicación funcionando y no se da por hecha sin su comprobación.
 
@@ -100,7 +100,7 @@ No se migran: el usuario los vuelve a subir desde "Mi empresa". Queda quitar `ex
 
 ## Fase 4 — Frontend
 
-### T9 · Ventas sin voucher en el navegador `[~]`
+### T9 · Ventas sin voucher en el navegador `[x]`
 Descargar y enviar por la API; borrar `VoucherPDF.tsx`, `VoucherPDF.css`, `buildVoucherPdf`, `html2canvas`, `jspdf`; último
 envío en el detalle.
 - **Se comprueba:** `tsc` y `vite build`; `grep` sin restos de `html2canvas`/`jspdf`. **En pantalla:** descargar y enviar.
@@ -109,7 +109,7 @@ envío en el detalle.
   `useSales` y las dependencias `html2canvas` y `jspdf`. El detalle de la venta muestra "Voucher enviado" (`lastVoucherSent`).
   **Comprobado:** `tsc` y `vite build`; `grep` limpio. **Falta:** probarlo en pantalla.
 
-### T10 · Mi empresa `[~]`
+### T10 · Mi empresa `[x]`
 `pages/Empresa.tsx`, `components/empresa/*` (Perfil, formulario, editor de cláusulas, vista previa), entrada en el menú,
 refresco de la marca tras guardar.
 - **Se comprueba:** `tsc` y `vite build`. **En pantalla:** como asesor solo Perfil; como admin, editar, ver la vista previa,
@@ -166,3 +166,4 @@ generados y leídos con `pdftotext`, y la página revisada como imagen. `pnpm te
 | 2026-10-04 | T9, T10 | Ventas usa el voucher del servidor (fuera `html2canvas`/`jspdf`); pantalla Mi empresa con vista previa. |
 | 2026-10-04 | T11–T13 | Límite del cuerpo a 5 MB, documentación al día. Spec cerrada salvo la prueba en pantalla. |
 | 2026-10-08 | T14 | Asientos legibles por tramo, reserva por pasajero, IVA "Incluido", título de cláusula encima, y las fechas de vuelo ya no salen un día antes. |
+| 2026-10-21 | T9, T10 | Confirmadas en pantalla por el usuario (spec 022 T2): descargar y enviar el voucher; Mi empresa como asesor y como admin. |

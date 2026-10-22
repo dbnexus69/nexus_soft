@@ -1,6 +1,8 @@
 # Spec 009 — Quitar la tabla `personas`
 
-**Estado:** diseño, pendiente de aprobación · **Rama:** `feat-bayrol` · **Toca la base compartida** `nexus-bd`
+**Estado:** archivada (2026-10-21) por decisión del usuario: no se implementa. El efecto cruzado de abajo
+(crear un cliente sobrescribe la `persona` existente) sigue vivo y se trata aparte en
+[`022` T6](../022-cierre-de-pendientes/tasks.md) · **Rama:** `feat-bayrol` · **Toca la base compartida** `nexus-bd`
 (la usa también `feat-dbmoon`) · **Relacionada:** [`003`](../003-validacion-de-datos-de-personas/spec.md)
 (los datos de persona), [`002`](../002-estabilizacion-multi-tenant/spec.md) (tenancy, claves compuestas)
 

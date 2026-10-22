@@ -1,7 +1,9 @@
 const { Router } = require('express');
 const path = require('path');
 const router = Router();
+const { Prisma } = require('@prisma/client');
 const auth = require('../middleware/auth');
+const { getEffectivePermissions, getActionScope } = require('../middleware/authorize');
 const prisma = require('../config/db');
 const { error } = require('../utils/apiResponse');
 
@@ -20,6 +22,12 @@ const { error } = require('../utils/apiResponse');
  * o el fichero no existe o es de otra agencia — y las dos respuestas son la
  * misma, que es lo correcto.
  *
+ * Dentro de la agencia manda además el alcance del rol (spec 022): el voucher
+ * sigue a ver ventas y el documento de check-in a ver vuelos (`itineraries`).
+ * Con 'own', solo los de ventas propias; quien no puede ver la venta por su id
+ * tampoco abre sus ficheros. No se usa `authorize`: un fichero puede ser de
+ * cualquiera de los dos módulos.
+ *
  * Los logos NO pasan por aquí: están en el bucket privado `logos` de Supabase
  * Storage y se entregan con URL firmada (`perfilEmpresa.service.js`, spec 011).
  */
@@ -30,10 +38,24 @@ router.get('/:fichero', auth, async (req, res, next) => {
     const fichero = path.basename(req.params.fichero);
     const ruta = `/uploads/${fichero}`;
 
+    const { permissions } = getEffectivePermissions(req.user);
+    const alcance = (modulo) => {
+      const ver = getActionScope(permissions, modulo, 'view');
+      if (ver === 'all') return Prisma.sql`TRUE`;
+      if (ver === 'own') return Prisma.sql`v.usuario_id = ${req.user.id}`;
+      return Prisma.sql`FALSE`;
+    };
+    const patron = '%' + fichero.replace(/[\\%_]/g, '\\$&') + '%';
+
     const [visible] = await prisma.$queryRaw`
-      SELECT 1 AS x FROM detalle_venta WHERE voucher_url = ${ruta}
+      SELECT 1 AS x FROM detalle_venta d JOIN ventas v ON v.id = d.venta_id
+      WHERE d.voucher_url = ${ruta} AND ${alcance('sales')}
       UNION ALL
-      SELECT 1 FROM tramos_vuelo WHERE checkin_docs::text LIKE ${'%' + fichero + '%'}
+      SELECT 1 FROM tramos_vuelo t
+        JOIN prod_tiqueteria p ON p.id = t.prod_tiqueteria_id
+        JOIN detalle_venta d ON d.id = p.detalle_venta_id
+        JOIN ventas v ON v.id = d.venta_id
+      WHERE t.checkin_docs::text LIKE ${patron} AND ${alcance('itineraries')}
       LIMIT 1`;
 
     if (!visible) return error(res, 'Archivo no encontrado', 404, 'NOT_FOUND');

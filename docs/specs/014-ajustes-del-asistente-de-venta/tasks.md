@@ -56,7 +56,7 @@ que llaman a la misma función.
 Verificado por lectura del código y `node --check`. Falta comprobarlo con una venta real de
 finca.
 
-## T7 · Error 500 al registrar una venta con todos los servicios `[ ]`
+## T7 · Error 500 al registrar una venta con todos los servicios `[x]` (cerrada como no reproducible, 2026-10-21)
 
 Reportado en el chat. El aviso da una referencia de 8 caracteres y el servidor registra la
 causa en la consola del backend (`[ERROR] <referencia> POST /api/v1/sales …`). Falta esa
@@ -70,6 +70,9 @@ grande tampoco lo explica (pasaría de 5 MB → 413, no 500; los vouchers ya no 
 haciendo falta la línea `[ERROR] <referencia>` del backend o los datos exactos de la venta que falló.
 El equipo confirma que las ventas funcionan con normalidad: queda abierta solo por si vuelve a aparecer.
 
+*Cerrada (2026-10-21), por decisión del usuario ([spec 022](../022-cierre-de-pendientes/spec.md) T1):* no
+reproducible. Si reaparece, se abre una tarea nueva con la línea `[ERROR] <referencia>` del backend.
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
@@ -81,3 +84,4 @@ El equipo confirma que las ventas funcionan con normalidad: queda abierta solo p
 | 2026-10-06 | T5 | Botones duplicados quitados; `tsc` sin errores. |
 | 2026-10-06 | T6 | Finca: ciudad y dirección; `node --check`. |
 | 2026-10-06 | T7 | Pendiente de la referencia del 500. |
+| 2026-10-21 | T7 | Cerrada como no reproducible (spec 022). |

@@ -128,6 +128,16 @@ async function main() {
   comprobar('…ni se edita', una((await pedir('PUT', `/sales/${ventaA.id}`, tokAsesor, { observations: 'x' })).status, 403, 404));
   comprobar('…ni se anula', una((await pedir('POST', `/sales/${ventaA.id}/cancellation`, tokAsesor, { reason: 'prueba de aislamiento' })).status, 400, 403, 404));
 
+  // Spec 022: los ficheros siguen el alcance de ver ventas, no solo la agencia.
+  comprobar('…ni se abre su voucher: 404', (await f(tokAsesor)).status === 404);
+  const subidaPropia = await pedir('PUT', `/sales/${ventaPropia?.id}/products/${ventaPropia?.products?.[0]?.detalleId}/voucher`, tokAsesor, undefined, { form: (() => {
+    const g = new FormData(); g.append('file', new Blob([png], { type: 'image/png' }), 'propio.png'); return g;
+  })() });
+  const urlPropia = subidaPropia.json?.data?.voucher_url;
+  comprobar('el voucher de su propia venta sí se abre: 200', Boolean(urlPropia) && (await fetch(BASE + urlPropia, { headers: { Authorization: `Bearer ${tokAsesor}` } })).status === 200,
+    `subida HTTP ${subidaPropia.status}`);
+  comprobar('el admin abre el voucher del asesor: 200', Boolean(urlPropia) && (await fetch(BASE + urlPropia, { headers: { Authorization: `Bearer ${tokA}` } })).status === 200);
+
   // Spec 019: el alcance 'own' de clientes vale también por id, no solo en la lista.
   const estado = async (metodo, ruta, cuerpo) => (await pedir(metodo, ruta, tokAsesor, cuerpo)).status;
   comprobar('el cliente del admin no se lee por id: 404', (await estado('GET', `/clients/${cliA.id}`)) === 404);

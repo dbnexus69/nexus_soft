@@ -95,6 +95,12 @@ async function firmar(bucket, nombre, segundos, { descarga } = {}) {
   return data.signedUrl;
 }
 
+/** Copia un objeto dentro del mismo bucket y de la misma carpeta de empresa, sin bajarlo. */
+async function copiar(bucket, desde, hacia) {
+  const { error } = await storage().from(bucketValido(bucket)).copy(ruta(desde), ruta(hacia));
+  if (error) throw fallo('copy', error);
+}
+
 async function borrar(bucket, nombres) {
   const lista = (Array.isArray(nombres) ? nombres : [nombres]).map(ruta);
   if (!lista.length) return;
@@ -102,4 +108,4 @@ async function borrar(bucket, nombres) {
   if (error) throw fallo('remove', error);
 }
 
-module.exports = { BUCKETS, storage, subir, existe, leer, firmar, borrar };
+module.exports = { BUCKETS, storage, subir, existe, leer, firmar, copiar, borrar };

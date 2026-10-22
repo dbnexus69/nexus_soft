@@ -14,7 +14,7 @@ const { fecha, dinero, SECCIONES, titulo, tarjeta, rejilla, bloqueTiquete } = re
  * (ninguna sección los incluye). La tabla de precios por servicio sí es propia de la cotización
  * (un voucher de venta no la tiene). Subir `PLANTILLA_VERSION` invalida la caché.
  */
-const PLANTILLA_VERSION = 2;
+const PLANTILLA_VERSION = 3;
 
 const vfs = (vfsFuentes.pdfMake && vfsFuentes.pdfMake.vfs) || vfsFuentes.vfs || vfsFuentes;
 const fuente = (archivo) => Buffer.from(vfs[archivo], 'base64');
@@ -45,12 +45,24 @@ function porCategoria(lineas) {
  * `services/quotes/index.js` (pdfmake necesita los bytes, no una URL). Una ruta sin Buffer
  * (falló la descarga) simplemente no se pinta, no rompe el documento.
  */
+// Las fotos van en una cuadrícula de 3 por fila, del ancho útil de la página (carta, 540 pt entre
+// márgenes): una sola fila con las 5 se salía por la derecha. Cada foto se encaja en su celda sin
+// deformarse, centrada; la última fila se completa con celdas vacías para que no se estiren.
+const FOTOS_POR_FILA = 3;
+const SEPARACION_FOTOS = 8;
+const CELDA_FOTO = [(540 - SEPARACION_FOTOS * (FOTOS_POR_FILA - 1)) / FOTOS_POR_FILA, 120];
+
 function bloqueImagenes(rutas, porRuta) {
   if (!Array.isArray(rutas) || !rutas.length) return [];
-  const columnas = rutas.map(r => porRuta[r]).filter(Boolean)
-    .map(buffer => ({ image: buffer, fit: [150, 110], margin: [0, 0, 8, 8] }));
-  if (!columnas.length) return [];
-  return [{ columns: columnas, margin: [0, 0, 0, 6] }];
+  const fotos = rutas.map(r => porRuta[r]).filter(Boolean);
+  const filas = [];
+  for (let i = 0; i < fotos.length; i += FOTOS_POR_FILA) {
+    const fila = fotos.slice(i, i + FOTOS_POR_FILA)
+      .map(buffer => ({ width: CELDA_FOTO[0], stack: [{ image: buffer, fit: CELDA_FOTO, alignment: 'center' }] }));
+    while (fila.length < FOTOS_POR_FILA) fila.push({ width: CELDA_FOTO[0], text: '' });
+    filas.push({ columns: fila, columnGap: SEPARACION_FOTOS, margin: [0, 0, 0, SEPARACION_FOTOS], unbreakable: true });
+  }
+  return filas.length ? [{ stack: filas, margin: [0, 2, 0, 6] }] : [];
 }
 
 /**

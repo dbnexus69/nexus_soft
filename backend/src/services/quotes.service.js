@@ -35,17 +35,36 @@ async function idDeClienteExistente(clientId) {
  * `detalle` es el objeto completo (`TicketData`/`HotelData`...); `descripcion` se
  * deriva de él, nunca se escribe a mano.
  */
-function lineasDe(body) {
+/**
+ * Las fotos de una línea solo las escriben `addLineImage`/`removeLineImage` (spec 021). Al guardar la
+ * cotización entera, el formulario devuelve las que recibió de `getQuoteById`, que son URLs firmadas
+ * de 5 minutos: guardarlas tal cual rompía las fotos al vencer (spec 023 T5). Se vuelve cada una a su
+ * ruta y solo se conservan las que ya eran de esta cotización (`guardadas`); lo demás se descarta.
+ */
+function imagenesConocidas(images, guardadas) {
+  if (!Array.isArray(images)) return [];
+  const rutas = images.map((img) => {
+    if (guardadas.has(img)) return img;
+    let camino;
+    try { camino = decodeURIComponent(new URL(img).pathname); } catch { return null; }
+    return [...guardadas].find(r => camino.endsWith(`/${r}`)) || null;
+  });
+  return [...new Set(rutas.filter(Boolean))].slice(0, MAX_IMAGENES_POR_LINEA);
+}
+
+function lineasDe(body, guardadas = new Set()) {
   const lineas = [];
   for (const slug of SLUGS) {
     const clave = CATALOG[slug].responseKey;
     for (const item of body[clave] || []) {
       const { ta, costo_proveedor, iva } = datosFinancieros(item);
+      const { images, ...resto } = item;
+      const imagenes = imagenesConocidas(images, guardadas);
       lineas.push({
         id: uuidv4(),
         categoria: slug,
         descripcion: resumenDe(slug, item),
-        detalle: item,
+        detalle: imagenes.length ? { ...resto, images: imagenes } : resto,
         costo_proveedor,
         ta,
         iva,
@@ -226,7 +245,11 @@ class QuotesService {
     productValidation.validarTiquetes(body.ticketData || [], catalogos, { exigirReserva: false });
     productValidation.validarPersonas(body, catalogos);
 
-    const lineas = lineasDe(body);
+    const actuales = await prisma.detalle_cotizacion.findMany({
+      where: { cotizacion_id: cotizacion.id }, select: { detalle: true },
+    });
+    const guardadas = new Set(actuales.flatMap(l => (Array.isArray(l.detalle?.images) ? l.detalle.images : [])));
+    const lineas = lineasDe(body, guardadas);
     if (!lineas.length) throw new BadRequestError('La cotización necesita al menos un servicio');
 
     await prisma.transaccion(async (tx) => {
@@ -247,6 +270,16 @@ class QuotesService {
       });
     });
 
+    // Las fotos que ya no están en ninguna línea (se quitó el servicio o la foto) salen del bucket,
+    // después de confirmar la escritura. Cada cotización tiene sus propios archivos (también las
+    // duplicadas, ver `duplicateQuote`), así que no se borra nada que use otra.
+    const quedan = new Set(lineas.flatMap(l => l.detalle.images || []));
+    const sobrantes = [...guardadas].filter(r => !quedan.has(r));
+    if (sobrantes.length) {
+      await almacenamiento.borrar(BUCKET_IMAGENES, sobrantes)
+        .catch(err => console.warn('[QUOTE_IMAGE_DELETE_FAILED]', err.message));
+    }
+
     return this.getQuoteById(cotizacion.id, alcance);
   }
 
@@ -258,6 +291,11 @@ class QuotesService {
   async duplicateQuote(id, alcance = {}) {
     const original = await cotizacionVisible(id, alcance);
     const lineas = await prisma.detalle_cotizacion.findMany({ where: { cotizacion_id: original.id } });
+    // Cada línea nueva nace sin fotos; las suyas, copiadas, se le ponen después de la transacción.
+    const nuevas = lineas.map((l) => {
+      const { images, ...detalle } = l.detalle || {};
+      return { id: uuidv4(), original: l, detalle };
+    });
 
     // Misma cantidad de días de validez que tenía el original, contados desde hoy;
     // si no tenía fecha de vencimiento, la copia tampoco.
@@ -279,14 +317,34 @@ class QuotesService {
       });
       if (lineas.length) {
         await tx.detalle_cotizacion.createMany({
-          data: lineas.map(l => ({
-            id: uuidv4(), cotizacion_id: cotizacion.id, categoria: l.categoria, descripcion: l.descripcion,
-            detalle: l.detalle, costo_proveedor: l.costo_proveedor, ta: l.ta, iva: l.iva,
+          data: nuevas.map(({ id: lineaId, original: l, detalle }) => ({
+            id: lineaId, cotizacion_id: cotizacion.id, categoria: l.categoria, descripcion: l.descripcion,
+            detalle, costo_proveedor: l.costo_proveedor, ta: l.ta, iva: l.iva,
           })),
         });
       }
       return cotizacion;
     });
+
+    // Las fotos se copian en el bucket (spec 023): si la copia compartiera los archivos del
+    // original, borrar una foto en una rompería la otra. Si una copia falla, esa línea queda sin
+    // fotos y se borran las que alcanzaron a copiarse; la cotización duplicada sigue valiendo.
+    for (const { id: lineaId, original, detalle } of nuevas) {
+      const imagenes = Array.isArray(original.detalle?.images) ? original.detalle.images : [];
+      if (!imagenes.length) continue;
+      const copiadas = [];
+      try {
+        for (const desde of imagenes) {
+          const hacia = `${copia.id}/${lineaId}/${uuidv4()}.${desde.split('.').pop()}`;
+          await almacenamiento.copiar(BUCKET_IMAGENES, desde, hacia);
+          copiadas.push(hacia);
+        }
+        await prisma.detalle_cotizacion.update({ where: { id: lineaId }, data: { detalle: { ...detalle, images: copiadas } } });
+      } catch (err) {
+        console.warn('[QUOTE_IMAGE_COPY_FAILED]', err.message);
+        await almacenamiento.borrar(BUCKET_IMAGENES, copiadas).catch(() => {});
+      }
+    }
 
     return this.getQuoteById(copia.id, alcance);
   }

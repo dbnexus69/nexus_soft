@@ -16,19 +16,21 @@ Corre como `postgres` (`DIRECT_URL`), sin RLS.
 ## T3 · Backend: alcance en responsables
 - `utils/alcancePermisos.js` `SCOPED_ACTIONS.responsables = ['edit', 'delete']`; `roles.service.js`
   `SCOPED_VIEW_MODULES` + responsables; `authorize.js`: `ADMIN_PERMISSIONS.responsables` a `all` (view/edit/delete) y los
-  defaults del asesor (`view: false` como hoy) y del freelancer (los nuevos).
+  defaults del asesor (`view: false` como hoy) y del freelancer (los nuevos). De `authorize.js` salen también los roles
+  de una agencia nueva (`companies.service.js`).
+- `roles.service.js` `DEFAULT_ROLE_VALUES` (lo que muestra el panel si falta una fila): freelancer `users.view` a
+  `'false'` (quedó desfasado en la 025) y responsables `own/true/own/none`; admin y superadmin responsables
+  `all/true/all/all`.
 - `responsables.service.js`: list/getById con `viewScope` (`own` → `creado_por_id = user.id`, mismo `where` para filas y
   conteo); update/delete con `alcanceDeEscritura` (403 en lo ajeno); create guarda `creado_por_id` (null suplantando).
   El controlador pasa el alcance como hace `clients.controller.js`.
 
-## T4 · Backend: ganancia en el dashboard
-`stats.service.js::getDashboardStats`: `totalProfit` = `SUM(ta_total)` de ventas no anuladas con los mismos filtros y
-alcance que `totalRevenue` (la misma consulta, una columna más).
+## T4 · Backend: ganancia en el dashboard — descartada
+La ganancia ya es `totalRevenue` con el alcance del dashboard. Sin cambio en `dashboardAggregates.sql` ni `db:generate`.
 
 ## T5 · Frontend
 `types/index.tsx`: responsables con alcance (`SCOPED_ACTIONS` espejo, defaults de admin/asesor/freelancer).
-`Responsables.tsx`: botones de editar/borrar por `scopeOf` y `createdBy` (como clientes en la 020). Dashboard: tarjeta
-"Ganancia (TA)" junto a "Total venta".
+`Responsables.tsx`: botones de editar/borrar por `scopeOf` y `createdBy` (como clientes en la 020).
 
 ## T6 · Pruebas
 `test:aislamiento-api`: los casos de `spec.md` con el freelancer de la 025. Más `check:prisma`, `tsc`.

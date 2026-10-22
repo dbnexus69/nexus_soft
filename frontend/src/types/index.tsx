@@ -41,9 +41,8 @@ export interface User {
  * Forma de los permisos por rol, y debe coincidir con `MODULE_ACTIONS` y
  * `SCOPED_VIEW_MODULES` del backend (`roles.service.js`).
  *
- * `responsables` era `all | own | none` y ahora es sí/no: su tabla no tiene
- * columna de dueño, así que un 'own' se habría comportado como 'all' sin
- * avisar. `users` y `config` faltaban, y son configurables desde el backend.
+ * `responsables` tiene alcance desde la spec 026, cuando su tabla tuvo dueño
+ * (`creado_por_id`). `users` y `config` faltaban, y son configurables desde el backend.
  */
 /** Alcance de una acción: toda la agencia, solo lo suyo o nada. */
 export type Alcance = "all" | "own" | "none";
@@ -57,6 +56,7 @@ export const SCOPED_ACTIONS: Record<string, string[]> = {
   sales: ['view', 'edit', 'delete'],
   quotes: ['view', 'edit', 'delete'],
   clients: ['view', 'edit'],
+  responsables: ['view', 'edit', 'delete'],
   itineraries: ['view', 'edit'],
 };
 export const tieneAlcance = (modulo: string, accion: string) => (SCOPED_ACTIONS[modulo] || []).includes(accion);
@@ -69,7 +69,7 @@ export interface RolePermissions {
   sales: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
   quotes: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
   clients: { view: Alcance; create: boolean; edit: Alcance };
-  responsables: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  responsables: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
   itineraries: { view: Alcance; edit: Alcance };
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
@@ -90,7 +90,7 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   quotes: { view: "own", create: true, edit: "own", delete: "none" },
   clients: { view: "own", create: true, edit: "own" },
   // El backend los niega por defecto; aquí concedían view/create/edit.
-  responsables: { view: false, create: false, edit: false, delete: false },
+  responsables: { view: "none", create: false, edit: "none", delete: "none" },
   itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: true, create: false, edit: false, delete: false },
@@ -102,8 +102,8 @@ export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   sales: { view: "own", create: true, edit: "own", delete: "none" },
   quotes: { view: "own", create: true, edit: "own", delete: "none" },
   clients: { view: "own", create: true, edit: "own" },
-  // El backend los niega por defecto; aquí concedían view/create/edit.
-  responsables: { view: false, create: false, edit: false, delete: false },
+  // Los que creó (spec 026).
+  responsables: { view: "own", create: true, edit: "own", delete: "none" },
   itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: false, create: false, edit: false, delete: false },
@@ -116,7 +116,7 @@ export const ADMIN_PERMISSIONS: RolePermissions = {
   sales: { view: "all", create: true, edit: "all", delete: "all" },
   quotes: { view: "all", create: true, edit: "all", delete: "all" },
   clients: { view: "all", create: true, edit: "all" },
-  responsables: { view: true, create: true, edit: true, delete: true },
+  responsables: { view: "all", create: true, edit: "all", delete: "all" },
   itineraries: { view: "all", edit: "all" },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
@@ -125,8 +125,6 @@ export const ADMIN_PERMISSIONS: RolePermissions = {
   permissions: { view: true, edit: false },
 };
 
-// Los mismos que `SCOPED_VIEW_MODULES` del backend. `responsables` sale de la
-// lista: sin columna de dueño, su `view` es un sí/no.
 /**
  * `superadmin`: el único que puede reescribir permisos. Se lo tiene el usuario
  * #1 (Admin Nexus) y su rol no es editable desde la interfaz — si alguien
@@ -222,6 +220,8 @@ export interface Responsable {
   email: string;
   status: "active" | "inactive";
   creadoAt: string;
+  /** Quien lo creó (spec 026); vacío en los anteriores y en los creados suplantando. */
+  createdBy?: number | null;
   deudaTotal: number;
   ventas?: any[];
 }

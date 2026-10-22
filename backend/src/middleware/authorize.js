@@ -15,7 +15,7 @@ const ADMIN_PERMISSIONS = {
   sales: { view: 'all', create: true, edit: 'all', delete: 'all' },
   quotes: { view: 'all', create: true, edit: 'all', delete: 'all' },
   clients: { view: 'all', create: true, edit: 'all', delete: true },
-  responsables: { view: true, create: true, edit: true, delete: true },
+  responsables: { view: 'all', create: true, edit: 'all', delete: 'all' },
   itineraries: { view: 'all', edit: 'all', delete: true },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
@@ -49,8 +49,9 @@ const ROLE_DEFAULT_PERMISSIONS = {
     clients: { view: 'own', create: true, edit: 'own' },
     // Por defecto los responsables son cosa de admin, como cuando esto se
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
-    // puede delegar desde la interfaz.
-    responsables: { view: false, create: false, edit: false, delete: false },
+    // puede delegar desde la interfaz. Con alcance desde la spec 026: 'none' y no
+    // `false`, o un 'own'/'all' guardado se leería como booleano.
+    responsables: { view: 'none', create: false, edit: 'none', delete: 'none' },
     permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: false, create: false, edit: false, delete: false },
@@ -67,10 +68,8 @@ const ROLE_DEFAULT_PERMISSIONS = {
     sales: { view: 'own', create: true, edit: 'own', delete: 'none' },
     quotes: { view: 'own', create: true, edit: 'own', delete: 'none' },
     clients: { view: 'own', create: true, edit: 'own' },
-    // Por defecto los responsables son cosa de admin, como cuando esto se
-    // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
-    // puede delegar desde la interfaz.
-    responsables: { view: false, create: false, edit: false, delete: false },
+    // Los suyos: los que creó (spec 026). Borrar, no.
+    responsables: { view: 'own', create: true, edit: 'own', delete: 'none' },
     permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: false, create: false, edit: false, delete: false },

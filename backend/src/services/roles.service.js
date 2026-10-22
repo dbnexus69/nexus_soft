@@ -43,11 +43,9 @@ const MODULE_ACTIONS = {
  * O sea: la interfaz lo mostraba apagado mientras el backend seguía dejando
  * pasar con alcance propio. Read y write ahora coinciden.
  *
- * `responsables` queda fuera a propósito: su tabla no tiene columna de dueño
- * (solo persona_id, status, creado_at, deleted_at), así que un 'own' no se
- * podría aplicar y se comportaría como 'all' sin avisar. Es un sí/no.
+ * `responsables` entró en la spec 026, cuando su tabla tuvo dueño (`creado_por_id`).
  */
-const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'quotes', 'clients', 'itineraries'];
+const SCOPED_VIEW_MODULES = ['dashboard', 'sales', 'quotes', 'clients', 'responsables', 'itineraries'];
 
 /**
  * Rótulos de los módulos y de las acciones, para que la API pueda DESCRIBIR el
@@ -113,7 +111,7 @@ const DEFAULT_ROLE_VALUES = {
     sales: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
     quotes: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
     clients: { view: 'own', create: 'true', edit: 'own' },
-    responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
+    responsables: { view: 'none', create: 'false', edit: 'none', delete: 'none' },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     // Se mantienen en true: el asistente de ventas necesita los catálogos
@@ -123,15 +121,17 @@ const DEFAULT_ROLE_VALUES = {
     config: { view: 'true', edit: 'false' },
     permissions: { view: 'false', edit: 'false' },
   },
+  // Lo mismo que `authorize.js` (spec 026): solo lo suyo, también en responsables, y sin
+  // la lista de usuarios (025).
   freelancer: {
     dashboard: { view: 'own' },
     sales: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
     quotes: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
     clients: { view: 'own', create: 'true', edit: 'own' },
-    responsables: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
+    responsables: { view: 'own', create: 'true', edit: 'own', delete: 'none' },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    users: { view: 'true', create: 'false', edit: 'false', delete: 'false' },
+    users: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     config: { view: 'true', edit: 'false' },
     permissions: { view: 'false', edit: 'false' },
   },
@@ -140,7 +140,7 @@ const DEFAULT_ROLE_VALUES = {
     sales: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
     quotes: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
     clients: { view: 'all', create: 'true', edit: 'all' },
-    responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    responsables: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
     itineraries: { view: 'all', edit: 'all' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     users: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
@@ -152,7 +152,7 @@ const DEFAULT_ROLE_VALUES = {
     sales: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
     quotes: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
     clients: { view: 'all', create: 'true', edit: 'all' },
-    responsables: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
+    responsables: { view: 'all', create: 'true', edit: 'all', delete: 'all' },
     itineraries: { view: 'all', edit: 'all' },
     commissions: { view: 'true', create: 'true', edit: 'true', delete: 'true' },
     users: { view: 'true', create: 'true', edit: 'true', delete: 'true' },

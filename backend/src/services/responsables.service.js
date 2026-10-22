@@ -1,14 +1,30 @@
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError } = require('../errors/AppError');
+const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { validarDocumento } = require('../utils/tipoDocumento');
 const { reutilizarPersona } = require('./personaCompartida');
+const { alcanceDeEscritura } = require('../utils/alcancePermisos');
+
+/**
+ * Con alcance de ver 'own', los suyos son los que creó (spec 026), como en clientes.
+ * Sin alcance (llamadas internas), no se restringe.
+ */
+const soloLosSuyos = (alcance = {}) =>
+  (alcance.viewScope || alcance.permissionScope) === 'own' && Boolean(alcance.user);
+
+/** Para escribir: 404 si no existe, 403 si es de otro. Manda el alcance de la acción, con el tope del de ver. */
+function comprobarQueEsSuyo(responsable, alcance = {}) {
+  if (!responsable || responsable.deleted_at) throw new NotFoundError('Responsable no encontrado');
+  if (alcanceDeEscritura(alcance) === 'own' && alcance.user && responsable.creado_por_id !== alcance.user.id) {
+    throw new ForbiddenError('No puede modificar un responsable de otro usuario');
+  }
+}
 
 class ResponsablesService {
   /**
    * Listar responsables con paginación y búsqueda
    */
-  async listResponsables({ pagination, search, status, sortBy, sortOrder }) {
+  async listResponsables({ pagination, search, status, sortBy, sortOrder, ...alcance }) {
     const { page, perPage, skip } = pagination;
     // Un solo constructor de filtros para el count y para el SQL: antes el
     // count ignoraba el search y la paginación devolvía totales falsos.
@@ -38,6 +54,9 @@ class ResponsablesService {
     }
     if (status) {
       push('r.status = ?::"UserStatus"', status);
+    }
+    if (soloLosSuyos(alcance)) {
+      push('r.creado_por_id = ?', alcance.user.id);
     }
 
     const whereSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
@@ -80,6 +99,7 @@ class ResponsablesService {
             p.email,
             p.birth_date as "birthDate",
             r.status,
+            r.creado_por_id as "createdBy",
             td.id as "docTypeId",
             td.nombre as "docType",
             COALESCE(
@@ -112,6 +132,7 @@ class ResponsablesService {
       birthDate: r.birthDate,
       status: r.status,
       creadoAt: r.creadoAt,
+      createdBy: r.createdBy,
       deudaTotal: parseFloat(r.deudaTotal)
     }));
 
@@ -124,14 +145,14 @@ class ResponsablesService {
   /**
    * Obtener responsable por ID
    */
-  async getResponsableById(id, includeSales = false) {
+  async getResponsableById(id, includeSales = false, alcance = {}) {
     // La deuda se suma en SQL sobre TODAS sus ventas a crédito, igual que en el
     // listado. Antes se traían 50 ventas para sumarlas aquí, así que con más de
     // 50 el total salía corto; y el array de ventas que devolvía no lo usaba
     // nadie: el modal pide las suyas paginadas con GET /sales?responsableId=.
     const [responsable, resumen] = await Promise.all([
-      prisma.responsables.findUnique({
-        where: { id },
+      prisma.responsables.findFirst({
+        where: { id, ...(soloLosSuyos(alcance) ? { creado_por_id: alcance.user.id } : {}) },
         include: { personas: { include: { tipos_documento: true } } }
       }),
       includeSales
@@ -170,6 +191,7 @@ class ResponsablesService {
       birthDate: responsable.personas.birth_date,
       status: responsable.status,
       creadoAt: responsable.creado_at,
+      createdBy: responsable.creado_por_id,
       deudaTotal,
       salesCount: resumen ? resumen._count._all : undefined,
     };
@@ -178,7 +200,7 @@ class ResponsablesService {
   /**
    * Crear responsable
    */
-  async createResponsable(data) {
+  async createResponsable(data, userId = null) {
     const { firstName, lastName, docNumber, phone, email } = data;
 
     const tipo = await validarDocumento(data);
@@ -209,10 +231,11 @@ class ResponsablesService {
         });
       }
 
-      // Un responsable dado de baja con ese documento se revive en vez de crear otro.
+      // Un responsable dado de baja con ese documento se revive en vez de crear otro, y pasa a
+      // ser de quien lo revive: si no, con alcance 'own' recibiría un 201 por algo que no ve.
       const responsable = previo
-        ? await tx.responsables.update({ where: { id: previo.id }, data: { deleted_at: null, status: 'active' } })
-        : await tx.responsables.create({ data: { persona_id: persona.id, status: 'active' } });
+        ? await tx.responsables.update({ where: { id: previo.id }, data: { deleted_at: null, status: 'active', creado_por_id: userId } })
+        : await tx.responsables.create({ data: { persona_id: persona.id, status: 'active', creado_por_id: userId } });
 
       return { ...responsable, aviso };
     });
@@ -223,7 +246,7 @@ class ResponsablesService {
   /**
    * Actualizar responsable
    */
-  async updateResponsable(id, data) {
+  async updateResponsable(id, data, alcance = {}) {
     const { firstName, lastName, docNumber, phone, email, status } = data;
 
     const tipo = await validarDocumento(data);
@@ -233,9 +256,7 @@ class ResponsablesService {
       where: { id },
       include: { personas: true }
     });
-    if (!responsable || responsable.deleted_at) {
-      throw new NotFoundError('Responsable no encontrado');
-    }
+    comprobarQueEsSuyo(responsable, alcance);
 
     if (status === 'inactive' && responsable.status === 'active') {
       const debtCheck = await prisma.transaccion(async (tx) => tx.$queryRawUnsafe(`
@@ -284,11 +305,9 @@ class ResponsablesService {
   /**
    * Eliminar responsable (soft delete)
    */
-  async deleteResponsable(id) {
+  async deleteResponsable(id, alcance = {}) {
     const responsable = await prisma.responsables.findUnique({ where: { id } });
-    if (!responsable || responsable.deleted_at) {
-      throw new NotFoundError('Responsable no encontrado');
-    }
+    comprobarQueEsSuyo(responsable, alcance);
 
     await prisma.responsables.update({
       where: { id },

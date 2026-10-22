@@ -209,6 +209,37 @@ async function main() {
   const checkinAs = await estadoAs('PUT', `/flights/${require('crypto').randomUUID()}/checkin`);
   comprobar('asesor: check-in de un vuelo (itineraries.edit ninguno): 403', checkinAs === 403, `HTTP ${checkinAs}`);
 
+  // ── Spec 026: el freelancer solo maneja los responsables que creó.
+  console.log('\n  Responsables del freelancer (spec 026)');
+  const respFree = await pedir('POST', '/responsables', tokFree, { firstName: 'Resp', lastName: 'Free' });
+  comprobar('freelancer: crea un responsable: 201', respFree.status === 201, `HTTP ${respFree.status}`);
+  const idRespFree = respFree.json?.data?.id;
+  comprobar('freelancer: ve el suyo: 200', (await pedir('GET', `/responsables/${idRespFree}`, tokFree)).status === 200);
+  const editRespFree = await pedir('PUT', `/responsables/${idRespFree}`, tokFree, { firstName: 'Resp', lastName: 'Editado' });
+  comprobar('freelancer: edita el suyo: 200', editRespFree.status === 200, `HTTP ${editRespFree.status}`);
+  const respAdmin = await pedir('POST', '/responsables', tokA, { firstName: 'Resp', lastName: 'Admin' });
+  const idRespAdmin = respAdmin.json?.data?.id;
+  comprobar('el admin crea un responsable', respAdmin.status === 201, `HTTP ${respAdmin.status}`);
+  comprobar('freelancer: GET del responsable del admin: 404', (await pedir('GET', `/responsables/${idRespAdmin}`, tokFree)).status === 404);
+  const putAjeno = await pedir('PUT', `/responsables/${idRespAdmin}`, tokFree, { firstName: 'Intruso', lastName: 'Ajeno' });
+  comprobar('freelancer: PUT del responsable del admin: 403', putAjeno.status === 403, `HTTP ${putAjeno.status}`);
+  const listaFree = ((await pedir('GET', '/responsables?perPage=100', tokFree)).json?.data || []).map(r => r.id);
+  comprobar('freelancer: su lista trae el suyo y no el del admin', listaFree.includes(idRespFree) && !listaFree.includes(idRespAdmin), JSON.stringify(listaFree));
+  comprobar('admin: ve el del freelancer: 200', (await pedir('GET', `/responsables/${idRespFree}`, tokA)).status === 200);
+  comprobar('admin: edita el del freelancer: 200', (await pedir('PUT', `/responsables/${idRespFree}`, tokA, { firstName: 'Resp', lastName: 'Free' })).status === 200);
+  const borraFree = await pedir('DELETE', `/responsables/${idRespFree}`, tokFree);
+  comprobar('freelancer: borrar el suyo (delete none): 403', borraFree.status === 403, `HTTP ${borraFree.status}`);
+  const ventaRespAjeno = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id, { responsableId: idRespAdmin }));
+  comprobar('freelancer: vender con el responsable del admin: 403', ventaRespAjeno.status === 403, `HTTP ${ventaRespAjeno.status}`);
+  const ventaRespPropio = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id, { responsableId: idRespFree }));
+  comprobar('freelancer: vender con su responsable: 201', ventaRespPropio.status === 201, `HTTP ${ventaRespPropio.status}`);
+  const ventaRespAsesor = await pedir('POST', '/sales', tokAsesor, ventaMinima(cliA.id, { responsableId: idRespAdmin }));
+  comprobar('asesor (responsables ninguno): vender con un responsable: 403', ventaRespAsesor.status === 403, `HTTP ${ventaRespAsesor.status}`);
+  const panelFree = (await pedir('GET', '/roles/freelancer/permissions', tokA)).json?.data;
+  comprobar('panel: el freelancer sin usuarios y con responsables own/true/own/none',
+    panelFree?.users?.view === false && JSON.stringify(panelFree?.responsables) === JSON.stringify({ view: 'own', create: true, edit: 'own', delete: 'none' }),
+    JSON.stringify([panelFree?.users?.view, panelFree?.responsables]));
+
   // Spec 020: editar y borrar con alcance propio. El superadmin reconfigura el rol
   // asesor de A: "ver todas, editar solo las suyas, no borrar".
   console.log('\n  Editar y borrar con alcance propio (spec 020)');
@@ -422,6 +453,10 @@ async function main() {
     comprobar('suplantando, crear una venta sin asesor da 400 claro, no 500', sinAsesor.status === 400, `HTTP ${sinAsesor.status}`);
     comprobar('suplantando, el rol admin no se reescribe: 400',
       (await pedir('PUT', '/roles/admin/permissions', tokSup, { permissions: { users: { view: true } } })).status === 400);
+    // Spec 026: el creador de un responsable es de la agencia de origen; se guarda vacío.
+    const respSup = await pedir('POST', '/responsables', tokSup, { firstName: 'Resp', lastName: 'Suplantado' });
+    const creadorSup = (await pedir('GET', `/responsables/${respSup.json?.data?.id}`, tokB)).json?.data?.createdBy;
+    comprobar('suplantando, crear un responsable: 201 con el creador vacío', respSup.status === 201 && creadorSup === null, `HTTP ${respSup.status}, createdBy ${creadorSup}`);
     // Se sale con el propio token suplantado: es el que se invalida.
     // Estando dentro de B, suplantar la agencia del propio superadmin (A): 400 claro. Antes la "empresa de
     // origen" que se usaba era la visitada (B) y salía un error de clave ajena sin explicación.

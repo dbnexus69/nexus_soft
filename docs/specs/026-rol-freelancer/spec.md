@@ -1,6 +1,6 @@
 # Spec 026 — El rol freelancer: lo suyo, su ganancia y sus responsables
 
-**Estado:** diseño aprobado (2026-10-21), pendiente de permiso para desarrollar · **Rama:** `feat-bayrol` · **Toca la base
+**Estado:** implementada (2026-10-22) · **Rama:** `feat-bayrol` · **Toca la base
 compartida** (columna nueva en `responsables` y migración de datos en `permisos_rol`) · **Relacionadas:**
 [`020`](../020-alcance-de-editar-y-borrar/spec.md) (alcance de editar y borrar), [`025`](../025-auditoria-de-permisos/spec.md) (H2: el freelancer no lista usuarios)
 
@@ -15,12 +15,15 @@ y separarlo bien del asesor.
 El admin le asigna los permisos en el panel de roles, como a un asesor. **Por defecto** el freelancer solo ve lo suyo:
 sus ventas, su ganancia en el dashboard, sus clientes, sus responsables, sus cotizaciones y sus vuelos.
 
-1. **Ganancia en el dashboard.** "Su ganancia" es la TA de sus ventas: la suma de `ta_total` (sin IVA) de las ventas no
-   anuladas del periodo. Indicador nuevo "Ganancia (TA)" en el dashboard de todos los roles, con el alcance del dashboard
-   (con `own`, la suya; el admin, la de la agencia). No incluye comisiones.
+1. **Ganancia en el dashboard: ya existe.** "Su ganancia" es la TA cobrada de sus ventas, que es el titular "Ingresado
+   en el periodo" (`totalRevenue`: TA completa si está pagada, proporcional a lo abonado). Con el dashboard en `own` ya
+   sale la suya. No se añade indicador ni columna (decidido 2026-10-22: dos cifras de TA juntas confundían). No incluye
+   comisiones.
 2. **Responsables con dueño.** "Sus responsables" son los que él creó. `responsables.creado_por_id` (nuevo); el módulo
    pasa a tener alcance en ver, editar y borrar, como clientes. Los existentes quedan sin dueño (solo los ve quien tiene
-   `all`). Suplantando, el creador se guarda vacío (002 T19).
+   `all`). Suplantando, el creador se guarda vacío (002 T19). En el asistente de venta (responsable del crédito) el
+   freelancer solo encuentra los suyos; si la persona ya es responsable de otro, el alta le da 400 ("Ya existe un responsable con este documento").
+   Aceptado así (2026-10-22).
 3. **Valores por defecto del freelancer:** responsables `{ view: 'own', create: true, edit: 'own', delete: 'none' }`; el
    resto como está (ventas, cotizaciones, clientes, vuelos y dashboard `own`; sin usuarios, comisionistas ni Gestión
    Interna). El asesor no cambia.
@@ -35,7 +38,8 @@ sus ventas, su ganancia en el dashboard, sus clientes, sus responsables, sus cot
 | Freelancer y el responsable del admin | GET 404, PUT 403, no aparece en su lista |
 | Admin | ve y edita los dos |
 | Freelancer borra su responsable | 403 (`delete: 'none'`) |
-| Dashboard del freelancer | `totalProfit` = TA de sus ventas; menor que la del admin |
+| Dashboard del freelancer | `totalRevenue` = TA cobrada de sus ventas; menor que la del admin |
+| Panel de roles (`GET /roles/freelancer/permissions`) | mismos valores que `authorize.js` (sin usuarios, responsables `own/true/own/none`) |
 | Superadmin suplantando crea un responsable | 201 con `creado_por_id` vacío |
 | `permisos_rol` tras la migración | en cada agencia, el freelancer con `users.view` false y responsables `own/true/own/none` |
 

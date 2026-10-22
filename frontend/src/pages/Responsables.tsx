@@ -27,7 +27,11 @@ import { DatePicker } from '../components/sales/forms/TicketForm';
 export default function Responsables() {
   const { data, addResponsable, updateResponsable, deleteResponsable, fetchResponsables } = useData();
   const { user } = useAuth();
-  const { permissions, canCreate, canEdit } = usePermissions();
+  const { permissions, canCreate, scopeOf } = usePermissions();
+  // Editar según su alcance (spec 026): todos, o solo los que creó.
+  const alcanceEditar = scopeOf('responsables', 'edit');
+  const puedeEditar = (responsable: Responsable) =>
+    alcanceEditar === 'all' || (alcanceEditar === 'own' && responsable.createdBy === user?.id);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -121,7 +125,7 @@ export default function Responsables() {
 
 
   const handleOpenModal = (responsable?: Responsable) => {
-    if (responsable && !canEdit('responsables')) return;
+    if (responsable && !puedeEditar(responsable)) return;
     if (responsable) {
       setEditingResponsable(responsable);
       setFormData({
@@ -234,7 +238,7 @@ export default function Responsables() {
   };
 
   const handleToggleStatus = (responsable: Responsable) => {
-    if (!canEdit('responsables')) return;
+    if (!puedeEditar(responsable)) return;
     setConfirmToggle({
       id: responsable.id,
       name: responsable.name,
@@ -538,7 +542,7 @@ export default function Responsables() {
                   <Button variant="outline" size="sm" onClick={() => handleViewDetail(responsable)} title="Ver detalle">
                     <Eye size={14} />
                   </Button>
-                  {canEdit('responsables') && (
+                  {puedeEditar(responsable) && (
                     <>
                       <Button variant="outline" size="sm" onClick={() => handleOpenModal(responsable)} title="Editar">
                         <Pencil size={14} />

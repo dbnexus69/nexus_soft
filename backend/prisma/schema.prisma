@@ -887,25 +887,30 @@ model proveedores {
 }
 
 model responsables {
-  id         Int        @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   /// El número que ve la agencia. El `id` es global y con huecos —los huecos
   /// son las filas de las otras agencias, contables por cualquiera—; este
   /// empieza en 1 en cada una. Lo pone un disparador de la base, no el código.
-  numero     Int?
-  persona_id Int        @unique
-  status     UserStatus @default(active)
-  creado_at  DateTime   @default(now())
-  deleted_at DateTime?
-  personas   personas   @relation(fields: [persona_id], references: [id])
-  ventas     ventas[]
-  empresa_id Int        @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
-  empresas   empresas   @relation(fields: [empresa_id], references: [id])
+  numero        Int?
+  persona_id    Int        @unique
+  status        UserStatus @default(active)
+  /// Quien lo creó: con alcance 'own' en responsables solo se ven y editan los suyos
+  /// (spec 026). Vacío en los anteriores a la spec y en los creados suplantando.
+  creado_por_id Int?
+  creado_at     DateTime   @default(now())
+  deleted_at    DateTime?
+  usuarios      usuarios?  @relation(fields: [creado_por_id], references: [id])
+  personas      personas   @relation(fields: [persona_id], references: [id])
+  ventas        ventas[]
+  empresa_id    Int        @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
+  empresas      empresas   @relation(fields: [empresa_id], references: [id])
 
   // Necesario para que otras tablas puedan apuntar a esta fila con su empresa
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
   @@unique([empresa_id, numero])
   @@index([empresa_id])
+  @@index([creado_por_id])
 }
 
 model roles {
@@ -1048,6 +1053,7 @@ model usuarios {
   codigos_recuperacion codigos_recuperacion[]
   logs_usuarios        logs_usuarios[]
   paquetes             paquetes[]
+  responsables         responsables[]
   sesiones             sesiones[]
   suplantaciones       suplantaciones[]
   personas             personas               @relation(fields: [persona_id], references: [id])

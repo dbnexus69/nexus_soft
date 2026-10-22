@@ -2,12 +2,13 @@
 // La comparten `services/roles.service.js` (leer y guardar el panel) y
 // `middleware/authorize.js` (decidir): una sola lista, para que no discrepen.
 //
-// `responsables` queda fuera: su tabla no tiene dueño, un 'own' no se podría aplicar.
+// `responsables` entró en la spec 026, cuando su tabla tuvo dueño (`creado_por_id`).
 const SCOPED_ACTIONS = {
   dashboard: ['view'],
   sales: ['view', 'edit', 'delete'],
   quotes: ['view', 'edit', 'delete'],
   clients: ['view', 'edit'],
+  responsables: ['view', 'edit', 'delete'],
   itineraries: ['view', 'edit'],
 };
 

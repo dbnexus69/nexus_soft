@@ -109,7 +109,7 @@ async function main() {
   const ventaPropia = (await pedir('POST', '/sales', tokAsesor, ventaMinima(cliA.id))).json?.data;
   comprobar('el asesor crea su propia venta', Boolean(ventaPropia?.id));
   const idUsuarioAsesor = asesorCreado.json?.data?.id;
-  comprobar('ve a sus compañeros (GET /users: 200)', (await pedir('GET', '/users', tokAsesor)).status === 200);
+  comprobar('no lista al personal (GET /users: 403, spec 027)', (await pedir('GET', '/users', tokAsesor)).status === 403);
   comprobar('crear un usuario: 403, no 404 ni 422', (await pedir('POST', '/users', tokAsesor, {
     firstName: 'X', lastName: 'Y', email: `${A.slug}-x@prueba.local`, password: CLAVE, role: 'asesor',
   })).status === 403);
@@ -239,6 +239,40 @@ async function main() {
   comprobar('panel: el freelancer sin usuarios y con responsables own/true/own/none',
     panelFree?.users?.view === false && JSON.stringify(panelFree?.responsables) === JSON.stringify({ view: 'own', create: true, edit: 'own', delete: 'none' }),
     JSON.stringify([panelFree?.users?.view, panelFree?.responsables]));
+
+  // ── Spec 027: lo que muestra la pantalla es lo que aplica la API.
+  console.log('\n  Permisos coherentes (spec 027)');
+  const misAs = await pedir('GET', '/auth/me/permissions', tokAsesor);
+  comprobar('asesor: GET /auth/me/permissions: 200, ventas propias y sin usuarios',
+    misAs.status === 200 && misAs.json?.data?.sales?.view === 'own' && misAs.json?.data?.users?.view === false, `HTTP ${misAs.status}`);
+  const tokPerm27 = await entrar(correoSuper);
+  const originalesFree = (await pedir('GET', '/roles/freelancer/permissions', tokPerm27)).json?.data || {};
+  const guardarFree = (permisos) => pedir('PUT', '/roles/freelancer/permissions', tokPerm27, { permissions: permisos });
+  const sinVentas = { ...originalesFree, sales: { ...originalesFree.sales, view: 'none' } };
+  comprobar('el superadmin le quita las ventas al freelancer: 200', (await guardarFree(sinVentas)).status === 200);
+  const misFree = await pedir('GET', '/auth/me/permissions', tokFree);
+  comprobar('…y su /auth/me/permissions lo refleja (ventas ninguna)', misFree.json?.data?.sales?.view === 'none', JSON.stringify(misFree.json?.data?.sales));
+  comprobar('…y GET /sales da 403', (await pedir('GET', '/sales', tokFree)).status === 403);
+  comprobar('el freelancer recupera sus permisos: 200', (await guardarFree(originalesFree)).status === 200);
+
+  // Valores heredados escritos a mano: el panel y la API tienen que decir lo mismo, y uno
+  // desconocido no da acceso (antes `authorize` lo aplicaba como 'own').
+  const ventasFree = { roles: { nombre: 'freelancer', empresa_id: A.id }, permisos: { modulo: 'sales', accion: 'view' } };
+  for (const [guardado, esperado] of [['true', 'all'], ['false', 'none'], ['xyz', 'none']]) {
+    await admin.permisos_rol.updateMany({ where: ventasFree, data: { valor: guardado } });
+    const tokFresco = await entrar(correoFree);
+    const api = (await pedir('GET', '/auth/me/permissions', tokFresco)).json?.data?.sales?.view;
+    const panel = (await pedir('GET', '/roles/freelancer/permissions', tokA)).json?.data?.sales?.view;
+    comprobar(`ventas guardado como '${guardado}': la API y el panel dicen '${esperado}'`, api === esperado && panel === esperado, `API ${api}, panel ${panel}`);
+    if (esperado === 'none') comprobar(`…y GET /sales: 403`, (await pedir('GET', '/sales', tokFresco)).status === 403);
+  }
+  await admin.permisos_rol.updateMany({ where: ventasFree, data: { valor: 'own' } });
+
+  // Spec 028: con ventas en 'own', el freelancer no ve las ajenas ni sus costos.
+  const tokFree28 = await entrar(correoFree);
+  comprobar('freelancer (ventas own): la venta del admin: 404', (await pedir('GET', `/sales/${ventaA.id}`, tokFree28)).status === 404);
+  const idsFree = ((await pedir('GET', '/sales?perPage=100', tokFree28)).json?.data || []).map(v => v.id);
+  comprobar('…y su lista no trae la del admin', idsFree.length > 0 && !idsFree.includes(ventaA.id), JSON.stringify(idsFree));
 
   // Spec 020: editar y borrar con alcance propio. El superadmin reconfigura el rol
   // asesor de A: "ver todas, editar solo las suyas, no borrar".

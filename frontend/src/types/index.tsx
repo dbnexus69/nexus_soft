@@ -93,7 +93,7 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   responsables: { view: "none", create: false, edit: "none", delete: "none" },
   itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
-  users: { view: true, create: false, edit: false, delete: false },
+  users: { view: false, create: false, edit: false, delete: false },
   config: { view: true, edit: false },
   permissions: { view: false, edit: false },
 };
@@ -990,6 +990,8 @@ export interface ConfigData {
     notes: string;
   }[];
   packages: TravelPackage[];
+  /** Los permisos del usuario conectado, tal como los aplica el servidor (`GET /auth/me/permissions`). */
+  misPermisos?: RolePermissions | null;
   rolePermissions: {
     // `admin` faltaba aunque DataContext lo escribe en tiempo de ejecución
     // (`{ admin: normalizeRolePermissions(adminPerms, ADMIN_PERMISSIONS) }`).

@@ -22,6 +22,16 @@ function aAlcance(valor) {
   return valor === true || valor === 'true' ? 'all' : 'none';
 }
 
+/**
+ * El valor EFECTIVO de un permiso guardado o por defecto: con alcance, 'all'/'own'/'none'; sin él,
+ * un booleano. Es la única lectura (spec 027): `authorize.js` decide con ella y `roles.service.js`
+ * la muestra en el panel. Un valor que no se reconoce no da acceso: 'none' / false.
+ */
+function leerValor(modulo, accion, valor) {
+  if (tieneAlcance(modulo, accion)) return aAlcance(valor);
+  return valor === true || valor === 'true';
+}
+
 /** El más estrecho de los dos: no se edita ni se borra lo que no se puede ver. */
 const masEstrecho = (a, b) => (RANGO[aAlcance(a)] <= RANGO[aAlcance(b)] ? aAlcance(a) : aAlcance(b));
 
@@ -36,4 +46,4 @@ function alcanceDeEscritura({ permissionScope, viewScope } = {}) {
   return masEstrecho(permissionScope, viewScope);
 }
 
-module.exports = { SCOPED_ACTIONS, tieneAlcance, aAlcance, masEstrecho, alcanceDeEscritura };
+module.exports = { SCOPED_ACTIONS, tieneAlcance, aAlcance, leerValor, masEstrecho, alcanceDeEscritura };

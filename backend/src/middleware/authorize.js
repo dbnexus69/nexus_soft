@@ -1,5 +1,5 @@
 const { error } = require('../utils/apiResponse');
-const { tieneAlcance, aAlcance, masEstrecho } = require('../utils/alcancePermisos');
+const { tieneAlcance, masEstrecho, leerValor } = require('../utils/alcancePermisos');
 
 /**
  * Punto de partida por rol. NO es la fuente: `getEffectivePermissions`
@@ -59,7 +59,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
     // de la base solo aplica un valor `if (pr.accion in mod)`, así que sin la
     // llave el permiso se guarda y se ignora en silencio. Faltaban justo las
     // que las rutas exigen: users.create/edit/delete y config.edit.
-    users: { view: true, create: false, edit: false, delete: false },
+    users: { view: false, create: false, edit: false, delete: false },
     config: { view: true, edit: false },
   },
   freelancer: {
@@ -97,18 +97,8 @@ function getEffectivePermissions(user) {
   if (user.permisos_rol) {
     for (const pr of user.permisos_rol) {
       const mod = permissions[pr.modulo];
-      if (mod && pr.accion in mod) {
-        const currentVal = mod[pr.accion];
-        if (pr.accion !== 'view' && tieneAlcance(pr.modulo, pr.accion)) {
-          // Editar/borrar con alcance: un `true`/`false` guardado antes de la spec 020
-          // vale 'all'/'none' (y con el tope de ver, lo mismo que antes).
-          mod[pr.accion] = aAlcance(pr.valor);
-        } else if (typeof currentVal === 'boolean') {
-          mod[pr.accion] = pr.valor === 'true' || pr.valor === true;
-        } else {
-          mod[pr.accion] = ['all', 'own', 'none'].includes(pr.valor) ? pr.valor : 'own';
-        }
-      }
+      // Una sola lectura (spec 027), la misma que muestra el panel de roles.
+      if (mod && pr.accion in mod) mod[pr.accion] = leerValor(pr.modulo, pr.accion, pr.valor);
     }
   }
 

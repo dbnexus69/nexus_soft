@@ -1,7 +1,7 @@
 const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { olvidarTodo } = require('../middleware/authCache');
-const { tieneAlcance, aAlcance, masEstrecho } = require('../utils/alcancePermisos');
+const { tieneAlcance, masEstrecho, leerValor } = require('../utils/alcancePermisos');
 
 /**
  * Lo que se puede configurar por rol. Es la ÚNICA lista: `getPermissions`
@@ -117,7 +117,7 @@ const DEFAULT_ROLE_VALUES = {
     // Se mantienen en true: el asistente de ventas necesita los catálogos
     // (aerolíneas, métodos de pago) y la lista de asesores para asignar la
     // venta. Ahora son revocables, aunque revocarlos rompa crear ventas.
-    users: { view: 'true', create: 'false', edit: 'false', delete: 'false' },
+    users: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     config: { view: 'true', edit: 'false' },
     permissions: { view: 'false', edit: 'false' },
   },
@@ -162,23 +162,10 @@ const DEFAULT_ROLE_VALUES = {
 };
 
 function parseValor(accion, modulo, valor, role) {
-  if (accion === 'view' && SCOPED_VIEW_MODULES.includes(modulo)) {
-    if (valor === 'all') {
-      if (modulo === 'dashboard' && !ROLES_ADMINISTRATIVOS.includes(role)) return 'own';
-      return 'all';
-    }
-    if (valor === 'own') return 'own';
-    if (valor === 'true') {
-      // Un 'true' guardado equivale a alcance total, salvo en el dashboard,
-      // donde solo un rol administrativo ve el de toda la agencia.
-      if (modulo === 'dashboard') return ROLES_ADMINISTRATIVOS.includes(role) ? 'all' : 'own';
-      return 'all';
-    }
-    return 'none';
-  }
-  // Editar/borrar con alcance (spec 020); un `true`/`false` de antes vale 'all'/'none'.
-  if (tieneAlcance(modulo, accion)) return aAlcance(valor);
-  return valor === 'true' || valor === true;
+  const efectivo = leerValor(modulo, accion, valor);
+  // El dashboard de toda la agencia es solo de un rol administrativo.
+  if (modulo === 'dashboard' && accion === 'view' && efectivo === 'all' && !ROLES_ADMINISTRATIVOS.includes(role)) return 'own';
+  return efectivo;
 }
 
 function encodeValor(value) {

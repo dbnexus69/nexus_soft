@@ -68,6 +68,7 @@ import { ProductFormsModal, PRODUCT_MAP } from "./wizard";
 import { todayStr, formatSaleId } from "../../utils/formatters";
 import * as api from "../../api";
 import type { VentaCreada } from "../../api/sales";
+import { usePermissions } from "../../context/PermissionsContext";
 
 interface Props {
   onClose: () => void;
@@ -133,6 +134,8 @@ export function olvidarBorradorEnMemoria(draftKey: string) {
 
 export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props) {
   const { data, fetchClients, fetchCommissionAgents, fetchConfig, invalidateDashboard } = useData();
+  const { canView } = usePermissions();
+  const verComisionistas = canView('commissions');
   // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,
   // que es donde vive el listado con su página y sus filtros.
   const { handleCreateSale } = useSalesContext();
@@ -312,9 +315,10 @@ export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props
   // Fetch data needed for comboboxes to ensure freshness
   useEffect(() => {
     fetchClients();
-    fetchCommissionAgents();
+    // Sin ver comisionistas la petición da 403, y nada del asistente los necesita (spec 027).
+    if (verComisionistas) fetchCommissionAgents();
     fetchConfig();
-  }, [fetchClients, fetchCommissionAgents, fetchConfig]);
+  }, [fetchClients, fetchCommissionAgents, fetchConfig, verComisionistas]);
 
   // Compute Totals Automatically using custom hook
   useSaleCalculations(form, setForm);

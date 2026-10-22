@@ -44,13 +44,17 @@ export function PermissionsProvider({
   const permissions = useMemo(() => {
     if (!user) return DEFAULT_ASESOR_PERMISSIONS;
 
+    // Lo que aplica el servidor a este usuario (spec 027). Los del panel de roles solo los lee
+    // quien tiene `permissions.view`, así que un asesor o un freelancer nunca los tendría.
+    const propios = data.config.misPermisos;
+    if (propios) return propios;
     const deLaBase = (data.config.rolePermissions as Record<string, RolePermissions | undefined> | undefined)?.[user.role];
     if (deLaBase) return deLaBase;
 
     if (user.role === 'superadmin') return SUPERADMIN_PERMISSIONS;
     if (user.role === 'admin') return ADMIN_PERMISSIONS;
     return user.role === 'freelancer' ? DEFAULT_FREELANCER_PERMISSIONS : DEFAULT_ASESOR_PERMISSIONS;
-  }, [user, data.config.rolePermissions]);
+  }, [user, data.config.misPermisos, data.config.rolePermissions]);
 
   /**
    * El atajo que concede todo sin mirar los permisos.

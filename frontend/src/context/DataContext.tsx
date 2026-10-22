@@ -182,19 +182,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Los permisos del propio usuario: una petición por sesión, que comparten `fetchConfig` y la carga
+  // inicial (spec 027). Se vuelve a pedir al cambiar de usuario.
+  const misPermisosRef = useRef<Promise<RolePermissions | null> | undefined>(undefined);
+  const fetchMisPermisos = useCallback(() => {
+    misPermisosRef.current ??= api.getMyPermissions()
+      .then((p: Partial<RolePermissions>) => normalizeRolePermissions(p))
+      .catch((err: unknown) => {
+        console.error('[DataContext] Error fetching own permissions:', err);
+        return null;
+      });
+    return misPermisosRef.current.then(propios => {
+      if (propios) setData(prev => ({ ...prev, config: { ...prev.config, misPermisos: propios } }));
+      return propios;
+    });
+  }, []);
+
   const fetchConfig = useCallback(async () => {
     try {
-      // Los tres roles se leen de la base. 'admin' se pedía nunca y el frontend
-      // usaba una constante inventada en su lugar.
-      const [configAll, asesorPerms, freelancerPerms, adminPerms] = await Promise.all([
+      const [configAll, propios] = await Promise.all([
         api.getAllConfig().catch((err) => {
           console.error('[DataContext] Error fetching config:', err);
           return {};
         }),
-        api.getRolePermissions('asesor').catch(() => null),
-        api.getRolePermissions('freelancer').catch(() => null),
-        api.getRolePermissions('admin').catch(() => null),
+        fetchMisPermisos(),
       ]);
+      // Los tres roles del panel se leen de la base solo si el usuario puede verlo: para el resto
+      // la petición da 403, y eran tres por cada llamada a `fetchConfig`.
+      const [asesorPerms, freelancerPerms, adminPerms] = propios?.permissions?.view
+        ? await Promise.all([
+            api.getRolePermissions('asesor').catch(() => null),
+            api.getRolePermissions('freelancer').catch(() => null),
+            api.getRolePermissions('admin').catch(() => null),
+          ])
+        : [null, null, null];
       const resolvedRolePermissions = {
         asesor: asesorPerms ? normalizeRolePermissions(asesorPerms) : emptyData.config.rolePermissions.asesor,
         freelancer: freelancerPerms ? normalizeRolePermissions(freelancerPerms) : emptyData.config.rolePermissions.freelancer,
@@ -300,18 +321,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     //
     // Van en paralelo: la cascada existía para no agotar un pool de una sola
     // conexión, y ese límite ya no está.
-    const loadBackgroundData = () => Promise.all([
-      fetchConfig(),
-      fetchClients(),
-      fetchUsers(),
-      fetchResponsables(),
-      fetchCommissionAgents(),
-    ]);
+    // Usuarios, responsables y comisionistas solo se piden a quien puede verlos (spec 027): a los
+    // demás les daba 403 en cada arranque. Si los permisos no llegaron, se piden como antes.
+    misPermisosRef.current = undefined;
+    const loadBackgroundData = () => {
+      fetchConfig();
+      fetchClients();
+      return fetchMisPermisos().then(propios => {
+        if (!propios || propios.users.view) fetchUsers();
+        if (!propios || propios.responsables.view !== 'none') fetchResponsables();
+        if (!propios || propios.commissions.view) fetchCommissionAgents();
+      });
+    };
 
     loadBackgroundData();
   }, [
     user?.id, 
     fetchConfig, 
+    fetchMisPermisos,
     fetchClients, 
     fetchUsers, 
     fetchResponsables, 

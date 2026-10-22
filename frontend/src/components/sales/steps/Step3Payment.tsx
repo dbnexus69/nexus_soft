@@ -8,10 +8,15 @@ import { DatePicker } from "../forms/TicketForm";
 import { todayStr } from "../../../utils/formatters";
 import type { WizardFormData, FijarCampo } from "../wizardData";
 import type { AppData } from "../../../types";
+import { usePermissions } from "../../../context/PermissionsContext";
 
 interface Props { form: WizardFormData; set: FijarCampo; data: AppData; errors: Record<string, string> }
 
 export function Step3Payment({ form, set, data, errors }: Props) {
+  // Sin ver responsables no se ofrece el campo: la búsqueda daría 403 y el servidor tampoco deja
+  // asignar uno a la venta (spec 026).
+  const { scopeOf } = usePermissions();
+  const verResponsables = scopeOf("responsables", "view") !== "none";
   // Los responsables se buscan en el servidor: el catálogo ya no viaja entero.
   const buscarResponsables = useCallback(async (q: string) => {
     const res = await api.listResponsables({ search: q || undefined, perPage: 20, status: 'active' });
@@ -328,7 +333,7 @@ export function Step3Payment({ form, set, data, errors }: Props) {
         )}
 
         {/* Responsable (Sólo si es crédito o abonado) */}
-        {(form.status === "credito" || form.status === "abonado") && (
+        {verResponsables && (form.status === "credito" || form.status === "abonado") && (
           <FormField label="Responsable del Crédito (Opcional)">
             <AsyncCombobox
               value={form.responsableName || ""}

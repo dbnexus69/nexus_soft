@@ -14,6 +14,9 @@ const {
 router.post('/login', validate(loginSchema), authController.login);
 router.post('/logout', auth, authController.logout);
 router.get('/me', auth, authController.me);
+// Los permisos de quien pregunta, los mismos que aplica `authorize` (spec 027). Sin `authorize`:
+// son los suyos, y el panel de roles (`/roles/:rol/permissions`) es otra cosa.
+router.get('/me/permissions', auth, authController.misPermisos);
 router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/verify-code', validate(verifyCodeSchema), authController.verifyCode);
 router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);

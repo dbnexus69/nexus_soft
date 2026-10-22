@@ -1,6 +1,7 @@
 const authService = require('../services/auth.service');
 const { conEmpresa } = require('../config/tenant');
 const { success } = require('../utils/apiResponse');
+const { getEffectivePermissions } = require('../middleware/authorize');
 
 exports.login = async (req, res, next) => {
   try {
@@ -32,6 +33,14 @@ exports.logout = async (req, res, next) => {
     // durante una suplantación no cerraba nada.
     const data = await conEmpresa(req.empresaOrigen, () => authService.logout(token));
     success(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.misPermisos = (req, res, next) => {
+  try {
+    success(res, getEffectivePermissions(req.user).permissions);
   } catch (err) {
     next(err);
   }

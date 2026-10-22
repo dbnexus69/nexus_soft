@@ -62,6 +62,12 @@ export async function getRolesSchema() {
   return res.data.data;
 }
 
+/** Los permisos de quien pregunta, los mismos que aplica el servidor (spec 027). */
+export async function getMyPermissions() {
+  const res = await api.get('/auth/me/permissions');
+  return res.data.data;
+}
+
 export async function getRolePermissions(role: string) {
   const res = await api.get(`/roles/${role}/permissions`);
   return res.data.data;

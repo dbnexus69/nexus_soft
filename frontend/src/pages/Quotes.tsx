@@ -80,7 +80,7 @@ export default function Quotes() {
     handleCreateQuote, handleUpdateQuote, handleDeleteQuote,
     handleDuplicateQuote, handleSendQuote, handleRespondQuote,
   } = useQuotesContext();
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit, canDelete, scopeOf } = usePermissions();
   const { user } = useAuth();
   const { data, fetchConfig } = useData();
   const navigate = useNavigate();
@@ -601,7 +601,8 @@ export default function Quotes() {
                 </FormField>
 
                 <div className={`grid grid-cols-1 gap-4 ${!editing ? "md:grid-cols-2" : ""}`}>
-                  {!editing && (
+                  {/* Solo quien ve todas las cotizaciones puede listar usuarios para elegir asesor (spec 025, H2). */}
+                  {!editing && scopeOf("quotes", "view") === "all" && (
                     <FormField label="Asesor">
                       <AsyncCombobox
                         value={draft.asesorName}

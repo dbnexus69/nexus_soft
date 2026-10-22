@@ -163,7 +163,7 @@ exports.updateReviewStatus = async (req, res, next) => {
   try {
     const saleId = parseInt(req.params.id);
     const result = await salesService.updateReviewStatus(saleId, req.body.isReviewed, alcanceDe(req));
-    success(res, result, 'Estado de revisión actualizado');
+    success(res, result);
   } catch (err) {
     next(err);
   }

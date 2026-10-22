@@ -106,7 +106,7 @@ export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   responsables: { view: false, create: false, edit: false, delete: false },
   itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
-  users: { view: true, create: false, edit: false, delete: false },
+  users: { view: false, create: false, edit: false, delete: false },
   config: { view: true, edit: false },
   permissions: { view: false, edit: false },
 };

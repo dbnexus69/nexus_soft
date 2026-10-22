@@ -35,8 +35,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
-  const { user, logout, isAdmin, marca, perfil } = useAuth();
-  const { canView } = usePermissions();
+  const { user, logout, marca, perfil } = useAuth();
+  const { canView, canEdit } = usePermissions();
   const [isHovered, setIsHovered] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -119,9 +119,8 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const filteredAdminLinks = (adminLinks as any[]).filter(link => {
     // Agencias es del sistema: dentro de una agencia suplantada no se ofrece (se sale primero con el botón rojo).
     if (link.permission === 'superadmin') return user?.role === 'superadmin' && !perfil?.suplantando;
-    if (link.permission === 'users' || link.permission === 'config' || link.permission === 'responsables') {
-      return isAdmin;
-    }
+    // Gestión Interna pide editar, igual que su ruta en App.tsx (spec 025).
+    if (link.permission === 'config') return canEdit('config');
     return canView(link.permission);
   });
 
@@ -173,7 +172,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             ))}
           </ul>
 
-          {isAdmin && filteredAdminLinks.length > 0 && (
+          {filteredAdminLinks.length > 0 && (
             <div className="mt-6 pt-6 border-t border-slate-800/40">
               <div className="px-4 py-2">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Administración</span>
@@ -245,7 +244,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             ))}
 
             {/* Admin Dropdown Links */}
-            {isAdmin && filteredAdminLinks.length > 0 && (
+            {filteredAdminLinks.length > 0 && (
               <li className="relative">
                 <button
                   onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}

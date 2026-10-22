@@ -439,7 +439,8 @@ export default function Sales() {
                 canManagePayments={canManagePayments}
                 canVoid={(sale) => puedeSobre("delete", sale)}
                 isAdmin={isAdmin}
-                onReviewStatusChange={(saleId, isReviewed) => {
+                onReviewStatusChange={scopeOf("sales", "edit") !== "all" ? undefined : (saleId, isReviewed) => {
+                  // Revisar es solo de quien edita ventas en 'all' (spec 025, H1): sin ese alcance no se ofrece el control.
                   updateReviewStatus(saleId, isReviewed)
                     .then(() => {
                       setSuccessMessage("Estado de revisión actualizado");

@@ -132,7 +132,7 @@ export function olvidarBorradorEnMemoria(draftKey: string) {
 }
 
 export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props) {
-  const { data, fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig, invalidateDashboard } = useData();
+  const { data, fetchClients, fetchCommissionAgents, fetchConfig, invalidateDashboard } = useData();
   // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,
   // que es donde vive el listado con su página y sus filtros.
   const { handleCreateSale } = useSalesContext();
@@ -312,11 +312,9 @@ export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props
   // Fetch data needed for comboboxes to ensure freshness
   useEffect(() => {
     fetchClients();
-    fetchUsers();
     fetchCommissionAgents();
-    fetchResponsables();
     fetchConfig();
-  }, [fetchClients, fetchUsers, fetchCommissionAgents, fetchResponsables, fetchConfig]);
+  }, [fetchClients, fetchCommissionAgents, fetchConfig]);
 
   // Compute Totals Automatically using custom hook
   useSaleCalculations(form, setForm);

@@ -7,7 +7,8 @@ import { UsersProvider } from './context/UsersContext';
 import { SalesProvider } from './context/SalesContext';
 import { CommissionsProvider } from './context/CommissionsContext';
 import { QuotesProvider } from './context/QuotesContext';
-import { PermissionsProvider } from './context/PermissionsContext';
+import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
+import type { RolePermissions } from './types';
 import { Layout } from './components/layout/Layout';
 import Login from './pages/Login';
 
@@ -37,9 +38,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <PermissionsProvider user={user}>{children}</PermissionsProvider>;
 }
 
-function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin } = useAuth();
-  if (!isAdmin) return <Navigate to="/" replace />;
+/**
+ * Pantalla según el permiso de ver del rol (spec 025, H3), no según ser admin.
+ * Va dentro de `ProtectedRoute`, que es quien monta el `PermissionsProvider`.
+ */
+function PermisoRoute({ modulo, editar = false, children }: { modulo: keyof RolePermissions; editar?: boolean; children: React.ReactNode }) {
+  const { canView, canEdit } = usePermissions();
+  if (!(editar ? canEdit(modulo) : canView(modulo))) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -69,17 +74,19 @@ function AppRoutes() {
         <Route path="sales" element={<Sales />} />
         <Route path="quotes" element={<Quotes />} />
         <Route path="clients" element={<Clients />} />
-        <Route path="responsables" element={<AdminRoute><Responsables /></AdminRoute>} />
+        <Route path="responsables" element={<PermisoRoute modulo="responsables"><Responsables /></PermisoRoute>} />
         <Route path="flights" element={<Itineraries />} />
         {/* La pantalla vivía en /itineraries. Sin este redirect, un marcador
             viejo caería en el catch-all de abajo y aterrizaría en el Dashboard
             sin explicación. */}
         <Route path="itineraries" element={<Navigate to="/flights" replace />} />
-        <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
+        <Route path="users" element={<PermisoRoute modulo="users"><Users /></PermisoRoute>} />
         <Route path="companies" element={<SuperadminRoute><Companies /></SuperadminRoute>} />
-        <Route path="config" element={<AdminRoute><Config /></AdminRoute>} />
+        {/* Gestión Interna administra los catálogos: pide editar. Ver `config` lo tiene todo rol porque el asistente
+            de venta lee esos catálogos, y no por eso tiene que entrar a esta pantalla. */}
+        <Route path="config" element={<PermisoRoute modulo="config" editar><Config /></PermisoRoute>} />
         <Route path="empresa" element={<Empresa />} />
-        <Route path="commissions" element={<CommissionAgents />} />
+        <Route path="commissions" element={<PermisoRoute modulo="commissions"><CommissionAgents /></PermisoRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

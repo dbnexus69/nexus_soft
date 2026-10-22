@@ -14,6 +14,7 @@ const {
 
 const { randomUUID: uuidv4 } = require('crypto');
 const { soloLasSuyas, esDeOtro, ventaVisible } = require('./ventasAlcance');
+const { alcanceDeEscritura } = require('../utils/alcancePermisos');
 const { listSales } = require('./ventasListado');
 const { getCreditPortfolio, getClientCredits } = require('./ventasCartera');
 const { escribirProductos } = require('./ventaProductos');
@@ -785,6 +786,11 @@ class SalesService {
 
   async updateReviewStatus(saleId, isReviewed, alcance = {}) {
     await ventaVisible(saleId, alcance, { paraEscribir: true });
+    // Revisar es del administrador: quien solo edita las suyas ('own') no marca como
+    // revisada ni su propia venta (spec 025, H1). Solo editar en 'all' lo permite.
+    if (alcanceDeEscritura(alcance) !== 'all') {
+      throw new ForbiddenError('Solo un administrador puede marcar una venta como revisada');
+    }
     const sale = await prisma.ventas.findFirst({ where: { id: saleId, deleted_at: null } });
     if (!sale) throw new NotFoundError('Venta no encontrada');
     if (sale.status !== 'pagado') throw new BadRequestError('La venta debe estar pagada para ser revisada');

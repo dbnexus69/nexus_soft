@@ -6,6 +6,7 @@ import { WizardFormData, FijarCampo } from "../wizardData";
 import type { AppData } from "../../../types";
 import { getAvatarGradient } from "../../../utils/formatters";
 import * as api from "../../../api";
+import { usePermissions } from "../../../context/PermissionsContext";
 
 interface Props { form: WizardFormData; set: FijarCampo; data: AppData; errors: Record<string, string> }
 
@@ -18,6 +19,10 @@ export function Step1Client({ form, set, data, errors }: Props) {
     const res = await api.listClients({ search: q || undefined, perPage: 20, status: 'active' });
     return (res?.data || []).map((c: any) => ({ value: c.name, label: c.name, data: c }));
   }, []);
+
+  // Elegir asesor exige listar usuarios: solo quien ve todas las ventas (spec 025, H2). Los demás venden a su nombre.
+  const { scopeOf } = usePermissions();
+  const eligeAsesor = scopeOf("sales", "view") === "all";
 
   const buscarAsesores = useCallback(async (q: string) => {
     const res = await api.listUsers({ search: q || undefined, perPage: 20 });
@@ -64,6 +69,9 @@ export function Step1Client({ form, set, data, errors }: Props) {
           </FormField>
 
           <FormField label="Asesor *">
+            {!eligeAsesor ? (
+              <Input value={form.asesorName} readOnly />
+            ) : (
             <AsyncCombobox
               value={form.asesorName}
               onChange={(val, opt) => {
@@ -78,6 +86,7 @@ export function Step1Client({ form, set, data, errors }: Props) {
               placeholder="¿Quién realiza la venta?"
               emptyText="Ningún asesor coincide"
             />
+            )}
           </FormField>
 
           <FormField label="Comisionista / Referido" error={errors.commissionAgent}>

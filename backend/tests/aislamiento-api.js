@@ -149,6 +149,66 @@ async function main() {
   comprobar('…y se edita: 200', (await estado('PUT', `/clients/${cliAsesor?.id}`, { phone: '3009998877' })) === 200);
   comprobar('el admin sigue leyendo el cliente del asesor: 200', (await pedir('GET', `/clients/${cliAsesor?.id}`, tokA)).status === 200);
 
+  // ── Spec 025: permisos por rol. Va ANTES de la spec 020, que reconfigura el rol asesor:
+  // aquí el asesor está con los valores por defecto.
+  console.log('\n  Permisos por rol (spec 025)');
+  // 1. Pantallas de gestión cerradas al asesor por defecto (H3).
+  const estadoAs = async (metodo, ruta, cuerpo) => (await pedir(metodo, ruta, tokAsesor, cuerpo)).status;
+  comprobar('asesor: GET /commissions/agents: 403', (await estadoAs('GET', '/commissions/agents')) === 403);
+  comprobar('asesor: POST /commissions/agents: 403', (await estadoAs('POST', '/commissions/agents', { name: 'X', type: 'freelance', docType: 'CC', docNumber: '920000009', paymentThreshold: 1000 })) === 403);
+  comprobar('asesor: GET /commissions/settlements: 403', (await estadoAs('GET', '/commissions/settlements')) === 403);
+  comprobar('asesor: GET /responsables: 403', (await estadoAs('GET', '/responsables')) === 403);
+  comprobar('asesor: POST /responsables: 403', (await estadoAs('POST', '/responsables', { firstName: 'X', lastName: 'Y' })) === 403);
+  comprobar('asesor: GET /config/all (config.view): 200', (await estadoAs('GET', '/config/all')) === 200);
+  comprobar('asesor: POST /config/payment-methods (config.edit): 403', (await estadoAs('POST', '/config/payment-methods', { name: 'Intruso' })) === 403);
+
+  // 2. La cotización del admin no se ve ni se edita.
+  const cotA = (await pedir('POST', '/quotes', tokA, { clientId: cliA.id, hotelData: [{ hotelName: 'Hotel Test', destination: 'San Andrés', supplierCost: 0, ta: 100000 }] })).json?.data;
+  comprobar('el admin crea una cotización', Boolean(cotA?.id));
+  comprobar('asesor: GET de la cotización del admin: 404', (await estadoAs('GET', `/quotes/${cotA?.id}`)) === 404);
+  comprobar('asesor: PUT de la cotización del admin: 403 o 404',
+    una(await estadoAs('PUT', `/quotes/${cotA?.id}`, { observations: 'x' }), 403, 404));
+
+  // 3. Cobrar una venta ajena.
+  const cobro = await estadoAs('POST', `/sales/${ventaA.id}/payments`, { amount: 1 });
+  comprobar('asesor: cobrar la venta del admin: 403 o 404', una(cobro, 403, 404), `HTTP ${cobro}`);
+
+  // 4. Estadísticas con ámbito: el asesor suma solo lo suyo (una venta propia, dos del admin en la agencia).
+  const stAs = await pedir('GET', '/stats/dashboard', tokAsesor);
+  const stAd = await pedir('GET', '/stats/dashboard', tokA);
+  comprobar('asesor: GET /stats/dashboard: 200', stAs.status === 200 && stAd.status === 200, `HTTP ${stAs.status}/${stAd.status}`);
+  const opsAs = stAs.json?.data?.totalOperations, opsAd = stAd.json?.data?.totalOperations;
+  comprobar('el dashboard del asesor cuenta menos operaciones que el del admin', opsAs < opsAd, `asesor ${opsAs}, admin ${opsAd}`);
+  comprobar('…y son solo las suyas (1)', opsAs === 1, `asesor ${opsAs}`);
+
+  // 5. H1: marcar revisada es solo de quien edita ventas en 'all'.
+  const ventaPagada = (await pedir('POST', '/sales', tokAsesor, ventaMinima(cliA.id))).json?.data;
+  const pago = await estadoAs('POST', `/sales/${ventaPagada?.id}/payments`, { amount: 1, isTotal: true });
+  comprobar('el asesor salda una venta suya (queda pagada)', pago === 201 || pago === 200, `HTTP ${pago}`);
+  const revAs = await estadoAs('PATCH', `/sales/${ventaPagada?.id}/review-status`, { isReviewed: true });
+  comprobar('asesor: marcar revisada su propia venta pagada: 403', revAs === 403, `HTTP ${revAs}`);
+  const revAd = await pedir('PATCH', `/sales/${ventaPagada?.id}/review-status`, tokA, { isReviewed: true });
+  comprobar('admin: marcar revisada esa venta: 200', revAd.status === 200, `HTTP ${revAd.status}`);
+
+  // 6. H2: el freelancer no lista usuarios y vende a su nombre. Los permisos del rol se
+  // siembran al crear la agencia desde ROLE_DEFAULT_PERMISSIONS (companies.service.js), así
+  // que el nuevo default (users.view false) ya está en la base de esta agencia de prueba.
+  const correoFree = `${A.slug}-freelancer@prueba.local`;
+  const free = await pedir('POST', '/users', tokA, { firstName: 'Free', lastName: 'Lancer', email: correoFree, password: CLAVE, role: 'freelancer' });
+  comprobar('el admin crea un freelancer', free.status === 201, `HTTP ${free.status}`);
+  const tokFree = await entrar(correoFree);
+  comprobar('freelancer: GET /users: 403', (await pedir('GET', '/users', tokFree)).status === 403);
+  const ventaFree = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id));
+  comprobar('freelancer: vende a su nombre (sin asesorId): 201', ventaFree.status === 201, `HTTP ${ventaFree.status}`);
+  const ajenoFree = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id, { asesorId: asesorCreado.json?.data?.id }));
+  comprobar('freelancer: vender a nombre de otro asesor: 403', ajenoFree.status === 403, `HTTP ${ajenoFree.status}`);
+
+  // 7. Vuelos: itineraries.edit es 'none' por defecto. `authorize` corta antes de buscar el
+  // vuelo, así que basta un uuid cualquiera (con forma de uuid: `paramsUuid` responde 400 antes
+  // de `authorize` a un id mal formado); montar un vuelo con tiquete no añade nada a esta prueba.
+  const checkinAs = await estadoAs('PUT', `/flights/${require('crypto').randomUUID()}/checkin`);
+  comprobar('asesor: check-in de un vuelo (itineraries.edit ninguno): 403', checkinAs === 403, `HTTP ${checkinAs}`);
+
   // Spec 020: editar y borrar con alcance propio. El superadmin reconfigura el rol
   // asesor de A: "ver todas, editar solo las suyas, no borrar".
   console.log('\n  Editar y borrar con alcance propio (spec 020)');
@@ -247,6 +307,29 @@ async function main() {
   comprobar('responsable: por el nombre del tipo (lo de antes) sigue valiendo', rNombre.status === 201, `HTTP ${rNombre.status}`);
   const rLeido = (await pedir('GET', `/responsables/${rOk.json?.data?.id}`, tokA)).json?.data;
   comprobar('responsable: la respuesta trae el id del tipo y su nombre', rLeido?.docTypeId === cc.id && rLeido?.docType === cc.nombre, JSON.stringify([rLeido?.docTypeId, rLeido?.docType]));
+
+  // Spec 024: un alta con el documento de otra persona de la agencia no le sobrescribe los datos.
+  const cliDeUsuario = await pedir('POST', '/clients', tokA, { firstName: 'Otro', lastName: 'Nombre', docType: 'CC', docNumber: '1020304050', email: 'otro@prueba.local' });
+  const usuarioTras = (await pedir('GET', `/users/${uOk.json?.data?.id}`, tokA)).json?.data;
+  comprobar('persona compartida: el cliente con el documento de un usuario conserva sus datos y avisa',
+    cliDeUsuario.status === 201 && cliDeUsuario.json?.data?.firstName === 'Persona' && Boolean(cliDeUsuario.json?.meta?.aviso)
+      && usuarioTras?.firstName === 'Persona' && usuarioTras?.lastName === 'Prueba',
+    `HTTP ${cliDeUsuario.status}, cliente ${cliDeUsuario.json?.data?.firstName}, usuario ${usuarioTras?.firstName} ${usuarioTras?.lastName}`);
+
+  const cliInactivo = (await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Inactivo', docType: 'CC', docNumber: '1020304080' })).json?.data;
+  await pedir('PATCH', `/clients/${cliInactivo?.id}/toggle-status`, tokA);
+  const comiDeCliente = await pedir('POST', '/commissions/agents', tokA, { name: 'Comisionista Encima', docTypeId: cc.id, docNumber: '1020304080' });
+  const cliTras = (await pedir('GET', `/clients/${cliInactivo?.id}`, tokA)).json?.data;
+  comprobar('persona compartida: el comisionista no reactiva ni renombra al cliente desactivado',
+    comiDeCliente.status === 201 && Boolean(comiDeCliente.json?.meta?.aviso) && cliTras?.status === 'inactive' && cliTras?.firstName === 'Cliente',
+    `HTTP ${comiDeCliente.status}, cliente ${cliTras?.status} ${cliTras?.firstName}`);
+
+  const uBaja = await pedir('POST', '/users', tokA, usuario({ email: correo(), docTypeId: cc.id, docNumber: '1020304090' }));
+  await pedir('DELETE', `/users/${uBaja.json?.data?.id}`, tokA);
+  const cliRevive = await pedir('POST', '/clients', tokA, { firstName: 'Nuevo', lastName: 'Dueño', docType: 'CC', docNumber: '1020304090' });
+  comprobar('persona compartida: el documento de una persona dada de baja se revive con los datos nuevos, sin aviso',
+    cliRevive.status === 201 && cliRevive.json?.data?.firstName === 'Nuevo' && !cliRevive.json?.meta?.aviso,
+    `HTTP ${cliRevive.status}, ${cliRevive.json?.data?.firstName}, aviso ${cliRevive.json?.meta?.aviso || 'no'}`);
 
   // Los pasajeros de una venta (createSale): el documento se valida y la persona guarda su tipo.
   const conHuespedes = (huespedes) => ventaMinima(cliA.id, {

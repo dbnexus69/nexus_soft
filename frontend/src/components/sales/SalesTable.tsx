@@ -109,13 +109,14 @@ export default function SalesTable({
                           ? "Anulado"
                           : "En Crédito"}
                   </Badge>
-                  {sale.status === "pagado" && onReviewStatusChange && (
+                  {/* El sello se ve siempre; marcar, solo quien puede revisar (spec 025, H1). */}
+                  {sale.status === "pagado" && (sale.isReviewed || onReviewStatusChange) && (
                     <div className="relative inline-flex items-center">
                       {sale.isReviewed ? (
                         <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100" title="Revisado">
                           <CheckCircle2 size={12} />
                         </span>
-                      ) : (
+                      ) : onReviewStatusChange && (
                         <div
                           className="relative flex items-center justify-center w-5 h-5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors border border-transparent hover:border-gray-200"
                           title="Marcar como revisado"

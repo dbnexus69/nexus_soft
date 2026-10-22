@@ -78,7 +78,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
     // de la base solo aplica un valor `if (pr.accion in mod)`, así que sin la
     // llave el permiso se guarda y se ignora en silencio. Faltaban justo las
     // que las rutas exigen: users.create/edit/delete y config.edit.
-    users: { view: true, create: false, edit: false, delete: false },
+    users: { view: false, create: false, edit: false, delete: false },
     config: { view: true, edit: false },
   },
 };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, Plus, Upload, Link2, Palette, UserPlus, Users } from 'lucide-react';
+import { Building2, Plus, Upload, Link2, Palette, UserPlus, Users, CreditCard } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input, FormField } from '../components/ui/Form';
@@ -337,6 +337,9 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
     acento: empresa.colorAcento || COLORES_POR_DEFECTO.acento,
     realce: empresa.colorRealce || COLORES_POR_DEFECTO.realce,
   });
+  const [limiteUsuarios, setLimiteUsuarios] = useState(empresa.limiteUsuarios != null ? String(empresa.limiteUsuarios) : '');
+  const [nombrePlan, setNombrePlan] = useState(empresa.nombrePlan ?? '');
+  const [precioPlan, setPrecioPlan] = useState(empresa.precioPlan != null ? String(empresa.precioPlan) : '');
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [logo, setLogo] = useState(empresa.logoUrl);
@@ -392,6 +395,9 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
         colorPrimario: colores.primario,
         colorAcento: colores.acento,
         colorRealce: colores.realce,
+        limiteUsuarios: limiteUsuarios.trim() === '' ? null : Number(limiteUsuarios),
+        nombrePlan: nombrePlan.trim() === '' ? null : nombrePlan.trim(),
+        precioPlan: precioPlan.trim() === '' ? null : Number(precioPlan),
       });
       onGuardada();
     } catch (e: any) {
@@ -485,6 +491,29 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
         </div>
 
         <SelectorDeColores colores={colores} onChange={(clave, valor) => setColores(c => ({ ...c, [clave]: valor }))} />
+
+        {/* Libre, sin catálogo: cada agencia puede tener un trato propio.
+            Vacío en "Límite de usuarios" es sin tope (plan Deluxe). */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+            <CreditCard size={13} /> Plan y licenciamiento
+          </h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <FormField label="Límite de usuarios" className="mb-0">
+              <Input
+                type="number" min={1} value={limiteUsuarios}
+                onChange={e => setLimiteUsuarios(e.target.value)}
+                placeholder="Sin límite"
+              />
+            </FormField>
+            <FormField label="Nombre del plan" className="mb-0">
+              <Input value={nombrePlan} onChange={e => setNombrePlan(e.target.value)} placeholder="Plan Base" />
+            </FormField>
+            <FormField label="Precio" className="mb-0">
+              <Input type="number" min={0} value={precioPlan} onChange={e => setPrecioPlan(e.target.value)} placeholder="300000" />
+            </FormField>
+          </div>
+        </div>
 
         {empresa.uso && (
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">

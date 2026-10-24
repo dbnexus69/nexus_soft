@@ -73,6 +73,10 @@ const aFicha = async (e) => ({
   colorRealce: e.color_realce,
   emailRemitente: e.email_remitente,
   emailNombre: e.email_nombre,
+  // Licenciamiento (spec 029): `limiteUsuarios` nulo = sin límite (plan Deluxe).
+  limiteUsuarios: e.limite_usuarios,
+  nombrePlan: e.nombre_plan,
+  precioPlan: e.precio_plan,
   estado: e.estado,
   creadoAt: e.creado_at,
 });
@@ -147,6 +151,11 @@ class CompaniesService {
           color_realce: datos.colorRealce ?? null,
           email_remitente: datos.emailRemitente ?? null,
           email_nombre: datos.emailNombre ?? datos.nombre,
+          // Plan base por defecto (spec 029): toda agencia nueva arranca cobrable, salvo que el
+          // superadministrador la cree ya en otro plan explícitamente.
+          limite_usuarios: 'limiteUsuarios' in datos ? datos.limiteUsuarios : 4,
+          nombre_plan: 'nombrePlan' in datos ? datos.nombrePlan : 'Plan Base',
+          precio_plan: 'precioPlan' in datos ? datos.precioPlan : 300000,
         },
       });
 
@@ -219,6 +228,8 @@ class CompaniesService {
       nombre: 'nombre', nombreComercial: 'nombre_comercial',
       colorPrimario: 'color_primario', colorAcento: 'color_acento', colorRealce: 'color_realce',
       emailRemitente: 'email_remitente', emailNombre: 'email_nombre', estado: 'estado',
+      // Licenciamiento (spec 029): solo el superadministrador llega aquí (la ruta ya lo exige).
+      limiteUsuarios: 'limite_usuarios', nombrePlan: 'nombre_plan', precioPlan: 'precio_plan',
     };
     const data = {};
     for (const [clave, columna] of Object.entries(columnas)) {

@@ -507,42 +507,19 @@ export default function Login() {
         <div className="absolute inset-0 z-10 bg-gradient-to-tr from-[#090b11] via-[#090b11]/70 to-[#4f46e5]/40" />
 
         {/* Contenido Visual */}
-        <div className="relative z-20 flex flex-col justify-between p-16 w-full text-white">
-          <div className="text-right">
-            <span className="px-4 py-1.5 text-xs font-semibold tracking-widest uppercase bg-white/10 backdrop-blur-md border border-white/20 rounded-full">
-              Enterprise v2.0
-            </span>
-          </div>
-
+        <div className="relative z-20 flex h-full flex-col items-center justify-center p-16 w-full text-white text-center">
           <div className="space-y-6 max-w-lg">
-            <h1 className="text-4xl lg:text-5xl font-black tracking-tight leading-none font-heading text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-amber-200">
-              Explore.<br />Manage.<br />Elevate.
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tight leading-tight font-heading text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-amber-200">
+              Tu agencia de viajes, en un solo lugar.
             </h1>
             <p className="text-slate-300 text-base leading-relaxed font-body">
-              La plataforma de administración de viajes de lujo y corporativos definitiva. Automatiza reservas, controla comisiones y gestiona itinerarios en segundos.
-            </p>
-
-            {/* Widget de Estadísticas Flotante */}
-            <div className="pt-4">
-              <div className="inline-flex items-center gap-6 p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl">
-                <div>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Disponibilidad</p>
-                  <p className="text-lg font-bold text-emerald-400">99.98%</p>
-                </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Soporte</p>
-                  <p className="text-lg font-bold text-amber-400">24/7 Premium</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-slate-400 font-medium font-body">
-              Tecnología de desarrollo exclusiva para DBNEXUS Software.
+              Ventas, clientes, cotizaciones, vuelos y comisiones de tu equipo, organizados y bajo control desde una sola plataforma.
             </p>
           </div>
+
+          <p className="mt-16 text-xs text-slate-400 font-medium font-body">
+            Desarrollado por DBNEXUS Software.
+          </p>
         </div>
       </div>
 

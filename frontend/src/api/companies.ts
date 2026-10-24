@@ -11,6 +11,10 @@ export interface Empresa {
   colorRealce: string | null;
   emailRemitente: string | null;
   emailNombre: string | null;
+  /** Licenciamiento (spec 029): nulo = sin límite (plan Deluxe). */
+  limiteUsuarios: number | null;
+  nombrePlan: string | null;
+  precioPlan: number | null;
   estado: 'activa' | 'suspendida';
   creadoAt: string;
   uso?: { usuarios: number; clientes: number; ventas: number };

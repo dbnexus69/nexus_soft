@@ -213,9 +213,10 @@ async function main() {
     SELECT count(*)::int AS n FROM pg_constraint
     WHERE contype = 'f' AND conname LIKE '%_empresa_fkey'`);
   // Eran 56 antes de spec 007: +4 nuevas (`cotizaciones`→cliente/usuario/venta y
-  // `detalle_cotizacion`→cotizacion_id), y +1 en spec 017 (`cliente_destinos`→cliente).
+  // `detalle_cotizacion`→cotizacion_id), +1 en spec 017 (`cliente_destinos`→cliente),
+  // +1 en spec 022 (`responsables`→creado_por_id).
   // Una clave compuesta nueva sube este número; una que desaparece lo baja y pone esto en rojo.
-  const ESPERADAS = 61;
+  const ESPERADAS = 62;
   comprobar('siguen las claves ajenas compuestas', compuestas === ESPERADAS, `${compuestas} de ${ESPERADAS}`);
 
   // ── 4c. El número propio de cada agencia

@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError } = require('../errors/AppError');
+const { empresaActual } = require('../config/tenant');
+const { AppError, NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const emailService = require('../utils/emailService');
 const { olvidarUsuario } = require('../middleware/authCache');
@@ -194,7 +195,31 @@ class UsersService {
     return this.getUserById(id);
   }
 
+  /**
+   * Licenciamiento (spec 029): el tope de usuarios activos que puede tener la agencia según su
+   * plan. `limite_usuarios` nulo es sin límite (plan Deluxe). Un usuario inactivo o dado de baja
+   * no cuenta, así que liberar uno (o reactivarlo) vuelve a comprobarse en el acto, sin que nadie
+   * tenga que "liberar" nada a mano. Único punto de control: cubre también revivir un usuario
+   * dado de baja (`reactivarUsuario`, más abajo), que solo se llama desde aquí.
+   */
+  async _comprobarLimiteDeUsuarios() {
+    const empresa = await prisma.empresas.findFirst({
+      where: { id: empresaActual(), deleted_at: null }, select: { limite_usuarios: true, nombre_plan: true },
+    });
+    if (!empresa || empresa.limite_usuarios == null) return;
+    const activos = await prisma.usuarios.count({ where: { status: 'active', deleted_at: null } });
+    if (activos >= empresa.limite_usuarios) {
+      const plan = empresa.nombre_plan || 'tu plan actual';
+      throw new AppError(
+        `Llegaste al límite de usuarios de ${plan}: permite hasta ${empresa.limite_usuarios} usuario(s) activos, y ya los tenés todos en uso. `
+        + 'Si necesitás más licencias, escribinos por WhatsApp al 301 231 6848 y te ayudamos a ampliar tu plan.',
+        422, 'VALIDATION_ERROR',
+      );
+    }
+  }
+
   async createUser(data) {
+    await this._comprobarLimiteDeUsuarios();
     const password_hash = await bcrypt.hash(data.password, 12);
 
     const tipo = await validarDocumento(data);

@@ -192,6 +192,12 @@ model empresas {
   voucher_pie               String?
   /// Cláusulas del voucher: [{ titulo, texto }] en orden. NULL = las de por defecto.
   voucher_terminos          Json?
+  /// Licenciamiento (spec 029): tope de usuarios activos que el servidor hace cumplir al crear uno
+  /// (`users.service.js::createUser`); nulo = sin límite (plan Deluxe). `nombre_plan`/`precio_plan`
+  /// son solo para que el panel de superadmin los muestre — el servidor no los usa para nada.
+  limite_usuarios           Int?
+  nombre_plan               String?
+  precio_plan               Int?
   estado                    EstadoEmpresa               @default(activa)
   creado_at                 DateTime                    @default(now())
   deleted_at                DateTime?

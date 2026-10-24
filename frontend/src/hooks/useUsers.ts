@@ -34,8 +34,8 @@ export function useUsers() {
       await fetchUsers();
       return newUser;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear usuario';
-      throw new Error(msg);
+      // El error original: envolverlo en un `new Error(msg)` descartaba la respuesta y con ella `error.details`.
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -49,8 +49,7 @@ export function useUsers() {
       await fetchUsers();
       return updated;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar usuario';
-      throw new Error(msg);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -66,8 +65,7 @@ export function useUsers() {
       await fetchUsers();
       return resultado;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar usuario';
-      throw new Error(msg);
+      throw err;
     }
   };
 

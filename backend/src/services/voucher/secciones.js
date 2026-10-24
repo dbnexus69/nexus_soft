@@ -28,8 +28,10 @@ const hora12 = (h) => {
 };
 
 // Un tour: va en su sección, o dentro del paquete al que pertenece.
+// `tourName` es como queda una venta ya guardada (la transforma `catalog/products.js`); `selectedTour`
+// es el campo crudo del formulario — una cotización, que nunca pasa por ese transform, solo trae este.
 const campoTour = (t) => [
-  ['Tour / actividad', t.tourName], ['Fecha y hora', fechaHora(t.preferredDate)],
+  ['Tour / actividad', t.tourName ?? t.selectedTour], ['Fecha y hora', fechaHora(t.preferredDate)],
   ['Pasajeros', nombres(t.guests) || t.passengerName],
   ['Adultos', t.adultsCount], ['Niños', t.childrenCount], ['Punto de recogida', t.pickupPoint],
   ['Idioma guía', t.guideLanguage], ['Transporte', t.needsTransport ? 'Incluido' : 'No requiere'], ['Observaciones', t.observations],
@@ -63,8 +65,16 @@ const SECCIONES = [
       ['Pasajeros', nombres(p.guests)], ['Observaciones', p.observations],
     ];
   }],
+  // `coverageAmount`/`contactNumber` es como queda una venta ya guardada; `coverage`/`phone` es el
+  // campo crudo del formulario. `members` nunca se renombra al guardar una venta (queda en el
+  // genérico `passengers`), así que sin el resto solo servía para una cotización.
   ['insuranceData', 'SEGURO MÉDICO / ASISTENCIA', (s) => [
-    ['Tipo de seguro', s.insuranceType], ['Teléfono', s.phone], ['Proveedor', s.supplier], ['Asegurados', nombres(s.members)],
+    ['Tipo de seguro', s.insuranceType],
+    ['Cobertura', (s.coverageAmount ?? s.coverage) ? dinero(s.coverageAmount ?? s.coverage) : null],
+    ['Días de cobertura', s.coverageDays],
+    ['Vigencia desde', fecha(s.startDate)], ['Vigencia hasta', fecha(s.endDate)],
+    ['Teléfono', s.phone ?? s.contactNumber], ['Proveedor', s.supplier],
+    ['Asegurados', nombres(s.members ?? s.passengers)],
   ]],
   ['carRentalData', 'RENTA DE VEHÍCULOS', (c) => [
     ['Conductor principal', c.mainDriver], ['N° licencia', c.licenseNumber], ['Categoría', c.vehicleCategory],
@@ -72,24 +82,31 @@ const SECCIONES = [
     ['Tipo de seguro', c.insuranceType === 'all_risk' ? 'Todo riesgo' : (c.insuranceType ? 'Básico' : null)],
     ['Conductores adicionales', c.additionalDrivers], ['Tarjeta de garantía', c.guaranteeCreditCard],
   ]],
+  // `passportNumber` es como queda una venta ya guardada; `docNumber` es el campo crudo del formulario.
   ['visaData', 'TRÁMITE DE VISAS', (v) => [
-    ['Solicitante', v.fullName], ['Nacionalidad', v.nationality], ['N° pasaporte', v.docNumber],
+    ['Solicitante', v.fullName], ['Nacionalidad', v.nationality], ['N° pasaporte', v.passportNumber ?? v.docNumber],
     ['País al que aplica', v.countryApplying], ['Tipo de visa', v.visaType], ['Viaje estimado', fecha(v.estimatedTravelDate)],
   ]],
+  // `city`/`address` es como queda una venta ya guardada; `fincaCity`/`fincaAddress` es el formulario crudo.
   ['fincaData', 'ALOJAMIENTO (FINCAS)', (f) => [
-    ['Finca', f.fincaName], ['Ciudad / destino', f.fincaCity], ['Responsable', f.responsibleName], ['Documento', f.docNumber],
+    ['Finca', f.fincaName], ['Ciudad / destino', f.city ?? f.fincaCity], ['Dirección', f.address ?? f.fincaAddress],
+    ['Responsable', f.responsibleName], ['Documento', f.docNumber],
     ['Check-in', fecha(f.checkInDate)], ['Check-out', fecha(f.checkOutDate)], ['Adultos', f.adultsCount], ['Niños', f.childrenCount],
     ['Mascotas', f.hasPets ? `Sí${f.petType ? ` - ${f.petType}` : ''}` : 'No'],
   ]],
+  // `passportNumber` es como queda una venta ya guardada; `docNumber` es el campo crudo del formulario.
   ['migrationData', 'TRÁMITES MIGRATORIOS', (m) => [
     ['Pasajero', m.passengerName], ['Nacionalidad', m.nationality], ['Trámite / documento', m.requestedDocType],
-    ['N° pasaporte', m.docNumber], ['Vencimiento', fecha(m.passportExpiry)], ['País destino', m.destinationCountry],
+    ['N° pasaporte', m.passportNumber ?? m.docNumber], ['Vencimiento', fecha(m.passportExpiry)], ['País destino', m.destinationCountry],
   ]],
   ['simCardData', 'SIM CARDS / CONECTIVIDAD', (s) => [
     ['Pasajero', s.passengerName], ['País destino', s.destinationCountry], ['Llegada', fecha(s.arrivalDate)],
     ['Plan de datos', s.dataPlan], ['Tipo de SIM', s.simType], ['Método de entrega', s.deliveryMethod],
   ]],
+  // `venueName` es como queda una venta ya guardada; `placeName` es el campo crudo del formulario.
+  // `city`/`address` no se habían agregado nunca: ni el nombre del lugar ni dónde queda.
   ['conventionData', 'EVENTOS Y CONVENCIONES', (c) => [
+    ['Sede', c.venueName ?? c.placeName], ['Ciudad', c.city], ['Dirección', c.address],
     ['Organización / evento', c.organization], ['Contacto', c.contactName], ['Tipo de evento', c.eventType],
     ['Inicio', fecha(c.startDate)], ['Fin', fecha(c.endDate)], ['Asistentes', c.estimatedAttendance],
     ['Espacio requerido', c.requiredSpace], ['Catering', c.hasCatering ? `Sí${c.cateringNotes ? ` - ${c.cateringNotes}` : ''}` : 'No'],

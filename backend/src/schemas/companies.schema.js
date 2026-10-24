@@ -51,6 +51,17 @@ const marca = {
 };
 
 /**
+ * Licenciamiento (spec 029): solo el superadministrador los toca (la base también lo exige,
+ * `app_empresa_solo_perfil`). `limiteUsuarios` es lo único que usa el servidor para frenar el
+ * alta; `nombrePlan`/`precioPlan` son sueltos, sin catálogo, solo para que el panel los muestre.
+ */
+const plan = {
+  limiteUsuarios: z.number().int('Tiene que ser un número entero').positive('Tiene que ser mayor que cero').nullable().optional(),
+  nombrePlan: z.string().trim().max(60).nullable().optional(),
+  precioPlan: z.number().int('Tiene que ser un número entero').nonnegative('No puede ser negativo').nullable().optional(),
+};
+
+/**
  * Al crear una agencia se crea también su primer administrador.
  *
  * Una empresa sin nadie que pueda entrar no sirve de nada, y dejarlo para un
@@ -59,6 +70,7 @@ const marca = {
  */
 const createCompanySchema = z.object({
   ...marca,
+  ...plan,
   slug,
   admin: z.object({
     firstName: z.string().trim().min(2).max(60),
@@ -78,6 +90,7 @@ const createCompanySchema = z.object({
  */
 const updateCompanySchema = z.object({
   ...marca,
+  ...plan,
   nombre: marca.nombre.optional(),
   estado: z.enum(['activa', 'suspendida']).optional(),
 }).strict().refine(o => Object.keys(o).length > 0, 'No se envió ningún campo que editar');

@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Planear con spec → plan → tasks (flujo spec-kit).** Todo trabajo que no sea una corrección puntual se planea en una carpeta nueva numerada de `docs/specs/` con `spec.md` (qué y cómo se comprueba), `plan.md` (cómo) y `tasks.md` (hecho/pendiente y lo verificado), antes de escribir código. No se instala la herramienta `specify` ni se crean `specs/` o `.specify/` en la raíz: el flujo vive en `docs/specs/`.
 
-- **No ejecutar el proyecto sin permiso expreso del usuario.** Sin esa orden no se levantan servidores (`pnpm dev`, `pnpm start`, vite) ni se corre nada que toque la BD compartida: las pruebas con BD (`test:aislamiento`, `test:aislamiento-api`, `test:vuelos-api`, `test:ventas-filtros`, `test:clientes-destinos`, `test:voucher`), `prisma migrate deploy`/`status`, `db:generate`, `db:seed`, `db:studio` ni scripts contra la BD. Sin permiso solo se corre lo que no levanta nada ni toca la BD: `tsc`/`pnpm build` del frontend, `check:prisma`, `test:validaciones` y `test:reglas-espejo`. Se dice qué comando hace falta y para qué, y se espera la orden.
+- **No ejecutar el proyecto sin permiso expreso del usuario.** Sin esa orden no se levantan servidores (`pnpm dev`, `pnpm start`, vite) ni se corre nada que toque la BD compartida: las pruebas con BD (`test:aislamiento`, `test:aislamiento-api`, `test:vuelos-api`, `test:ventas-filtros`, `test:clientes-destinos`, `test:voucher`, `test:limite-usuarios`), `prisma migrate deploy`/`status`, `db:generate`, `db:seed`, `db:seed:vuelos`, `db:studio` ni scripts contra la BD. Sin permiso solo se corre lo que no levanta nada ni toca la BD: `tsc`/`pnpm build` del frontend, `check:prisma`, `test:validaciones` y `test:reglas-espejo`. Se dice qué comando hace falta y para qué, y se espera la orden.
 
 - **Modo cavernícola (ahorro de tokens).** Respuestas cortas y directas: lo hecho, lo que falla, lo que hay que decidir; sin recapitulaciones, sin repetir lo que el usuario ya sabe, sin explicar lo que el código o el commit ya dicen. Leer solo lo necesario, no volver a leer lo ya leído, y agrupar llamadas. Mismo criterio que `ponytail`: la solución mínima que funciona.
 
@@ -51,7 +51,10 @@ pnpm test:ventas-filtros # tests/ventas-filtros-api.js — sales list and credit
 pnpm test:clientes-destinos # tests/clientes-destinos-api.js — client preferred destinations through the real API (spec 017): max 5, recent = last, filter by recent or any, agency-wide suggestions
 pnpm test:voucher        # tests/voucher-api.js — company profile and logo through the real API (spec 011); uploads under the `prueba/` folder of the buckets, removed on teardown
 pnpm test:reglas-espejo   # tests/reglas-espejo.js — compiles frontend/src/utils/datosPersona.ts and compares it with the server copy on ~800 inputs; no DB
-pnpm db:seed | db:studio
+pnpm test:limite-usuarios # tests/limite-usuarios-api.js — per-agency user-license limit (spec 029): default plan, 422 at the cap, raising it, a freed seat, unlimited; same harness as aislamiento-api
+pnpm db:seed              # prisma/seed.js — BROKEN against the current schema (upserts metodos_pago/roles by a bare `nombre`, which stopped being unique once multi-tenant made it `(empresa_id, nombre)`); fails before the airline/airport section. Not fixed — out of scope when found (2026-10-24), would mean reviewing the whole demo-data script.
+pnpm db:seed:vuelos       # prisma/seed-catalogos-vuelos.js — the one seed script that does work: airlines, airports and baggage policies (global catalogs, no `empresa_id`). Idempotent, safe to re-run.
+pnpm db:studio
 
 # frontend
 pnpm dev                 # vite, http://localhost:5173

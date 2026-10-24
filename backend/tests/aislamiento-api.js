@@ -38,6 +38,12 @@ async function main() {
   const tokA = await entrar(A.correo);
   const tokB = await entrar(B.correo);
 
+  // A es una agencia de pruebas que da de alta muchos usuarios para probar roles
+  // y validaciones (spec 003), no una clienta real atada al plan base (spec 029):
+  // sin esto, el tope de 4 usuarios corta la mitad de los casos de abajo con un
+  // 422 de "límite de usuarios" en vez del que cada caso quiere comprobar.
+  await pedir('PATCH', `/companies/${A.id}`, await entrar(correoSuper), { limiteUsuarios: null });
+
   // Un asesor de A, creado por su admin como lo haría la pantalla de Usuarios.
   const correoAsesor = `${A.slug}-asesor@prueba.local`;
   const asesorCreado = await pedir('POST', '/users', tokA, {

@@ -503,10 +503,39 @@ exacta del reporte (convertir una cotización, cerrar sin terminar, convertir ot
 
 ---
 
+## T18 · Bug reportado: el PDF de tour no mostraba el nombre (y el mismo defecto de T16, pero en el PDF) `[x]`
+
+T16 revisó los 15 formularios contra `serviceShapes.tsx` (pantalla) y corrigió los desajustes de nombre de
+campo entre el formulario crudo y el de una venta ya guardada. Nunca se revisó el otro lado: `voucher/secciones.js`
+—el módulo que sí comparten el voucher de una venta Y el PDF de la cotización (T14)— tenía los mismos desajustes,
+sin tocar desde que se extrajo. El usuario lo encontró en tour; la revisión encontró más.
+
+Corregido con *fallback* (igual que T16 — una venta ya guardada sigue leyendo exactamente lo mismo):
+
+- **tour**: "Tour / actividad" leía `tourName` (venta guardada); el formulario escribe `selectedTour`.
+- **insurance**: faltaban "Cobertura", "Días de cobertura" y "Vigencia" por completo (ni para una venta ni para
+  una cotización se mostraban — no es un desajuste de nombre, es que nunca se agregaron). "Teléfono" leía `phone`
+  (el formulario; una venta guardada lo llama `contactNumber`) y "Asegurados" leía `members` (el formulario; una
+  venta guardada nunca lo renombra, queda en el genérico `passengers`) — los dos al revés de lo que T16 encontraba
+  en otras categorías: ahí rompían para la cotización, aquí rompían para la venta.
+- **finca**: "Ciudad / destino" leía `fincaCity` (el formulario; una venta guardada lo llama `city`) — roto para
+  una venta, al revés de T16. Faltaba "Dirección" por completo.
+- **convention**: faltaban "Sede", "Ciudad" y "Dirección" por completo.
+- **visa** y **migration**: "N° pasaporte" leía `docNumber` (el formulario; una venta guardada lo llama
+  `passportNumber`) — roto para una venta en los dos.
+
+**Comprobado:** `node --check`/`require` sin error; PDF de prueba generado en memoria con las 6 categorías
+corregidas (tour, insurance, finca, convention, visa, migration) — 25.928 bytes sin excepciones; `check:prisma`
+en verde. **Pendiente:** descargar el voucher de una venta real y el PDF de una cotización real, y confirmar en
+pantalla.
+
+---
+
 ## Registro
 
 | Fecha | Tarea | Qué pasó |
 |---|---|---|
+| 2026-10-24 | T18 | Bug reportado: el PDF de un tour cotizado no mostraba el nombre. Causa: `voucher/secciones.js` (compartido con el voucher de venta) tenía el mismo tipo de desajuste de nombre que T16 ya corrigió en pantalla, nunca revisado ahí. Encontrados y corregidos con *fallback*: tour (nombre), insurance (cobertura/días/vigencia faltaban del todo; teléfono y asegurados rotos para una venta), finca (ciudad rota para una venta; dirección faltaba), convention (sede/ciudad/dirección faltaban del todo), visa y migration (pasaporte roto para una venta). PDF de prueba con las 6 categorías generado sin errores; pendiente de pantalla. |
 | 2026-10-20 | T17 | Bug reportado: convertir una cotización en venta abría el asistente con los datos de una cotización distinta, ya convertida antes en la misma sesión. Causa: `NewSaleWizard.tsx` prioriza un caché en memoria (`borradoresEnMemoria`, sobrevive a que el asistente se cierre sin terminar la venta) sobre el `localStorage` que `Quotes.tsx` sí actualiza al convertir. Arreglo: `olvidarBorradorEnMemoria(draftKey)` exportada y llamada desde `convertirEnVenta` antes de navegar. `tsc` sin errores; pendiente repetir la secuencia en pantalla. |
 | 2026-10-20 | T16 | Verificadas las 15 categorías contra `serviceShapes.tsx` (pensado para una venta ya guardada, con nombres de campo que a veces difieren del formulario crudo que guarda una cotización). Corregidos con *fallback* (sin tocar el caso de una venta real): checkin (silla de ruedas), insurance (cobertura, contacto, asegurados), finca (ciudad, dirección), tour (nombre del tour), convention (sede), plan (viajeros, nombre, observaciones), hotel (observaciones), restaurant (restricciones como lista, no texto pegado). Sin cambios en ticket/simcard/car/migration/visa/passport/pet, ya coincidían. `tsc` sin errores; pendiente de pantalla. |
 | 2026-10-20 | T15 | La vista de solo lectura de una cotización cerrada mostraba solo el resumen corto de cada línea (como el PDF antes de T14). Ahora reutiliza `ServiceRow`/`serviceShapes.tsx` del detalle de una venta real: una fila desplegable por categoría con su propio `Detalle` (tramos, fechas, huéspedes...), no una tabla plana. Verificado con `tsc`; pendiente de pantalla. |

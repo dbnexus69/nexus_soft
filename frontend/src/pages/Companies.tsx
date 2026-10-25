@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, Plus, Upload, Link2, Palette, UserPlus, Users, CreditCard } from 'lucide-react';
+import { Building2, Plus, Upload, Link2, Palette, UserPlus, Users, CreditCard, Mail } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input, FormField } from '../components/ui/Form';
@@ -340,6 +340,8 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
   const [limiteUsuarios, setLimiteUsuarios] = useState(empresa.limiteUsuarios != null ? String(empresa.limiteUsuarios) : '');
   const [nombrePlan, setNombrePlan] = useState(empresa.nombrePlan ?? '');
   const [precioPlan, setPrecioPlan] = useState(empresa.precioPlan != null ? String(empresa.precioPlan) : '');
+  const [emailRemitente, setEmailRemitente] = useState(empresa.emailRemitente ?? '');
+  const [emailNombre, setEmailNombre] = useState(empresa.emailNombre ?? '');
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [logo, setLogo] = useState(empresa.logoUrl);
@@ -398,6 +400,8 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
         limiteUsuarios: limiteUsuarios.trim() === '' ? null : Number(limiteUsuarios),
         nombrePlan: nombrePlan.trim() === '' ? null : nombrePlan.trim(),
         precioPlan: precioPlan.trim() === '' ? null : Number(precioPlan),
+        emailRemitente: emailRemitente.trim() === '' ? null : emailRemitente.trim(),
+        emailNombre: emailNombre.trim() === '' ? null : emailNombre.trim(),
       });
       onGuardada();
     } catch (e: any) {
@@ -511,6 +515,29 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
             </FormField>
             <FormField label="Precio" className="mb-0">
               <Input type="number" min={0} value={precioPlan} onChange={e => setPrecioPlan(e.target.value)} placeholder="300000" />
+            </FormField>
+          </div>
+        </div>
+
+        {/* El dominio hay que verificarlo aparte en Resend (SPF/DKIM); esto solo
+            guarda con qué remitente sale el correo una vez verificado. */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+            <Mail size={13} /> Correo con el que le escribe a sus clientes
+          </h3>
+          <p className="mt-0.5 text-xs text-accent">
+            El dominio de este correo debe estar verificado en Resend antes de guardarlo aquí, o los
+            correos de la agencia saldrán sin autenticar. Vacío usa el remitente genérico del sistema.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <FormField label="Correo remitente" className="mb-0">
+              <Input
+                type="email" value={emailRemitente} onChange={e => setEmailRemitente(e.target.value)}
+                placeholder="reservas@viajessol.com"
+              />
+            </FormField>
+            <FormField label="Nombre del remitente" className="mb-0">
+              <Input value={emailNombre} onChange={e => setEmailNombre(e.target.value)} placeholder={nombre || 'Viajes Sol'} />
             </FormField>
           </div>
         </div>

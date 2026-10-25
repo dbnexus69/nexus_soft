@@ -57,13 +57,32 @@ empresa (`<empresa_id>/…`). Solo los toca el backend, con estas variables en `
 - `SUPABASE_SERVICE_ROLE_KEY` — la clave `service_role`. Salta las políticas de Storage, así que nunca sale del backend; el
   aislamiento entre agencias lo pone `src/utils/almacenamiento.js`, que antepone siempre la carpeta de la empresa del token.
 
-Los buckets se crean (o se ajustan) con `pnpm storage:buckets`. El navegador nunca recibe la ruta de un objeto: recibe una URL
+El voucher del proveedor y los documentos de check-in van al bucket privado `adjuntos` (spec 031): la fila guarda
+`/uploads/<fichero>` y `GET /uploads/:fichero` responde con una URL firmada de 5 minutos si la venta o el vuelo se pueden ver.
+El servidor no escribe nada en disco.
+
+Los buckets se crean a mano en Supabase Storage (`pnpm storage:buckets` apunta a `scripts/crear-buckets.js`, que no está en el
+repo). El navegador nunca recibe la ruta de un objeto: recibe una URL
 firmada que caduca (1 h el logo, 5 min un voucher).
 
 El **voucher** se genera en el servidor con `pdfmake` (`src/services/voucher/`), con la marca de la agencia: logo, colores,
 datos de contacto, términos y pie, que el admin edita en *Mi empresa*. Cada PDF se guarda con un hash de su contenido; si
 nada cambió se reutiliza, y si cambió algo (un abono, otro logo) se genera otro. Los envíos al cliente quedan en
 `vouchers_venta`, solo cuando el correo salió.
+
+## Despliegue (spec 030)
+
+Frontend en Vercel, backend en Render (plan free: duerme a los 15 min y el primer request tarda ~30–60 s).
+
+1. **Render** → New → Blueprint con este repo: lee `render.yaml`. Cargar en el panel las variables `sync: false`
+   (las mismas de `backend/.env.example`; `DATABASE_URL` con el rol `app_nexus`). `JWT_SECRET` se genera solo.
+2. Copiar la URL del servicio (`https://<nombre>.onrender.com`) y comprobar `/api/health`.
+3. **Vercel** → New Project, Root Directory `frontend`, variable `VITE_API_URL=https://<nombre>.onrender.com/api/v1`.
+4. Copiar la URL de producción de Vercel a `FRONTEND_URL` en Render (sin barra final) y redeployar el backend.
+   Las URLs de vista previa de Vercel quedan fuera de CORS a propósito.
+
+Las migraciones siguen siendo manuales desde local (`migrate diff` → leer el SQL → `migrate deploy`), nunca en el build.
+Nada se guarda en el disco del servidor: los adjuntos van al bucket `adjuntos` (spec 031), que hay que crear a mano en Supabase.
 
 ## Convenciones de la API
 

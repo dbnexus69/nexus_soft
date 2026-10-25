@@ -535,25 +535,6 @@ class UsersService {
 
     return { message: 'Usuario eliminado', deleted: true };
   }
-
-  async uploadAvatar(id, file) {
-    if (!file) {
-      throw new BadRequestError('Archivo requerido');
-    }
-
-    const usuario = await prisma.usuarios.findFirst({ where: { id, personas: { deleted_at: null } } });
-    if (!usuario) {
-      throw new NotFoundError('Usuario no encontrado');
-    }
-
-    const avatarUrl = `/uploads/${file.filename}`;
-    await prisma.personas.update({
-      where: { id: usuario.persona_id },
-      data: { avatar_url: avatarUrl }
-    });
-
-    return { avatarUrl };
-  }
 }
 
 module.exports = new UsersService();

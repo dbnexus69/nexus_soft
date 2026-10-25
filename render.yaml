@@ -1,0 +1,35 @@
+# Backend en Render (spec 030). El frontend va en Vercel con Root Directory `frontend`.
+# Las migraciones NO corren aquí: siguen siendo manuales (migrate diff → leer SQL → migrate deploy).
+services:
+  - type: web
+    name: nexus-backend
+    runtime: node
+    plan: free
+    region: virginia # Supabase está en us-east-1
+    rootDir: backend
+    # pnpm 10, el mismo que CI. --prod=false: `prisma` es devDependency y `build` (prisma generate --sql) lo necesita,
+    # igual que DATABASE_URL/DIRECT_URL en el build.
+    buildCommand: npx -y pnpm@10 install --frozen-lockfile --prod=false && npx -y pnpm@10 run build
+    startCommand: node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Rol app_nexus, pooler 6543 (ver backend/.env.example). Nunca postgres: index.js no arranca con él.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # URL de producción de Vercel, sin barra final.
+      - key: FRONTEND_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

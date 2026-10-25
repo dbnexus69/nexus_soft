@@ -390,29 +390,6 @@ class ClientsService {
 
     return { status: newStatus };
   }
-
-  /**
-   * Actualizar avatar de cliente
-   */
-  async uploadAvatar(id, file, alcance = {}) {
-    if (!file) {
-      throw new BadRequestError('Archivo requerido');
-    }
-
-    const cliente = await prisma.clientes.findUnique({ where: { id } });
-    comprobarQueEsSuyo(cliente, alcance);
-
-    const avatarUrl = `/uploads/${file.filename}`;
-    await prisma.personas.update({
-      where: { id: cliente.persona_id },
-      // `avatar_url`, que es la columna. Escrito abreviado, y abreviado es
-      // justo lo que `check:prisma` no miraba: subir un avatar daba 500 desde
-      // siempre, sin que nada lo señalara.
-      data: { avatar_url: avatarUrl }
-    });
-
-    return { avatarUrl };
-  }
 }
 
 module.exports = new ClientsService();

@@ -1,10 +1,10 @@
-const fs = require('fs/promises');
-const path = require('path');
 const prisma = require('../config/db');
 const { success } = require('../utils/apiResponse');
 const { BadRequestError, ForbiddenError, NotFoundError } = require('../errors/AppError');
 const { getEffectivePermissions } = require('../middleware/authorize');
 const { masEstrecho } = require('../utils/alcancePermisos');
+const almacenamiento = require('../utils/almacenamiento');
+const { nombreUnico } = require('../middleware/upload');
 
 /**
  * Los productos de una venta se crean con ella, en un solo `POST /sales`: el
@@ -19,12 +19,10 @@ const { masEstrecho } = require('../utils/alcancePermisos');
  * `POST /sales` le devuelve.
  */
 
-const CARPETA = path.join(__dirname, '../../uploads');
-
-/** Borra un fichero de `uploads/` sin fallar si ya no está. */
+/** Borra un adjunto del bucket (`/uploads/<fichero>`) sin fallar si ya no está. */
 async function borrarFichero(ruta) {
   if (!ruta) return;
-  await fs.unlink(path.join(CARPETA, path.basename(ruta))).catch(() => {});
+  await almacenamiento.borrar('adjuntos', ruta.split('/').pop()).catch(() => {});
 }
 
 /**
@@ -59,12 +57,13 @@ async function getSale(saleId, req) {
  *   por su id: con el id de una venta propia se podía escribir en la línea de
  *   cualquier otra de la agencia. Un producto de otra venta responde 404, igual
  *   que uno que no existe.
- * - `multer` escribe el fichero antes de que esto decida. Si se rechaza, se
- *   borra: si no, cada rechazo dejaba un huérfano en `uploads/`.
+ * - El fichero se sube al bucket `adjuntos` solo después de comprobar la venta;
+ *   si algo falla tras subirlo, se borra para no dejar huérfanos (spec 031).
  * - El voucher anterior se borra al reemplazarlo, para que la carpeta no acabe
  *   siendo un archivo de todos los que tuvo.
  */
 exports.uploadVoucher = async (req, res, next) => {
+  let subido = null;
   try {
     if (!req.file) throw new BadRequestError('Falta el archivo del voucher (campo "file")');
 
@@ -75,13 +74,15 @@ exports.uploadVoucher = async (req, res, next) => {
     });
     if (!linea) throw new NotFoundError('Producto no encontrado en esta venta');
 
-    const voucher_url = `/uploads/${req.file.filename}`;
+    const nombre = nombreUnico(req.file);
+    await almacenamiento.subir('adjuntos', nombre, req.file.buffer, req.file.mimetype);
+    const voucher_url = subido = `/uploads/${nombre}`;
     await prisma.detalle_venta.update({ where: { id: linea.id }, data: { voucher_url } });
     if (linea.voucher_url && linea.voucher_url !== voucher_url) await borrarFichero(linea.voucher_url);
 
     success(res, { detalleId: linea.id, voucher_url });
   } catch (err) {
-    if (req.file) await borrarFichero(req.file.filename);
+    await borrarFichero(subido);
     next(err);
   }
 };

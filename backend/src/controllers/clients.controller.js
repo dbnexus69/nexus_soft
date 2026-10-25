@@ -77,13 +77,3 @@ exports.toggleStatus = async (req, res, next) => {
     next(err);
   }
 };
-
-exports.uploadAvatar = async (req, res, next) => {
-  try {
-    const id = parseInt(req.params.id);
-    const result = await clientsService.uploadAvatar(id, req.file, alcanceDe(req));
-    success(res, result);
-  } catch (err) {
-    next(err);
-  }
-};

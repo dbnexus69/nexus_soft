@@ -24,6 +24,13 @@ const BUCKETS = {
   // Spec 021: hasta 5 fotos por servicio de una cotización, para que el cliente vea cómo es.
   // El bucket hay que crearlo una vez en Supabase Storage, igual que los de arriba.
   'cotizacion-imagenes': { public: false, fileSizeLimit: 3 * 1024 * 1024, allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'] },
+  // Spec 031: voucher del proveedor y documentos de check-in, que antes iban al disco (Render lo borra en cada deploy).
+  // La fila guarda `/uploads/<fichero>` y el objeto vive en `adjuntos/<empresa>/<fichero>`. Se crea a mano, como los demás.
+  adjuntos: {
+    public: false, fileSizeLimit: 5 * 1024 * 1024,
+    allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  },
 };
 
 let cliente = null;

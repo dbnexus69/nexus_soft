@@ -6,6 +6,7 @@ const auth = require('../middleware/auth');
 const { getEffectivePermissions, getActionScope } = require('../middleware/authorize');
 const prisma = require('../config/db');
 const { error } = require('../utils/apiResponse');
+const almacenamiento = require('../utils/almacenamiento');
 
 /**
  * Los ficheros subidos, ahora con dueño.
@@ -28,11 +29,12 @@ const { error } = require('../utils/apiResponse');
  * tampoco abre sus ficheros. No se usa `authorize`: un fichero puede ser de
  * cualquiera de los dos módulos.
  *
+ * El fichero vive en el bucket privado `adjuntos` (spec 031): si se puede ver, se responde 302 a una URL
+ * firmada de 5 minutos. Uno de antes de la spec, que solo existía en el disco, responde 404.
+ *
  * Los logos NO pasan por aquí: están en el bucket privado `logos` de Supabase
  * Storage y se entregan con URL firmada (`perfilEmpresa.service.js`, spec 011).
  */
-const CARPETA = path.join(__dirname, '../../uploads');
-
 router.get('/:fichero', auth, async (req, res, next) => {
   try {
     const fichero = path.basename(req.params.fichero);
@@ -60,9 +62,8 @@ router.get('/:fichero', auth, async (req, res, next) => {
 
     if (!visible) return error(res, 'Archivo no encontrado', 404, 'NOT_FOUND');
 
-    res.sendFile(path.join(CARPETA, fichero), (err) => {
-      if (err) next(err);
-    });
+    if (!(await almacenamiento.existe('adjuntos', fichero))) return error(res, 'Archivo no encontrado', 404, 'NOT_FOUND');
+    res.redirect(302, await almacenamiento.firmar('adjuntos', fichero, 300));
   } catch (err) { next(err); }
 });
 

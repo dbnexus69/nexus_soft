@@ -58,14 +58,3 @@ exports.remove = async (req, res, next) => {
     next(err);
   }
 };
-
-
-exports.uploadAvatar = async (req, res, next) => {
-  try {
-    const id = parseInt(req.params.id);
-    const result = await usersService.uploadAvatar(id, req.file);
-    success(res, result);
-  } catch (err) {
-    next(err);
-  }
-};

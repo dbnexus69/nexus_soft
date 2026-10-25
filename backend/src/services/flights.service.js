@@ -1,5 +1,3 @@
-const fs = require('fs/promises');
-const path = require('path');
 const prisma = require('../config/db');
 const { buildMeta } = require('../utils/paginationHelper');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
@@ -7,10 +5,11 @@ const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/Ap
 // Por qué no se marcó un check-in como realizado: el correo al cliente no salió.
 const MOTIVO_SIN_ENVIO = {
   sin_correo: 'El cliente no tiene correo registrado: regístralo para enviarle el check-in',
-  error_adjunto: 'No se pudo adjuntar el archivo al correo: vuelve a intentarlo',
   error_envio: 'No se pudo enviar el correo al cliente: vuelve a intentarlo',
 };
 const emailService = require('../utils/emailService');
+const almacenamiento = require('../utils/almacenamiento');
+const { nombreUnico } = require('../middleware/upload');
 const { enHoraColombia, fechaEnColombia, rangoDeDias } = require('../utils/fechas');
 const { alcanceDeEscritura } = require('../utils/alcancePermisos');
 
@@ -866,43 +865,52 @@ class FlightsService {
     const realizado = pedido === 'realizado';
     // Check-in hecho por otro medio (WhatsApp, la aerolínea...): se deja constancia sin enviar nada al cliente.
     const sinEnvio = body.sinEnvio === true || body.sinEnvio === 'true';
-    const docs = (files || []).map(f => ({
-      url: `/uploads/${f.filename}`,
-      filename: f.originalname,
-    }));
+    const subidos = (files || []).map(f => ({ nombre: nombreUnico(f), f }));
+    const docs = subidos.map(({ nombre, f }) => ({ url: `/uploads/${nombre}`, filename: f.originalname }));
+    const adjuntos = subidos.map(({ f }) => ({ filename: f.originalname, content: f.buffer }));
 
     // El check-in se da por realizado cuando el cliente lo recibe: el correo va ANTES de guardar y, si no
-    // sale (cliente sin correo, adjunto ilegible o fallo de envío), el tramo sigue pendiente y se responde un
-    // 400 que dice por qué. Fuera de la transacción: es una llamada de red y la mantendría abierta segundos.
+    // sale (cliente sin correo o fallo de envío), el tramo sigue pendiente y se responde un 400 que dice por
+    // qué. Fuera de la transacción: es una llamada de red y la mantendría abierta segundos.
     // Volver a pendiente no envía nada.
+    // Los ficheros van al bucket (spec 031) antes del correo, para que nunca salga uno que luego no quede
+    // guardado; cualquier fallo de aquí en adelante los borra y no deja huérfanos.
     const enviar = realizado && !sinEnvio;
-    const correo = enviar
-      ? await this._enviarCheckin(tramo, venta, docs)
-      : { emailSent: false, emailStatus: 'no_aplica', emailError: null, emailTo: null };
-    if (enviar && !correo.emailSent) {
-      throw new BadRequestError(MOTIVO_SIN_ENVIO[correo.emailStatus] || 'No se pudo enviar el check-in al cliente');
+    let correo;
+    let productStatus;
+    try {
+      await Promise.all(subidos.map(({ nombre, f }) => almacenamiento.subir('adjuntos', nombre, f.buffer, f.mimetype)));
+      correo = enviar
+        ? await this._enviarCheckin(tramo, venta, adjuntos)
+        : { emailSent: false, emailStatus: 'no_aplica', emailError: null, emailTo: null };
+      if (enviar && !correo.emailSent) {
+        throw new BadRequestError(MOTIVO_SIN_ENVIO[correo.emailStatus] || 'No se pudo enviar el check-in al cliente');
+      }
+
+      ({ productStatus } = await prisma.transaccion(async (tx) => {
+        await tx.tramos_vuelo.update({
+          where: { id: tramo.id },
+          data: {
+            checkin_status: pedido,
+            checkin_at: realizado ? new Date() : null,
+            // Este endpoint deja el tramo en pendiente o realizado, así que ya no
+            // está cancelado: dejar el motivo puesto sería un dato que contradice
+            // al estado. Así se revierte una cancelación equivocada.
+            canceled_at: null,
+            reason_canceled: null,
+            // Solo se sobrescriben si vienen adjuntos nuevos: repetir el envío
+            // sin ficheros no debe borrar los que ya había.
+            ...(docs.length ? { checkin_docs: docs } : {}),
+          },
+        });
+
+        const productStatus = await recalcularProducto(tx, tramo.prod_tiqueteria_id);
+        return { productStatus };
+      }));
+    } catch (err) {
+      await almacenamiento.borrar('adjuntos', subidos.map(s => s.nombre)).catch(() => {});
+      throw err;
     }
-
-    const { productStatus } = await prisma.transaccion(async (tx) => {
-      await tx.tramos_vuelo.update({
-        where: { id: tramo.id },
-        data: {
-          checkin_status: pedido,
-          checkin_at: realizado ? new Date() : null,
-          // Este endpoint deja el tramo en pendiente o realizado, así que ya no
-          // está cancelado: dejar el motivo puesto sería un dato que contradice
-          // al estado. Así se revierte una cancelación equivocada.
-          canceled_at: null,
-          reason_canceled: null,
-          // Solo se sobrescriben si vienen adjuntos nuevos: repetir el envío
-          // sin ficheros no debe borrar los que ya había.
-          ...(docs.length ? { checkin_docs: docs } : {}),
-        },
-      });
-
-      const productStatus = await recalcularProducto(tx, tramo.prod_tiqueteria_id);
-      return { productStatus };
-    });
 
     const actualizado = await prisma.tramos_vuelo.findUnique({
       where: { id: tramo.id },
@@ -1098,7 +1106,7 @@ class FlightsService {
    *
    * Nunca lanza: devuelve cómo fue, y quien la llama decide (sin envío, el check-in no se guarda).
    */
-  async _enviarCheckin(tramo, venta, docs) {
+  async _enviarCheckin(tramo, venta, adjuntos = []) {
     const persona = venta?.clientes?.personas;
     const destino = persona?.email;
 
@@ -1116,23 +1124,6 @@ class FlightsService {
     const hora = formatLocalTime(tramo.salida);
     const vuelo = tramo.nro_vuelo_tramo || tramo.prod_tiqueteria?.nro_vuelo || '';
     const pnr = tramo.prod_tiqueteria?.nro_reserva || '';
-
-    let adjuntos = [];
-    try {
-      adjuntos = await Promise.all(
-        docs.map(async (d) => ({
-          filename: d.filename,
-          content: await fs.readFile(path.join(__dirname, '../../uploads', path.basename(d.url))),
-        }))
-      );
-    } catch (err) {
-      return {
-        emailSent: false,
-        emailStatus: 'error_adjunto',
-        emailError: err.message,
-        emailTo: destino,
-      };
-    }
 
     const { nombre: agencia } = await emailService.marcaDeCorreo();
     const res = await emailService.sendEmail({

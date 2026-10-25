@@ -10,7 +10,6 @@
  */
 require('dotenv').config();
 const { spawn } = require('child_process');
-const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { PrismaClient, Prisma } = require('@prisma/client');
@@ -110,14 +109,6 @@ async function desmontar(prefijo) {
   const empresas = await admin.empresas.findMany({ where: { slug: { startsWith: prefijo } }, select: { id: true, slug: true } });
   if (!empresas.length) return;
   const ids = empresas.map(e => e.id);
-  const subidos = [
-    ...(await admin.detalle_venta.findMany({
-      where: { empresa_id: { in: ids }, voucher_url: { not: null } }, select: { voucher_url: true },
-    })).map(d => d.voucher_url),
-    ...(await admin.tramos_vuelo.findMany({
-      where: { empresa_id: { in: ids }, checkin_docs: { not: Prisma.DbNull } }, select: { checkin_docs: true },
-    })).flatMap(t => (Array.isArray(t.checkin_docs) ? t.checkin_docs : []).map(d => d?.url || d?.path || d)).filter(x => typeof x === 'string'),
-  ];
   const tablas = Prisma.dmmf.datamodel.models
     .filter(m => m.name !== 'empresas' && m.fields.some(f => f.name === 'empresa_id')).map(m => m.name);
   // Pasadas repetidas sobre TODAS las agencias a la vez: una suplantación vive
@@ -132,9 +123,6 @@ async function desmontar(prefijo) {
   }
   await admin.empresas.deleteMany({ where: { id: { in: ids } } });
   await limpiarAlmacenamiento(ids);
-  for (const url of subidos) {
-    try { fs.unlinkSync(path.join(RAIZ, 'uploads', path.basename(url))); } catch { /* ya no está */ }
-  }
 }
 
 /** Borra de los buckets las carpetas de prueba de esas agencias (hasta dos niveles: `vouchers/<p>/<id>/<venta>/x.pdf`). */

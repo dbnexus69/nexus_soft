@@ -14,6 +14,10 @@ const routes = require('./routes');
 
 const app = express();
 
+// Detrás del proxy de Render: sin esto `req.ip` es la del proxy y el límite de login vale para todos a la vez.
+// ponytail: un salto; si los logs de rate-limit muestran una sola IP para todos, subir el número.
+app.set('trust proxy', 1);
+
 // Seguridad
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 

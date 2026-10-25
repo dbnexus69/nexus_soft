@@ -20,9 +20,8 @@ node_modules
 dist
 build
 
-# Uploads directory
-uploads/*
-!uploads/.gitkeep
+# Uploads directory: ya no se usa (spec 031, los adjuntos van al bucket `adjuntos`); se ignora el que quede en local.
+uploads/
 
 # Prisma
 prisma/*.db

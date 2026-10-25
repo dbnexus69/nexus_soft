@@ -3,16 +3,12 @@ const { BadRequestError } = require('../errors/AppError');
 const { conservarContexto } = require('./conservarContexto');
 const path = require('path');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
-  }
-});
+// En memoria: el fichero va al bucket `adjuntos` (spec 031), nunca al disco.
+const storage = multer.memoryStorage();
+
+/** El nombre con que se guarda en el bucket: no se puede adivinar y conserva la extensión. */
+const nombreUnico = (file) =>
+  `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname).toLowerCase()}`;
 
 const fileFilter = (req, file, cb) => {
   const allowed = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx'];
@@ -36,4 +32,5 @@ const upload = multer({
 module.exports = {
   single: (...args) => conservarContexto(upload.single(...args)),
   array: (...args) => conservarContexto(upload.array(...args)),
+  nombreUnico,
 };

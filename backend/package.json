@@ -11,6 +11,7 @@
     "db:generate": "npx prisma generate --sql",
     "db:seed": "node prisma/seed.js",
     "db:seed:vuelos": "node prisma/seed-catalogos-vuelos.js",
+    "db:seed:proveedores": "node prisma/seed-proveedores-iniciales.js",
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma db push --force-reset && node prisma/seed.js",
     "check:prisma": "node scripts/check-prisma-fields.js",

@@ -55,6 +55,56 @@ const METODOS_DE_PAGO_INICIALES = [
   'Consignación',
 ];
 
+/**
+ * Los proveedores con los que arranca una agencia nueva: las aerolíneas y cadenas
+ * hoteleras principales de Colombia y las internacionales con presencia en el país.
+ *
+ * `proveedores` es propio de cada agencia a propósito (spec 030) — no un catálogo
+ * global como `aerolineas`/`aeropuertos` — porque el contacto y las notas de cada
+ * fila son la relación comercial de ESA agencia con el proveedor, no un dato
+ * objetivo igual para todas; y porque cada agencia agrega también proveedores
+ * propios (un operador local) que no deben verse en las demás. Esto solo evita
+ * que todas tengan que escribir a mano los mismos nombres conocidos; cada una es
+ * dueña de su copia y la edita o la borra sin afectar a ninguna otra.
+ */
+const PROVEEDORES_INICIALES = [
+  { nombre: 'Avianca', tipo: 'Aerolinea' },
+  { nombre: 'LATAM', tipo: 'Aerolinea' },
+  { nombre: 'Wingo', tipo: 'Aerolinea' },
+  { nombre: 'EasyFly', tipo: 'Aerolinea' },
+  { nombre: 'Satena', tipo: 'Aerolinea' },
+  { nombre: 'JetSmart Colombia', tipo: 'Aerolinea' },
+  { nombre: 'Copa Airlines', tipo: 'Aerolinea' },
+  { nombre: 'American Airlines', tipo: 'Aerolinea' },
+  { nombre: 'Iberia', tipo: 'Aerolinea' },
+  { nombre: 'Delta', tipo: 'Aerolinea' },
+  { nombre: 'United Airlines', tipo: 'Aerolinea' },
+  { nombre: 'Air France', tipo: 'Aerolinea' },
+  { nombre: 'KLM', tipo: 'Aerolinea' },
+  { nombre: 'JetBlue', tipo: 'Aerolinea' },
+  { nombre: 'Spirit Airlines', tipo: 'Aerolinea' },
+  { nombre: 'Emirates', tipo: 'Aerolinea' },
+  { nombre: 'Turkish Airlines', tipo: 'Aerolinea' },
+  { nombre: 'Air Europa', tipo: 'Aerolinea' },
+  { nombre: 'Aeroméxico', tipo: 'Aerolinea' },
+  { nombre: 'Lufthansa', tipo: 'Aerolinea' },
+  { nombre: 'GOL Linhas Aéreas', tipo: 'Aerolinea' },
+  { nombre: 'Decameron', tipo: 'Hotel' },
+  { nombre: 'GHL Hoteles', tipo: 'Hotel' },
+  { nombre: 'Hoteles Dann Carlton', tipo: 'Hotel' },
+  { nombre: 'Estelar', tipo: 'Hotel' },
+  { nombre: 'OxoHotel', tipo: 'Hotel' },
+  { nombre: 'Faranda Hotels & Resorts', tipo: 'Hotel' },
+  { nombre: 'Movich Hotels', tipo: 'Hotel' },
+  { nombre: 'Marriott', tipo: 'Hotel' },
+  { nombre: 'Hilton', tipo: 'Hotel' },
+  { nombre: 'Hyatt', tipo: 'Hotel' },
+  { nombre: 'Meliá', tipo: 'Hotel' },
+  { nombre: 'Accor', tipo: 'Hotel' },
+  { nombre: 'Wyndham', tipo: 'Hotel' },
+  { nombre: 'Radisson', tipo: 'Hotel' },
+];
+
 /** Cuánto dura una entrada de soporte antes de caducar sola. */
 const SUPLANTACION_MINUTOS = 60;
 
@@ -181,6 +231,10 @@ class CompaniesService {
 
         await tx.metodos_pago.createMany({
           data: METODOS_DE_PAGO_INICIALES.map(nombre => ({ nombre, empresa_id: creada.id })),
+        });
+
+        await tx.proveedores.createMany({
+          data: PROVEEDORES_INICIALES.map(p => ({ ...p, empresa_id: creada.id })),
         });
 
         const persona = await tx.personas.create({
@@ -390,3 +444,6 @@ class CompaniesService {
 }
 
 module.exports = new CompaniesService();
+// Para que el script de siembra (`prisma/seed-proveedores-iniciales.js`) use la
+// misma lista, nunca una copia que se pueda desalinear.
+module.exports.PROVEEDORES_INICIALES = PROVEEDORES_INICIALES;

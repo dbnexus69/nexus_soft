@@ -10,7 +10,8 @@
  * siendo la que manda.
  *
  * Idempotente: si una agencia ya tiene un proveedor con ese nombre (lo trajo este
- * script antes, o lo escribió alguien a mano), no lo repite.
+ * script antes, o lo escribió alguien a mano), no lo repite, aunque esté desactivado
+ * o escrito con otras mayúsculas o espacios.
  *
  * `node prisma/seed-proveedores-iniciales.js`, desde `backend/`.
  */
@@ -28,11 +29,14 @@ async function main() {
 
   for (const agencia of agencias) {
     await conEmpresa(agencia.id, async () => {
+      // Todos, no solo los activos: uno desactivado es uno que la agencia no quiere, y
+      // volver a sembrarlo lo duplicaría. Y por nombre normalizado, para que un "avianca "
+      // escrito a mano cuente como "Avianca" (la tabla no tiene índice único por nombre).
+      const clave = (nombre) => nombre.trim().toLowerCase();
       const existentes = new Set(
-        (await prisma.proveedores.findMany({ where: { status: 'active' }, select: { nombre: true } }))
-          .map(p => p.nombre),
+        (await prisma.proveedores.findMany({ select: { nombre: true } })).map(p => clave(p.nombre)),
       );
-      const faltantes = PROVEEDORES_INICIALES.filter(p => !existentes.has(p.nombre));
+      const faltantes = PROVEEDORES_INICIALES.filter(p => !existentes.has(clave(p.nombre)));
       if (!faltantes.length) {
         console.log(`  ${agencia.nombre}: ya los tenía todos.`);
         return;

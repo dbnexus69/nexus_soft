@@ -1,4 +1,4 @@
-# Spec 030 — Despliegue: frontend en Vercel, backend en Render
+# Spec 032 — Despliegue: frontend en Vercel, backend en Render
 
 **Estado:** configuración implementada; despliegue real y B1 (spec 031) pendientes · **Rama:** `feat-bayrol` · **Toca la base compartida:** no (ninguna migración)
 · **Relacionadas:** 011 (Storage por empresa), 022 (CI)

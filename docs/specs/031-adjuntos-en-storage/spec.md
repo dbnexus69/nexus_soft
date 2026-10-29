@@ -1,12 +1,12 @@
 # Spec 031 — Adjuntos en Supabase Storage, no en el disco
 
 **Estado:** diseño, sin implementar · **Rama:** `feat-bayrol` · **Toca la base compartida:** no (ninguna migración;
-un bucket nuevo en Storage, creado a mano) · **Relacionadas:** 030 (despliegue, bloqueante B1), 011 (Storage por
+un bucket nuevo en Storage, creado a mano) · **Relacionadas:** 032 (despliegue, bloqueante B1), 011 (Storage por
 empresa), 022 (alcance al abrir ficheros)
 
 ## Por qué
 
-Render borra el disco en cada deploy o reinicio (spec 030, B1). Hoy `middleware/upload.js` escribe en
+Render borra el disco en cada deploy o reinicio (spec 032, B1). Hoy `middleware/upload.js` escribe en
 `backend/uploads/`, así que todo lo que se sube por ahí desaparece al redeployar y las filas quedan apuntando a
 `/uploads/<fichero>` que ya no existe.
 

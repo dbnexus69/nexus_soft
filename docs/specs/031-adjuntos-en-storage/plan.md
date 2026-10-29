@@ -19,4 +19,4 @@
   desarrollo y se dan por perdidos (pendiente de confirmar).
 - **Bucket:** crearlo a mano en Supabase Storage, como los demás (`pnpm storage:buckets` apunta a
   `scripts/crear-buckets.js`, que no está en el repo — `scripts/` está en `.gitignore`).
-- **Docs:** CLAUDE.md (línea de despliegue y la nota de uploads en Tenancy), README (sección Storage), spec 030 T6.
+- **Docs:** CLAUDE.md (línea de despliegue y la nota de uploads en Tenancy), README (sección Storage), spec 032 T6.

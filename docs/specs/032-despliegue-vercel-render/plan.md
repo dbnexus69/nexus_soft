@@ -1,4 +1,4 @@
-# Plan — Spec 030
+# Plan — Spec 032
 
 ## Frontend (Vercel)
 

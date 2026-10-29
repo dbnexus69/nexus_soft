@@ -18,7 +18,7 @@ por perdidos.
 - [x] T5 · Fuera `PUT /clients/:id/avatar` y `PUT /users/:id/avatar` (rutas, controladores, servicios).
 - [x] T6 · `backend/uploads/.gitkeep` fuera del repo, `.gitignore` ignora `uploads/` entero; `tests/montaje.js` ya no
   borra en disco (la limpieza de buckets recorre `BUCKETS` y cubre `adjuntos`).
-- [x] T7 · CLAUDE.md, README (Storage y Despliegue), spec 030 T6.
+- [x] T7 · CLAUDE.md, README (Storage y Despliegue), spec 032 T6.
 - [~] T8 · `node --check` de todo lo tocado y `require('./src/routes')` en verde. `check:prisma` sale en rojo **igual
   que antes del cambio** (comprobado con `git stash`): el cliente generado en local no tiene `cliente_destinos` ni
   `cotizaciones`; se arregla con `db:generate` (toca la BD). Pendiente, con permiso del usuario: crear el bucket

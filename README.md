@@ -70,7 +70,7 @@ datos de contacto, términos y pie, que el admin edita en *Mi empresa*. Cada PDF
 nada cambió se reutiliza, y si cambió algo (un abono, otro logo) se genera otro. Los envíos al cliente quedan en
 `vouchers_venta`, solo cuando el correo salió.
 
-## Despliegue (spec 030)
+## Despliegue (spec 032)
 
 Frontend en Vercel, backend en Render (plan free: duerme a los 15 min y el primer request tarda ~30–60 s).
 

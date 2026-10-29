@@ -1,4 +1,4 @@
-# Tareas — Spec 030
+# Tareas — Spec 032
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
@@ -16,3 +16,5 @@ mover los archivos a Storage (spec 031).
 - [x] T6 · Archivos subidos a Supabase Storage (B1) → hecho en la spec 031.
 - [x] T7 · CLAUDE.md (destino, BD compartida, uploads) y README (sección "Despliegue").
 - [ ] T8 · Despliegue real y comprobaciones de `spec.md` (en los paneles de Render y Vercel).
+
+**2026-10-28.** Renumerada de 030 a 032: la 030 quedó para `proveedores-iniciales-por-agencia` (Darío), que llegó con el mismo número al traer `feat-dbmoon`.

@@ -1,4 +1,4 @@
-# Backend en Render (spec 030). El frontend va en Vercel con Root Directory `frontend`.
+# Backend en Render (spec 032). El frontend va en Vercel con Root Directory `frontend`.
 # Las migraciones NO corren aquí: siguen siendo manuales (migrate diff → leer SQL → migrate deploy).
 services:
   - type: web

@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-21).** Implementada (T1–T4 por un agente con Sonnet, revisada y corregida por Claude) y probada por la API. Falta verla en pantalla.
+**Estado (2026-10-21).** Implementada (T1–T4 por un agente con Sonnet, revisada y corregida por Claude) y probada por la API; confirmada en pantalla por el usuario (2026-10-28).
 
 ## T1 · H1: "revisada" solo con editar ventas en `all` `[x]`
 `sales.service.js::updateReviewStatus` rechaza con 403 si `alcanceDeEscritura(alcance) !== 'all'`. `Sales.tsx` no pasa `onReviewStatusChange` sin ese alcance **Corregido en la revisión:** eso ocultaba también el sello "Revisado" al asesor; `SalesTable.tsx` ahora pinta el sello siempre y el control solo con `onReviewStatusChange`. Verificado: `tsc`, `node --check`.
@@ -27,3 +27,4 @@ Sección "Permisos por rol (spec 025)" en `tests/aislamiento-api.js`, antes de l
 | 2026-10-21 | T1–T5 | Implementado en el árbol de trabajo, sin commit. `tsc`, `check:prisma` y `test:validaciones` en verde; `test:aislamiento-api` pendiente. |
 | 2026-10-21 | — | Auditoría de rutas, valores por defecto, servicios, frontend y pruebas; decisiones H1–H3 del usuario. |
 | 2026-10-21 | T1, T3, T5 | Revisión: sello "Revisado" visible para todos, Gestión Interna por `config.edit`, caso de check-in con uuid válido. `test:aislamiento-api` en verde. |
+| 2026-10-28 | — | Prueba en pantalla confirmada por el usuario. |

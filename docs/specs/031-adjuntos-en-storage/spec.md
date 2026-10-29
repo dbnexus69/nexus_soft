@@ -1,6 +1,6 @@
 # Spec 031 — Adjuntos en Supabase Storage, no en el disco
 
-**Estado:** diseño, sin implementar · **Rama:** `feat-bayrol` · **Toca la base compartida:** no (ninguna migración;
+**Estado:** completada (2026-10-28) · **Rama:** `feat-bayrol` · **Toca la base compartida:** no (ninguna migración;
 un bucket nuevo en Storage, creado a mano) · **Relacionadas:** 032 (despliegue, bloqueante B1), 011 (Storage por
 empresa), 022 (alcance al abrir ficheros)
 

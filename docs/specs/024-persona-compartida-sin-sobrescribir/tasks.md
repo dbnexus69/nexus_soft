@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
-**Estado (2026-10-21).** Implementada y probada por la API. Falta verla en pantalla (T4).
+**Estado (2026-10-28).** Completada: probada por la API y confirmada en pantalla por el usuario (2026-10-28).
 
 ## T1 · `reutilizarPersona` `[x]`
 `services/personaCompartida.js`. Campos que rellena: nombres, apellidos, tipo de documento, correo, teléfono, foto y
@@ -15,7 +15,7 @@ baja (`reactivarUsuario`, mismo rol) sigue como estaba.
 ## T3 · Aviso en pantalla `[x]`
 `api/client.ts` (`EVENTO_AVISO`) y `context/ToastContext.tsx`. **Comprobado:** `tsc` limpio.
 
-## T4 · Prueba `[~]`
+## T4 · Prueba `[x]`
 Tres casos en `tests/aislamiento-api.js`. **Verificado:** `pnpm test:aislamiento-api` "Todo en orden" (con las
 comprobaciones de antes), `check:prisma` y `test:validaciones` en verde. **Por ver en pantalla:** crear un cliente
 con la cédula de un usuario → aviso azul y el cliente aparece con el nombre del usuario.
@@ -26,3 +26,4 @@ con la cédula de un usuario → aviso azul y el cliente aparece con el nombre d
 |---|---|---|
 | 2026-10-21 | — | Diseño aprobado por el usuario (reutilizar sin sobrescribir, con aviso). |
 | 2026-10-21 | T1–T4 | Implementada; `test:aislamiento-api`, `check:prisma`, `test:validaciones` y `tsc` en verde. |
+| 2026-10-28 | T4 | Prueba en pantalla confirmada por el usuario. |

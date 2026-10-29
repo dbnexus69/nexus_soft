@@ -1,6 +1,6 @@
 # Spec 025 — Auditoría de permisos por rol: huecos y pruebas que faltaban
 
-**Estado:** implementada (2026-10-21), probada por la API; falta verla en pantalla · **Rama:** `feat-bayrol` · **No toca el esquema** (los
+**Estado:** completada (2026-10-28), probada por la API y confirmada en pantalla por el usuario (2026-10-28) · **Rama:** `feat-bayrol` · **No toca el esquema** (los
 valores por defecto viven en código; lo guardado en `permisos_rol` no cambia) · **Relacionadas:**
 [`020`](../020-alcance-de-editar-y-borrar/spec.md) (alcance de editar y borrar), [`022`](../022-cierre-de-pendientes/spec.md) T5 (archivos)
 

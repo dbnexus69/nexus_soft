@@ -4,7 +4,7 @@ Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
 **Estado (2026-10-21).** Hechas T1–T6 (T3 confirmada en pantalla por el usuario). T7 confirmada en pantalla por el usuario.
 
-## T1 · Crear el bucket `cotizacion-imagenes` `[~]`
+## T1 · Crear el bucket `cotizacion-imagenes` `[x]` (configuración del panel confirmada por el usuario, 2026-10-28)
 Intento por MCP (2026-10-21): la cuenta conectada solo ve el proyecto `andERP-prod`; sobre `wzuipxghojvcuxonbzfz`
 responde "You do not have permission". No se tocó `andERP-prod`. El usuario lo creó a mano en el panel.
 **Comprobado por T2:** existe, recibe subidas y entrega URLs firmadas. **Por confirmar:** que sea privado, con
@@ -106,3 +106,4 @@ de 3 y 2. **Por ver en pantalla:** bajar el PDF de una cotización con 1, 3 y 5 
 | 2026-10-21 | T6 | Duplicar copia los archivos; guardar borra los huérfanos. 18 comprobaciones en verde. |
 | 2026-10-21 | T3 | Pruebas en pantalla ok (usuario). |
 | 2026-10-21 | T7 | Fotos del PDF en cuadrícula de 3; comprobado generando el PDF en memoria. |
+| 2026-10-28 | T1 | El usuario confirma la configuración del bucket en el panel. |

@@ -1,6 +1,6 @@
 # Spec 024 — Un alta no sobrescribe a la persona que ya existe
 
-**Estado:** implementada (2026-10-21), probada por la API · **Rama:** `feat-bayrol` · **No toca el esquema** ·
+**Estado:** completada (2026-10-28), probada por la API y confirmada en pantalla por el usuario (2026-10-28) · **Rama:** `feat-bayrol` · **No toca el esquema** ·
 **Origen:** [`022` T6](../022-cierre-de-pendientes/tasks.md) (efecto heredado de la [`009`](../009-sin-tabla-personas/spec.md), archivada)
 
 ## Por qué

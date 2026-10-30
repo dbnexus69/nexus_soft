@@ -1,6 +1,6 @@
 # Spec 015 — Servicios dentro del paquete en el voucher
 
-**Estado:** implementada (2026-10-06), pendiente de probar el PDF en pantalla · **Rama:** `feat-dbmoon`
+**Estado:** completada (2026-10-30), aprobada por el usuario · **Rama:** `feat-dbmoon`
 
 Este documento dice **qué** tiene que pasar y **cómo se comprueba**. El *cómo* está en
 `plan.md`; el reparto en tareas, en `tasks.md`.

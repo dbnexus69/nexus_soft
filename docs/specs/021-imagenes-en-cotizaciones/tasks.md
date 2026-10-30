@@ -2,12 +2,14 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
+**Cierre (2026-10-30).** Completada: el bucket, la prueba de API y la revisión en pantalla se cerraron en la [`023`](../023-cerrar-imagenes-en-cotizaciones/tasks.md).
+
 **Estado (2026-10-20).** Implementada de punta a punta (T2-T3, T5-T7); verificada sin tocar la base (`node --check`,
 `require` de cada módulo nuevo, un PDF de prueba generado en memoria con una imagen incrustada, `tsc`,
 `check:prisma`). **Pendiente:** T1 (crear el bucket real en Supabase), T4 (correr la prueba — toca la base, pide
 permiso), y ver todo en pantalla.
 
-## T1 · Bucket y utilidades de almacenamiento `[~]`
+## T1 · Bucket y utilidades de almacenamiento `[x]`
 
 Código listo: entrada `cotizacion-imagenes` en `BUCKETS` (`backend/src/utils/almacenamiento.js`) y
 `middleware/uploadQuoteImage.js` (multer en memoria, mismo patrón que `uploadLogo.js`). **Pendiente:** el `pnpm
@@ -23,7 +25,7 @@ archivo `scripts/crear-buckets.js` nunca se creó — huérfano de antes de esta
 primero y si falla escribir `detalle.images` lo borra, para no dejar un huérfano. `paramsUuid(router, 'lineId')`
 nuevo en `numericParams.js` ya existente, usado tal cual.
 
-## T3 · Backend: URLs firmadas al leer `[~]`
+## T3 · Backend: URLs firmadas al leer `[x]`
 
 `getQuoteById(id, alcance, { resolverImagenes })` resuelve cada ruta a una URL firmada de 5 minutos antes de
 responder — **desviación del plan**: solo ahí, no en `listQuotes` (el listado de `Quotes.tsx` no muestra ninguna
@@ -32,7 +34,7 @@ imagen; firmar las de cada línea de cada cotización de cada página habría si
 para descargar los bytes con el service role, y además una URL firmada cambia en cada pedido, lo que habría roto la
 caché por huella de contenido del PDF.
 
-## T4 · Prueba por la API `[~]`
+## T4 · Prueba por la API `[x]`
 
 Escrita en `tests/cotizacion-imagenes-api.js` (`pnpm test:cotizacion-imagenes`, agregado a `package.json`): sube,
 tipo inválido (422), tope de 5 (sexta → 400), ajena (404), línea de otra cotización (404), cotización aceptada

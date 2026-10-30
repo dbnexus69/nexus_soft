@@ -1,6 +1,6 @@
 # Spec 022 — Cierre de pendientes tras el análisis del 2026-10-21
 
-**Estado:** diseño, pendiente de permiso para desarrollar · **Rama:** `feat-bayrol` · **Toca la base:** no (solo
+**Estado:** completada (2026-10-28; T6 resuelta en la spec 024) · **Rama:** `feat-bayrol` · **Toca la base:** no (solo
 la prueba de T5 corre contra la base compartida, con permiso) · **Relacionadas:** [`009`](../009-sin-tabla-personas/spec.md),
 [`010`](../010-calidad-y-rendimiento/spec.md) (CI), [`014`](../014-ajustes-del-asistente-de-venta/spec.md) (T7),
 [`020`](../020-alcance-de-editar-y-borrar/spec.md) (alcance)

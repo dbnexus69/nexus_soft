@@ -1,6 +1,6 @@
 # Spec 014 — Ajustes del asistente de venta
 
-**Estado:** implementada (2026-10-06), pendiente de probar en pantalla · **Rama:** `feat-dbmoon`
+**Estado:** completada (2026-10-30), aprobada por el usuario · **Rama:** `feat-dbmoon`
 
 Este documento dice **qué** tiene que pasar y **cómo se comprueba**. El *cómo* está en
 `plan.md`; el reparto en tareas, en `tasks.md`. Recoge una serie de ajustes que salieron al

@@ -2,6 +2,8 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
+**Cierre (2026-10-30).** Completada: aprobada por el usuario.
+
 **Estado (2026-10-06).** Implementada y verificada por la API. Falta verla en pantalla.
 
 ---

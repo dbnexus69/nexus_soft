@@ -1,7 +1,6 @@
 # Spec 021 — Imágenes en los servicios de una cotización
 
-**Estado:** implementada (2026-10-20); pendiente crear el bucket real, correr la prueba de API y verla en pantalla
-(ver `tasks.md`) · **Rama:** `feat-dbmoon` · **Toca la base compartida:** no (bucket nuevo en Supabase Storage, sin
+**Estado:** completada (2026-10-28): bucket, prueba de API y pantalla cerrados en la [`023`](../023-cerrar-imagenes-en-cotizaciones/tasks.md) · **Rama:** `feat-dbmoon` · **Toca la base compartida:** no (bucket nuevo en Supabase Storage, sin
 migración de esquema) · **Relacionadas:** [`007`](../007-cotizaciones/spec.md) (cotizaciones;
 T14-T16 son el precedente directo: el mismo `detalle` por categoría, la misma pantalla de "ver" y el mismo PDF que
 esta spec extiende), [`011`](../011-perfil-y-voucher-de-la-empresa/spec.md) (primer uso de Supabase Storage con

@@ -1,6 +1,6 @@
 # Spec 003 — Validación de los datos de una persona
 
-**Estado:** en ejecución · **Rama:** `feat-dbmoon` · **Alcance de esta entrega:** el módulo de clientes · **Relacionada:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md)
+**Estado:** completada (2026-10-03) · **Rama:** `feat-dbmoon` · **Alcance de esta entrega:** el módulo de clientes · **Relacionada:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md)
 
 Este documento dice **qué** tiene que pasar y **cómo se comprueba**. El *cómo* está en `plan.md`; lo
 hecho y lo pendiente, en `tasks.md`.

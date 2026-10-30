@@ -1,6 +1,6 @@
 # Spec 029 — Límite de usuarios por plan
 
-**Estado:** diseño, sin implementar · **Rama:** `feat-dbmoon` · **Toca la base compartida:** sí (tres columnas
+**Estado:** completada (2026-10-24), migración aplicada y `test:limite-usuarios` en verde · **Rama:** `feat-dbmoon` · **Toca la base compartida:** sí (tres columnas
 nuevas en `empresas`, aditivas) · **Relacionadas:** ninguna — primer trabajo de licenciamiento del sistema
 
 ## Por qué

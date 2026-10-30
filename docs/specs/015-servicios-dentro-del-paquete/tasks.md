@@ -2,6 +2,8 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente
 
+**Cierre (2026-10-30).** Completada: aprobada por el usuario.
+
 **Estado (2026-10-06).** Implementada y verificada por la API y por la definición del
 documento. Falta ver el PDF y el detalle de la venta en pantalla.
 
@@ -19,7 +21,7 @@ Verificado:
 - Venta 603: dos tours vinculados al paquete, ahora dentro del paquete en la definición.
 - Datos ficticios: 14 de 14 categorías bajo un paquete.
 
-## T3 · Tour con nombre y fecha y hora en el voucher `[~]`
+## T3 · Tour con nombre y fecha y hora en el voucher `[x]`
 
 `campoTour` lee `tourName` y `preferredDate`. El nombre de los tours ya guardados sigue vacío
 (se capturaron antes del campo): hay que volver a capturarlos.

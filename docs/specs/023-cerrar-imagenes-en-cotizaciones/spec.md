@@ -1,6 +1,6 @@
 # Spec 023 — Dejar funcionando las imágenes de las cotizaciones
 
-**Estado:** en ejecución · **Rama:** `feat-bayrol` · **Toca:** Supabase Storage del proyecto `wzuipxghojvcuxonbzfz`
+**Estado:** completada (2026-10-28), confirmada en pantalla por el usuario · **Rama:** `feat-bayrol` · **Toca:** Supabase Storage del proyecto `wzuipxghojvcuxonbzfz`
 (bucket nuevo; sin migración de esquema) · **Continúa:** [`021`](../021-imagenes-en-cotizaciones/spec.md) (de Darío,
 no se edita: lo que se haga aquí se le pasa como nota)
 

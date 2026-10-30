@@ -1,6 +1,6 @@
 # Spec 004 — Vuelos y check-in
 
-**Estado:** en ejecución · **Rama:** `feat-dbmoon` · **Relacionada:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md)
+**Estado:** completada (2026-10-03) · **Rama:** `feat-dbmoon` · **Relacionada:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md)
 
 Qué tiene que pasar y cómo se comprueba. El *cómo* está en `plan.md`; lo hecho y lo pendiente, en `tasks.md`.
 

@@ -1,6 +1,6 @@
 # Spec 010 — Calidad y rendimiento (auditoría del 2026-10-03)
 
-**Estado:** en ejecución · **Rama:** `feat-bayrol` · **Origen:** auditoría de funcionalidades, diseño y
+**Estado:** completada (2026-10-21, CI activada en la spec 022 T3) · **Rama:** `feat-bayrol` · **Origen:** auditoría de funcionalidades, diseño y
 arquitectura hecha con la skill `ui-ux-pro-max` (solo lectura del código; sin navegador).
 
 ## Qué se quiere

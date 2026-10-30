@@ -1,6 +1,6 @@
-# Spec 003 — IVA sobre la Tarifa Administrativa (TA)
+# Spec 005 — IVA sobre la Tarifa Administrativa (TA)
 
-**Estado:** en ejecución · **Continúa:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md)
+**Estado:** completada (2026-10-03) · **Continúa:** [`002-estabilizacion-multi-tenant`](../002-estabilizacion-multi-tenant/spec.md)
 
 Este documento dice **qué** tiene que pasar y **cómo se comprueba**. El *cómo* técnico está en
 `plan.md`; el reparto en tareas, con lo que ya se hizo y lo que falta, en `tasks.md`.

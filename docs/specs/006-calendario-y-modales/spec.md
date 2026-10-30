@@ -1,6 +1,6 @@
 # Spec 006 — El calendario de fecha y el diseño de tres modales
 
-**Estado:** en ejecución · **Rama:** `feat-dbmoon`
+**Estado:** completada (2026-10-03) · **Rama:** `feat-dbmoon`
 
 Qué tiene que pasar y cómo se comprueba. El *cómo* técnico está en `plan.md`; lo hecho y lo
 pendiente, en `tasks.md`.

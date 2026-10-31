@@ -15,7 +15,6 @@ const {
 const { randomUUID: uuidv4 } = require('crypto');
 const { soloLasSuyas, esDeOtro, ventaVisible } = require('./ventasAlcance');
 const { alcanceDeEscritura, aAlcance } = require('../utils/alcancePermisos');
-const { getEffectivePermissions } = require('../middleware/authorize');
 const { listSales } = require('./ventasListado');
 const { getCreditPortfolio, getClientCredits } = require('./ventasCartera');
 const { escribirProductos } = require('./ventaProductos');
@@ -132,11 +131,11 @@ async function comprobarReferencias(definiciones, valores) {
  * El responsable de una venta tiene que estar al alcance de quien la escribe (spec 026):
  * con ver responsables en 'own', uno que creó; en 'none', ninguno. El asistente ya solo
  * ofrece esos, y esto cierra el mismo hueco por la API. El alcance es el de ver
- * responsables, no el de la venta, así que se lee aquí.
+ * responsables, no el de la venta: lo pone el controlador en `alcance.responsablesView`.
  */
-async function comprobarResponsablePropio(responsableId, user) {
+async function comprobarResponsablePropio(responsableId, { user, responsablesView } = {}) {
   if (!responsableId || !user) return;
-  const alcance = aAlcance(getEffectivePermissions(user).permissions.responsables?.view);
+  const alcance = aAlcance(responsablesView);
   if (alcance === 'all') return;
   if (alcance === 'none') throw new ForbiddenError('No puede asignar responsables a una venta');
   const r = await prisma.responsables.findFirst({ where: { id: Number(responsableId) }, select: { creado_por_id: true } });
@@ -262,7 +261,7 @@ class SalesService {
     await comprobarReferencias(REFERENCIAS_NUEVA_VENTA, {
       clientId, asesorId, responsableId, commissionAgentId,
     });
-    await comprobarResponsablePropio(responsableId, alcance.user);
+    await comprobarResponsablePropio(responsableId, alcance);
 
     // Resolve payment method principal id
     let metodo_pago_principal_id = null;
@@ -782,7 +781,7 @@ class SalesService {
     );
     // Solo si cambia: editar otra cosa de una venta con un responsable ajeno sigue valiendo.
     if ('responsable_id' in data && data.responsable_id !== venta.responsable_id) {
-      await comprobarResponsablePropio(data.responsable_id, alcance.user);
+      await comprobarResponsablePropio(data.responsable_id, alcance);
     }
 
     const esCredito = 'es_credito' in data ? data.es_credito : Boolean(venta.es_credito);

@@ -164,6 +164,8 @@ class CompaniesService {
 
     const uso = await conEmpresa(empresa.id, async () => ({
       usuarios: await prisma.usuarios.count(),
+      // Los que ocupan cupo del plan: el mismo conteo que `users.service.js::_comprobarLimiteDeUsuarios` (spec 033).
+      usuariosActivos: await prisma.usuarios.count({ where: { status: 'active', deleted_at: null } }),
       clientes: await prisma.clientes.count({ where: { deleted_at: null } }),
       ventas: await prisma.ventas.count({ where: { deleted_at: null } }),
     }));

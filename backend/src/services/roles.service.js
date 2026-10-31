@@ -114,9 +114,9 @@ const DEFAULT_ROLE_VALUES = {
     responsables: { view: 'none', create: 'false', edit: 'none', delete: 'none' },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
-    // Se mantienen en true: el asistente de ventas necesita los catálogos
-    // (aerolíneas, métodos de pago) y la lista de asesores para asignar la
-    // venta. Ahora son revocables, aunque revocarlos rompa crear ventas.
+    // `config.view` se mantiene en true: el asistente de ventas necesita los
+    // catálogos (aerolíneas, métodos de pago); revocarlo rompe crear ventas.
+    // `users.view`, no desde la 027: el selector de asesor solo sale con ventas en 'all'.
     users: { view: 'false', create: 'false', edit: 'false', delete: 'false' },
     config: { view: 'true', edit: 'false' },
     permissions: { view: 'false', edit: 'false' },

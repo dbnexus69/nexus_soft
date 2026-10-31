@@ -67,6 +67,22 @@ async function main() {
   const u7 = await crearUsuario('u7');
   comprobar('tras la baja, vuelve a entrar uno sin tocar el límite', u7.status === 201, `HTTP ${u7.status}`);
 
+  console.log('\n  Reactivar a un inactivo también ocupa cupo (spec 033)');
+  const idU7 = u7.json?.data?.id;
+  const inactivar = await pedir('PUT', `/users/${idU7}`, tokA, { status: 'inactive' });
+  comprobar('inactivar: 200', inactivar.status === 200, `HTTP ${inactivar.status}`);
+  const u10 = await crearUsuario('u10');
+  comprobar('con uno inactivo, entra otro', u10.status === 201, `HTTP ${u10.status}`);
+  const reactivar = await pedir('PUT', `/users/${idU7}`, tokA, { status: 'active' });
+  comprobar('reactivar con el cupo lleno: 422', reactivar.status === 422, `HTTP ${reactivar.status}`);
+
+  console.log('\n  Dos altas a la vez con un solo cupo libre (spec 033)');
+  const bajaU10 = await pedir('DELETE', `/users/${u10.json?.data?.id}`, tokA);
+  comprobar('dar de baja: 200', bajaU10.status === 200, `HTTP ${bajaU10.status}`);
+  const simultaneas = await Promise.all([crearUsuario('u11'), crearUsuario('u12')]);
+  const entraron = simultaneas.filter(r => r.status === 201).length;
+  comprobar('entra exactamente una', entraron === 1, simultaneas.map(r => r.status).join(' '));
+
   console.log('\n  Límite nulo: plan Deluxe, sin tope');
   const sinLimite = await pedir('PATCH', `/companies/${A.id}`, tokSuper, { limiteUsuarios: null, nombrePlan: 'Plan Deluxe', precioPlan: 800000 });
   comprobar('PATCH a límite nulo: 200', sinLimite.status === 200, `HTTP ${sinLimite.status}`);

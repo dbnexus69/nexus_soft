@@ -18,7 +18,7 @@ const createUserSchema = z.object({
   birth_date: nacimiento,
   birthDate: nacimiento, // el que lee el servicio; birth_date queda por compatibilidad
   avatar: z.string().nullable().optional(),
-  status: z.string().optional()
+  status: z.enum(['active', 'inactive']).optional()
 }).superRefine(tipoYNumeroJuntos);
 
 const updateUserSchema = z.object({
@@ -35,7 +35,7 @@ const updateUserSchema = z.object({
   birth_date: nacimiento,
   birthDate: nacimiento, // el que lee el servicio; birth_date queda por compatibilidad
   avatar: z.string().nullable().optional(),
-  status: z.string().optional()
+  status: z.enum(['active', 'inactive']).optional()
 }).superRefine(tipoYNumeroJuntos);
 
 module.exports = {

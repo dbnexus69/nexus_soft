@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { User, RolePermissions, ADMIN_PERMISSIONS, SUPERADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions } from '../types';
+import { User, RolePermissions, ADMIN_PERMISSIONS, SUPERADMIN_PERMISSIONS, DEFAULT_ASESOR_PERMISSIONS, DEFAULT_FREELANCER_PERMISSIONS, normalizeRolePermissions, tieneAlcance } from '../types';
 import { useData } from './DataContext';
 
 type ModulePermission = {
@@ -8,14 +8,13 @@ type ModulePermission = {
 
 interface PermissionsContextType {
   permissions: RolePermissions;
-  can: (module: keyof RolePermissions, action: string) => boolean;
   canEdit: (module: keyof RolePermissions) => boolean;
   canDelete: (module: keyof RolePermissions) => boolean;
   canCreate: (module: keyof RolePermissions) => boolean;
   canView: (module: keyof RolePermissions) => boolean;
   /**
-   * Sobre qué registros puede hacer `action` (spec 020): el de la acción con el tope
-   * del de ver, igual que `authorize` en el servidor. 'all' en las acciones sí/no
+   * Sobre qué registros puede hacer `action` (spec 020): el de la acción, con el tope
+   * del de ver si tiene alcance, igual que `authorize`. 'all' en las acciones sí/no
    * concedidas; 'none' en las denegadas.
    */
   scopeOf: (module: keyof RolePermissions, action: string) => 'all' | 'own' | 'none';
@@ -66,68 +65,28 @@ export function PermissionsProvider({
   const atajo = (module: keyof RolePermissions) =>
     user?.role === 'superadmin' || (user?.role === 'admin' && module !== 'permissions');
 
-  const can = (module: keyof RolePermissions, action: string): boolean => {
-    const modulePerms = permissions[module] as ModulePermission;
-    if (!modulePerms) return atajo(module);
-    const actionValue = modulePerms[action];
-    if (typeof actionValue === 'boolean') return actionValue;
-    if (actionValue === 'all') return true;
-    if (actionValue === 'own') return true;
-    return false;
-  };
-
-  const canEdit = (module: keyof RolePermissions): boolean => {
-    if (atajo(module)) return true;
-    const perm = permissions[module] as ModulePermission;
-    if (!perm) return false;
-    if ('edit' in perm) {
-      const editVal = perm.edit;
-      if (typeof editVal === 'boolean') return editVal;
-      return editVal !== 'none';
-    }
-    return false;
-  };
-
-  const canDelete = (module: keyof RolePermissions): boolean => {
-    if (atajo(module)) return true;
-    const perm = permissions[module] as ModulePermission;
-    if (!perm) return false;
-    if ('delete' in perm) return perm.delete === true || perm.delete === 'all' || perm.delete === 'own';
-    return false;
-  };
-
-  const canCreate = (module: keyof RolePermissions): boolean => {
-    if (atajo(module)) return true;
-    const perm = permissions[module] as ModulePermission;
-    if (!perm) return false;
-    if ('create' in perm) return perm.create === true;
-    return false;
-  };
-
-  const canView = (module: keyof RolePermissions): boolean => {
-    if (atajo(module)) return true;
-    const perm = permissions[module] as ModulePermission;
-    if (!perm) return true;
-    if ('view' in perm) {
-      const viewVal = perm.view;
-      if (typeof viewVal === 'boolean') return viewVal;
-      return viewVal === 'all' || viewVal === 'own';
-    }
-    return true;
-  };
-
+  /**
+   * La única lectura de un permiso en la pantalla (spec 033), como `leerValor` en el servidor: el
+   * de la acción y, si es una acción con alcance (`SCOPED_ACTIONS`), con el tope del de ver, igual
+   * que `authorize`. Si el módulo o la acción no existen, 'none': cierra, no abre.
+   */
   const scopeOf = (module: keyof RolePermissions, action: string): 'all' | 'own' | 'none' => {
     if (atajo(module)) return 'all';
     const perm = permissions[module] as ModulePermission | undefined;
     if (!perm || !(action in perm)) return 'none';
     const accion = aAlcance(perm[action]);
-    if (action === 'view' || typeof perm.view !== 'string') return accion;
+    if (action === 'view' || !tieneAlcance(module, action) || typeof perm.view !== 'string') return accion;
     const ver = aAlcance(perm.view);
     return RANGO[accion] <= RANGO[ver] ? accion : ver;
   };
 
+  const canView = (module: keyof RolePermissions) => scopeOf(module, 'view') !== 'none';
+  const canCreate = (module: keyof RolePermissions) => scopeOf(module, 'create') !== 'none';
+  const canEdit = (module: keyof RolePermissions) => scopeOf(module, 'edit') !== 'none';
+  const canDelete = (module: keyof RolePermissions) => scopeOf(module, 'delete') !== 'none';
+
   return (
-    <PermissionsContext.Provider value={{ permissions, can, canEdit, canDelete, canCreate, canView, scopeOf }}>
+    <PermissionsContext.Provider value={{ permissions, canEdit, canDelete, canCreate, canView, scopeOf }}>
       {children}
     </PermissionsContext.Provider>
   );

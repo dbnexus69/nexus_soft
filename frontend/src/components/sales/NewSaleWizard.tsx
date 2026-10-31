@@ -134,8 +134,9 @@ export function olvidarBorradorEnMemoria(draftKey: string) {
 
 export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props) {
   const { data, fetchClients, fetchCommissionAgents, fetchConfig, invalidateDashboard } = useData();
-  const { canView } = usePermissions();
+  const { canView, scopeOf } = usePermissions();
   const verComisionistas = canView('commissions');
+  const verResponsables = scopeOf('responsables', 'view') !== 'none';
   // Crear la venta y refrescar la tabla es responsabilidad de SalesContext,
   // que es donde vive el listado con su página y sus filtros.
   const { handleCreateSale } = useSalesContext();
@@ -529,7 +530,8 @@ export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props
         reference: p.reference
       })),
       status: finalStatus as Sale["status"],
-      responsableId: form.responsableId ? Number(form.responsableId) : undefined,
+      // Sin ver responsables el campo no se muestra: uno que quedó en un borrador no se envía (spec 033).
+      responsableId: verResponsables && form.responsableId ? Number(form.responsableId) : undefined,
       observations: fullObservations,
       products: form.selectedProducts,
       ticketData: mappedTickets.length > 0 ? mappedTickets : undefined,

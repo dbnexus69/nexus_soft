@@ -911,6 +911,12 @@ class FlightsService {
       await almacenamiento.borrar('adjuntos', subidos.map(s => s.nombre)).catch(() => {});
       throw err;
     }
+    // Los documentos reemplazados salen del bucket, como el voucher anterior (spec 033). Un fallo
+    // aquí no deshace el check-in: `borrar` ya lo deja en el log.
+    const reemplazados = docs.length && Array.isArray(tramo.checkin_docs)
+      ? tramo.checkin_docs.map(d => d?.url?.split('/').pop()).filter(Boolean)
+      : [];
+    if (reemplazados.length) await almacenamiento.borrar('adjuntos', reemplazados).catch(() => {});
 
     const actualizado = await prisma.tramos_vuelo.findUnique({
       where: { id: tramo.id },

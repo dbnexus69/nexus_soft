@@ -25,7 +25,7 @@ import AvatarPicker, { AVATARS } from '../components/ui/AvatarPicker';
 import { DatePicker } from '../components/sales/forms/TicketForm';
 
 export default function Responsables() {
-  const { data, addResponsable, updateResponsable, deleteResponsable, fetchResponsables } = useData();
+  const { data, addResponsable, updateResponsable, setResponsableStatus, fetchResponsables } = useData();
   const { user } = useAuth();
   const { permissions, canCreate, scopeOf } = usePermissions();
   // Editar según su alcance (spec 026): todos, o solo los que creó.
@@ -251,21 +251,9 @@ export default function Responsables() {
     setIsToggling(true);
     try {
       const { id, newStatus } = confirmToggle;
-      // Actualizar el estado en lugar de eliminar
-      const responsableData = data.responsables.find(r => r.id === id);
-      if (!responsableData) throw new Error('Responsable no encontrado en el estado');
-      
-      const updateData = {
-        firstName: responsableData.name.split(' ')[0],
-        lastName: responsableData.name.split(' ').slice(1).join(' '),
-        docTypeId: responsableData.docTypeId,
-        docNumber: responsableData.docNumber,
-        phone: responsableData.phone,
-        email: responsableData.email,
-        status: newStatus
-      };
-
-      await updateResponsable(id, updateData);
+      // Solo el estado (spec 033): reenviar la ficha rehecha desde `name` partía mal los nombres
+      // compuestos y los escribía en la persona, que comparten el cliente o el usuario con ese documento.
+      await setResponsableStatus(id, newStatus as Responsable['status']);
       setSuccessMessage(`Responsable ${newStatus === 'active' ? 'activado' : 'desactivado'} exitosamente`);
       setShowSuccess(true);
       setToggledResponsableId(id);

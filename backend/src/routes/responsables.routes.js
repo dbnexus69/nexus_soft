@@ -10,7 +10,7 @@ const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
 const paginate = require('../middleware/paginate');
 const { validate } = require('../middleware/validate');
-const { createResponsableSchema, updateResponsableSchema } = require('../schemas/responsables.schema');
+const { createResponsableSchema, updateResponsableSchema, statusResponsableSchema } = require('../schemas/responsables.schema');
 
 router.use(auth);
 
@@ -26,6 +26,7 @@ router.get('/', authorize('responsables', 'view'), paginate, controller.list);
 router.post('/', authorize('responsables', 'create'), validate(createResponsableSchema), controller.create);
 router.get('/:id', authorize('responsables', 'view'), controller.getById);
 router.put('/:id', authorize('responsables', 'edit'), validate(updateResponsableSchema), controller.update);
+router.patch('/:id/status', authorize('responsables', 'edit'), validate(statusResponsableSchema), controller.setStatus);
 router.delete('/:id', authorize('responsables', 'delete'), controller.delete);
 
 module.exports = router;

@@ -170,6 +170,7 @@ class UsersService {
       : null;
 
     await prisma.transaccion(async (tx) => {
+      if (data.status !== 'inactive') await this._comprobarLimiteDeUsuarios(tx);
       await tx.personas.update({
         where: { id: existente.persona_id },
         data: {
@@ -198,28 +199,36 @@ class UsersService {
   /**
    * Licenciamiento (spec 029): el tope de usuarios activos que puede tener la agencia según su
    * plan. `limite_usuarios` nulo es sin límite (plan Deluxe). Un usuario inactivo o dado de baja
-   * no cuenta, así que liberar uno (o reactivarlo) vuelve a comprobarse en el acto, sin que nadie
-   * tenga que "liberar" nada a mano. Único punto de control: cubre también revivir un usuario
-   * dado de baja (`reactivarUsuario`, más abajo), que solo se llama desde aquí.
+   * no cuenta, así que liberar uno vuelve a dejar el cupo libre en el acto, sin que nadie tenga
+   * que "liberar" nada a mano. Se comprueba en todo lo que deja a alguien activo: crear, revivir
+   * a uno dado de baja (`reactivarUsuario`) y reactivar a uno inactivo (`updateUser`).
+   *
+   * Con `tx`, dentro de la transacción que escribe: el `FOR UPDATE` sobre la fila de la agencia
+   * pone en fila a dos altas simultáneas, y la segunda cuenta ya con la primera. Sin el bloqueo,
+   * las dos veían el mismo cupo libre y entraban las dos.
    */
-  async _comprobarLimiteDeUsuarios() {
-    const empresa = await prisma.empresas.findFirst({
-      where: { id: empresaActual(), deleted_at: null }, select: { limite_usuarios: true, nombre_plan: true },
-    });
+  async _comprobarLimiteDeUsuarios(tx = prisma) {
+    const [empresa] = await tx.$queryRaw`
+      SELECT limite_usuarios, nombre_plan FROM empresas
+      WHERE id = ${empresaActual()} AND deleted_at IS NULL
+      FOR UPDATE`;
     if (!empresa || empresa.limite_usuarios == null) return;
-    const activos = await prisma.usuarios.count({ where: { status: 'active', deleted_at: null } });
+    const activos = await tx.usuarios.count({ where: { status: 'active', deleted_at: null } });
     if (activos >= empresa.limite_usuarios) {
       const plan = empresa.nombre_plan || 'tu plan actual';
       throw new AppError(
-        `Llegaste al límite de usuarios de ${plan}: permite hasta ${empresa.limite_usuarios} usuario(s) activos, y ya los tenés todos en uso. `
-        + 'Si necesitás más licencias, escribinos por WhatsApp al 301 231 6848 y te ayudamos a ampliar tu plan.',
+        `Llegaste al límite de usuarios de ${plan}: permite hasta ${empresa.limite_usuarios} usuario(s) activos, y ya los tienes todos en uso. `
+        + 'Si necesitas más licencias, escríbenos por WhatsApp al 301 231 6848 y te ayudamos a ampliar tu plan.',
         422, 'VALIDATION_ERROR',
       );
     }
   }
 
   async createUser(data) {
-    await this._comprobarLimiteDeUsuarios();
+    // Un alta inactiva no ocupa cupo. Esta primera comprobación corta antes de tocar la persona
+    // (que `reutilizarPersona` puede actualizar); la que vale es la de la transacción del final.
+    const activa = (data.status || 'active') === 'active';
+    if (activa) await this._comprobarLimiteDeUsuarios();
     const password_hash = await bcrypt.hash(data.password, 12);
 
     const tipo = await validarDocumento(data);
@@ -273,15 +282,18 @@ class UsersService {
       throw new BadRequestError('Rol no válido');
     }
 
-    const usuario = await prisma.usuarios.create({
-      data: {
-        persona_id: persona.id,
-        email: data.email,
-        password_hash,
-        rol_id: roles.id,
-        status: data.status || 'active'
-      },
-      include: { personas: { include: { tipos_documento: true } }, roles: true }
+    const usuario = await prisma.transaccion(async (tx) => {
+      if (activa) await this._comprobarLimiteDeUsuarios(tx);
+      return tx.usuarios.create({
+        data: {
+          persona_id: persona.id,
+          email: data.email,
+          password_hash,
+          rol_id: roles.id,
+          status: data.status || 'active'
+        },
+        include: { personas: { include: { tipos_documento: true } }, roles: true }
+      });
     });
 
     try {
@@ -398,10 +410,16 @@ class UsersService {
       olvidarUsuario(id);
     }
 
-    const updated = await prisma.usuarios.update({
-      where: { id },
-      data: updateData,
-      include: { personas: { include: { tipos_documento: true } }, roles: true }
+    // Reactivar a un inactivo ocupa un cupo del plan (spec 029): sin esto, inactivar a uno, dar de
+    // alta a otro y reactivar al primero dejaba la agencia por encima del límite.
+    const reactiva = updateData.status === 'active' && usuario.status !== 'active';
+    const updated = await prisma.transaccion(async (tx) => {
+      if (reactiva) await this._comprobarLimiteDeUsuarios(tx);
+      return tx.usuarios.update({
+        where: { id },
+        data: updateData,
+        include: { personas: { include: { tipos_documento: true } }, roles: true }
+      });
     });
 
     return {

@@ -233,6 +233,36 @@ async function main() {
   comprobar('freelancer: su lista trae el suyo y no el del admin', listaFree.includes(idRespFree) && !listaFree.includes(idRespAdmin), JSON.stringify(listaFree));
   comprobar('admin: ve el del freelancer: 200', (await pedir('GET', `/responsables/${idRespFree}`, tokA)).status === 200);
   comprobar('admin: edita el del freelancer: 200', (await pedir('PUT', `/responsables/${idRespFree}`, tokA, { firstName: 'Resp', lastName: 'Free' })).status === 200);
+
+  // Spec 033: desactivar manda y devuelve solo el estado; la persona (compartida por documento) no cambia.
+  const ccResp = (await admin.tipos_documento.findMany()).find(t => t.abreviatura === 'CC');
+  const respCompuesto = await pedir('POST', '/responsables', tokA, {
+    firstName: 'Juan Carlos', lastName: 'Pérez Gómez', docTypeId: ccResp.id, docNumber: '1098765432',
+  });
+  const idCompuesto = respCompuesto.json?.data?.id;
+  const desactivar = await pedir('PATCH', `/responsables/${idCompuesto}/status`, tokA, { status: 'inactive' });
+  comprobar('desactivar un responsable: 200 con solo { id, status }',
+    desactivar.status === 200 && JSON.stringify(Object.keys(desactivar.json?.data || {}).sort()) === '["id","status"]' && desactivar.json?.data?.status === 'inactive',
+    `HTTP ${desactivar.status}, ${JSON.stringify(desactivar.json?.data)}`);
+  const trasDesactivar = (await pedir('GET', `/responsables/${idCompuesto}`, tokA)).json?.data;
+  comprobar('desactivar no toca nombres ni tipo de documento',
+    trasDesactivar?.firstName === 'Juan Carlos' && trasDesactivar?.lastName === 'Pérez Gómez' && trasDesactivar?.docTypeId === ccResp.id,
+    JSON.stringify([trasDesactivar?.firstName, trasDesactivar?.lastName, trasDesactivar?.docTypeId]));
+  comprobar('un estado que no existe: 422',
+    (await pedir('PATCH', `/responsables/${idCompuesto}/status`, tokA, { status: 'borrado' })).status === 422);
+  comprobar('el estado no acepta otros campos: 422',
+    (await pedir('PATCH', `/responsables/${idCompuesto}/status`, tokA, { status: 'active', firstName: 'Otro' })).status === 422);
+  const ponerSoloEstado = await pedir('PUT', `/responsables/${idCompuesto}`, tokA, { status: 'active' });
+  const trasPut = (await pedir('GET', `/responsables/${idCompuesto}`, tokA)).json?.data;
+  comprobar('un PUT con solo el estado no borra el tipo de documento',
+    ponerSoloEstado.status === 200 && trasPut?.docTypeId === ccResp.id, `HTTP ${ponerSoloEstado.status}, tipo ${trasPut?.docTypeId}`);
+  comprobar('un PUT responde solo lo que se mandó: { id, status }',
+    JSON.stringify(Object.keys(ponerSoloEstado.json?.data || {}).sort()) === '["id","status"]', JSON.stringify(ponerSoloEstado.json?.data));
+  const renombrar = await pedir('PUT', `/responsables/${idCompuesto}`, tokA, { firstName: 'Juan Carlos', lastName: 'Pérez Gómez' });
+  comprobar('un PUT de nombres responde id, firstName, lastName y name, sin documento ni deuda',
+    JSON.stringify(Object.keys(renombrar.json?.data || {}).sort()) === '["firstName","id","lastName","name"]', JSON.stringify(renombrar.json?.data));
+  comprobar('freelancer: desactivar uno ajeno: 403',
+    (await pedir('PATCH', `/responsables/${idRespAdmin}/status`, tokFree, { status: 'inactive' })).status === 403);
   const borraFree = await pedir('DELETE', `/responsables/${idRespFree}`, tokFree);
   comprobar('freelancer: borrar el suyo (delete none): 403', borraFree.status === 403, `HTTP ${borraFree.status}`);
   const ventaRespAjeno = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id, { responsableId: idRespAdmin }));
@@ -489,6 +519,11 @@ async function main() {
     const yo = (await pedir('GET', '/auth/me', tokSup)).json?.data;
     comprobar('/auth/me sigue siendo el superadmin, y trae la agencia en la que opera (para pintar su perfil)',
       yo?.email === correoSuper && yo?.empresaNombre === 'Agencia b' && Boolean(yo?.suplantacionId), JSON.stringify([yo?.email === correoSuper, yo?.empresaNombre, Boolean(yo?.suplantacionId)]));
+    // Spec 033: la pantalla toma sus permisos de aquí; suplantando son los de administrador, no un 403.
+    const misSup = await pedir('GET', '/auth/me/permissions', tokSup);
+    comprobar('suplantando, /auth/me/permissions: 200 con ventas en all y el panel de permisos',
+      misSup.status === 200 && misSup.json?.data?.sales?.view === 'all' && misSup.json?.data?.permissions?.view === true,
+      `HTTP ${misSup.status}, ${JSON.stringify([misSup.json?.data?.sales?.view, misSup.json?.data?.permissions?.view])}`);
     const sinAsesor = await pedir('POST', '/sales', tokSup, ventaMinima(cliB.id));
     comprobar('suplantando, crear una venta sin asesor da 400 claro, no 500', sinAsesor.status === 400, `HTTP ${sinAsesor.status}`);
     comprobar('suplantando, el rol admin no se reescribe: 400',

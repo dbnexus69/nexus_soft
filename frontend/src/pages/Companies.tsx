@@ -36,6 +36,9 @@ function comoSlug(nombre: string): string {
 
 const COLORES_POR_DEFECTO = { primario: '#2B2D42', acento: '#8D99AE', realce: '#0F7B8A' };
 
+/** Los campos de la ficha que pintan su propio error de 422; el resto va al aviso general. */
+const CAMPOS_FICHA = ['nombre', 'limiteUsuarios', 'nombrePlan', 'precioPlan', 'emailRemitente', 'emailNombre'];
+
 /** Las iniciales, para cuando una agencia aún no ha subido su logo. */
 const iniciales = (nombre: string) =>
   nombre.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -346,6 +349,10 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
   const [subiendo, setSubiendo] = useState(false);
   const [logo, setLogo] = useState(empresa.logoUrl);
   const [error, setError] = useState('');
+  // Los 422 de guardar, por campo (spec 033): `error.details` del servidor, junto a cada input.
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  // Un límite por debajo de los activos no los saca, pero frena altas y reactivaciones (spec 033): se avisa, no se impide.
+  const limiteBajo = limiteUsuarios.trim() !== '' && empresa.uso != null && Number(limiteUsuarios) < empresa.uso.usuariosActivos;
 
   const subirLogo = async (archivo: File) => {
     setSubiendo(true); setError('');
@@ -390,7 +397,7 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
   };
 
   const guardar = async () => {
-    setGuardando(true); setError('');
+    setGuardando(true); setError(''); setErrores({});
     try {
       await api.updateCompany(empresa.id, {
         nombre: nombre.trim(),
@@ -405,7 +412,12 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
       });
       onGuardada();
     } catch (e: any) {
-      setError(e.response?.data?.error?.message || e.message || 'No se pudo guardar');
+      const respuesta = e.response?.data?.error;
+      const detalles: Array<{ field: string; message: string }> = Array.isArray(respuesta?.details) ? respuesta.details : [];
+      const porCampo = Object.fromEntries(detalles.filter(d => CAMPOS_FICHA.includes(d.field)).map(d => [d.field, d.message]));
+      const sueltos = detalles.filter(d => !CAMPOS_FICHA.includes(d.field)).map(d => d.message);
+      setErrores(porCampo);
+      setError(detalles.length ? sueltos.join('. ') : respuesta?.message || e.message || 'No se pudo guardar');
     } finally {
       setGuardando(false);
     }
@@ -482,7 +494,7 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Nombre de la agencia" className="mb-0">
+          <FormField label="Nombre de la agencia" error={errores.nombre} className="mb-0">
             <Input value={nombre} onChange={e => setNombre(e.target.value)} />
           </FormField>
           {/* Se muestra y no se edita: es por donde entra la agencia y por donde
@@ -503,20 +515,26 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
             <CreditCard size={13} /> Plan y licenciamiento
           </h3>
           <div className="mt-3 grid gap-4 sm:grid-cols-3">
-            <FormField label="Límite de usuarios" className="mb-0">
+            <FormField label="Límite de usuarios" error={errores.limiteUsuarios} className="mb-0">
               <Input
                 type="number" min={1} value={limiteUsuarios}
                 onChange={e => setLimiteUsuarios(e.target.value)}
                 placeholder="Sin límite"
               />
             </FormField>
-            <FormField label="Nombre del plan" className="mb-0">
+            <FormField label="Nombre del plan" error={errores.nombrePlan} className="mb-0">
               <Input value={nombrePlan} onChange={e => setNombrePlan(e.target.value)} placeholder="Plan Base" />
             </FormField>
-            <FormField label="Precio" className="mb-0">
+            <FormField label="Precio" error={errores.precioPlan} className="mb-0">
               <Input type="number" min={0} value={precioPlan} onChange={e => setPrecioPlan(e.target.value)} placeholder="300000" />
             </FormField>
           </div>
+          {limiteBajo && (
+            <p className="mt-3 text-xs font-medium text-amber-700 dark:text-amber-400">
+              La agencia tiene {empresa.uso?.usuariosActivos} usuarios activos: con este límite no podrá crear ni reactivar
+              usuarios hasta que tenga menos de {limiteUsuarios} activos. Los que ya están siguen funcionando.
+            </p>
+          )}
         </div>
 
         {/* El dominio hay que verificarlo aparte en Resend (SPF/DKIM); esto solo
@@ -530,13 +548,13 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
             correos de la agencia saldrán sin autenticar. Vacío usa el remitente genérico del sistema.
           </p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <FormField label="Correo remitente" className="mb-0">
+            <FormField label="Correo remitente" error={errores.emailRemitente} className="mb-0">
               <Input
                 type="email" value={emailRemitente} onChange={e => setEmailRemitente(e.target.value)}
                 placeholder="reservas@viajessol.com"
               />
             </FormField>
-            <FormField label="Nombre del remitente" className="mb-0">
+            <FormField label="Nombre del remitente" error={errores.emailNombre} className="mb-0">
               <Input value={emailNombre} onChange={e => setEmailNombre(e.target.value)} placeholder={nombre || 'Viajes Sol'} />
             </FormField>
           </div>

@@ -2,13 +2,13 @@ const multer = require('multer');
 const { BadRequestError } = require('../errors/AppError');
 const { conservarContexto } = require('./conservarContexto');
 const path = require('path');
+const { randomUUID } = require('crypto');
 
 // En memoria: el fichero va al bucket `adjuntos` (spec 031), nunca al disco.
 const storage = multer.memoryStorage();
 
 /** El nombre con que se guarda en el bucket: no se puede adivinar y conserva la extensión. */
-const nombreUnico = (file) =>
-  `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname).toLowerCase()}`;
+const nombreUnico = (file) => `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`;
 
 const fileFilter = (req, file, cb) => {
   const allowed = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx'];

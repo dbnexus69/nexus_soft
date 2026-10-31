@@ -1,6 +1,11 @@
 const salesService = require('../services/sales.service');
 const voucher = require('../services/voucher');
 const { success, noContent } = require('../utils/apiResponse');
+const { getEffectivePermissions } = require('../middleware/authorize');
+
+// Crear o editar una venta también mira el alcance de ver responsables (spec 026): el responsable
+// asignado tiene que ser uno que quien escribe puede ver.
+const conResponsables = (req) => ({ ...alcanceDe(req), responsablesView: getEffectivePermissions(req.user).permissions.responsables?.view });
 
 /**
  * El alcance del permiso, tal como lo deja `authorize`.
@@ -190,7 +195,7 @@ exports.sendVoucher = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await salesService.createSale(req.validatedBody || req.body, alcanceDe(req));
+    const result = await salesService.createSale(req.validatedBody || req.body, conResponsables(req));
     success(res, result, null, 201);
   } catch (err) {
     next(err);
@@ -200,7 +205,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     // `paramsNumericos` ya garantiza que :id es un entero dentro de int4.
-    const data = await salesService.updateSale(Number(req.params.id), req.validatedBody || req.body, alcanceDe(req));
+    const data = await salesService.updateSale(Number(req.params.id), req.validatedBody || req.body, conResponsables(req));
     success(res, data);
   } catch (err) {
     next(err);

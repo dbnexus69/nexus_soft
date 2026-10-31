@@ -17,7 +17,7 @@ export interface Empresa {
   precioPlan: number | null;
   estado: 'activa' | 'suspendida';
   creadoAt: string;
-  uso?: { usuarios: number; clientes: number; ventas: number };
+  uso?: { usuarios: number; usuariosActivos: number; clientes: number; ventas: number };
 }
 
 export interface NuevaEmpresa {

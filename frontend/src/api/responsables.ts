@@ -18,7 +18,14 @@ export async function createResponsable(data: Record<string, unknown>) {
 }
 
 export async function updateResponsable(id: number, data: Record<string, unknown>) {
-  const res = await api.put<Recurso<Responsable>>(`/responsables/${id}`, data);
+  // Responde solo los campos que se mandaron, más el id (spec 033).
+  const res = await api.put<Recurso<Partial<Responsable> & { id: number }>>(`/responsables/${id}`, data);
+  return res.data;
+}
+
+/** Activar o desactivar (spec 033): manda y recibe solo el estado. */
+export async function setResponsableStatus(id: number, status: Responsable['status']) {
+  const res = await api.patch<Recurso<{ id: number; status: Responsable['status'] }>>(`/responsables/${id}/status`, { status });
   return res.data;
 }
 

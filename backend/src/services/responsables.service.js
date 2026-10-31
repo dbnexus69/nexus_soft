@@ -20,6 +20,25 @@ function comprobarQueEsSuyo(responsable, alcance = {}) {
   }
 }
 
+/** Qué devuelve `updateResponsable` por cada campo que llegó: el mismo nombre de la ficha (spec 033). */
+const CAMPOS_DE_RESPUESTA = {
+  firstName: ['firstName', 'name'], lastName: ['lastName', 'name'],
+  docTypeId: ['docTypeId', 'docType'], docType: ['docTypeId', 'docType'], docNumber: ['docNumber'],
+  phone: ['phone'], email: ['email'], status: ['status'],
+};
+
+/** No se desactiva a quien debe: suma lo pendiente de sus ventas a crédito vigentes. */
+async function comprobarSinDeuda(id) {
+  const [fila] = await prisma.$queryRaw`
+    SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)) AS "deuda"
+    FROM ventas v
+    WHERE v.responsable_id = ${id} AND v.status IN ('credito', 'abonado') AND v.deleted_at IS NULL`;
+  const deuda = Number(fila?.deuda) || 0;
+  if (deuda > 0) {
+    throw new BadRequestError(`No se puede desactivar: El responsable tiene una deuda de $${deuda.toLocaleString('es-CO')}`);
+  }
+}
+
 class ResponsablesService {
   /**
    * Listar responsables con paginación y búsqueda
@@ -258,17 +277,7 @@ class ResponsablesService {
     });
     comprobarQueEsSuyo(responsable, alcance);
 
-    if (status === 'inactive' && responsable.status === 'active') {
-      const debtCheck = await prisma.transaccion(async (tx) => tx.$queryRawUnsafe(`
-        SELECT SUM(v.monto_total - COALESCE(v.monto_pagado_credito, 0)) as "deuda"
-        FROM ventas v
-        WHERE v.responsable_id = $1 AND v.status IN ('credito', 'abonado')
-      `, id));
-      const pendingDebt = Number(debtCheck[0]?.deuda) || 0;
-      if (pendingDebt > 0) {
-        throw new BadRequestError(`No se puede desactivar: El responsable tiene una deuda de $${pendingDebt.toLocaleString('es-CO')}`);
-      }
-    }
+    if (status === 'inactive' && responsable.status === 'active') await comprobarSinDeuda(id);
 
     if (docNumber && docNumber !== responsable.personas.documento) {
       const existingPersona = await prisma.personas.findFirst({ where: { documento: docNumber } });
@@ -278,12 +287,14 @@ class ResponsablesService {
     }
 
     await prisma.transaccion(async (tx) => {
+      // Solo lo que llegó (spec 033): la persona es compartida por documento (spec 024), y un campo
+      // ausente no es "vaciarlo". El tipo, igual: `null` aquí borraba el de la persona.
       await tx.personas.update({
         where: { id: responsable.persona_id },
         data: {
           nombres: firstName,
           apellidos: lastName,
-          tipo_documento_id: docTypeId,
+          ...(tipo ? { tipo_documento_id: docTypeId } : {}),
           documento: docNumber,
           telefono: phone,
           email: email
@@ -297,9 +308,26 @@ class ResponsablesService {
       });
     });
 
-    // Return the updated responsable using getResponsableById to get consistent formatting
-    const updatedResponsable = await this.getResponsableById(id);
-    return updatedResponsable;
+    // Solo lo que se pidió cambiar, ya guardado y normalizado (spec 033): la ficha entera (deuda,
+    // creador, fechas) no viaja en la respuesta de una edición.
+    const ficha = await this.getResponsableById(id);
+    const salida = { id };
+    for (const [pedido, campos] of Object.entries(CAMPOS_DE_RESPUESTA)) {
+      if (data[pedido] !== undefined) for (const c of campos) salida[c] = ficha[c];
+    }
+    return salida;
+  }
+
+  /**
+   * Activar o desactivar (spec 033). Solo el estado: no toca a la persona, y responde solo lo que
+   * cambió, no la ficha con sus datos personales.
+   */
+  async setStatus(id, status, alcance = {}) {
+    const responsable = await prisma.responsables.findUnique({ where: { id } });
+    comprobarQueEsSuyo(responsable, alcance);
+    if (status === 'inactive' && responsable.status === 'active') await comprobarSinDeuda(id);
+    await prisma.responsables.update({ where: { id }, data: { status } });
+    return { id, status };
   }
 
   /**

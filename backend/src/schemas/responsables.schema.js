@@ -24,10 +24,14 @@ const updateResponsableSchema = z.object({
   firstName: nombre.optional(),
   lastName: nombre.optional(),
   ...campos,
-  status: z.string().optional()
+  status: z.enum(['active', 'inactive']).optional()
 }).superRefine(tipoYNumeroJuntos);
+
+// Activar o desactivar (spec 033): solo el estado, nada de la persona.
+const statusResponsableSchema = z.object({ status: z.enum(['active', 'inactive']) }).strict();
 
 module.exports = {
   createResponsableSchema,
-  updateResponsableSchema
+  updateResponsableSchema,
+  statusResponsableSchema
 };

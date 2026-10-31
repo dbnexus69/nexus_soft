@@ -52,6 +52,15 @@ exports.update = async (req, res, next) => {
   }
 };
 
+exports.setStatus = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    success(res, await responsablesService.setStatus(id, req.validatedBody.status, alcanceDe(req)));
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.delete = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);

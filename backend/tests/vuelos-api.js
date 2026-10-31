@@ -11,7 +11,7 @@
  * Mismo montaje que `aislamiento-api.js` (`montaje.js`): servidor propio, agencias `prueba-vue-*`
  * y todo desmontado al final. Los clientes no llevan correo, así que el check-in no envía nada.
  */
-const { admin, comprobar, pedir, entrar, una, levantarServidor, montarAgencia, ejecutar } = require('./montaje');
+const { admin, BASE, comprobar, pedir, entrar, una, levantarServidor, montarAgencia, ejecutar } = require('./montaje');
 
 const PREFIJO = 'prueba-vue-';
 
@@ -113,6 +113,24 @@ async function main() {
   comprobar('registrar el check-in: realizado', hecho.status === 200 && hecho.json?.data?.checkinStatus === 'realizado' && hecho.json?.data?.emailSent === true, `HTTP ${hecho.status}`);
   const revertido = await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, { checkin: 'pendiente' });
   comprobar('revertirlo: pendiente', revertido.json?.data?.checkinStatus === 'pendiente');
+
+  // Spec 033: reemplazar los documentos del check-in borra del bucket los anteriores.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==', 'base64');
+  const conDocumento = async (nombre) => {
+    const form = new FormData();
+    form.append('checkin', 'realizado');
+    form.append('sinEnvio', 'true');
+    form.append('files', new Blob([png], { type: 'image/png' }), nombre);
+    const r = await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, undefined, { form });
+    const fila = await admin.tramos_vuelo.findUnique({ where: { id: tramoRt.id }, select: { checkin_docs: true } });
+    return { status: r.status, url: fila.checkin_docs?.[0]?.url };
+  };
+  const doc1 = await conDocumento('primero.png');
+  const doc2 = await conDocumento('segundo.png');
+  comprobar('subir y reemplazar el documento del check-in: 200 y 200', doc1.status === 200 && doc2.status === 200 && doc1.url !== doc2.url, `HTTP ${doc1.status} ${doc2.status}`);
+  comprobar('el documento reemplazado ya no se abre: 404', (await pedir('GET', doc1.url, tokA, undefined, { base: BASE })).status === 404);
+  comprobar('el nuevo sí se abre: 200', (await pedir('GET', doc2.url, tokA, undefined, { base: BASE })).status === 200);
+  await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, { checkin: 'pendiente' });
   for (const malo of ['cancelado', 'critico']) {
     comprobar(`no se escribe "${malo}" por el PUT: 400`, (await pedir('PUT', `/flights/${tramoRt.id}/checkin`, tokA, { checkin: malo })).status === 400);
   }

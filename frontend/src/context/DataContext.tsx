@@ -56,6 +56,7 @@ interface DataContextType {
   toggleClientStatus: (id: number) => Promise<void>;
   addResponsable: (responsable: Record<string, unknown>) => Promise<void>;
   updateResponsable: (id: number, responsable: Record<string, unknown>) => Promise<void>;
+  setResponsableStatus: (id: number, status: Responsable['status']) => Promise<void>;
   deleteResponsable: (id: number) => Promise<void>;
   updateFlight: (id: string, flight: (Partial<Flight> & { sinEnvio?: boolean }) | FormData) => Promise<{ emailStatus?: string }>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -192,8 +193,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         console.error('[DataContext] Error fetching own permissions:', err);
         return null;
       });
-    return misPermisosRef.current.then(propios => {
-      if (propios) setData(prev => ({ ...prev, config: { ...prev.config, misPermisos: propios } }));
+    const pedida = misPermisosRef.current;
+    return pedida.then(propios => {
+      // Si cambió de usuario mientras llegaba, es la respuesta del anterior: no se escribe (spec 033).
+      // Si falló (null), también se escribe: borra la copia del caché, que podía ser de hace 15 min, y
+      // `PermissionsContext` cae a los del rol.
+      if (misPermisosRef.current === pedida) setData(prev => ({ ...prev, config: { ...prev.config, misPermisos: propios } }));
       return propios;
     });
   }, []);
@@ -324,10 +329,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Usuarios, responsables y comisionistas solo se piden a quien puede verlos (spec 027): a los
     // demás les daba 403 en cada arranque. Si los permisos no llegaron, se piden como antes.
     misPermisosRef.current = undefined;
+    let vigente = true;
     const loadBackgroundData = () => {
       fetchConfig();
       fetchClients();
       return fetchMisPermisos().then(propios => {
+        if (!vigente) return; // ya es otro usuario: sus listas las pide su propia carga
         if (!propios || propios.users.view) fetchUsers();
         if (!propios || propios.responsables.view !== 'none') fetchResponsables();
         if (!propios || propios.commissions.view) fetchCommissionAgents();
@@ -335,8 +342,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     loadBackgroundData();
+    return () => { vigente = false; };
   }, [
-    user?.id, 
+    user?.id,
     fetchConfig, 
     fetchMisPermisos,
     fetchClients, 
@@ -416,10 +424,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateResponsable = async (id: number, responsable: Record<string, unknown>) => {
     const res = await api.updateResponsable(id, responsable);
+    // El servidor devuelve solo los campos editados (spec 033): se mezclan con la fila que ya había.
     const updated = res.data;
     setData(prev => ({
       ...prev,
-      responsables: prev.responsables.map(r => r.id === id ? updated : r)
+      responsables: prev.responsables.map(r => r.id === id ? { ...r, ...updated } : r)
+    }));
+  };
+
+  // Solo cambia el estado en la fila: el servidor ya no devuelve la ficha entera (spec 033).
+  const setResponsableStatus = async (id: number, status: Responsable['status']) => {
+    const res = await api.setResponsableStatus(id, status);
+    setData(prev => ({
+      ...prev,
+      responsables: prev.responsables.map(r => r.id === id ? { ...r, status: res.data.status } : r)
     }));
   };
 
@@ -600,6 +618,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toggleClientStatus,
       addResponsable,
       updateResponsable,
+      setResponsableStatus,
       deleteResponsable,
       updateFlight,
       addConfigItem,

@@ -9,7 +9,8 @@
  * Necesita `DATABASE_URL` (rol `app_nexus`) y `DIRECT_URL` (para montar y desmontar).
  */
 require('dotenv').config();
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+const net = require('net');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { PrismaClient, Prisma } = require('@prisma/client');
@@ -30,6 +31,43 @@ const admin = new PrismaClient({
 
 let fallos = 0;
 let servidor = null;
+
+const vivo = () => servidor && servidor.exitCode === null && servidor.signalCode === null;
+
+/**
+ * Cierra el servidor de prueba y espera a que salga. En Windows `kill()` no siempre lo cerraba y
+ * quedaba escuchando en el puerto: la prueba siguiente se colgaba esperando el suyo. `taskkill /T /F`
+ * cierra el proceso y lo que haya abierto.
+ */
+function pararServidor() {
+  if (!vivo()) return Promise.resolve();
+  return new Promise((resolver) => {
+    servidor.once('exit', resolver);
+    if (process.platform === 'win32') spawn('taskkill', ['/pid', String(servidor.pid), '/T', '/F'], { stdio: 'ignore' });
+    else servidor.kill();
+    setTimeout(resolver, 5000);
+  });
+}
+
+// Si la prueba muere sin pasar por el `finally` (Ctrl+C, un `timeout`, un error sin capturar), el
+// servidor tampoco se queda vivo. En `exit` solo vale lo síncrono.
+process.on('exit', () => {
+  if (!vivo()) return;
+  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(servidor.pid), '/T', '/F'], { stdio: 'ignore' });
+  else servidor.kill();
+});
+for (const senal of ['SIGINT', 'SIGTERM']) process.on(senal, () => process.exit(130));
+
+/** Falla en el acto, y diciendo por qué, si el puerto ya está ocupado (otro servidor de prueba vivo). */
+function puertoLibre() {
+  return new Promise((resolver, rechazar) => {
+    const prueba = net.createServer()
+      .once('error', () => rechazar(new Error(
+        `el puerto ${PUERTO} ya está en uso: probablemente un servidor de prueba anterior sigue vivo. Ciérralo o usa TEST_PORT.`)))
+      .once('listening', () => prueba.close(resolver))
+      .listen(PUERTO, '127.0.0.1');
+  });
+}
 
 function comprobar(descripcion, condicion, detalle = '') {
   const ok = Boolean(condicion);
@@ -58,6 +96,7 @@ const entrar = async (email) => {
 const una = (status, ...validos) => validos.includes(status);
 
 async function levantarServidor() {
+  await puertoLibre();
   servidor = spawn(process.execPath, ['src/index.js'], {
     cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1', ALMACENAMIENTO_PREFIJO: PREFIJO_ALMACEN }, stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -159,7 +198,7 @@ function ejecutar(titulo, prefijo, prueba) {
   })()
     .catch(err => { fallos++; console.error('\n  ✗ la prueba se cortó:', err.message || err); })
     .finally(async () => {
-      if (servidor) servidor.kill();
+      await pararServidor();
       try { await desmontar(prefijo); console.log('\n  Agencias de prueba desmontadas.'); }
       catch (err) { fallos++; console.error('\n  ✗ no se pudo desmontar:', err.message); }
       await admin.$disconnect();

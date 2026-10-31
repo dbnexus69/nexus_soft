@@ -52,7 +52,9 @@ async function main() {
   console.log('\n  El superadministrador sube el límite');
   const subir = await pedir('PATCH', `/companies/${A.id}`, tokSuper, { limiteUsuarios: 5 });
   comprobar('PATCH /companies sube el límite: 200', subir.status === 200, `HTTP ${subir.status}`);
-  comprobar('la ficha devuelve el límite nuevo', subir.json?.data?.limiteUsuarios === 5);
+  comprobar('la respuesta devuelve el límite nuevo y nada más (spec 034)',
+    subir.json?.data?.limiteUsuarios === 5 && JSON.stringify(Object.keys(subir.json?.data || {}).sort()) === '["id","limiteUsuarios"]',
+    JSON.stringify(subir.json?.data));
 
   const u5 = await crearUsuario('u5');
   comprobar('con el límite en 5, el 5.º usuario entra', u5.status === 201, `HTTP ${u5.status}`);

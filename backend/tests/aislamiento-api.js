@@ -195,6 +195,8 @@ async function main() {
   comprobar('asesor: marcar revisada su propia venta pagada: 403', revAs === 403, `HTTP ${revAs}`);
   const revAd = await pedir('PATCH', `/sales/${ventaPagada?.id}/review-status`, tokA, { isReviewed: true });
   comprobar('admin: marcar revisada esa venta: 200', revAd.status === 200, `HTTP ${revAd.status}`);
+  comprobar('marcar revisada responde solo { id, isReviewed } (spec 034)',
+    JSON.stringify(Object.keys(revAd.json?.data || {}).sort()) === '["id","isReviewed"]', JSON.stringify(revAd.json?.data));
 
   // 6. H2: el freelancer no lista usuarios y vende a su nombre. Los permisos del rol se
   // siembran al crear la agencia desde ROLE_DEFAULT_PERMISSIONS (companies.service.js), así
@@ -332,6 +334,11 @@ async function main() {
   comprobar('edita el suyo: 200', (await estado('PUT', `/clients/${cliAsesor?.id}`, { phone: '3009998866' })) === 200);
 
   await guardarAsesor({ sales: { view: 'all', edit: 'all' } });
+  const edVenta = await pedir('PUT', `/sales/${ventaA.id}`, tokA, { observations: 'spec 034' });
+  comprobar('editar una venta responde solo lo editado, el estado y el total (spec 034)',
+    edVenta.status === 200 && JSON.stringify(Object.keys(edVenta.json?.data || {}).sort()) === '["id","observations","status","total"]'
+      && edVenta.json?.data?.observations === 'spec 034',
+    `HTTP ${edVenta.status}, ${JSON.stringify(edVenta.json?.data)}`);
   comprobar('con "editar: todas" edita la del admin: 200', (await estado('PUT', `/sales/${ventaA.id}`, { observations: 'spec 020' })) === 200);
 
   await guardarAsesor({ clients: { view: 'own', edit: 'all' } });
@@ -390,11 +397,23 @@ async function main() {
   const uEdita = await pedir('PUT', `/users/${uOk.json?.data?.id}`, tokA, { docTypeId: cc.id, docNumber: 'ABC1234' });
   comprobar('usuario: editar con un número inválido: 422', uEdita.status === 422 && campoDe(uEdita).includes('docNumber'), `HTTP ${uEdita.status}`);
 
+  // Spec 034: crear y editar responden el id (y el número, al crear) y solo lo que se mandó.
+  const claves = (r) => JSON.stringify(Object.keys(r.json?.data || {}).sort());
+  const sinSobrantes = (r, prohibidas) => prohibidas.filter(c => c in (r.json?.data || {}));
+  comprobar('crear un usuario no devuelve contraseña, fecha de nacimiento, último login ni fecha de alta',
+    uOk.json?.data?.numero != null && sinSobrantes(uOk, ['password', 'password_hash', 'birth_date', 'lastLogin', 'creado_at', 'phone']).length === 0,
+    claves(uOk));
+  const uTelefono = await pedir('PUT', `/users/${uOk.json?.data?.id}`, tokA, { phone: '3001234567' });
+  comprobar('editar el teléfono de un usuario responde solo { id, phone }', uTelefono.status === 200 && claves(uTelefono) === '["id","phone"]',
+    `HTTP ${uTelefono.status}, ${claves(uTelefono)}`);
+
   const cNit = (num) => pedir('POST', '/commissions/agents', tokA, { name: 'Comisionista NIT', type: 'freelance', docTypeId: nit.id, docNumber: num });
   const cOtroDigito = await cNit('900123456-7');
   comprobar('comisionista: el dígito de verificación del NIT no se comprueba: 201', cOtroDigito.status === 201, `HTTP ${cOtroDigito.status}`);
   const cBien = await cNit('900123456-8');
   comprobar('comisionista: NIT con el dígito bien: 201 con el id del tipo', cBien.status === 201 && cBien.json?.data?.docTypeId === nit.id, `HTTP ${cBien.status}`);
+  comprobar('crear un comisionista sin datos bancarios no los devuelve, ni el acumulado (spec 034)',
+    sinSobrantes(cBien, ['banco', 'tipoCuenta', 'numeroCuenta', 'accumulated', 'phone', 'email']).length === 0, claves(cBien));
   const cTel = await pedir('POST', '/commissions/agents', tokA, { name: 'Con teléfono malo', phone: 'abc' });
   comprobar('comisionista: teléfono con letras: 422', cTel.status === 422 && campoDe(cTel).includes('phone'), `HTTP ${cTel.status}`);
   const cEmpresa = await pedir('POST', '/commissions/agents', tokA, { name: 'Agencia Z S.A.S. 2' });
@@ -404,6 +423,8 @@ async function main() {
   comprobar('responsable: cédula con letras: 422 en docNumber', rMal.status === 422 && campoDe(rMal).includes('docNumber'), `HTTP ${rMal.status}`);
   const rOk = await pedir('POST', '/responsables', tokA, { firstName: 'Resp', lastName: 'Onsable', docTypeId: cc.id, docNumber: '1020304060' });
   comprobar('responsable: por id: 201', rOk.status === 201, `HTTP ${rOk.status} ${JSON.stringify(rOk.json?.error)}`);
+  comprobar('crear un responsable responde solo { id, numero }, sin empresa_id (spec 034)',
+    JSON.stringify(Object.keys(rOk.json?.data || {}).sort()) === '["id","numero"]', JSON.stringify(rOk.json?.data));
   const rNombre = await pedir('POST', '/responsables', tokA, { firstName: 'Resp', lastName: 'Antiguo', docType: cc.nombre, docNumber: '1020304061' });
   comprobar('responsable: por el nombre del tipo (lo de antes) sigue valiendo', rNombre.status === 201, `HTTP ${rNombre.status}`);
   const rLeido = (await pedir('GET', `/responsables/${rOk.json?.data?.id}`, tokA)).json?.data;
@@ -484,12 +505,17 @@ async function main() {
   // Clientes por id del tipo (el contrato nuevo) y el mínimo para retirar de cada comisionista.
   const cliPorId = await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Por Id', docTypeId: cc.id, docNumber: '1050000001' });
   comprobar('cliente por docTypeId: 201 y la respuesta trae el id del tipo', cliPorId.status === 201 && cliPorId.json?.data?.docTypeId === cc.id, `HTTP ${cliPorId.status}`);
+  comprobar('crear un cliente no devuelve fecha de nacimiento, creador ni fecha de registro (spec 034)',
+    cliPorId.json?.data?.numero != null && sinSobrantes(cliPorId, ['birthDate', 'createdBy', 'registrationDate', 'phone', 'email']).length === 0,
+    claves(cliPorId));
   const cliMal = await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Mal', docTypeId: cc.id, docNumber: '12ab' });
   comprobar('cliente por docTypeId con una cédula con letras: 422 en docNumber', cliMal.status === 422 && campoDe(cliMal).includes('docNumber'), `HTTP ${cliMal.status}`);
   const cliEspacios = await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Sin Tipo', docType: '   ', docNumber: '1050000002' });
   comprobar('cliente con un tipo de solo espacios: 422 (antes quedaba sin tipo)', cliEspacios.status === 422, `HTTP ${cliEspacios.status}`);
   const agenteMin = (await pedir('POST', '/commissions/agents', tokA, { name: 'Comisionista Mínimo', type: 'freelance' })).json?.data;
-  comprobar('un comisionista sin mínimo propio tiene el de por defecto (50.000)', Number(agenteMin?.paymentThreshold) === 50000, String(agenteMin?.paymentThreshold));
+  // Del listado, no de la respuesta del alta: esa solo devuelve lo que se mandó (spec 034).
+  const agenteMinListado = ((await pedir('GET', '/commissions/agents?perPage=100', tokA)).json?.data || []).find(a => a.id === agenteMin?.id);
+  comprobar('un comisionista sin mínimo propio tiene el de por defecto (50.000)', Number(agenteMinListado?.paymentThreshold) === 50000, String(agenteMinListado?.paymentThreshold));
   await pedir('POST', '/sales', tokA, ventaMinima(cliA.id, {
     commissionAgentId: agenteMin?.id, commissionAgentAmount: 5000, commissionAgentRetentionPercentage: 0, commissionAgentNetPayment: 5000,
   }));

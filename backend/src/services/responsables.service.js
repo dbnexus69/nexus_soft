@@ -4,6 +4,7 @@ const { buildMeta } = require('../utils/paginationHelper');
 const { validarDocumento } = require('../utils/tipoDocumento');
 const { reutilizarPersona } = require('./personaCompartida');
 const { alcanceDeEscritura } = require('../utils/alcancePermisos');
+const { soloLoPedido } = require('../utils/respuestaMinima');
 
 /**
  * Con alcance de ver 'own', los suyos son los que creó (spec 026), como en clientes.
@@ -256,7 +257,8 @@ class ResponsablesService {
         ? await tx.responsables.update({ where: { id: previo.id }, data: { deleted_at: null, status: 'active', creado_por_id: userId } })
         : await tx.responsables.create({ data: { persona_id: persona.id, status: 'active', creado_por_id: userId } });
 
-      return { ...responsable, aviso };
+      // El id y el número visible (spec 034): la fila cruda llevaba `empresa_id`, `persona_id` y el creador.
+      return { id: responsable.id, numero: responsable.numero, aviso };
     });
 
     return result;
@@ -310,12 +312,7 @@ class ResponsablesService {
 
     // Solo lo que se pidió cambiar, ya guardado y normalizado (spec 033): la ficha entera (deuda,
     // creador, fechas) no viaja en la respuesta de una edición.
-    const ficha = await this.getResponsableById(id);
-    const salida = { id };
-    for (const [pedido, campos] of Object.entries(CAMPOS_DE_RESPUESTA)) {
-      if (data[pedido] !== undefined) for (const c of campos) salida[c] = ficha[c];
-    }
-    return salida;
+    return soloLoPedido(await this.getResponsableById(id), data, CAMPOS_DE_RESPUESTA);
   }
 
   /**

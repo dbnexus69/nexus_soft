@@ -8,6 +8,17 @@ const { olvidarUsuario } = require('../middleware/authCache');
 const { formatName } = require('../utils/stringUtils');
 const { validarDocumento } = require('../utils/tipoDocumento');
 const { reutilizarPersona } = require('./personaCompartida');
+const { soloLoPedido } = require('../utils/respuestaMinima');
+
+// Qué devuelve crear o editar un usuario por cada campo que llegó (spec 034). `password` no está:
+// nunca vuelve. `getUserById` llama `birthDate` a lo que aquí es `birth_date`; se piden los dos.
+const CAMPOS_DE_RESPUESTA = {
+  name: ['name'], firstName: ['firstName', 'name'], lastName: ['lastName', 'name'],
+  email: ['email'], role: ['role'], phone: ['phone'],
+  docTypeId: ['docTypeId', 'docType'], docType: ['docTypeId', 'docType'], docNumber: ['docNumber'],
+  birthDate: ['birth_date', 'birthDate'], birth_date: ['birth_date', 'birthDate'],
+  avatar: ['avatar'], status: ['status'],
+};
 
 class UsersService {
   async listUsers({ pagination, search, role, status }) {
@@ -193,7 +204,9 @@ class UsersService {
       });
     });
 
-    return this.getUserById(id);
+    // Lo mismo que un alta nueva (spec 034): el id, el número y lo que se mandó.
+    const ficha = await this.getUserById(id);
+    return { ...soloLoPedido(ficha, data, CAMPOS_DE_RESPUESTA), numero: ficha.numero };
   }
 
   /**
@@ -325,7 +338,7 @@ class UsersService {
       console.error('[WELCOME_EMAIL_FAILED]', emailErr.message);
     }
 
-    return {
+    const ficha = {
       id: usuario.id,
       numero: usuario.numero,
       name: `${usuario.personas.nombres} ${usuario.personas.apellidos}`,
@@ -340,10 +353,8 @@ class UsersService {
       status: usuario.status,
       birth_date: usuario.personas.birth_date,
       avatar: usuario.personas.avatar_url,
-      creado_at: usuario.creadoAt,
-      lastLogin: usuario.ultimo_login,
-      aviso,
     };
+    return { ...soloLoPedido(ficha, data, CAMPOS_DE_RESPUESTA), numero: ficha.numero, aviso };
   }
 
   async updateUser(id, data) {
@@ -422,9 +433,9 @@ class UsersService {
       });
     });
 
-    return {
+    // Solo lo editado (spec 034); la contraseña no está en el mapa y no vuelve nunca.
+    return soloLoPedido({
       id: updated.id,
-      numero: updated.numero,
       name: `${updated.personas.nombres} ${updated.personas.apellidos}`,
       firstName: updated.personas.nombres,
       lastName: updated.personas.apellidos,
@@ -437,9 +448,7 @@ class UsersService {
       status: updated.status,
       birth_date: updated.personas.birth_date,
       avatar: updated.personas.avatar_url,
-      creado_at: updated.creadoAt,
-      lastLogin: updated.ultimo_login
-    };
+    }, data, CAMPOS_DE_RESPUESTA);
   }
 
   /**

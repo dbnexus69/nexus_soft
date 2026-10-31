@@ -8,6 +8,7 @@ const { conEmpresa, empresaActual } = require('../config/tenant');
 const { olvidarToken, olvidarEmpresa } = require('../middleware/authCache');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
+const { soloLoPedido } = require('../utils/respuestaMinima');
 const { ROLE_DEFAULT_PERMISSIONS, ADMIN_PERMISSIONS } = require('../middleware/authorize');
 
 /**
@@ -112,6 +113,13 @@ const SUPLANTACION_MINUTOS = 60;
 const comoTexto = (valor) => (typeof valor === 'boolean' ? String(valor) : String(valor));
 
 // `logoUrl` firmada: el logo vive en un bucket privado (spec 011).
+// Qué devuelve crear o editar una agencia por cada campo que llegó (spec 034): el mismo nombre en la
+// ficha. `admin` (el primer usuario, con su contraseña) no está: no vuelve nunca.
+const CAMPOS_DE_RESPUESTA = Object.fromEntries([
+  'slug', 'nombre', 'nombreComercial', 'colorPrimario', 'colorAcento', 'colorRealce',
+  'emailRemitente', 'emailNombre', 'limiteUsuarios', 'nombrePlan', 'precioPlan', 'estado',
+].map(campo => [campo, [campo]]));
+
 const aFicha = async (e) => ({
   id: e.id,
   slug: e.slug,
@@ -263,7 +271,8 @@ class CompaniesService {
       return creada;
     });
 
-    return this.getById(empresa.id);
+    // Lo que se mandó, sin el admin (su contraseña no vuelve nunca), spec 034.
+    return soloLoPedido(await this.getById(empresa.id), datos, CAMPOS_DE_RESPUESTA);
   }
 
   /** El catálogo de permisos es compartido; se lee una vez por alta. */
@@ -305,13 +314,14 @@ class CompaniesService {
       // salida de una suplantación.
       olvidarEmpresa(empresa.id);
     }
-    return this.getById(empresa.id);
+    return soloLoPedido(await this.getById(empresa.id), datos, CAMPOS_DE_RESPUESTA);
   }
 
-  /** Guarda el logo en el bucket (`perfilEmpresa.guardarLogo`) y devuelve la ficha. */
+  /** Guarda el logo en el bucket (`perfilEmpresa.guardarLogo`) y devuelve solo su URL firmada (spec 034). */
   async setLogo(id, fichero) {
     const empresa = await perfilEmpresa.guardarLogo(id, fichero);
-    return this.getById(empresa.id);
+    const { logoUrl } = await this.getById(empresa.id);
+    return { id: empresa.id, logoUrl };
   }
 
   /**

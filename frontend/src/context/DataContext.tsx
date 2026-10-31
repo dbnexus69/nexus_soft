@@ -48,10 +48,8 @@ interface DataContextType {
   flightsRefreshToken: number;
   fetchCommissionAgents: () => Promise<void>;
   refreshData: () => void;
-  addUser: (user: Omit<User, 'id'>) => Promise<User>;
   updateUser: (id: number, user: Partial<User>) => Promise<void>;
   deleteUser: (id: number) => Promise<void>;
-  addClient: (client: Omit<Client, 'id'>) => Promise<Client>;
   updateClient: (id: number, client: Partial<Client>) => Promise<void>;
   toggleClientStatus: (id: number) => Promise<void>;
   addResponsable: (responsable: Record<string, unknown>) => Promise<void>;
@@ -62,7 +60,6 @@ interface DataContextType {
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;
-  addCommissionAgent: (agent: Record<string, unknown>) => Promise<CommissionAgent>;
   updateCommissionAgent: (id: number, agent: Record<string, unknown>) => Promise<void>;
   deleteCommissionAgent: (id: number) => Promise<void>;
   updateRolePermissions: (role: 'asesor' | 'freelancer', permissions: RolePermissions) => Promise<void>;
@@ -370,16 +367,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     fetchFlights();
   };
 
-  const addUser = async (user: Omit<User, 'id'>): Promise<User> => {
-    const created = await api.createUser(user);
-    setData(prev => {
-      const updated = [...prev.users, created];
-      invalidateUsersCache();
-      return { ...prev, users: updated };
-    });
-    return created;
-  };
-
   const updateUser = async (id: number, userUpdate: Partial<User>) => {
     const updated = await api.updateUser(id, userUpdate);
     setData(prev => {
@@ -397,12 +384,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   };
 
-
-  const addClient = async (client: Omit<Client, 'id'>): Promise<Client> => {
-    const created = await api.createClient(client);
-    setData(prev => ({ ...prev, clients: [...prev.clients, created] }));
-    return created;
-  };
 
   const updateClient = async (id: number, clientUpdate: Partial<Client>) => {
     await api.updateClient(id, clientUpdate);
@@ -558,12 +539,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addCommissionAgent = async (agent: Record<string, unknown>) => {
-    const created = await api.createCommissionAgent(agent);
-    setData(prev => ({ ...prev, commissionAgents: [...prev.commissionAgents, created] }));
-    return created;
-  };
-
   const updateCommissionAgent = async (id: number, agentUpdate: Record<string, unknown>) => {
     await api.updateCommissionAgent(id, agentUpdate);
     setData(prev => ({
@@ -610,10 +585,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchResponsables,
       fetchCommissionAgents,
       refreshData,
-      addUser,
       updateUser,
       deleteUser,
-      addClient,
       updateClient,
       toggleClientStatus,
       addResponsable,
@@ -624,7 +597,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addConfigItem,
       updateConfigItem,
       deleteConfigItem,
-      addCommissionAgent,
       updateCommissionAgent,
       deleteCommissionAgent,
       updateRolePermissions,

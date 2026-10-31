@@ -8,7 +8,8 @@ export async function listCommissionAgents(params: Record<string, unknown> = {})
 }
 
 export async function createCommissionAgent(data: Record<string, unknown>) {
-  const res = await api.post<Recurso<CommissionAgent>>('/commissions/agents', data);
+  // Responde el id, el número y lo que se mandó (spec 034).
+  const res = await api.post<Recurso<Partial<CommissionAgent> & { id: number; numero: number | null }>>('/commissions/agents', data);
   return res.data.data;
 }
 

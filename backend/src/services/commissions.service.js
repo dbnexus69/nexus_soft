@@ -6,6 +6,15 @@ const { validarDocumento } = require('../utils/tipoDocumento');
 const { reutilizarPersona } = require('./personaCompartida');
 const { aCentimos } = require('./saleTotals');
 const { enHoraColombia, fechaEnColombia } = require('../utils/fechas');
+const { soloLoPedido } = require('../utils/respuestaMinima');
+
+// Qué devuelve el alta de un comisionista por cada campo que llegó (spec 034): los datos bancarios,
+// el acumulado o el avatar no viajan si el formulario no los trajo.
+const CAMPOS_DE_RESPUESTA = {
+  name: ['name'], type: ['type'], docTypeId: ['docTypeId', 'docType'], docType: ['docTypeId', 'docType'],
+  docNumber: ['docNumber'], phone: ['phone'], email: ['email'], avatar: ['avatar'], status: ['status'],
+  paymentThreshold: ['paymentThreshold'], banco: ['banco'], tipoCuenta: ['tipoCuenta'], numeroCuenta: ['numeroCuenta'],
+};
 
 // El mínimo que un comisionista tiene que acumular para poder retirar (liquidar). Cada uno tiene el suyo
 // (`comisionistas.umbral_pago`); uno sin definir (0 o nulo, que es como quedan los de antes) usa este.
@@ -198,7 +207,7 @@ class CommissionsService {
       include: { personas: { include: { tipos_documento: true } } }
     });
 
-    return {
+    const ficha = {
       id: agent.id,
       name: `${agent.personas.nombres} ${agent.personas.apellidos}`.trim(),
       type: agent.tipo,
@@ -214,8 +223,8 @@ class CommissionsService {
       banco: agent.banco || null,
       tipoCuenta: agent.tipo_cuenta || null,
       numeroCuenta: agent.numero_cuenta || null,
-      aviso,
     };
+    return { ...soloLoPedido(ficha, data, CAMPOS_DE_RESPUESTA), numero: agent.numero ?? null, aviso };
   }
 
   async updateAgent(id, data) {

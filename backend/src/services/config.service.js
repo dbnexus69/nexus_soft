@@ -418,7 +418,13 @@ class ConfigService {
       include: config.include
     });
 
-    return config.transform(updated);
+    // El id y lo que se mandó, con su valor guardado (spec 034). La pantalla ya aplicó el cambio en
+    // optimista; un campo que el catálogo llame distinto al guardar simplemente no vuelve.
+    const ficha = config.transform(updated);
+    return {
+      id: ficha.id,
+      ...Object.fromEntries(Object.keys(data).filter(campo => campo in ficha).map(campo => [campo, ficha[campo]])),
+    };
   }
 
   async deleteItem(section, id) {

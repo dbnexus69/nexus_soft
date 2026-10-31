@@ -56,10 +56,11 @@ async function main() {
     `HTTP ${guardado.status} ${Object.keys(datos).filter(k => !isDeepStrictEqual(leido[k], datos[k])).map(k => `${k}=${JSON.stringify(leido[k])}`).join(' ')}`);
 
   const malo = await pedir('PATCH', '/company-profile', tokA, {
-    nit: '900123456-0', colorPrimario: 'rojo', sitioWeb: 'viajes.co',
+    // Un NIT corto: el dígito de verificación ya no se comprueba (a0cafee), la base sí.
+    nit: '12345', colorPrimario: 'rojo', sitioWeb: 'viajes.co',
     voucherTerminos: Array.from({ length: 16 }, (_, i) => ({ titulo: `C${i}`, texto: 'x' })),
   });
-  comprobar('NIT con dígito erróneo, color, web sin http y 16 cláusulas: 422 con cada campo',
+  comprobar('NIT sin la base de 9 o 10 dígitos, color, web sin http y 16 cláusulas: 422 con cada campo',
     malo.status === 422 && ['colorPrimario', 'nit', 'sitioWeb', 'voucherTerminos'].every(c => camposDe(malo).includes(c)),
     `HTTP ${malo.status} ${camposDe(malo).join(',')}`);
   comprobar('lo rechazado no se guardó', (await pedir('GET', '/company-profile', tokA)).json?.data?.nit === '900123456-8');

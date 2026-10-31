@@ -115,6 +115,7 @@ Any route that should be permission-scoped **must** call `authorize(...)` after 
 - Totals are always computed server-side, never summed in the browser over a paginated list.
 - Domain conventions (person data, sale creation in batches, VAT on the TA, flights in Bogotá days, the 15 product categories) live in `backend/CLAUDE.md`, loaded when working under `backend/`.
 - `POST` → 201, `DELETE` → 204 (except `DELETE /sales/:id/payments/:id`, which returns the recalculated sale). Validation errors → 422 with `error.details: [{field, message}]`.
+- **A write answers with what was asked, not the whole record** (spec 034): an edit returns `{ id, ...the fields sent }` with their stored values, a create adds `numero`, a status change returns `{ id, status }`, and a password, `empresa_id`, bank data or a person field the form didn't send never travel back. `utils/respuestaMinima.js::soloLoPedido(ficha, body, map)` does the picking from a per-service map; the screen merges the reply into the row it has (`{ ...row, ...reply }`) or reloads the list. Quotes and `PATCH /company-profile` still return the full document on purpose — their forms repaint from it (see the spec).
 
 ## Frontend architecture
 

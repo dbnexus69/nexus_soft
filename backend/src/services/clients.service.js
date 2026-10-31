@@ -7,6 +7,15 @@ const { buildMeta } = require('../utils/paginationHelper');
 
 const { validarDocumento } = require('../utils/tipoDocumento');
 const { reutilizarPersona } = require('./personaCompartida');
+const { soloLoPedido } = require('../utils/respuestaMinima');
+
+// Qué devuelve un alta por cada campo que llegó (spec 034).
+const CAMPOS_DE_RESPUESTA = {
+  firstName: ['firstName', 'name'], lastName: ['lastName', 'name'],
+  docTypeId: ['docTypeId', 'docType'], docType: ['docTypeId', 'docType'], docNumber: ['docNumber'],
+  phone: ['phone'], email: ['email'], birthDate: ['birthDate'], avatar: ['avatar'],
+  destinations: ['destinations', 'recentDestination'],
+};
 
 /**
  * Reemplaza los destinos de preferencia del cliente y su copia `destino_reciente`
@@ -278,7 +287,7 @@ class ClientsService {
     });
     const destinos = data.destinations?.length ? await escribirDestinos(cliente.id, data.destinations) : [];
 
-    return {
+    const ficha = {
       id: cliente.id,
       numero: cliente.numero,
       firstName: persona.nombres,
@@ -297,8 +306,10 @@ class ClientsService {
       createdBy: cliente.creado_por_id,
       destinations: destinos,
       recentDestination: destinos.at(-1) ?? null,
-      aviso,
     };
+    // El id, el número y lo que se mandó, con lo guardado (spec 034): fecha de nacimiento, creador o
+    // fecha de registro no viajan si el formulario no los trajo.
+    return { ...soloLoPedido(ficha, data, CAMPOS_DE_RESPUESTA), numero: ficha.numero, aviso };
   }
 
   /**

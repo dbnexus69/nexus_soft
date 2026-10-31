@@ -13,7 +13,8 @@ export async function getResponsable(id: number, params?: Record<string, unknown
 }
 
 export async function createResponsable(data: Record<string, unknown>) {
-  const res = await api.post<Recurso<Responsable>>('/responsables', data);
+  // Responde solo el id y el número visible (spec 034).
+  const res = await api.post<Recurso<{ id: number; numero: number }>>('/responsables', data);
   return res.data;
 }
 

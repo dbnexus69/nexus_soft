@@ -39,14 +39,15 @@ export async function getCompany(id: number) {
   return res.data.data as Empresa;
 }
 
+// Crear y editar responden el id y lo que se mandó; el logo, su URL (spec 034).
 export async function createCompany(datos: NuevaEmpresa) {
   const res = await api.post('/companies', datos);
-  return res.data.data as Empresa;
+  return res.data.data as Partial<Empresa> & { id: number };
 }
 
 export async function updateCompany(id: number, datos: Record<string, unknown>) {
   const res = await api.patch(`/companies/${id}`, datos);
-  return res.data.data as Empresa;
+  return res.data.data as Partial<Empresa> & { id: number };
 }
 
 export async function uploadCompanyLogo(id: number, archivo: File) {
@@ -55,7 +56,7 @@ export async function uploadCompanyLogo(id: number, archivo: File) {
   const res = await api.put(`/companies/${id}/logo`, cuerpo, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return res.data.data as Empresa;
+  return res.data.data as Pick<Empresa, 'id' | 'logoUrl'>;
 }
 
 export async function getBranding() {

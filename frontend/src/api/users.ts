@@ -13,12 +13,14 @@ export async function getUser(id: number) {
 }
 
 export async function createUser(data: Partial<User>) {
-  const res = await api.post<Recurso<User>>('/users', data);
+  // Responde el id, el número y lo que se mandó (spec 034).
+  const res = await api.post<Recurso<Partial<User> & { id: number; numero: number | null }>>('/users', data);
   return res.data.data;
 }
 
 export async function updateUser(id: number, data: Partial<User>) {
-  const res = await api.put<Recurso<User>>(`/users/${id}`, data);
+  // Responde el id y solo lo editado (spec 034).
+  const res = await api.put<Recurso<Partial<User> & { id: number }>>(`/users/${id}`, data);
   return res.data.data;
 }
 

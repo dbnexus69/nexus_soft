@@ -13,7 +13,8 @@ export async function getClient(id: number) {
 }
 
 export async function createClient(data: Record<string, unknown>) {
-  const res = await api.post<Recurso<Client>>('/clients', data);
+  // Responde el id, el número y lo que se mandó (spec 034).
+  const res = await api.post<Recurso<Partial<Client> & { id: number; numero: number | null }>>('/clients', data);
   return res.data.data;
 }
 

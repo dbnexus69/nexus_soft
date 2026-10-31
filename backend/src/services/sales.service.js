@@ -799,9 +799,18 @@ class SalesService {
       await recalcularVenta(tx, ventaId);
     });
 
-    // La venta entera, no el parche: quien edita necesita ver el resultado, y
-    // el estado y el total pueden haber cambiado sin que los mandara.
-    return this.getSaleById(ventaId);
+    // Lo editado, con su valor guardado, más el estado y el total, que pueden cambiar sin que se
+    // manden (spec 034). La venta entera (cliente, productos, pagos) no viaja: la pantalla recarga
+    // la lista, y quien quiera el detalle lo pide con GET /sales/:id.
+    const { status, monto_total } = await prisma.ventas.findUnique({
+      where: { id: ventaId }, select: { status: true, monto_total: true },
+    });
+    return {
+      id: ventaId,
+      ...Object.fromEntries(Object.keys(body).map(clave => [clave, data[CAMPOS_EDITABLES[clave].columna]])),
+      status,
+      total: Number(monto_total),
+    };
   }
 
   async updateReviewStatus(saleId, isReviewed, alcance = {}) {
@@ -821,12 +830,13 @@ class SalesService {
     // iba abreviado.
     if (sale.is_reviewed) throw new BadRequestError('Esta venta ya fue revisada y no se puede modificar su estado');
 
-    const updatedSale = await prisma.ventas.update({
+    await prisma.ventas.update({
       where: { id: saleId },
       data: { is_reviewed: isReviewed }
     });
 
-    return updatedSale;
+    // Solo lo que cambió (spec 034): antes volvía la fila cruda de `ventas`, con `empresa_id`, costos y ganancias.
+    return { id: saleId, isReviewed };
   }
 
   async listPayments(saleId, alcance = {}) {

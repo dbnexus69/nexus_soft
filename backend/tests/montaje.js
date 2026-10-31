@@ -84,13 +84,15 @@ async function pedir(metodo, ruta, token, cuerpo, { base = API, form } = {}) {
   else if (cuerpo !== undefined) { cabeceras['Content-Type'] = 'application/json'; body = JSON.stringify(cuerpo); }
   const r = await fetch(base + ruta, { method: metodo, headers: cabeceras, body });
   const json = await r.json().catch(() => null);
-  return { status: r.status, json };
+  // El token de sesión ya no va en el cuerpo, solo en la cookie (spec 035); las pruebas lo sacan de ahí.
+  const cookie = r.headers.getSetCookie().find((c) => c.startsWith('nexus_sesion=') && !c.startsWith('nexus_sesion=;'));
+  return { status: r.status, json, token: cookie ? decodeURIComponent(cookie.split(';')[0].slice('nexus_sesion='.length)) : null };
 }
 
 const entrar = async (email) => {
   const r = await pedir('POST', '/auth/login', null, { email, password: CLAVE });
   if (r.status !== 200) throw new Error(`login de ${email}: ${r.status} ${JSON.stringify(r.json?.error)}`);
-  return r.json.data.token;
+  return r.token;
 };
 
 const una = (status, ...validos) => validos.includes(status);

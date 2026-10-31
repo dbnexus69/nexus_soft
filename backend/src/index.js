@@ -15,8 +15,10 @@ const routes = require('./routes');
 const app = express();
 
 // Detrás del proxy de Render: sin esto `req.ip` es la del proxy y el límite de login vale para todos a la vez.
-// ponytail: un salto; si los logs de rate-limit muestran una sola IP para todos, subir el número.
-app.set('trust proxy', 1);
+// En producción hay dos saltos: Vercel reenvía `/api` (spec 035) y Render pone su balanceador, así que
+// `render.yaml` fija TRUST_PROXY=2. Vercel sobrescribe el X-Forwarded-For del cliente, así que no se falsea por ahí.
+// Por defecto uno: en local y en las pruebas no hay proxy.
+app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
 
 // Seguridad
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));

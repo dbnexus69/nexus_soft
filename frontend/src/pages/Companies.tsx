@@ -374,21 +374,9 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
   const suplantar = async () => {
     setGuardando(true); setError('');
     try {
-      const res = await api.startImpersonation(empresa.id, motivo.trim());
-      
-      // Solo si no hay uno guardado ya. Esta pantalla sigue siendo accesible
-      // mientras se suplanta —el token de suplantación lleva rol de
-      // superadministrador—, así que entrar en una segunda agencia desde dentro
-      // de la primera pisaba el token del superadministrador con el de la
-      // suplantación en curso. Al salir se restauraba ese, que además caduca en
-      // una hora, y no había forma de volver a ser uno mismo.
-      const currentToken = localStorage.getItem('nexus_token');
-      if (currentToken && !localStorage.getItem('nexus_original_token')) {
-        localStorage.setItem('nexus_original_token', currentToken);
-      }
-
-      localStorage.setItem('nexus_token', res.token);
-      localStorage.setItem('nexus_session_expiry', new Date(res.expiraAt).getTime().toString());
+      // El servidor cambia la cookie de sesión por la de la suplantación y guarda la del
+      // superadministrador en otra para volver al salir (spec 035). Aquí solo se recarga.
+      await api.startImpersonation(empresa.id, motivo.trim());
       window.location.href = '/';
     } catch (e: any) {
       setError(e.response?.data?.error?.message || e.message || 'No se pudo suplantar');

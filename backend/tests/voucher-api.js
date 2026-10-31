@@ -106,7 +106,7 @@ async function main() {
   console.log('\n  Superadministrador');
   const tokSuper = await entrar(correoSuper);
   const sup = await pedir('POST', `/companies/${B.id}/impersonations`, tokSuper, { motivo: 'Prueba automática del perfil' });
-  const tokSup = sup.json?.data?.token;
+  const tokSup = sup.token;
   const editaB = await pedir('PATCH', '/company-profile', tokSup, { nombreComercial: 'Editado por soporte' });
   comprobar('suplantando B, edita el perfil de B',
     editaB.status === 200 && (await pedir('GET', '/company-profile', tokB)).json?.data?.nombreComercial === 'Editado por soporte',

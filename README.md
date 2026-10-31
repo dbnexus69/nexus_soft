@@ -77,7 +77,9 @@ Frontend en Vercel, backend en Render (plan free: duerme a los 15 min y el prime
 1. **Render** → New → Blueprint con este repo: lee `render.yaml`. Cargar en el panel las variables `sync: false`
    (las mismas de `backend/.env.example`; `DATABASE_URL` con el rol `app_nexus`). `JWT_SECRET` se genera solo.
 2. Copiar la URL del servicio (`https://<nombre>.onrender.com`) y comprobar `/api/health`.
-3. **Vercel** → New Project, Root Directory `frontend`, variable `VITE_API_URL=https://<nombre>.onrender.com/api/v1`.
+3. **Vercel** → New Project, Root Directory `frontend`, **sin** `VITE_API_URL`: el navegador llama a `/api` del propio
+   sitio y `vercel.json` lo reenvía a Render, para que la cookie de sesión sea del mismo sitio (spec 035). Si la URL
+   de Render no es `nexus-backend.onrender.com`, cambiarla en el rewrite de `frontend/vercel.json`.
 4. Copiar la URL de producción de Vercel a `FRONTEND_URL` en Render (sin barra final) y redeployar el backend.
    Las URLs de vista previa de Vercel quedan fuera de CORS a propósito.
 

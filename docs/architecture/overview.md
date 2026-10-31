@@ -11,7 +11,7 @@ El código, comentarios, documentación y la interfaz están en español.
 
 ## Despliegue
 Según la configuración documentada del proyecto (spec 032):
-- Frontend en Vercel, con `frontend/` como Root Directory y `VITE_API_URL` incorporada durante el build.
+- Frontend en Vercel, con `frontend/` como Root Directory. El navegador llama a `/api` del propio sitio y un rewrite de `vercel.json` lo reenvía a Render; la sesión va en una cookie `httpOnly` (spec 035).
 - Backend en Render, en la región Virginia, junto a Supabase us-east-1.
 - Render no conserva archivos locales entre despliegues. Vouchers de proveedores y documentos de check-in se guardan en el bucket privado `adjuntos` de Supabase Storage (spec 031).
 - Las migraciones no se ejecutan durante el build ni al iniciar el backend.

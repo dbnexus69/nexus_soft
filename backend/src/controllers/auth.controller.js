@@ -2,16 +2,21 @@ const authService = require('../services/auth.service');
 const { conEmpresa } = require('../config/tenant');
 const { success } = require('../utils/apiResponse');
 const { getEffectivePermissions } = require('../middleware/authorize');
+const { COOKIE_SESION, COOKIE_ORIGINAL, DURACION_RECORDAR_MS, opcionesCookie, tokenDe } = require('../utils/tokenUtils');
 
 exports.login = async (req, res, next) => {
   try {
     const { email, password, remember } = req.validatedBody;
-    const data = await authService.login({
+    const { token, ...data } = await authService.login({
       email,
       password,
       remember,
       userAgent: req.headers['user-agent']
     });
+    // El token va solo en la cookie, nunca en el cuerpo: lo que llega al
+    // JavaScript de la página es lo que un XSS podría llevarse (spec 035).
+    res.cookie(COOKIE_SESION, token, opcionesCookie(remember ? DURACION_RECORDAR_MS : undefined));
+    res.clearCookie(COOKIE_ORIGINAL, opcionesCookie());
     success(res, data);
   } catch (err) {
     next(err);
@@ -22,7 +27,10 @@ exports.logout = async (req, res, next) => {
   try {
     // El token del encabezado, que es lo que identifica a ESTA sesión: cerrar
     // la del móvil no debe cerrar la del ordenador.
-    const token = (req.headers.authorization || '').split(' ')[1];
+    const token = tokenDe(req);
+    // Si se sale en mitad de una suplantación, la sesión del superadministrador
+    // guardada en la otra cookie también se cierra: nadie volverá a usarla.
+    const original = req.cookies?.[COOKIE_ORIGINAL];
     // En la empresa donde vive la fila de `sesiones`, no en la que se trabaja.
     //
     // Al suplantar no son la misma —la sesión es del superadministrador, así que
@@ -31,7 +39,12 @@ exports.logout = async (req, res, next) => {
     // error. Como la caché sí se olvidaba, la siguiente petición volvía a la
     // base, encontraba la fila intacta y revalidaba el token: cerrar sesión
     // durante una suplantación no cerraba nada.
-    const data = await conEmpresa(req.empresaOrigen, () => authService.logout(token));
+    const data = await conEmpresa(req.empresaOrigen, async () => {
+      if (original) await authService.logout(original);
+      return authService.logout(token);
+    });
+    res.clearCookie(COOKIE_SESION, opcionesCookie());
+    res.clearCookie(COOKIE_ORIGINAL, opcionesCookie());
     success(res, data);
   } catch (err) {
     next(err);

@@ -20,7 +20,7 @@
  * viaja al pooler. Sin marco de pruebas, igual que `aislamiento.js`.
  */
 const {
-  admin, BASE, CLAVE, comprobar, pedir, entrar, una,
+  admin, BASE, API, CLAVE, comprobar, pedir, entrar, una,
   levantarServidor, montarAgencia, montarSuperadmin, ventaMinima, ejecutar,
 } = require('./montaje');
 
@@ -63,6 +63,11 @@ async function main() {
   // ── 1. Sin sesión
   console.log('\n  Sin sesión');
   comprobar('GET /sales sin token: 401', (await pedir('GET', '/sales')).status === 401);
+  // Spec 035: el token va en una cookie httpOnly y nunca en el cuerpo, donde lo leería un script de la página.
+  const login = await fetch(API + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: A.correo, password: CLAVE }) });
+  const cookieLogin = login.headers.getSetCookie().find((c) => c.startsWith('nexus_sesion=')) || '';
+  comprobar('login: cookie HttpOnly y SameSite=Strict, sin token en el cuerpo',
+    /HttpOnly/i.test(cookieLogin) && /SameSite=Strict/i.test(cookieLogin) && !(await login.json())?.data?.token, cookieLogin);
   comprobar('GET /sales con un token inventado: 401', (await pedir('GET', '/sales', 'no.es.un.token')).status === 401);
 
   // ── 2. A3: un id de otra agencia responde "no existe"
@@ -534,8 +539,8 @@ async function main() {
   comprobar('suplantar la propia agencia: 400',
     (await pedir('POST', `/companies/${A.id}/impersonations`, tokSuper, { motivo: 'Prueba automática de aislamiento' })).status === 400);
   const sup = await pedir('POST', `/companies/${B.id}/impersonations`, tokSuper, { motivo: 'Prueba automática de aislamiento' });
-  comprobar('suplantar B: 201 con token', sup.status === 201 && sup.json?.data?.token, `HTTP ${sup.status}`);
-  const tokSup = sup.json?.data?.token;
+  comprobar('suplantar B: 201, token en la cookie y no en el cuerpo', sup.status === 201 && sup.token && !sup.json?.data?.token, `HTTP ${sup.status}`);
+  const tokSup = sup.token;
   if (tokSup) {
     const ve = await pedir('GET', '/sales?perPage=100', tokSup);
     const idsSup = (ve.json?.data || []).map(v => v.id);

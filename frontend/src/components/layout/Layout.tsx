@@ -5,6 +5,7 @@ import { Header } from './Header';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { stopImpersonation } from '../../api';
+import { borrarSesionLocal } from '../../utils/sesionLocal';
 
 export function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -21,21 +22,10 @@ export function Layout() {
     if (user?.suplantacionId) {
       setIsStopping(true);
       try {
-        await stopImpersonation(user.empresaId, user.suplantacionId);
-        
-        const originalToken = localStorage.getItem('nexus_original_token');
-        if (originalToken) {
-          localStorage.setItem('nexus_token', originalToken);
-          localStorage.removeItem('nexus_original_token');
-          // No sabemos la expiración exacta del original aquí de forma fácil, pero 
-          // limpiar la actual basta, el AuthContext recargará y refrescará si sigue vivo.
-          localStorage.removeItem('nexus_session_expiry');
-          window.location.href = '/';
-        } else {
-          localStorage.removeItem('nexus_token');
-          localStorage.removeItem('nexus_session_expiry');
-          window.location.href = '/login';
-        }
+        // El servidor restaura la cookie del superadministrador, o la borra si no había (spec 035).
+        const { restaurada } = await stopImpersonation(user.empresaId, user.suplantacionId);
+        if (!restaurada) borrarSesionLocal();
+        window.location.href = restaurada ? '/' : '/login';
       } catch (e: any) {
         // Un fallo aquí deja al superadministrador atrapado dentro de la agencia,
         // así que tiene que verse. Antes solo iba a la consola: desde la pantalla,

@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { verifyToken, VENTANA_INACTIVIDAD_MS } = require('../utils/tokenUtils');
+const { verifyToken, tokenDe, VENTANA_INACTIVIDAD_MS } = require('../utils/tokenUtils');
 const prisma = require('../config/db');
 const { error } = require('../utils/apiResponse');
 // La caché vive en su propio archivo: quien cierra sesión o cambia una
@@ -21,12 +21,10 @@ const { conEmpresa } = require('../config/tenant');
  */
 async function auth(req, res, next) {
   try {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
-      return error(res, 'Token de autorización faltante o formato inválido', 401, 'UNAUTHORIZED');
+    const token = tokenDe(req);
+    if (!token) {
+      return error(res, 'No hay una sesión iniciada', 401, 'UNAUTHORIZED');
     }
-
-    const token = header.split(' ')[1];
     const decoded = verifyToken(token);
 
     // Los tokens emitidos antes del multi-tenant no traen empresa. No se les da

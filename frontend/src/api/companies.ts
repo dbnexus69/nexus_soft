@@ -66,10 +66,11 @@ export async function getBranding() {
 
 export async function startImpersonation(id: number, motivo: string) {
   const res = await api.post(`/companies/${id}/impersonations`, { motivo });
-  return res.data.data as { suplantacionId: string; token: string; empresa: Empresa; expiraAt: string; motivo: string };
+  return res.data.data as { suplantacionId: string; empresa: Empresa; expiraAt: string; motivo: string };
 }
 
 export async function stopImpersonation(companyId: number, impersonationId: string) {
   const res = await api.delete(`/companies/${companyId}/impersonations/${impersonationId}`);
-  return res.data;
+  // `restaurada`: el servidor devolvió la sesión del superadministrador; si no, no queda ninguna.
+  return res.data.data as { restaurada: boolean };
 }

@@ -29,9 +29,41 @@ function verifyToken(token) {
  */
 const VENTANA_INACTIVIDAD_MS = 30 * 60 * 1000;
 
+const DURACION_RECORDAR_MS = 7 * 24 * 60 * 60 * 1000;
+
 function getExpiryTime(remember = false) {
-  const ms = remember ? 7 * 24 * 60 * 60 * 1000 : VENTANA_INACTIVIDAD_MS;
+  const ms = remember ? DURACION_RECORDAR_MS : VENTANA_INACTIVIDAD_MS;
   return Date.now() + ms;
 }
 
-module.exports = { generateToken, generateTokenConCaducidad, verifyToken, getExpiryTime, VENTANA_INACTIVIDAD_MS };
+/**
+ * La sesión del navegador viaja en una cookie `httpOnly` (spec 035): ningún
+ * script de la página puede leerla, así que un XSS no se lleva el token.
+ * `SameSite=Strict` porque el navegador habla con un único sitio (Vercel
+ * reenvía `/api` a Render); `Secure` solo en producción, que en local es http.
+ *
+ * Al suplantar, el token del superadministrador se guarda en la segunda cookie
+ * y se restaura al salir: antes vivía en `localStorage`.
+ */
+const COOKIE_SESION = 'nexus_sesion';
+const COOKIE_ORIGINAL = 'nexus_sesion_original';
+
+/** Sin `maxAge` es cookie de sesión del navegador: se va al cerrarlo. */
+function opcionesCookie(maxAge) {
+  return { httpOnly: true, secure: env.nodeEnv === 'production', sameSite: 'strict', path: '/api', ...(maxAge ? { maxAge } : {}) };
+}
+
+/**
+ * El token de la petición: la cookie del navegador o, si no hay, el `Bearer`.
+ * El `Bearer` sigue valiendo para las suites de pruebas y clientes que no son
+ * un navegador; no abre nada, porque el navegador ya no tiene el token a mano.
+ */
+function tokenDe(req) {
+  const header = req.headers.authorization || '';
+  return req.cookies?.[COOKIE_SESION] || (header.startsWith('Bearer ') ? header.slice(7) : null);
+}
+
+module.exports = {
+  generateToken, generateTokenConCaducidad, verifyToken, getExpiryTime, VENTANA_INACTIVIDAD_MS, DURACION_RECORDAR_MS,
+  COOKIE_SESION, COOKIE_ORIGINAL, opcionesCookie, tokenDe,
+};

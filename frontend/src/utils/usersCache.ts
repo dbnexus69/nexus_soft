@@ -5,20 +5,12 @@
  * Al crear/editar/eliminar usuarios, el caché se invalida automáticamente.
  */
 
+import { claveCache } from './sesionLocal';
+
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutos
 
 function getCacheKey(baseKey: string): string {
-  try {
-    const token = localStorage.getItem('nexus_token');
-    if (!token) return `${baseKey}_anonymous`;
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // La empresa entra en la clave, no solo el usuario: al suplantar, el
-    // superadministrador conserva su userId y el navegador le serviría los datos
-    // de la agencia anterior dentro de la siguiente, sin error y sin aviso.
-    return `${baseKey}_${payload.empresaId || 'sin-empresa'}_${payload.userId || 'unknown'}`;
-  } catch {
-    return `${baseKey}_anonymous`;
-  }
+  return claveCache(baseKey);
 }
 
 interface CacheEntry<T> {

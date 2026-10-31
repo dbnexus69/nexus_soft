@@ -54,5 +54,8 @@
     server: {
       port: 5173,
       open: true,
+      // Sin `VITE_API_URL`, el navegador llama a `/api` en el mismo sitio y Vite lo reenvía al backend, igual que
+      // el rewrite de Vercel en producción (spec 035).
+      proxy: { '/api': 'http://localhost:3000' },
     },
   });

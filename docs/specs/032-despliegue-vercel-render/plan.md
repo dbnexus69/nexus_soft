@@ -4,7 +4,8 @@
 
 - `frontend/vercel.json`: un solo rewrite `/(.*)` → `/index.html` (B5). Vercel detecta Vite y pnpm solo.
 - En el panel: *Root Directory* `frontend`, variable `VITE_API_URL=https://<servicio>.onrender.com/api/v1`
-  (se hornea en el build: cambiarla exige redeploy).
+  (se hornea en el build: cambiarla exige redeploy). **Sustituido por la spec 035:** sin `VITE_API_URL`, con un
+  rewrite `/api/(.*)` → Render en `vercel.json`.
 
 ## Backend (Render)
 

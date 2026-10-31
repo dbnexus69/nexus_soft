@@ -21,8 +21,6 @@ export interface LoginResponse {
     empresaSlug: string;
     empresaNombre?: string | null;
   };
-  token: string;
-  expiresAt: string;
 }
 
 export async function login(email: string, password: string, remember?: boolean) {
@@ -30,14 +28,9 @@ export async function login(email: string, password: string, remember?: boolean)
   return res.data.data as LoginResponse;
 }
 
-/**
- * El token se pasa explícito. Quien cierra sesión lo borra de localStorage en
- * el mismo tick, y axios lee las cabeceras en un interceptor asíncrono: la
- * petición salía SIN token, el servidor respondía 401 y la sesión seguía viva.
- */
-export async function logout(token: string | null) {
-  if (!token) return;
-  await api.post('/auth/logout', undefined, { headers: { Authorization: `Bearer ${token}` } });
+/** La cookie viaja sola; el servidor borra la sesión y la cookie. */
+export async function logout() {
+  await api.post('/auth/logout');
 }
 
 /**

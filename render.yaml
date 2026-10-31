@@ -15,6 +15,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Vercel reenvía /api a este servicio (spec 035): dos proxies delante, Vercel y el balanceador de Render.
+      - key: TRUST_PROXY
+        value: "2"
       # Rol app_nexus, pooler 6543 (ver backend/.env.example). Nunca postgres: index.js no arranca con él.
       - key: DATABASE_URL
         sync: false

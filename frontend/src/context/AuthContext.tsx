@@ -7,6 +7,7 @@ import { invalidateConfigCache } from '../utils/configCache';
 import { invalidateDashboardCache } from '../utils/dashboardCache';
 import type { LoginResponse } from '../api/auth';
 import { SESION_CADUCADA } from '../api/client';
+import { PENDIENTE, borrarSesionLocal, guardarSesionLocal, haySesionLocal } from '../utils/sesionLocal';
 
 // El título de `index.html`, leído antes de que ninguna agencia lo cambie.
 const TITULO_POR_DEFECTO = document.title;
@@ -54,20 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('nexus_token');
-
-    if (token) {
+    // El token está en una cookie que JavaScript no ve (spec 035): lo que dice si
+    // hubo sesión es la marca de `sesionLocal`. Sin ella no se pregunta.
+    if (haySesionLocal()) {
+      // Hasta saber quién es (tras suplantar o salir, la empresa cambió), ningún
+      // caché lee con la clave de antes.
+      guardarSesionLocal(PENDIENTE);
       getMe()
         .then(async (userData) => {
+          guardarSesionLocal(userData);
           setUser(userData);
           // La marca se pide después de saber quién eres: depende de la empresa
           // del token, no de la URL. La pantalla de entrada es común a todas.
           await getBranding().then(ponerMarca).catch(() => {});
         })
-        .catch(() => {
-          localStorage.removeItem('nexus_token');
-          localStorage.removeItem('nexus_session_expiry');
-        })
+        .catch(() => borrarSesionLocal())
         .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
@@ -78,11 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await apiLogin(email, password, remember);
 
-      // El token primero, porque la marca se pide con él; y la marca antes de
+      // La cookie de sesión ya vino con la respuesta. La marca antes de
       // `setUser`, para que la primera pantalla ya lleve la de la agencia en vez
       // de pintar la de la casa y cambiarla un instante después.
-      localStorage.setItem('nexus_token', data.token);
-      localStorage.setItem('nexus_remember', String(remember));
+      guardarSesionLocal(data.user);
       await getBranding().then(ponerMarca).catch(() => {});
       setUser(data.user);
 
@@ -94,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    apiLogout(localStorage.getItem('nexus_token')).catch(() => {});
+    apiLogout().catch(() => {});
     cerrarSesionLocal();
   };
 
@@ -104,22 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fuera la marca: la pantalla de entrada es común, y dejarla puesta haría
     // que quien sale de una agencia viera sus colores al ir a entrar en otra.
     ponerMarca(null);
-    // Los cachés, ANTES de borrar el token: cada uno compone su clave con la
-    // empresa y el usuario que lee del token, así que sin él borrarían la clave
-    // anónima y dejarían intactos los datos de la agencia.
+    // Los cachés, ANTES de borrar la marca de sesión: cada uno compone su clave
+    // con la empresa y el usuario que lee de ella, así que sin ella borrarían la
+    // clave anónima y dejarían intactos los datos de la agencia.
     invalidateClientsCache();
     invalidateUsersCache();
     invalidateConfigCache();
     invalidateDashboardCache();
-    localStorage.removeItem('nexus_token');
-    localStorage.removeItem('nexus_user');
-    localStorage.removeItem('nexus_session_expiry');
-    localStorage.removeItem('nexus_remember');
-    // El token del superadministrador guardado al suplantar. Es un token válido
-    // por su cuenta: dejarlo aquí significa que cerrar sesión dentro de una
-    // agencia deja en el navegador una sesión de superadministrador lista para
-    // restaurarse a mano.
-    localStorage.removeItem('nexus_original_token');
+    // El token y el del superadministrador al suplantar están en cookies que
+    // borra el servidor en `/auth/logout`.
+    borrarSesionLocal();
   };
 
   // La sesión caducó (30 min sin actividad) o se cerró en el servidor: fuera,

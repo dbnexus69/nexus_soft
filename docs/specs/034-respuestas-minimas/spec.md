@@ -1,6 +1,6 @@
 # Spec 034 — Respuestas mínimas: una escritura devuelve lo que se pidió
 
-**Estado:** en ejecución · **Rama:** `feat-bayrol` · **Toca la base compartida:** no · **Origen:** pedido del
+**Estado:** completada (2026-10-30), probada con base y confirmada en pantalla por el usuario · **Rama:** `feat-bayrol` · **Toca la base compartida:** no · **Origen:** pedido del
 usuario al revisar la 033 (2026-10-30): "no puede mandar como respuesta toda la info, hay que mandar solo la info
 solicitada" · **Relacionadas:** [`033`](../033-revision-de-la-rama/tasks.md) T17 (el precedente: responsables)
 

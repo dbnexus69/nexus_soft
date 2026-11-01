@@ -326,21 +326,6 @@ class ResponsablesService {
     await prisma.responsables.update({ where: { id }, data: { status } });
     return { id, status };
   }
-
-  /**
-   * Eliminar responsable (soft delete)
-   */
-  async deleteResponsable(id, alcance = {}) {
-    const responsable = await prisma.responsables.findUnique({ where: { id } });
-    comprobarQueEsSuyo(responsable, alcance);
-
-    await prisma.responsables.update({
-      where: { id },
-      data: { deleted_at: new Date() }
-    });
-
-    return { message: 'Responsable eliminado exitosamente' };
-  }
 }
 
 module.exports = new ResponsablesService();

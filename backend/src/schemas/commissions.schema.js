@@ -1,6 +1,6 @@
 const { z } = require('zod');
 const {
-  numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, telefono, tipoYNumeroJuntos,
+  numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, telefono, tipoYNumeroJuntos, avatar,
 } = require('./personaCampos');
 
 const createAgentSchema = z.object({
@@ -13,7 +13,7 @@ const createAgentSchema = z.object({
   email: z.string().email('Email inválido').nullable().optional().or(z.literal('')),
   paymentThreshold: z.coerce.number({ invalid_type_error: 'El mínimo para retirar es un número' }).min(0, 'El mínimo para retirar no puede ser negativo').optional(),
   status: z.string().optional(),
-  avatar: z.string().nullable().optional(),
+  avatar,
   banco: z.string().nullable().optional(),
   tipoCuenta: z.string().nullable().optional(),
   numeroCuenta: z.string().nullable().optional()
@@ -29,7 +29,7 @@ const updateAgentSchema = z.object({
   email: z.string().email('Email inválido').nullable().optional().or(z.literal('')),
   paymentThreshold: z.coerce.number({ invalid_type_error: 'El mínimo para retirar es un número' }).min(0, 'El mínimo para retirar no puede ser negativo').optional(),
   status: z.string().optional(),
-  avatar: z.string().nullable().optional(),
+  avatar,
   banco: z.string().nullable().optional(),
   tipoCuenta: z.string().nullable().optional(),
   numeroCuenta: z.string().nullable().optional()

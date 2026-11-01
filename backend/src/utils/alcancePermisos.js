@@ -8,7 +8,7 @@ const SCOPED_ACTIONS = {
   sales: ['view', 'edit', 'delete'],
   quotes: ['view', 'edit', 'delete'],
   clients: ['view', 'edit'],
-  responsables: ['view', 'edit', 'delete'],
+  responsables: ['view', 'edit'],
   itineraries: ['view', 'edit'],
 };
 

@@ -130,5 +130,17 @@ comprobar('destinos: 61 caracteres se rechazan', normalizarDestinos(['x'.repeat(
 const conDestinos = updateClientSchema.safeParse({ destinations: ['Cali', 'B'] });
 comprobar('destinos: el esquema nombra el campo', !conDestinos.success && conDestinos.error.issues[0].path.join('.') === 'destinations.1');
 
+// Avatar (spec 036): una URL del selector, con largo máximo; nada de texto suelto, otros dominios ni data URIs.
+const { avatar } = require('../src/schemas/personaCampos');
+const AVATAR_OK = 'https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=transparent';
+comprobar('avatar: uno del selector pasa', avatar.safeParse(AVATAR_OK).success);
+comprobar('avatar: nulo pasa (sin avatar)', avatar.safeParse(null).success);
+for (const [que, valor] of [['texto suelto', 'hola'], ['otro dominio', 'https://evil.co/x.png'],
+  ['data URI', 'data:image/png;base64,AAAA'], ['más de 300 caracteres', AVATAR_OK + 'x'.repeat(300)]]) {
+  comprobar(`avatar: ${que} se rechaza`, !avatar.safeParse(valor).success);
+}
+const clienteConAvatar = updateClientSchema.safeParse({ avatar: 'hola' });
+comprobar('avatar: el esquema de cliente nombra el campo', !clienteConAvatar.success && clienteConAvatar.error.issues[0].path.join('.') === 'avatar');
+
 console.log(fallos === 0 ? `\nTodo en orden (${total} comprobaciones).\n` : `\n${fallos} de ${total} comprobación(es) en rojo.\n`);
 process.exit(fallos === 0 ? 0 : 1);

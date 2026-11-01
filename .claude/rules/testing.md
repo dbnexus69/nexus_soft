@@ -30,7 +30,7 @@ No ejecutar pruebas por rutina. Elige la comprobación más pequeña que cubra e
 
 ## CI y scripts conocidos
 La CI está en `.github/workflows/ci.yml`. Según la documentación del proyecto, ejecuta el build del frontend y `check:prisma`, `test:validaciones` y `test:reglas-espejo` en backend. Las suites con BD permanecen manuales.
-- `pnpm db:seed` está documentado como roto frente al schema actual; no lo uses como arreglo rápido.
+- `db:seed` y `db:reset` ya no existen (spec 036): el primero estaba roto frente al schema y el segundo era un `db push --force-reset`.
 - `pnpm db:seed:vuelos` y `pnpm db:seed:proveedores` escriben datos y requieren permiso expreso.
 - `pnpm db:generate`, `prisma migrate status/deploy` y Prisma Studio requieren permiso expreso en este entorno.
 - Ejecuta comandos desde `backend/` o `frontend/`, no desde la raíz.

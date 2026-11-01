@@ -7,13 +7,10 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "build": "npx prisma generate --sql",
-    "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate --sql",
-    "db:seed": "node prisma/seed.js",
     "db:seed:vuelos": "node prisma/seed-catalogos-vuelos.js",
     "db:seed:proveedores": "node prisma/seed-proveedores-iniciales.js",
     "db:studio": "npx prisma studio",
-    "db:reset": "npx prisma db push --force-reset && node prisma/seed.js",
     "check:prisma": "node scripts/check-prisma-fields.js",
     "test:aislamiento": "node tests/aislamiento.js",
     "test:aislamiento-api": "node tests/aislamiento-api.js",
@@ -55,9 +52,6 @@
   "devDependencies": {
     "@prisma/config": "^7.8.0",
     "prisma": "^6.19.3"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
   },
   "engines": {
     "node": "22.x"

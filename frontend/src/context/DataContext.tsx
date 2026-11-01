@@ -11,7 +11,6 @@ import {
 import {
   saveUsersCache,
   loadUsersCache,
-  invalidateUsersCache,
 } from '../utils/usersCache';
 import {
   saveDashboardCache,
@@ -48,21 +47,13 @@ interface DataContextType {
   flightsRefreshToken: number;
   fetchCommissionAgents: () => Promise<void>;
   refreshData: () => void;
-  updateUser: (id: number, user: Partial<User>) => Promise<void>;
-  deleteUser: (id: number) => Promise<void>;
-  updateClient: (id: number, client: Partial<Client>) => Promise<void>;
-  toggleClientStatus: (id: number) => Promise<void>;
   addResponsable: (responsable: Record<string, unknown>) => Promise<void>;
   updateResponsable: (id: number, responsable: Record<string, unknown>) => Promise<void>;
   setResponsableStatus: (id: number, status: Responsable['status']) => Promise<void>;
-  deleteResponsable: (id: number) => Promise<void>;
   updateFlight: (id: string, flight: (Partial<Flight> & { sinEnvio?: boolean }) | FormData) => Promise<{ emailStatus?: string }>;
   addConfigItem: (section: ConfigSection, item: Record<string, unknown>) => Promise<Record<string, unknown>>;
   updateConfigItem: (section: ConfigSection, id: number, item: Record<string, unknown>) => Promise<void>;
   deleteConfigItem: (section: ConfigSection, id: number) => Promise<void>;
-  updateCommissionAgent: (id: number, agent: Record<string, unknown>) => Promise<void>;
-  deleteCommissionAgent: (id: number) => Promise<void>;
-  updateRolePermissions: (role: 'asesor' | 'freelancer', permissions: RolePermissions) => Promise<void>;
 }
 
 const emptyData: AppData = {
@@ -367,36 +358,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     fetchFlights();
   };
 
-  const updateUser = async (id: number, userUpdate: Partial<User>) => {
-    const updated = await api.updateUser(id, userUpdate);
-    setData(prev => {
-      const users = prev.users.map(u => u.id === id ? { ...u, ...updated } : u);
-      invalidateUsersCache();
-      return { ...prev, users };
-    });
-  };
-
-  const deleteUser = async (id: number) => {
-    await api.deleteUser(id);
-    setData(prev => {
-      invalidateUsersCache();
-      return { ...prev, users: prev.users.filter(u => u.id !== id) };
-    });
-  };
-
-
-  const updateClient = async (id: number, clientUpdate: Partial<Client>) => {
-    await api.updateClient(id, clientUpdate);
-    setData(prev => ({
-      ...prev,
-      clients: prev.clients.map(c => c.id === id ? { ...c, ...clientUpdate } : c)
-    }));
-  };
-
-  const toggleClientStatus = async (id: number) => {
-    // Optimistic toggle implemented in component if needed, else refetch
-    await fetchClients();
-  };
 
   const addResponsable = async (responsable: Record<string, unknown>) => {
     await api.createResponsable(responsable);
@@ -421,18 +382,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       responsables: prev.responsables.map(r => r.id === id ? { ...r, status: res.data.status } : r)
     }));
   };
-
-  const deleteResponsable = async (id: number) => {
-    await api.deleteResponsable(id);
-    await fetchResponsables();
-  };
-
-
-
-
-
-
-
 
 
   const updateFlight = async (id: string, flightUpdate: (Partial<Flight> & { sinEnvio?: boolean }) | FormData) => {
@@ -539,36 +488,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateCommissionAgent = async (id: number, agentUpdate: Record<string, unknown>) => {
-    await api.updateCommissionAgent(id, agentUpdate);
-    setData(prev => ({
-      ...prev,
-      commissionAgents: prev.commissionAgents.map(a => a.id === id ? { ...a, ...agentUpdate } : a)
-    }));
-  };
-
-  const deleteCommissionAgent = async (id: number) => {
-    await api.deleteCommissionAgent(id);
-    setData(prev => ({
-      ...prev,
-      commissionAgents: prev.commissionAgents.filter(a => a.id !== id)
-    }));
-  };
-
-  const updateRolePermissions = async (role: 'asesor' | 'freelancer', permissions: RolePermissions) => {
-    const normalized = normalizeRolePermissions(permissions);
-    await api.updateRolePermissions(role, normalized);
-    setData(prev => ({
-      ...prev,
-      config: {
-        ...prev.config,
-        rolePermissions: {
-          ...prev.config.rolePermissions,
-          [role]: normalized
-        }
-      }
-    }));
-  };
 
   return (
     <DataContext.Provider value={{
@@ -585,21 +504,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchResponsables,
       fetchCommissionAgents,
       refreshData,
-      updateUser,
-      deleteUser,
-      updateClient,
-      toggleClientStatus,
       addResponsable,
       updateResponsable,
       setResponsableStatus,
-      deleteResponsable,
       updateFlight,
       addConfigItem,
       updateConfigItem,
       deleteConfigItem,
-      updateCommissionAgent,
-      deleteCommissionAgent,
-      updateRolePermissions,
     }}>
       {children}
     </DataContext.Provider>

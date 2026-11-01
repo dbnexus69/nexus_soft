@@ -16,7 +16,7 @@ paths:
 La BD de desarrollo y producción es la misma instancia compartida de Supabase. Sin autorización expresa, no ejecutes migraciones, scripts que escriban, suites de pruebas con BD, `db:generate`, `db:seed*`, `db:studio`, `prisma migrate status/deploy`, ni comandos que puedan alterar o inspeccionar datos reales. No levantes servicios sin permiso. Si hace falta una de estas acciones, explica el comando y su propósito y espera autorización.
 
 ## Migraciones
-- Usa migraciones versionadas en `backend/prisma/migrations/`; nunca uses `db push` ni `db reset` contra la BD compartida. `pnpm db:push` y `pnpm db:reset` existen en `package.json`, pero no se corren: construyen la BD solo desde `schema.prisma` y no aplicarían RLS, FKs compuestas, defaults de `empresa_id`, triggers de `numero` ni las funciones SQL.
+- Usa migraciones versionadas en `backend/prisma/migrations/`; nunca uses `db push` ni `db reset` contra la BD compartida. Los scripts `db:push` y `db:reset` se quitaron de `package.json` (spec 036): construían la BD solo desde `schema.prisma` y no aplicaban RLS, FKs compuestas, defaults de `empresa_id`, triggers de `numero` ni las funciones SQL.
 - Las migraciones incluyen SQL que Prisma Schema no representa por completo: RLS, FKs compuestas, defaults de `empresa_id`, triggers de `numero` y funciones SQL. No reemplaces esos mecanismos por cambios solo en `schema.prisma`.
 - Flujo previsto: `prisma migrate diff` → revisar el SQL generado → obtener autorización antes de aplicar con `prisma migrate deploy`.
 - No edites migraciones ya aplicadas: cambiaría sus checksums. Documenta correcciones en un `NOTA.md` junto a la migración y crea una nueva migración cuando corresponda.

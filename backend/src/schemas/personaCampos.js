@@ -54,4 +54,15 @@ function tipoYNumeroJuntos(d, ctx) {
   });
 }
 
-module.exports = { validar, vacioAUndefined, nombre, numeroDocumento, numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, email, telefono, nacimiento, tipoYNumeroJuntos };
+/**
+ * Avatar (spec 036): una URL del selector de la pantalla (`AvatarPicker.tsx`, hoy de api.dicebear.com), acotada.
+ * Antes era cualquier texto sin largo: cabía hasta el tope de 5 MB del JSON y viajaba en cada listado.
+ */
+const ORIGEN_AVATARES = 'api.dicebear.com';
+const avatar = z.string().trim().max(300, 'El avatar es demasiado largo')
+  .url('El avatar tiene que ser una URL')
+  .refine((u) => { try { return new URL(u).hostname === ORIGEN_AVATARES; } catch { return false; } },
+    'El avatar tiene que ser uno del selector')
+  .nullable().optional();
+
+module.exports = { validar, vacioAUndefined, nombre, numeroDocumento, numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, email, telefono, nacimiento, tipoYNumeroJuntos, avatar };

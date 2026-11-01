@@ -271,7 +271,8 @@ async function main() {
   comprobar('freelancer: desactivar uno ajeno: 403',
     (await pedir('PATCH', `/responsables/${idRespAdmin}/status`, tokFree, { status: 'inactive' })).status === 403);
   const borraFree = await pedir('DELETE', `/responsables/${idRespFree}`, tokFree);
-  comprobar('freelancer: borrar el suyo (delete none): 403', borraFree.status === 403, `HTTP ${borraFree.status}`);
+  // Spec 036: la ruta de borrar ya no existe (un responsable se desactiva, no se borra).
+  comprobar('borrar un responsable: 404, la ruta ya no existe', borraFree.status === 404, `HTTP ${borraFree.status}`);
   const ventaRespAjeno = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id, { responsableId: idRespAdmin }));
   comprobar('freelancer: vender con el responsable del admin: 403', ventaRespAjeno.status === 403, `HTTP ${ventaRespAjeno.status}`);
   const ventaRespPropio = await pedir('POST', '/sales', tokFree, ventaMinima(cliA.id, { responsableId: idRespFree }));
@@ -279,8 +280,8 @@ async function main() {
   const ventaRespAsesor = await pedir('POST', '/sales', tokAsesor, ventaMinima(cliA.id, { responsableId: idRespAdmin }));
   comprobar('asesor (responsables ninguno): vender con un responsable: 403', ventaRespAsesor.status === 403, `HTTP ${ventaRespAsesor.status}`);
   const panelFree = (await pedir('GET', '/roles/freelancer/permissions', tokA)).json?.data;
-  comprobar('panel: el freelancer sin usuarios y con responsables own/true/own/none',
-    panelFree?.users?.view === false && JSON.stringify(panelFree?.responsables) === JSON.stringify({ view: 'own', create: true, edit: 'own', delete: 'none' }),
+  comprobar('panel: el freelancer sin usuarios y con responsables own/true/own (sin borrar, spec 036)',
+    panelFree?.users?.view === false && JSON.stringify(panelFree?.responsables) === JSON.stringify({ view: 'own', create: true, edit: 'own' }),
     JSON.stringify([panelFree?.users?.view, panelFree?.responsables]));
 
   // ── Spec 027: lo que muestra la pantalla es lo que aplica la API.

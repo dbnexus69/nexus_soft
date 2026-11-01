@@ -8,7 +8,7 @@ paths:
 - Stack: Express 5, Prisma 6, CommonJS y JavaScript (no TypeScript), PostgreSQL en Supabase.
 - Arquitectura de una funcionalidad: ruta → middleware (`auth`, `authorize`, `validate`) → controller → service → Prisma. `routes/index.js` monta los recursos.
 - Valida entradas con esquemas Zod en `schemas/*.schema.js`. No omitas validación para aceptar entradas inválidas.
-- `src/index.js` configura Helmet, CORS con allowlist explícita (`FRONTEND_URL` y localhost), rate limits y los prefijos `/api` y `/api/v1`; el frontend usa `/api/v1`.
+- `src/index.js` configura Helmet, CORS con allowlist explícita (`FRONTEND_URL` y localhost), rate limits y el prefijo `/api/v1` (el único desde la spec 036; `GET /api/health` se declara aparte).
 - Usa `utils/apiResponse.js`: respuestas correctas con `{ success, data, meta }` y errores con `{ success: false, error: { message, code } }`. Los errores se procesan en `middleware/errorHandler.js` y `errors/AppError.js`.
 - Colecciones paginadas: valor predeterminado 10, máximo 100; `meta` incluye `page`, `perPage`, `total`, `totalPages`, `hasNext` y `hasPrev`.
 - `POST` devuelve 201 y `DELETE` devuelve 204, salvo excepciones documentadas. Los errores de validación devuelven 422 con `error.details: [{ field, message }]`.

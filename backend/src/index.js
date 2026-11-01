@@ -84,7 +84,7 @@ const authLimiter = rateLimit({
 // Los dos prefijos, /api y /api/v1: montar el limitador solo en uno dejaría el
 // otro como puerta abierta para probar contraseñas y códigos sin freno.
 for (const ruta of ['login', 'forgot-password', 'verify-code', 'reset-password']) {
-  app.use([`/api/auth/${ruta}`, `/api/v1/auth/${ruta}`], authLimiter);
+  app.use(`/api/v1/auth/${ruta}`, authLimiter);
 }
 
 // Parsing. Eran 50 MB por el voucher que el navegador subía en base64; ahora lo genera el servidor (spec 011).
@@ -112,8 +112,8 @@ app.use('/uploads', require('./routes/uploads.routes'));
 // la vez a todos los clientes, sin forma de fijar una versión. /api/v1 es el
 // camino nuevo; /api se mantiene como alias del actual para no romper nada de
 // lo que ya hay desplegado, y el frontend apunta ya a /api/v1.
+// Solo `/api/v1` (spec 036): el frontend no usa otra cosa. `/api/health` se declara aparte.
 app.use('/api/v1', routes);
-app.use('/api', routes);
 
 // Health check
 app.get('/api/health', (req, res) => {

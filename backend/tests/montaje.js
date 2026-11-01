@@ -31,6 +31,8 @@ const admin = new PrismaClient({
 
 let fallos = 0;
 let servidor = null;
+let salidaServidor = ''; // la salida de error del servidor de prueba, para mostrarla si algo falla
+let cerrandoServidor = false; // el cierre a propósito no se informa como caída
 
 const vivo = () => servidor && servidor.exitCode === null && servidor.signalCode === null;
 
@@ -41,6 +43,7 @@ const vivo = () => servidor && servidor.exitCode === null && servidor.signalCode
  */
 function pararServidor() {
   if (!vivo()) return Promise.resolve();
+  cerrandoServidor = true;
   return new Promise((resolver) => {
     servidor.once('exit', resolver);
     if (process.platform === 'win32') spawn('taskkill', ['/pid', String(servidor.pid), '/T', '/F'], { stdio: 'ignore' });
@@ -102,12 +105,17 @@ async function levantarServidor() {
   servidor = spawn(process.execPath, ['src/index.js'], {
     cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1', ALMACENAMIENTO_PREFIJO: PREFIJO_ALMACEN }, stdio: ['ignore', 'pipe', 'pipe'],
   });
-  let salida = '';
-  servidor.stderr.on('data', d => { salida += d; });
+  salidaServidor = '';
+  servidor.stderr.on('data', d => { salidaServidor += d; });
   await new Promise((resolver, rechazar) => {
-    const limite = setTimeout(() => rechazar(new Error(`el servidor no arrancó en 60 s:\n${salida}`)), 60000);
+    const limite = setTimeout(() => rechazar(new Error(`el servidor no arrancó en 60 s:\n${salidaServidor}`)), 60000);
     servidor.stdout.on('data', d => { if (String(d).includes('Servidor corriendo')) { clearTimeout(limite); resolver(); } });
-    servidor.on('exit', c => { clearTimeout(limite); rechazar(new Error(`el servidor salió con código ${c}:\n${salida}`)); });
+    servidor.on('exit', c => { clearTimeout(limite); rechazar(new Error(`el servidor salió con código ${c}:\n${salidaServidor}`)); });
+  });
+  // Si se cae a mitad de la prueba, la causa queda a la vista: si no, solo se ve un "fetch failed".
+  servidor.on('exit', (c, senal) => {
+    if (cerrandoServidor) return;
+    console.error(`\n  ✗ el servidor de prueba se cayó (código ${c}${senal ? `, señal ${senal}` : ''}). Su salida de error:\n${salidaServidor.slice(-4000)}`);
   });
 }
 
@@ -204,6 +212,7 @@ function ejecutar(titulo, prefijo, prueba) {
       try { await desmontar(prefijo); console.log('\n  Agencias de prueba desmontadas.'); }
       catch (err) { fallos++; console.error('\n  ✗ no se pudo desmontar:', err.message); }
       await admin.$disconnect();
+      if (fallos && salidaServidor) console.error(`\n  Salida de error del servidor de prueba (últimos 4000 caracteres):\n${salidaServidor.slice(-4000)}`);
       console.log(fallos ? `\n${fallos} comprobación(es) fallida(s)\n` : '\nTodo en orden\n');
       process.exit(fallos ? 1 : 0);
     });

@@ -76,6 +76,7 @@ async function listSales({ pagination, search, status, asesorId, clientId, respo
   const sortFieldMap = { 'creadoAt': 'creadoAt', 'date': 'creadoAt', 'total': 'montoTotal', 'status': 'status', 'clientName': 'cliente_id' };
   const effectiveSortBy = sortFieldMap[sortBy] || 'creadoAt';
   const sqlOrderBy = effectiveSortBy === 'montoTotal' ? 'v.monto_total' : (effectiveSortBy === 'status' ? 'v.status' : 'v.creado_at');
+  const orderDirection = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
   // Mismo FROM y mismo WHERE que las filas, con los mismos parámetros.
   const fromSql = `
@@ -147,7 +148,7 @@ async function listSales({ pagination, search, status, asesorId, clientId, respo
           ), '[]'::json) as "detalleVentas"
 
         ${fromSql}
-        ORDER BY ${sqlOrderBy} ${sortOrder === 'desc' ? 'DESC' : 'ASC'}
+        ORDER BY ${sqlOrderBy} ${orderDirection}
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `, ...params, perPage, skip)
     ]);

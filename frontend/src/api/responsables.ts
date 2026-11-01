@@ -30,7 +30,3 @@ export async function setResponsableStatus(id: number, status: Responsable['stat
   return res.data;
 }
 
-// DELETE responde 204 sin cuerpo.
-export async function deleteResponsable(id: number) {
-  await api.delete(`/responsables/${id}`);
-}

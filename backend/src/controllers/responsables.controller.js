@@ -1,5 +1,5 @@
 const responsablesService = require('../services/responsables.service');
-const { success, noContent } = require('../utils/apiResponse');
+const { success } = require('../utils/apiResponse');
 
 // Con alcance 'own' solo los que creó quien pide (spec 026).
 const alcanceDe = (req) => ({ permissionScope: req.permissionScope, viewScope: req.viewScope, user: req.user });
@@ -56,16 +56,6 @@ exports.setStatus = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     success(res, await responsablesService.setStatus(id, req.validatedBody.status, alcanceDe(req)));
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.delete = async (req, res, next) => {
-  try {
-    const id = parseInt(req.params.id);
-    await responsablesService.deleteResponsable(id, alcanceDe(req));
-    noContent(res);
   } catch (err) {
     next(err);
   }

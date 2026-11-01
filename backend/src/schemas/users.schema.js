@@ -1,7 +1,7 @@
 const { z } = require('zod');
 const { contrasena } = require('./contrasena');
 const {
-  nombre, numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, telefono, nacimiento, tipoYNumeroJuntos,
+  nombre, numeroDocumentoOpcional, tipoDocumentoPorTexto, idTipoDocumento, telefono, nacimiento, tipoYNumeroJuntos, avatar,
 } = require('./personaCampos');
 
 const createUserSchema = z.object({
@@ -17,7 +17,7 @@ const createUserSchema = z.object({
   docNumber: numeroDocumentoOpcional,
   birth_date: nacimiento,
   birthDate: nacimiento, // el que lee el servicio; birth_date queda por compatibilidad
-  avatar: z.string().nullable().optional(),
+  avatar,
   status: z.enum(['active', 'inactive']).optional()
 }).superRefine(tipoYNumeroJuntos);
 
@@ -34,7 +34,7 @@ const updateUserSchema = z.object({
   docNumber: numeroDocumentoOpcional,
   birth_date: nacimiento,
   birthDate: nacimiento, // el que lee el servicio; birth_date queda por compatibilidad
-  avatar: z.string().nullable().optional(),
+  avatar,
   status: z.enum(['active', 'inactive']).optional()
 }).superRefine(tipoYNumeroJuntos);
 

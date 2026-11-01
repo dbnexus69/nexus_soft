@@ -15,7 +15,7 @@ const ADMIN_PERMISSIONS = {
   sales: { view: 'all', create: true, edit: 'all', delete: 'all' },
   quotes: { view: 'all', create: true, edit: 'all', delete: 'all' },
   clients: { view: 'all', create: true, edit: 'all', delete: true },
-  responsables: { view: 'all', create: true, edit: 'all', delete: 'all' },
+  responsables: { view: 'all', create: true, edit: 'all' },
   itineraries: { view: 'all', edit: 'all', delete: true },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },
@@ -51,7 +51,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
     // cerraba con un `requireAdmin` a mano. La diferencia es que ahora se
     // puede delegar desde la interfaz. Con alcance desde la spec 026: 'none' y no
     // `false`, o un 'own'/'all' guardado se leería como booleano.
-    responsables: { view: 'none', create: false, edit: 'none', delete: 'none' },
+    responsables: { view: 'none', create: false, edit: 'none' },
     permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: false, create: false, edit: false, delete: false },
@@ -69,7 +69,7 @@ const ROLE_DEFAULT_PERMISSIONS = {
     quotes: { view: 'own', create: true, edit: 'own', delete: 'none' },
     clients: { view: 'own', create: true, edit: 'own' },
     // Los suyos: los que creó (spec 026). Borrar, no.
-    responsables: { view: 'own', create: true, edit: 'own', delete: 'none' },
+    responsables: { view: 'own', create: true, edit: 'own' },
     permissions: { view: false, edit: false },
     itineraries: { view: 'own', edit: 'none' },
     commissions: { view: false, create: false, edit: false, delete: false },

@@ -4,7 +4,7 @@ const {
   normalizarNombre, mensajeNombre,
   mensajeTelefono, mensajeNacimiento,
 } = require('../utils/datosPersona');
-const { idTipoDocumento, tipoDocumentoPorTexto } = require('./personaCampos');
+const { idTipoDocumento, tipoDocumentoPorTexto, avatar } = require('./personaCampos');
 const { normalizarDestinos, MAX_LARGO } = require('../utils/destinos');
 
 // Las reglas viven en utils/datosPersona.js; aquí solo se cablean. El servicio recibe `req.validatedBody`, ya normalizado.
@@ -36,7 +36,7 @@ const campos = {
   email: z.preprocess(vacioAUndefined, z.string().trim().toLowerCase().max(180, 'Máximo 180 caracteres').email('Email inválido').optional()),
   phone: z.preprocess(vacioAUndefined, z.string().trim().superRefine(validar(mensajeTelefono)).optional()),
   birthDate: z.preprocess(vacioAUndefined, z.string().superRefine(validar(mensajeNacimiento)).optional()),
-  avatar: z.string().nullable().optional(),
+  avatar,
   // Destinos de preferencia (spec 017), del más viejo al más nuevo: el último es el
   // reciente. Sale ya normalizado (recortado, sin repetidos); en PUT reemplaza la lista.
   destinations: z.array(z.string({ invalid_type_error: 'Debe ser texto' })).transform((lista, ctx) => {

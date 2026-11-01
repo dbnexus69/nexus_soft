@@ -21,7 +21,7 @@ Según la configuración documentada del proyecto (spec 032):
 ## Backend
 Flujo habitual: ruta → middleware (`auth`, `authorize`, `validate`) → controller → service → Prisma. `routes/index.js` monta los recursos. Las validaciones usan Zod en `schemas/*.schema.js`; las respuestas se normalizan con `utils/apiResponse.js`; los errores se procesan en `middleware/errorHandler.js`.
 
-El frontend apunta a `/api/v1`. El backend mantiene `/api` y `/api/v1` sobre el mismo router.
+El frontend apunta a `/api/v1`, el único prefijo del router desde la spec 036 (`GET /api/health`, el health check de Render, se declara aparte).
 
 ## Aislamiento multiempresa
 El JWT autenticado identifica `empresaId`. El contexto de empresa se establece con `conEmpresa(...)` en `config/tenant.js`, usando AsyncLocalStorage. El cliente extendido de Prisma configura `app.empresa_id` para que las políticas RLS de PostgreSQL apliquen el aislamiento. No dupliques el aislamiento con filtros `where empresa_id` ni asignaciones manuales en `create`.

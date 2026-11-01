@@ -27,6 +27,5 @@ router.post('/', authorize('responsables', 'create'), validate(createResponsable
 router.get('/:id', authorize('responsables', 'view'), controller.getById);
 router.put('/:id', authorize('responsables', 'edit'), validate(updateResponsableSchema), controller.update);
 router.patch('/:id/status', authorize('responsables', 'edit'), validate(statusResponsableSchema), controller.setStatus);
-router.delete('/:id', authorize('responsables', 'delete'), controller.delete);
 
 module.exports = router;

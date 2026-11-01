@@ -56,7 +56,7 @@ export const SCOPED_ACTIONS: Record<string, string[]> = {
   sales: ['view', 'edit', 'delete'],
   quotes: ['view', 'edit', 'delete'],
   clients: ['view', 'edit'],
-  responsables: ['view', 'edit', 'delete'],
+  responsables: ['view', 'edit'],
   itineraries: ['view', 'edit'],
 };
 export const tieneAlcance = (modulo: string, accion: string) => (SCOPED_ACTIONS[modulo] || []).includes(accion);
@@ -69,7 +69,7 @@ export interface RolePermissions {
   sales: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
   quotes: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
   clients: { view: Alcance; create: boolean; edit: Alcance };
-  responsables: { view: Alcance; create: boolean; edit: Alcance; delete: Alcance };
+  responsables: { view: Alcance; create: boolean; edit: Alcance };
   itineraries: { view: Alcance; edit: Alcance };
   commissions: { view: boolean; create: boolean; edit: boolean; delete: boolean };
   users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
@@ -90,7 +90,7 @@ export const DEFAULT_ASESOR_PERMISSIONS: RolePermissions = {
   quotes: { view: "own", create: true, edit: "own", delete: "none" },
   clients: { view: "own", create: true, edit: "own" },
   // El backend los niega por defecto; aquí concedían view/create/edit.
-  responsables: { view: "none", create: false, edit: "none", delete: "none" },
+  responsables: { view: "none", create: false, edit: "none" },
   itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: false, create: false, edit: false, delete: false },
@@ -103,7 +103,7 @@ export const DEFAULT_FREELANCER_PERMISSIONS: RolePermissions = {
   quotes: { view: "own", create: true, edit: "own", delete: "none" },
   clients: { view: "own", create: true, edit: "own" },
   // Los que creó (spec 026).
-  responsables: { view: "own", create: true, edit: "own", delete: "none" },
+  responsables: { view: "own", create: true, edit: "own" },
   itineraries: { view: "own", edit: "none" },
   commissions: { view: false, create: false, edit: false, delete: false },
   users: { view: false, create: false, edit: false, delete: false },
@@ -116,7 +116,7 @@ export const ADMIN_PERMISSIONS: RolePermissions = {
   sales: { view: "all", create: true, edit: "all", delete: "all" },
   quotes: { view: "all", create: true, edit: "all", delete: "all" },
   clients: { view: "all", create: true, edit: "all" },
-  responsables: { view: "all", create: true, edit: "all", delete: "all" },
+  responsables: { view: "all", create: true, edit: "all" },
   itineraries: { view: "all", edit: "all" },
   commissions: { view: true, create: true, edit: true, delete: true },
   users: { view: true, create: true, edit: true, delete: true },

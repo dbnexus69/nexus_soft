@@ -198,9 +198,59 @@ console.log('\n=== transforms de producto ===');
 if (!transformesMalos.length) console.log('  ninguno');
 transformesMalos.forEach(t => console.log(`  ${t.cat.padEnd(12)} ${t.modelo}.${t.clave}`));
 
+// SQL crudo vigilado (spec 036). `$queryRawUnsafe`/`$executeRawUnsafe` no escapan nada: un `${…}` con un
+// dato del usuario dentro del SQL es una inyección. Hoy todos los que hay son seguros; esto obliga a mirar
+// cualquiera nuevo. Vale un `${…}` si es:
+//  - un índice de parámetro posicional (`$${params.length + 1}`, `$${iTramo}`), que solo produce un número;
+//  - un fragmento de esta lista, armado en su archivo sin datos del usuario (los valores van como parámetros).
+// Añadir un nombre aquí es afirmar que se revisó cómo se construye.
+const FRAGMENTOS_PERMITIDOS = new Set([
+  'VAR_EMPRESA', 'VAR_SUPERADMIN',                    // config/db.js: nombres fijos de variables de sesión
+  'whereSql', 'VENTA_CON_COMISION_PENDIENTE',         // commissions.service.js, responsables.service.js
+  'whereLiq',                                         // commissions.service.js
+  'sqlOrderBy', 'orderDirection',                     // responsables.service.js, ventasListado.js: de listas cerradas
+  'vigencia', 'sqlPendienteProveedor',                // stats.service.js: SQL fijo
+  'baseSql', 'filtroSql', 'ordenSql', 'CTE_POR_CLIENTE', // ventasCartera.js
+  'fromSql',                                          // ventasListado.js
+]);
+// Llamadas cuyo SQL llega en una variable en vez de una plantilla escrita en la llamada (stats.service.js).
+const SQL_EN_VARIABLE_PERMITIDO = new Set(['categorySql', 'monthlyTrendSql']);
+const sqlCrudoMalo = [];
+for (const archivo of archivos) {
+  const src = sinComentarios(fs.readFileSync(archivo, 'utf8'));
+  const re = /\$(?:query|execute)RawUnsafe\(\s*(`|[A-Za-z_]\w*)/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const linea = src.slice(0, m.index).split('\n').length;
+    if (m[1] !== '`') {
+      if (!SQL_EN_VARIABLE_PERMITIDO.has(m[1])) sqlCrudoMalo.push({ archivo, linea, que: `SQL en la variable ${m[1]}` });
+      continue;
+    }
+    // Recorre la plantilla hasta su comilla de cierre, llevando la cuenta de las llaves de cada `${…}`.
+    let i = m.index + m[0].length, prof = 0, inicio = -1;
+    for (; i < src.length; i++) {
+      const c = src[i];
+      if (prof === 0 && c === '`') break;
+      if (c === '$' && src[i + 1] === '{') { if (prof++ === 0) inicio = i; i++; continue; }
+      if (c === '}' && prof > 0 && --prof === 0) {
+        const expr = src.slice(inicio + 2, i).trim();
+        const posicional = src[inicio - 1] === '$' && /^[\w.]+( \+ \d+)?$/.test(expr);
+        if (!posicional && !FRAGMENTOS_PERMITIDOS.has(expr)) sqlCrudoMalo.push({ archivo, linea, que: '${' + expr + '}' });
+      }
+    }
+  }
+}
+console.log('\n=== SQL crudo con interpolaciones no revisadas ===');
+if (!sqlCrudoMalo.length) console.log('  ninguna');
+sqlCrudoMalo.forEach(s => console.log(`  ${s.archivo}:${s.linea}  ${s.que}`));
 
-if (hallazgos.length || modelosMalos.length || transformesMalos.length) {
-  console.log('\n  Corrige estos usos: fallarían en ejecución con PrismaClientValidationError.');
+if (hallazgos.length || modelosMalos.length || transformesMalos.length || sqlCrudoMalo.length) {
+  if (hallazgos.length || modelosMalos.length || transformesMalos.length) {
+    console.log('\n  Corrige estos usos: fallarían en ejecución con PrismaClientValidationError.');
+  }
+  if (sqlCrudoMalo.length) {
+    console.log('\n  Pasa el valor como parámetro, o añade el fragmento a FRAGMENTOS_PERMITIDOS si se arma sin datos del usuario.');
+  }
   process.exit(1);
 }
 console.log('  Sin problemas.');

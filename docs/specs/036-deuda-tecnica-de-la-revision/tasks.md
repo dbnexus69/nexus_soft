@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente · `[-]` descartada
 
-**Estado (2026-11-01).** T1–T6 hechas. Pendientes: una corrida completa de `test:aislamiento-api` (la red no la dejó terminar) y T7 en pantalla.
+**Estado (2026-11-01).** Completada: T1–T7 hechas; `test:aislamiento-api` en verde y pantalla confirmada por el usuario.
 
 ## T1 · Inventario de interpolaciones en el SQL crudo `[x]`
 18 llamadas a `$queryRawUnsafe`/`$executeRawUnsafe`. Las interpolaciones son de tres clases, ninguna con datos del
@@ -39,7 +39,7 @@ es de dicebear (p. ej. de la antigua subida de avatares, quitada en la 031), edi
 `avatar`. Para saberlo hace falta contar en la BD los `personas.avatar_url` que no empiezan por
 `https://api.dicebear.com/` (consulta de solo lectura, con permiso del usuario).
 
-## T6 · Código muerto según las decisiones 2–4 `[~]`
+## T6 · Código muerto según las decisiones 2–4 `[x]`
 - `DELETE /responsables/:id` fuera: ruta, `controller.delete`, `responsablesService.deleteResponsable` y
   `api.deleteResponsable` (+ su export). `aislamiento-api`: el `DELETE` ahora espera 404 (la ruta ya no existe).
 - Solo `/api/v1`: fuera `app.use('/api', routes)` y el limitador de `/api/auth/...`. `GET /api/health` y el 404 en
@@ -55,11 +55,11 @@ Y fuera `db:push` de `package.json`.
 **Prueba con base (2026-11-01):** `test:aislamiento-api` no llegó al final en seis corridas por la red (RTT ~300 ms
 con pérdida de paquetes al pooler de Supabase: cuelgues en puntos distintos, un 500 y un `Can't reach database
 server`). En la última pasaron 102 comprobaciones, entre ellas las de esta spec: `DELETE /responsables/:id` → 404 y
-el panel del freelancer sin `delete`. Falta una corrida completa con la red estable.
+el panel del freelancer sin `delete`. Corrida completa en verde: "Todo en orden" (usuario, 2026-11-01).
 `tests/montaje.js` muestra ahora la salida de error del servidor de prueba si una comprobación falla, y avisa si se
 cae a mitad.
 
-## T7 · Pruebas en pantalla `[ ]`
+## T7 · Pruebas en pantalla `[x]` (confirmadas por el usuario, 2026-11-01)
 Usuarios, clientes, comisionistas y responsables (listar, crear, editar), asistente de venta (selectores) y el
 selector de avatar.
 
@@ -70,3 +70,4 @@ selector de avatar.
 | 2026-11-01 | — | Spec creada a partir de la revisión del proyecto (puntos 3, 4, 5 y 7). |
 | 2026-11-01 | T1–T6 | SQL crudo vigilado en `check:prisma`, `DataContext` sin 8 funciones muertas, `avatar` acotado, fuera `DELETE /responsables/:id`, `/api` y `db:seed`/`db:reset`. |
 | 2026-11-01 | T5, T6 | Avatares guardados revisados (ninguno inválido); fuera `responsables.delete` y `db:push`; `aislamiento-api` cortada por la red tras 102 comprobaciones en verde. |
+| 2026-11-01 | — | `test:aislamiento-api` en verde y repaso en pantalla aprobado por el usuario. Spec cerrada. |

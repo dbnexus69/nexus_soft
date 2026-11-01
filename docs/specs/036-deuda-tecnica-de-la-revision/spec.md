@@ -1,6 +1,6 @@
 # Spec 036 — Deuda técnica de la revisión del 2026-11-01
 
-**Estado:** en ejecución · **Rama:** `feat-bayrol` · **Toca la base compartida:** no (ninguna migración) ·
+**Estado:** completada (2026-11-01), probada con base y confirmada en pantalla por el usuario · **Rama:** `feat-bayrol` · **Toca la base compartida:** no (ninguna migración) ·
 **Origen:** revisión del proyecto entero del 2026-11-01, puntos 3, 4, 5 y 7 · **Relacionadas:**
 [`034`](../034-respuestas-minimas/spec.md) (respuestas mínimas; quitó los primeros `add*` muertos de `DataContext`),
 [`035`](../035-sesion-en-el-navegador/spec.md) (sesión en cookie)

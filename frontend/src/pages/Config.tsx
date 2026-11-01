@@ -180,6 +180,12 @@ export default function Config() {
       setErrors(Object.fromEntries(payload.details.map((d: any) => [d.field, d.message])));
       return payload.details.map((d: any) => d.message).join('. ');
     }
+    // El 409 de un único repetido no trae `details`; el del documento de un proveedor (spec 037) va a su campo.
+    if (payload?.code === 'DUPLICATE' && /documento/.test(payload?.message || '')) {
+      const mensaje = 'Ya existe un proveedor con ese documento';
+      setErrors({ docNumber: mensaje });
+      return mensaje;
+    }
     return payload?.message || err?.message || porDefecto;
   };
 

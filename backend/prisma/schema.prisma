@@ -879,9 +879,14 @@ model proveedores {
   telefono          String?
   web               String?
   observaciones     String?
+  /// Spec 037, fase 0: el documento (normalmente NIT) con que se relaciona como tercero en el software
+  /// contable de la agencia. Opcionales y juntos (CHECK en la migración); se exigen al facturar, no al crear.
+  tipo_documento_id Int?
+  documento         String?
   status            UserStatus          @default(active)
   detalle_venta     detalle_venta[]
   paquete_proveedor paquete_proveedor[]
+  tipos_documento   tipos_documento?    @relation(fields: [tipo_documento_id], references: [id], onDelete: Restrict)
   empresa_id        Int                 @default(dbgenerated("COALESCE(NULLIF(current_setting('app.empresa_id', true), '')::int, 1)"))
   empresas          empresas            @relation(fields: [empresa_id], references: [id])
 
@@ -889,7 +894,10 @@ model proveedores {
   // dentro: sin este único, la clave ajena compuesta no se puede crear.
   @@unique([id, empresa_id])
   @@unique([empresa_id, numero])
+  // Un documento por agencia; los NULL no chocan en Postgres, así que caben todos los proveedores sin documento.
+  @@unique([empresa_id, documento])
   @@index([empresa_id])
+  @@index([tipo_documento_id])
 }
 
 model responsables {
@@ -998,6 +1006,7 @@ model tipos_documento {
   nombre      String
   abreviatura String     @unique
   personas    personas[]
+  proveedores proveedores[]
 }
 
 model tramos_vuelo {

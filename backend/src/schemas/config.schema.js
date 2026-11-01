@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { idTipoDocumento, numeroDocumentoOpcional, tipoYNumeroJuntos } = require('./personaCampos');
 
 /**
  * Validación de los catálogos de Gestión Interna.
@@ -55,7 +56,12 @@ const ESQUEMAS = {
     phone: opcional(40),
     website: opcional(300),
     observations: opcional(1000),
-  }).passthrough(),
+    // Spec 037, fase 0: el NIT (u otro documento) con que se relaciona en el software contable.
+    // Opcionales; la regla del número según el tipo la aplica `config.service.js` con `validarDocumento`.
+    // `null` en los dos quita el documento al editar (vacío es "no lo toques").
+    docTypeId: z.union([z.literal(null), idTipoDocumento]),
+    docNumber: z.union([z.literal(null), numeroDocumentoOpcional]),
+  }).passthrough().superRefine(tipoYNumeroJuntos),
 
   'airports': z.object({
     name: nombre,

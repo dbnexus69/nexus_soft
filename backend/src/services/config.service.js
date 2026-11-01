@@ -2,6 +2,7 @@ const prisma = require('../config/db');
 const { NotFoundError, BadRequestError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const { idPorNombre } = require('../utils/idPorNombre');
+const { columnasDeDocumento } = require('../utils/tipoDocumento');
 
 const SECTION_MAP = {
   'cards': {
@@ -44,7 +45,10 @@ const SECTION_MAP = {
   'document-types': {
     model: 'tipos_documento', idField: 'id',
     buscarEn: ['nombre', 'abreviatura'],
-    usos: [{ etiqueta: 'personas', modelo: 'personas', campo: 'tipo_documento_id' }],
+    usos: [
+      { etiqueta: 'personas', modelo: 'personas', campo: 'tipo_documento_id' },
+      { etiqueta: 'proveedores', modelo: 'proveedores', campo: 'tipo_documento_id' },
+    ],
     orden: { defecto: 'name', campos: { name: 'nombre', abbreviation: 'abreviatura', id: 'id' } },
     transform: (r) => ({ id: r.id, name: r.nombre, abbreviation: r.abreviatura }),
     reverseTransform: async (d) => ({
@@ -78,14 +82,20 @@ const SECTION_MAP = {
       { etiqueta: 'paquetes', modelo: 'paquete_proveedor', campo: 'proveedor_id' },
     ],
     orden: { defecto: 'name', campos: { name: 'nombre', type: 'tipo', id: 'id' } },
-    transform: (r) => ({ id: r.id, numero: r.numero, name: r.nombre, type: r.tipo, email: r.email_contacto, phone: r.telefono, website: r.web, observations: r.observaciones || '' }),
+    transform: (r) => ({
+      id: r.id, numero: r.numero, name: r.nombre, type: r.tipo, email: r.email_contacto, phone: r.telefono, website: r.web,
+      observations: r.observaciones || '',
+      docTypeId: r.tipo_documento_id ?? null, docNumber: r.documento ?? null,
+    }),
     reverseTransform: async (d) => ({
       nombre: d.name || 'Sin nombre',
       tipo: d.type,
       email_contacto: d.email,
       telefono: d.phone,
       web: d.website,
-      observaciones: d.observations || d.observaciones || ''
+      observaciones: d.observations || d.observaciones || '',
+      // Spec 037, fase 0: el documento con que se relaciona en el software contable.
+      ...(await columnasDeDocumento(d)),
     })
   },
   'airports': {

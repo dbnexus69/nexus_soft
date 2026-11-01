@@ -142,5 +142,29 @@ for (const [que, valor] of [['texto suelto', 'hola'], ['otro dominio', 'https://
 const clienteConAvatar = updateClientSchema.safeParse({ avatar: 'hola' });
 comprobar('avatar: el esquema de cliente nombra el campo', !clienteConAvatar.success && clienteConAvatar.error.issues[0].path.join('.') === 'avatar');
 
-console.log(fallos === 0 ? `\nTodo en orden (${total} comprobaciones).\n` : `\n${fallos} de ${total} comprobación(es) en rojo.\n`);
-process.exit(fallos === 0 ? 0 : 1);
+// Proveedores con documento (spec 037, fase 0): opcionales, pero tipo y número van juntos.
+const { ESQUEMAS } = require('../src/schemas/config.schema');
+const prov = (d) => ESQUEMAS.suppliers.safeParse({ name: 'Avianca', ...d });
+const campoDe = (r) => r.error?.issues[0]?.path.join('.');
+comprobar('proveedor: sin documento es válido', prov({}).success);
+comprobar('proveedor: con tipo y número es válido', prov({ docTypeId: 3, docNumber: '900123456-8' }).success);
+comprobar('proveedor: tipo como texto del <select> es válido', prov({ docTypeId: '3', docNumber: '900123456' }).data?.docTypeId === 3);
+comprobar('proveedor: tipo sin número → error en docNumber', campoDe(prov({ docTypeId: 3 })) === 'docNumber');
+comprobar('proveedor: número sin tipo → error en docTypeId', campoDe(prov({ docNumber: '900123456' })) === 'docTypeId');
+comprobar('proveedor: el número se recorta', prov({ docTypeId: 3, docNumber: ' 900123456 ' }).data?.docNumber === '900123456');
+comprobar('proveedor: los dos vacíos es "sin documento"', prov({ docTypeId: '', docNumber: '' }).success);
+const limpiar = prov({ docTypeId: null, docNumber: null });
+comprobar('proveedor: null en los dos limpia el documento', limpiar.data?.docTypeId === null && limpiar.data?.docNumber === null);
+comprobar('proveedor: null en uno solo → error', campoDe(prov({ docTypeId: null })) === 'docNumber');
+
+// Columnas del documento de un proveedor (sin tocar la base en estos casos).
+const { columnasDeDocumento } = require('../src/utils/tipoDocumento');
+
+(async () => {
+  comprobar('columnas: sin documento no toca las columnas', JSON.stringify(await columnasDeDocumento({})) === '{}');
+  comprobar('columnas: vacíos no tocan las columnas', JSON.stringify(await columnasDeDocumento({ docTypeId: '', docNumber: '' })) === '{}');
+  const limpias = await columnasDeDocumento({ docTypeId: null, docNumber: null });
+  comprobar('columnas: null en los dos las limpia', limpias.tipo_documento_id === null && limpias.documento === null);
+  console.log(fallos === 0 ? `\nTodo en orden (${total} comprobaciones).\n` : `\n${fallos} de ${total} comprobación(es) en rojo.\n`);
+  process.exit(fallos === 0 ? 0 : 1);
+})();

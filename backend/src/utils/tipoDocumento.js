@@ -1,6 +1,6 @@
 const prisma = require('../config/db');
 const { AppError } = require('../errors/AppError');
-const { mensajeDocumento } = require('./datosPersona');
+const { mensajeDocumento, normalizarDocumento } = require('./datosPersona');
 
 // Errores que la pantalla pinta junto a su campo (`error.details`).
 const invalido = (field, message) => new AppError(
@@ -49,4 +49,20 @@ async function validarDocumento({ docTypeId, docType, docNumber }) {
   return tipo;
 }
 
-module.exports = { resolverTipoDocumento, comprobarNumeroDeDocumento, validarDocumento };
+/**
+ * Las columnas `tipo_documento_id`/`documento` de un registro que no es una persona —un proveedor (spec 037)—
+ * a partir del cuerpo crudo, que el esquema ya validó (tipo y número juntos):
+ * - sin campos o vacíos → `{}`: no se tocan (editar sin cambiar el documento);
+ * - `null` en los dos → se limpian;
+ * - con valor → mismas reglas que una persona (`validarDocumento`); el 422 nombra `docTypeId`/`docNumber`.
+ */
+async function columnasDeDocumento({ docTypeId, docNumber }) {
+  if (docTypeId === null && docNumber === null) return { tipo_documento_id: null, documento: null };
+  const vacio = (v) => v === undefined || v === null || String(v).trim() === '';
+  if (vacio(docTypeId) && vacio(docNumber)) return {};
+  const documento = normalizarDocumento(String(docNumber ?? ''));
+  const tipo = await validarDocumento({ docTypeId, docNumber: documento });
+  return { tipo_documento_id: tipo.id, documento };
+}
+
+module.exports = { resolverTipoDocumento, comprobarNumeroDeDocumento, validarDocumento, columnasDeDocumento };

@@ -7,11 +7,11 @@ pasos de cada tarea están en `plan.md`.
 
 ## Fase 0 — Documento en proveedores
 
-## T1 · Backend: tipo de documento y documento en `proveedores` `[ ]`
+## T1 · Backend: tipo de documento y documento en `proveedores` `[x]`
 Columnas opcionales, índice único parcial por agencia, `ESQUEMAS.suppliers` con los dos campos juntos, `reverseTransform`
 con `validarDocumento`. Comprobar: `test:validaciones`, `check:prisma`. Con permiso: migración.
 
-## T2 · Frontend: campos del proveedor `[ ]`
+## T2 · Frontend: campos del proveedor `[~]`
 Selector de tipo y documento en `ConfigForms.tsx`, errores por campo y `409` de duplicado. Comprobar: `pnpm build`. Con
 permiso: en pantalla.
 
@@ -80,3 +80,5 @@ Comprobar: `pnpm build`. Con permiso: en pantalla.
 | 2026-11-01 | — | Diseño completo vía `/brainstorming` con el usuario: módulo por agencia activado por el superadmin, botón genérico «Facturar», factura con TA+IVA propio y costo del proveedor como ingreso para terceros, cliente relacionado por documento con el software contable, nota crédito opcional por agencia, un reintento según el error, seguridad primero. Se investigó la API oficial de Siigo (idempotencia, límites, bloqueo por errores, `Partner-Id`); Karing no tiene documentación pública. Spec y plan escritos; nada implementado; sin commit. |
 | 2026-11-01 | — | Ajustes del usuario: el diseño es para software contables en general, no solo Siigo (vocabulario fijo software contable / conector / proveedor; Siigo pasa al anexo A como primer conector; conectores con y sin idempotencia); el ingreso para terceros va con el NIT del proveedor de cada servicio (la fase 0 pasa a ser requisito); la fecha de la factura es la de emisión y siempre lleva vencimiento. Resueltas tres preguntas abiertas. Spec, plan y tareas actualizados; nada implementado; sin commit. |
 | 2026-11-01 | — | El usuario confirma que el proveedor también debe existir como tercero en el software contable (deja de ser decisión de diseño). La documentación y la cuenta de pruebas pasan a «pendientes externos»: el proyecto está en preparación. |
+| 2026-11-01 | T1–T2 | Implementado: `ESQUEMAS.suppliers` con `docTypeId`/`docNumber` (juntos; `null` en los dos limpia), `utils/tipoDocumento.js::columnasDeDocumento` (mismas reglas que una persona), `config.service.js` (transform, reverseTransform y el uso en `document-types`), `schema.prisma` + migración `20261101120000_documento_de_proveedores` (columnas, CHECK de ambos juntos, FK `RESTRICT`, único `(empresa_id, documento)`), formulario de Configuración y el `409` de duplicado pintado en el campo. Sin validación local en el navegador: la página de Configuración pinta los 422 del servidor por diseño. `test:validaciones` (162), `test:reglas-espejo`, `check:prisma`, `prisma validate` y `pnpm build` en verde. **Pendiente con permiso:** `migrate deploy` + `db:generate` (sin ellos el servidor local no arranca: la revisión de usos de `document-types` lee el cliente generado) y probar en pantalla. Desplegar solo después de aplicar la migración. Sin commit. |
+| 2026-11-01 | T1 | Con permiso del usuario: `migrate deploy` de `20261101120000_documento_de_proveedores` y `db:generate`; `migrate status` al día, el servicio carga con las columnas nuevas, `check:prisma` en verde. Los asesores de Supabase no se revisaron: la cuenta conectada a la herramienta no incluye el proyecto de Nexus. T2 sigue `[~]`: falta probar en pantalla. |

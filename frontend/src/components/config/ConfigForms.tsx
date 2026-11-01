@@ -178,6 +178,41 @@ export default function ConfigForms({ section, formData, setFormData, errors, se
               error={errors.type}
             />
           </FormField>
+          {/* Spec 037, fase 0: el documento (normalmente NIT) con que se relaciona en el software contable,
+              para el ingreso para terceros de la factura. Las reglas las aplica el servidor (422 por campo).
+              «Sin documento» envía null en los dos: al editar, quita el documento guardado. */}
+          <FormField label="Tipo de documento (Opcional)" error={errors.docTypeId}>
+            <Select
+              value={formData.docTypeId != null ? String(formData.docTypeId) : ''}
+              onChange={e => {
+                const valor = e.target.value;
+                setFormData(valor
+                  ? { ...formData, docTypeId: valor }
+                  : { ...formData, docTypeId: null, docNumber: null });
+                if (errors.docTypeId || errors.docNumber) setErrors({ ...errors, docTypeId: '', docNumber: '' });
+              }}
+              options={[
+                { value: '', label: 'Sin documento' },
+                ...(data?.config?.documentTypes || []).map((dt: any) => ({
+                  value: String(dt.id),
+                  label: dt.abbreviation ? `${dt.abbreviation} - ${dt.name}` : dt.name,
+                })),
+              ]}
+              error={errors.docTypeId}
+            />
+          </FormField>
+          <FormField label="Número de documento" error={errors.docNumber}>
+            <Input
+              value={formData.docNumber || ''}
+              disabled={formData.docTypeId == null || formData.docTypeId === ''}
+              onChange={e => {
+                setFormData({ ...formData, docNumber: e.target.value });
+                if (errors.docNumber) setErrors({ ...errors, docNumber: '' });
+              }}
+              placeholder="Ej. 890100577-6"
+              error={errors.docNumber}
+            />
+          </FormField>
           <FormField label="Email de Contacto (Opcional)" error={errors.email}>
             <Input 
               value={formData.email || ''} 

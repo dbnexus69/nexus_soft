@@ -4,7 +4,7 @@ Software de gestión para agencia de viajes: ventas, clientes, comisionistas,
 itinerarios y configuración.
 
 - **backend** — Express 5 + Prisma sobre PostgreSQL (Supabase)
-- **frontend** — React 19 + Vite + Tailwind
+- **frontend** — React 19 + Vite + TypeScript + Tailwind
 
 ## Puesta en marcha
 
@@ -48,10 +48,20 @@ No es opcional. `prisma db push` y `prisma generate --sql` usan `directUrl`, y c
 host viejo los dos fallan con `P1001 Can't reach database server`. Como `pnpm build`
 ejecuta `prisma generate --sql`, sin este valor no se puede ni generar el cliente.
 
-### Archivos en Supabase Storage (spec 011)
+### Archivos en Supabase Storage (specs 011, 007, 021 y 031)
 
-Los logos y los vouchers viven en dos buckets **privados** de Supabase Storage, `logos` y `vouchers`, con una carpeta por
-empresa (`<empresa_id>/…`). Solo los toca el backend, con estas variables en `backend/.env`:
+Los archivos viven en cinco buckets **privados** de Supabase Storage, con una carpeta por empresa (`<empresa_id>/…`),
+declarados en `BUCKETS` de `src/utils/almacenamiento.js`:
+
+| Bucket | Qué guarda |
+|---|---|
+| `logos` | el logo de la agencia |
+| `vouchers` | el PDF del voucher de una venta |
+| `quotes` | el PDF de una cotización |
+| `cotizacion-imagenes` | hasta 5 fotos por servicio cotizado |
+| `adjuntos` | voucher del proveedor y documentos de check-in |
+
+Solo los toca el backend, con estas variables en `backend/.env`:
 
 - `SUPABASE_URL` — la URL del proyecto, `https://<ref>.supabase.co` (no la clave *publishable*).
 - `SUPABASE_SERVICE_ROLE_KEY` — la clave `service_role`. Salta las políticas de Storage, así que nunca sale del backend; el
@@ -62,7 +72,7 @@ El voucher del proveedor y los documentos de check-in van al bucket privado `adj
 El servidor no escribe nada en disco.
 
 Los buckets se crean a mano en Supabase Storage (`pnpm storage:buckets` apunta a `scripts/crear-buckets.js`, que no está en el
-repo). El navegador nunca recibe la ruta de un objeto: recibe una URL
+repo: `scripts/` está en `.gitignore`). El navegador nunca recibe la ruta de un objeto: recibe una URL
 firmada que caduca (1 h el logo, 5 min un voucher).
 
 El **voucher** se genera en el servidor con `pdfmake` (`src/services/voucher/`), con la marca de la agencia: logo, colores,
@@ -442,15 +452,11 @@ que los guardaba nunca llegó a funcionar.
 
 - `docs/designs/` — decisiones de diseño, con el problema, las alternativas descartadas
   y el resultado medido.
-- `docs/specs/` — trabajo dirigido por especificación, una carpeta por spec con `spec.md`
-  (qué y cómo se comprueba), `plan.md` (cómo) y `tasks.md` (hecho y pendiente, con lo verificado):
-  `001-multi-tenant`, `002-estabilizacion-multi-tenant`, `003-validacion-de-datos-de-personas`,
-  `004-vuelos-y-checkin`, `005-iva-sobre-ta`, `006-calendario-y-modales`,
-  `007-cotizaciones`, `013-iva-en-dashboard`,
-  `014-ajustes-del-asistente-de-venta`, `015-servicios-dentro-del-paquete`,
-  `016-filtros-de-ventas-sin-siigo`, `017-destinos-de-preferencia`,
-  `018-cartera-asesor-y-contacto`, `019-alcance-al-escribir-clientes`,
-  `020-alcance-de-editar-y-borrar` y `021-imagenes-en-cotizaciones`.
+- `docs/specs/` — trabajo dirigido por especificación, una carpeta numerada por spec con `spec.md`
+  (qué y cómo se comprueba), `plan.md` (cómo) y `tasks.md` (hecho y pendiente, con lo verificado).
+  El listado de la carpeta es el índice; no se repite aquí para que no quede desfasado.
+- `docs/decisions/` — decisiones de arquitectura (p. ej. la multiempresa) con las alternativas descartadas.
+- `docs/architecture/overview.md` — visión general de paquetes, despliegue, tenencia y permisos.
 
 ## Herramientas de agentes
 

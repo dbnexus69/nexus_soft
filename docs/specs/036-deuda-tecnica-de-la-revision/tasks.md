@@ -47,7 +47,7 @@ es de dicebear (p. ej. de la antigua subida de avatares, quitada en la 031), edi
 - `db:seed`, `db:reset`, `prisma.seed` de `package.json` y `prisma/seed.js` fuera.
 - Documentos al día: `.claude/rules/{backend,database,testing}.md`, `docs/architecture/overview.md`.
 **Comprobado:** `node --check`, las rutas cargan, `check:prisma`, `test:validaciones`, `test:reglas-espejo`, `tsc`.
-**Pendiente (con permiso):** `test:aislamiento-api`.
+**Con base (con permiso):** `test:aislamiento-api`, en verde; ver «Prueba con base» abajo.
 **También (decisión del usuario, 2026-11-01):** fuera el permiso `responsables.delete` (`MODULE_ACTIONS`,
 `DEFAULT_ROLE_VALUES`, `authorize.js`, `SCOPED_ACTIONS` en los dos lados, `types/index.tsx`); las filas viejas de
 `permisos_rol` con esa acción se ignoran (el overlay solo aplica acciones conocidas) y desaparecen al guardar el rol.

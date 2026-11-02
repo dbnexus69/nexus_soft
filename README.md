@@ -8,11 +8,14 @@ itinerarios y configuración.
 
 ## Puesta en marcha
 
+Cada persona desarrolla contra su propia base y su propio Storage, en Docker (spec 038). Hace falta Docker Desktop abierto.
+
 ```bash
 # backend
 cd backend && pnpm install
-cp .env.example .env        # rellenar DATABASE_URL y DIRECT_URL
-pnpm db:generate
+cp .env.example .env        # funciona tal cual: todo es local y de mentira
+pnpm local:up               # Postgres, Storage y su pasarela
+pnpm local:preparar         # migraciones, cliente de Prisma, buckets, catálogos y datos de prueba
 pnpm dev                    # http://localhost:3000
 
 # frontend
@@ -20,7 +23,34 @@ cd frontend && pnpm install
 pnpm dev                    # http://localhost:5173
 ```
 
-### La conexión a la base de datos
+Entra con `admin@nexus.local` (contraseña `Admin123*`) o `super@nexus.local` como superadministrador, y con `admin@casa.local` o `admin@demo.local` como administrador de agencia (contraseña `Local-nexus-1!`).
+
+### Base local (spec 038)
+
+| Comando (desde `backend/`) | Qué hace |
+|---|---|
+| `pnpm local:up` / `pnpm local:down` | Levanta / apaga los contenedores; los datos quedan en los volúmenes |
+| `pnpm local:preparar` | Deja la base lista. Se puede repetir, y se niega si algo no apunta a esta máquina |
+| `docker compose down -v` (desde la raíz) | Borra los datos locales. Después, `local:up` y `local:preparar` |
+| `pnpm db:migrate:produ` | Aplica las migraciones en **producción**, con `backend/.env.produ` |
+
+- **Consumo:** unos 165–230 MB de memoria entre los tres contenedores (medido con `docker stats`, sin carga), más lo que use Docker Desktop. Las imágenes ocupan unos 1,9 GB de disco.
+- **Producción no cambia:** Supabase, Render y Vercel. `.env.produ` no se versiona y solo lo usa `db:migrate:produ`; Render tiene sus variables en su panel.
+- **Protecciones:** las suites y `local:preparar` se niegan si la base o Storage no son locales (`scripts/solo-local.js`), y fuera de producción el servidor no arranca contra un Storage real sin `ALMACENAMIENTO_PREFIJO`.
+- **En qué se diferencia de producción:**
+  - No hay pooler: un fallo propio del pooler no se ve en local.
+  - Una migración que olvide su `GRANT` a `app_nexus` no falla en local, porque ahí los permisos se dan por defecto (`docker/postgres/init/01-roles.sql`). Hay que revisarlo a mano.
+  - Postgres es la imagen oficial, no la de Supabase.
+
+### Conectarse con DBeaver
+
+Los datos están en `DBEAVER_*`, en `backend/.env` (local) y `backend/.env.produ` (producción). DBeaver no lee esos archivos: se copian a su formulario (Nueva conexión → PostgreSQL). Si `DBEAVER_SSL=require`, va también en la pestaña SSL (modo `require`).
+
+- **Local:** hay que tener los contenedores arriba (`pnpm local:up`). Se usa `postgres` a propósito: con `app_nexus` y sin contexto de empresa, la RLS no deja ver ninguna fila de las tablas de negocio. Las tablas de Storage están en otra base, `nexus_storage`.
+- **Producción:** en DBeaver, marca el tipo de conexión como *Production* y actívale *Read-only*. Ese usuario salta la RLS: ve y puede cambiar los datos de todas las agencias.
+
+### La conexión a la base de datos en producción
+
 
 `DATABASE_URL` apunta al *pooler* de Supabase (puerto 6543) y **debe** llevar:
 

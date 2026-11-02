@@ -11,7 +11,7 @@ paths:
 No ejecutar pruebas por rutina. Elige la comprobación más pequeña que cubra el cambio. No repitas una comprobación ya realizada sin motivo y no afirmes resultados que no observaste.
 
 ## Permisos
-- Las pruebas que acceden a la BD, levantan servidores o escriben datos requieren permiso expreso del usuario en este proyecto, porque desarrollo y producción comparten la BD de Supabase.
+- Las pruebas que acceden a la BD, levantan servidores o escriben datos requieren permiso expreso del usuario. Corren contra la base local en Docker (spec 038): `pnpm local:up` y `pnpm local:preparar`, y se niegan si la base o Storage no son locales (`scripts/solo-local.js`).
 - No ejecutes pruebas en navegador ni levantes servidores sin permiso.
 - Sin permiso, las comprobaciones habituales que no levantan servicios ni tocan la BD son `pnpm check:prisma`, `pnpm test:validaciones` y `pnpm test:reglas-espejo` en `backend/`, y `pnpm build` en `frontend/`. Verifica el alcance real del script antes de ejecutarlo si hay dudas.
 
@@ -31,7 +31,7 @@ No ejecutar pruebas por rutina. Elige la comprobación más pequeña que cubra e
 ## CI y scripts conocidos
 La CI está en `.github/workflows/ci.yml`. Según la documentación del proyecto, ejecuta el build del frontend y `check:prisma`, `test:validaciones` y `test:reglas-espejo` en backend. Las suites con BD permanecen manuales.
 - `db:seed` y `db:reset` ya no existen (spec 036): el primero estaba roto frente al schema y el segundo era un `db push --force-reset`.
-- `pnpm db:seed:vuelos` y `pnpm db:seed:proveedores` escriben datos y requieren permiso expreso.
+- `pnpm db:seed:vuelos` y `pnpm db:seed:proveedores` escriben datos y requieren permiso expreso. `pnpm local:preparar` ya siembra los catálogos y las agencias de desarrollo (`prisma/seed-local.js`).
 - `pnpm db:generate`, `prisma migrate status/deploy` y Prisma Studio requieren permiso expreso en este entorno.
 - Ejecuta comandos desde `backend/` o `frontend/`, no desde la raíz.
 

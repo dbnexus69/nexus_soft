@@ -14,6 +14,7 @@ const net = require('net');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { PrismaClient, Prisma } = require('@prisma/client');
+const { exigirLocal } = require('../scripts/solo-local');
 const companiesService = require('../src/services/companies.service');
 const { sinEmpresa } = require('../src/config/tenant');
 
@@ -103,7 +104,7 @@ const una = (status, ...validos) => validos.includes(status);
 async function levantarServidor() {
   await puertoLibre();
   servidor = spawn(process.execPath, ['src/index.js'], {
-    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1', ALMACENAMIENTO_PREFIJO: PREFIJO_ALMACEN }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: RAIZ, env: { ...process.env, PORT: String(PUERTO), EMAIL_SIMULADO: '1', ALMACENAMIENTO_PREFIJO: PREFIJO_ALMACEN, AUTH_RATE_LIMIT_MAX: '1000' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   salidaServidor = '';
   servidor.stderr.on('data', d => { salidaServidor += d; });
@@ -199,6 +200,7 @@ async function limpiarAlmacenamiento(ids) {
 function ejecutar(titulo, prefijo, prueba) {
   (async () => {
     console.log(`\n${titulo}\n`);
+    exigirLocal(); // estas pruebas crean y borran agencias: nunca contra producción (spec 038)
     const [app] = await new PrismaClient({ datasourceUrl: process.env.DATABASE_URL })
       .$queryRawUnsafe(`SELECT current_user AS usuario, (SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user) AS salta`);
     comprobar('DATABASE_URL conecta con un rol que no salta la RLS', app.salta === false, `rol "${app.usuario}"`);

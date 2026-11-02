@@ -21,6 +21,7 @@
  * parecía el momento de meter una dependencia para ejecutar un archivo.
  */
 require('dotenv').config();
+require('../scripts/solo-local').exigirLocal(); // crea y borra una agencia: nunca contra producción (spec 038)
 const { PrismaClient } = require('@prisma/client');
 const { randomUUID } = require('crypto');
 const prisma = require('../src/config/db');

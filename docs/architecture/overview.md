@@ -16,7 +16,7 @@ Según la configuración documentada del proyecto (spec 032):
 - Render no conserva archivos locales entre despliegues. Vouchers de proveedores y documentos de check-in se guardan en el bucket privado `adjuntos` de Supabase Storage (spec 031).
 - Las migraciones no se ejecutan durante el build ni al iniciar el backend.
 
-**Advertencia operativa:** desarrollo y producción usan la misma base de datos compartida de Supabase. Las pruebas con BD, scripts de datos y migraciones pueden afectar datos reales y requieren autorización explícita.
+**Entornos (spec 038):** desarrollo y pruebas usan Postgres y la API de Storage de Supabase en Docker (`docker-compose.yml`), cada persona en su máquina. Producción sigue en Supabase, y sus variables están en `backend/.env.produ` (sin versionar); solo `pnpm db:migrate:produ` las usa. Ver "Base local" en el README.
 
 ## Backend
 Flujo habitual: ruta → middleware (`auth`, `authorize`, `validate`) → controller → service → Prisma. `routes/index.js` monta los recursos. Las validaciones usan Zod en `schemas/*.schema.js`; las respuestas se normalizan con `utils/apiResponse.js`; los errores se procesan en `middleware/errorHandler.js`.

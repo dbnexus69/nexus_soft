@@ -1,9 +1,12 @@
 const jwt = require('jsonwebtoken');
+const { randomUUID } = require('crypto');
 const env = require('../config/env');
 
+// `jwtid`: sin él, dos entradas del mismo usuario en el mismo segundo daban el mismo token. Compartían la entrada de
+// `authCache` (permisos viejos) y su sesión: cerrar una cerraba la otra (spec 038).
 function generateToken(payload, remember = false) {
   const expiresIn = remember ? env.jwtRememberExpiresIn : env.jwtExpiresIn;
-  return jwt.sign(payload, env.jwtSecret, { expiresIn });
+  return jwt.sign(payload, env.jwtSecret, { expiresIn, jwtid: randomUUID() });
 }
 
 /**
@@ -14,7 +17,7 @@ function generateToken(payload, remember = false) {
  * de salir equivalga a un acceso permanente.
  */
 function generateTokenConCaducidad(payload, segundos) {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: segundos });
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: segundos, jwtid: randomUUID() });
 }
 
 function verifyToken(token) {

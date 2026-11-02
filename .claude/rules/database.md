@@ -12,8 +12,8 @@ paths:
 
 # PostgreSQL, Prisma y multitenencia
 
-## Base de datos compartida: permiso antes de ejecutar
-La BD de desarrollo y producción es la misma instancia compartida de Supabase. Sin autorización expresa, no ejecutes migraciones, scripts que escriban, suites de pruebas con BD, `db:generate`, `db:seed*`, `db:studio`, `prisma migrate status/deploy`, ni comandos que puedan alterar o inspeccionar datos reales. No levantes servicios sin permiso. Si hace falta una de estas acciones, explica el comando y su propósito y espera autorización.
+## Base local y producción: permiso antes de ejecutar
+Desarrollo y pruebas usan una base local en Docker (`docker-compose.yml`, spec 038); `backend/.env` apunta a ella. Producción es Supabase y sus variables están en `backend/.env.produ` (sin versionar). Sin autorización expresa no levantes contenedores ni servicios, ni ejecutes migraciones, suites con BD, `db:generate`, `db:seed*` o `db:studio`. Contra producción, además, solo con orden expresa para ese caso: nunca cargues `.env.produ` por tu cuenta. Si hace falta una de estas acciones, explica el comando y su propósito y espera autorización.
 
 ## Migraciones
 - Usa migraciones versionadas en `backend/prisma/migrations/`; nunca uses `db push` ni `db reset` contra la BD compartida. Los scripts `db:push` y `db:reset` se quitaron de `package.json` (spec 036): construían la BD solo desde `schema.prisma` y no aplicaban RLS, FKs compuestas, defaults de `empresa_id`, triggers de `numero` ni las funciones SQL.
@@ -24,6 +24,8 @@ La BD de desarrollo y producción es la misma instancia compartida de Supabase. 
 - Las migraciones no se ejecutan durante el build ni al iniciar el servicio.
 
 ## Conexiones y roles
+- En local, `backend/.env.example` funciona tal cual: `app_nexus` para la app y `postgres` para migraciones, sin pooler. Lo de abajo es producción.
+- Las migraciones nuevas deben llevar su `GRANT` a `app_nexus`: en local los permisos se dan por defecto (`docker/postgres/init/01-roles.sql`) y un olvido no falla hasta producción.
 - `DATABASE_URL`: pooler de transacciones de Supabase, puerto 6543, con `?pgbouncer=true&connection_limit=10&pool_timeout=20`.
 - `DIRECT_URL`: pooler de sesión en puerto 5432; no usar `db.<ref>.supabase.co` si no es accesible desde el entorno.
 - `DATABASE_URL` debe usar el rol `app_nexus.<ref>` sin `BYPASSRLS`. No uses `postgres` para consultas de aplicación: puede hacer que las políticas RLS no aíslen datos. El rol `postgres` corresponde únicamente a `DIRECT_URL` para migraciones, según la configuración del proyecto.

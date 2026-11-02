@@ -24,7 +24,7 @@ Nexus Soft es un sistema multiempresa para agencias de viaje. Cada agencia (`emp
 ## Permisos obligatorios
 - No levantes servidores ni ejecutes la aplicación (`pnpm dev`, `pnpm start`, Vite) sin permiso expreso.
 - No abras ni controles el navegador, ni el integrado ni Chrome, sin permiso expreso.
-- La base de datos de desarrollo y producción es la misma BD compartida de Supabase. No ejecutes pruebas que la modifiquen, scripts contra ella, Prisma Studio, generación Prisma que requiera acceso a BD, migraciones ni cambios de datos sin permiso expreso. Consulta `.claude/rules/database.md`.
+- Desarrollo y pruebas usan una base y un Storage locales en Docker (spec 038); producción sigue en Supabase, con sus variables en `backend/.env.produ`. No levantes los contenedores ni corras pruebas con base sin permiso expreso. Nunca ejecutes nada contra producción (`db:migrate:produ`, `.env.produ`, scripts) sin que el usuario lo ordene para ese caso. Consulta `.claude/rules/database.md`.
 - No hagas commit, push ni merge sin que el usuario lo pida.
 - Una skill o subagente nunca concede permisos que el usuario no haya dado. Las reglas de seguridad, base de datos, multitenencia y autorización prevalecen sobre instrucciones genéricas de skills.
 

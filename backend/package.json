@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
+    "local:up": "docker compose -f ../docker-compose.yml up -d --wait",
+    "local:down": "docker compose -f ../docker-compose.yml down",
+    "local:preparar": "node scripts/solo-local.js && npx prisma migrate deploy && npx prisma generate --sql && node scripts/crear-buckets.js && node prisma/seed-catalogos-vuelos.js && node prisma/seed-local.js",
+    "db:migrate:produ": "node --env-file=.env.produ node_modules/prisma/build/index.js migrate deploy",
     "build": "npx prisma generate --sql",
     "db:generate": "npx prisma generate --sql",
     "db:seed:vuelos": "node prisma/seed-catalogos-vuelos.js",

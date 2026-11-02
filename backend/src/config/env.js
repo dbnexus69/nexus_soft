@@ -7,6 +7,10 @@ if (process.env.NODE_ENV === 'production') {
     console.error(`[MISSING_ENV] Refusing to start in production without: ${faltan.join(', ')}`);
     process.exit(1);
   }
+} else if (/^https:/.test(process.env.SUPABASE_URL || '') && !process.env.ALMACENAMIENTO_PREFIJO) {
+  // Fuera de producción contra un Storage real, las carpetas de las agencias locales (1, 2…) serían las de las reales.
+  console.error('[STORAGE_WITHOUT_PREFIX] Refusing to start outside production against a real Storage without ALMACENAMIENTO_PREFIJO.');
+  process.exit(1);
 }
 
 const env = {

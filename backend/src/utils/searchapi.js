@@ -29,7 +29,10 @@ async function buscarVuelos(parametros, engine = 'google_flights') {
   }
 
   const datos = await respuesta.json().catch(() => null);
-  if (!respuesta.ok || !datos || datos.error) {
+  // Un 200 con `error` es "Google Flights didn't return any results.": la búsqueda funcionó y no
+  // hay vuelos. Se devuelve vacío (sin `best_flights`/`other_flights`/`calendar`), no un 502.
+  if (respuesta.ok && datos?.error) return {};
+  if (!respuesta.ok || !datos) {
     console.error('[SEARCHAPI_FAILED]', respuesta.status, datos?.error || 'sin cuerpo');
     throw new AppError('La búsqueda de vuelos no responde. Inténtalo de nuevo en un momento.', 502, 'SEARCHAPI_UNAVAILABLE');
   }

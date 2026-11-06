@@ -1,7 +1,7 @@
 # Activa desde el 2026-10-21 (spec 022 T3; antes vivía en docs/ci/ci.yml, ver spec 010 T2).
 # Lo que se puede comprobar sin la base de datos ni secretos: tipos, build y las reglas puras.
-# Las pruebas que levantan servidor y agencias (test:aislamiento*, test:vuelos-api) necesitan
-# DATABASE_URL/DIRECT_URL de la base compartida y se siguen corriendo a mano (CLAUDE.md, "Commands").
+# Las pruebas que levantan servidor y agencias (test:aislamiento*, test:vuelos-api…) necesitan
+# la base y el Storage locales en Docker (spec 038) y se corren a mano (.claude/rules/testing.md).
 name: CI
 
 on:

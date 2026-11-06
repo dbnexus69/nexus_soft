@@ -66,6 +66,11 @@ El agente principal conserva la responsabilidad de integrar los resultados, veri
 
 La delegación no sustituye la validación del código ni autoriza a dar por ciertos los resultados de un subagente sin comprobarlos.
 
+## Comandos
+Desde la carpeta del paquete, nunca desde la raíz. Arranque local (README, «Puesta en marcha»): `backend/`: `pnpm install`, `cp .env.example .env`, `pnpm local:up` (Docker), `pnpm local:preparar` (migraciones, cliente Prisma, buckets, catálogos y agencias de prueba), `pnpm dev` (:3000); `frontend/`: `pnpm dev` (:5173, proxy a `/api/v1`). Todo esto requiere permiso (ver arriba).
+- No hay runner de pruebas: cada suite es un script de Node en `backend/tests/` y se ejecuta sola con `pnpm test:<suite>` (lista y alcance en `.claude/rules/testing.md`). La CI (`.github/workflows/ci.yml`) solo corre `pnpm build` del frontend y `check:prisma`, `test:validaciones` y `test:reglas-espejo` del backend.
+- `backend/scripts/` está en `backend/.gitignore` a propósito; solo `check-prisma-fields.js` está versionado. Los buckets de producción se crean a mano en Supabase Storage.
+
 ## Pruebas
 - Ejecuta solo la comprobación más pequeña que cubra el cambio y que esté permitida. No corras suites completas por rutina ni repitas pruebas sin motivo.
 - Sin permiso para acceder a la BD o levantar servicios, las comprobaciones permitidas incluyen `frontend`: `pnpm build`; `backend`: `pnpm check:prisma`, `pnpm test:validaciones` y `pnpm test:reglas-espejo`. Ejecuta desde la carpeta del paquete correspondiente.

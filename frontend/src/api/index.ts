@@ -18,6 +18,11 @@ export {
 export {
   listFlights, listCheckins, updateCheckin, cancelCheckin,
 } from './flights';
+export { searchFlights, searchFlightCalendar } from './flightSearch';
+export type {
+  FlightSearchResult, FlightSearchParams, FlightSearchResponse, FlightLegDetail, FlightLayover, FlightAirportStop,
+  FlightPriceInsights, TravelClass, TripType, FlightCalendarEntry, FlightCalendarParams,
+} from './flightSearch';
 export {
   listCommissionAgents, createCommissionAgent, updateCommissionAgent, deleteCommissionAgent,
   listSettlements, createSettlement,

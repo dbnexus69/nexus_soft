@@ -6,6 +6,7 @@ import {
   FileText,
   Contact,
   Globe,
+  Plane,
   BadgePercent,
   Users,
   UserCog,
@@ -101,8 +102,9 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     { to: "/", icon: Compass, label: "Dashboard", permission: 'dashboard' as const },
     { to: "/sales", icon: Wallet, label: "Ventas", permission: 'sales' as const },
     { to: "/quotes", icon: FileText, label: "Cotizaciones", permission: 'quotes' as const },
+    { to: "/flight-search", icon: Plane, label: "Vuelos", permission: 'quotes' as const },
     { to: "/clients", icon: Contact, label: "Clientes", permission: 'clients' as const },
-    { to: "/flights", icon: Globe, label: "Vuelos", permission: 'itineraries' as const },
+    { to: "/flights", icon: Globe, label: "Itinerarios", permission: 'itineraries' as const },
     { to: "/commissions", icon: BadgePercent, label: "Comisionistas", permission: 'commissions' as const },
   ];
 

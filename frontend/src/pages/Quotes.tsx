@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Plus, Send, Check, X, Copy, Trash2, Download, ArrowRightCircle, FileText,
 } from "lucide-react";
@@ -21,8 +21,8 @@ import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { useSaleCalculations } from "../hooks/useSaleCalculations";
 import { formatCurrency, formatDate, todayStr } from "../utils/formatters";
-import { type Quote, type SaleProductId } from "../types";
-import { INITIAL_FORM, type WizardFormData, type FijarCampo } from "../components/sales/wizardData";
+import { type Quote, type SaleProductId, type TicketData } from "../types";
+import { INITIAL_FORM, INITIAL_TICKET, type WizardFormData, type FijarCampo } from "../components/sales/wizardData";
 import * as api from "../api";
 
 const ESTADO_BADGE: Record<string, string> = {
@@ -84,6 +84,7 @@ export default function Quotes() {
   const { user } = useAuth();
   const { data, fetchConfig } = useData();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -179,6 +180,19 @@ export default function Quotes() {
   };
 
   const openCreate = () => { resetForm(); setIsModalOpen(true); };
+
+  // Desde "Vuelos" (spec 039): elegir un resultado de la búsqueda en vivo llega acá con el
+  // tiquete ya armado, en vez de uno en blanco. Se limpia el estado de la navegación al toque
+  // (replace) para que recargar la página o volver atrás no vuelva a abrir el mismo borrador.
+  useEffect(() => {
+    const prefillTicket = (location.state as { prefillTicket?: TicketData } | null)?.prefillTicket;
+    if (!prefillTicket) return;
+    resetForm();
+    setDraft((prev) => ({ ...prev, selectedProducts: ["ticket"], tickets: [prefillTicket] }));
+    setIsModalOpen(true);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // Una cotización aceptada o rechazada ya no se puede editar (el backend la
   // rechaza con 400): se abre en una vista de solo lectura, no en el mismo

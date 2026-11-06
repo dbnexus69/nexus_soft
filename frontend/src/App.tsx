@@ -28,6 +28,7 @@ const Config = lazy(() => import('./pages/Config'));
 const Empresa = lazy(() => import('./pages/Empresa'));
 const CommissionAgents = lazy(() => import('./pages/CommissionAgents'));
 const Quotes = lazy(() => import('./pages/Quotes'));
+const FlightSearch = lazy(() => import('./pages/FlightSearch'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -73,6 +74,7 @@ function AppRoutes() {
         <Route path="stats" element={<StatsView />} />
         <Route path="sales" element={<Sales />} />
         <Route path="quotes" element={<Quotes />} />
+        <Route path="flight-search" element={<PermisoRoute modulo="quotes"><FlightSearch /></PermisoRoute>} />
         <Route path="clients" element={<Clients />} />
         <Route path="responsables" element={<PermisoRoute modulo="responsables"><Responsables /></PermisoRoute>} />
         <Route path="flights" element={<Itineraries />} />

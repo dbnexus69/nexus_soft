@@ -11,6 +11,7 @@ router.use('/clients', require('./clients.routes'));
 router.use('/responsables', require('./responsables.routes'));
 router.use('/sales', require('./sales.routes'));
 router.use('/flights', require('./flights.routes'));
+router.use('/flight-search', require('./flightSearch.routes'));
 router.use('/commissions', require('./commissions.routes'));
 router.use('/config', require('./config.routes'));
 router.use('/stats', require('./stats.routes'));

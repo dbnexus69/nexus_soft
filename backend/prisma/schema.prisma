@@ -248,6 +248,7 @@ model empresas {
   cotizaciones              cotizaciones[]
   detalle_cotizacion        detalle_cotizacion[]
   cliente_destinos          cliente_destinos[]
+  busquedas_vuelos_contador busquedas_vuelos_contador[]
 }
 
 enum EstadoEmpresa {
@@ -1362,4 +1363,18 @@ model vouchers_venta {
 
   @@index([empresa_id])
   @@index([venta_id])
+}
+
+/// Tope diario de búsquedas de vuelos en vivo por agencia (spec 039): la clave de SearchApi es
+/// única y la paga DBNEXUS, así que esto es lo único que frena el costo. Un contador por
+/// `(empresa_id, fecha)`, incrementado con un upsert atómico — nunca se lee y luego se escribe.
+model busquedas_vuelos_contador {
+  id       Int      @id @default(autoincrement())
+  fecha    DateTime @db.Date
+  cantidad Int      @default(0)
+
+  empresa_id Int      @default(dbgenerated("NULLIF(current_setting('app.empresa_id', true), '')::integer"))
+  empresas   empresas @relation(fields: [empresa_id], references: [id])
+
+  @@unique([empresa_id, fecha])
 }

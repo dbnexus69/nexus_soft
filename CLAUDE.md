@@ -15,6 +15,7 @@ Nexus Soft es un sistema multiempresa para agencias de viaje. Cada agencia (`emp
 - No supongas requisitos, comportamiento ni datos. Pregunta si una ambigüedad cambia la solución; si una suposición menor es inevitable, declárala.
 - Cuestiona requisitos dudosos, duplicados, riesgosos o innecesariamente complejos antes de ejecutarlos.
 - Prioriza la solución mínima que resuelve el problema: menos cambios, lecturas, comandos y texto; no repitas información ya conocida.
+- Lee archivos del proyecto con la herramienta Read, no con `cat`/`sed`/`head` en Bash: las reglas con `paths` de `.claude/rules/` solo se cargan con Read/Edit.
 - Usa las skills solo cuando aporten valor. Superpowers se usa bajo demanda; no encadenes flujos completos por rutina. `ponytail` aporta principios de simplicidad, no requiere invocación en toda tarea trivial.
 - Usa `ui-ux-pro-max` al diseñar, construir o revisar interfaces; usa solo la skill principal instalada en `.claude/skills/ui-ux-pro-max`. Consulta con `python .claude/skills/ui-ux-pro-max/scripts/search.py "<consulta>" --domain ux`.
 - Planifica de forma proporcional. Para tareas pequeñas, no generes documentación innecesaria. Para funcionalidades complejas o con decisiones relevantes, crea una carpeta numerada en `docs/specs/` con `spec.md`, `plan.md` y `tasks.md`. No instales `specify` ni crees `specs/` o `.specify/` en la raíz.

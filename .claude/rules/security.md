@@ -1,9 +1,3 @@
----
-paths:
-  - "backend/src/**"
-  - "frontend/src/**"
----
-
 # Seguridad, autenticación y autorización
 
 - Trata todos los datos de agencias como datos aislados por `empresa`. Nunca confíes en un `empresaId` recibido desde URL, body o query; el contexto de la empresa autenticada debe venir de la sesión/token y del mecanismo de tenencia del backend.

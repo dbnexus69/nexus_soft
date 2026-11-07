@@ -1,5 +1,5 @@
 # ==========================================
-# iTea Soft - Root Gitignore for Monorepo
+# Nexus Soft - .gitignore raíz (backend/ y frontend/ son paquetes pnpm independientes)
 # ==========================================
 
 # Node / Dependencies
@@ -38,8 +38,8 @@ ehthumbs.db
 backend/node_modules/
 backend/dist/
 backend/build/
-backend/uploads/*
-!backend/uploads/.gitkeep
+# Adjuntos antiguos en disco: desde la spec 031 van al bucket `adjuntos`.
+backend/uploads/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 
@@ -85,7 +85,6 @@ coverage/
 *.pdf
 *.csv
 *.xlsx
-!backend/prisma/seed.js
 
 # ==========================================
 # Herramientas de agentes (Claude Code / skills)
@@ -120,6 +119,4 @@ _test*.js
 # ==========================================
 # Prisma
 # ==========================================
-backend/prisma/*.db
-backend/prisma/*.db-journal
 backend/prisma/migrations/dev.db*

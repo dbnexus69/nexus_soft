@@ -21,6 +21,20 @@ exports.subirLogo = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.subirImagenEncabezado = async (req, res, next) => {
+  try {
+    await perfilEmpresa.guardarImagenEncabezado(empresaActual(), req.file);
+    success(res, await perfilEmpresa.perfil());
+  } catch (err) { next(err); }
+};
+
+exports.subirImagenPie = async (req, res, next) => {
+  try {
+    await perfilEmpresa.guardarImagenPie(empresaActual(), req.file);
+    success(res, await perfilEmpresa.perfil());
+  } catch (err) { next(err); }
+};
+
 exports.vistaPrevia = async (req, res, next) => {
   try {
     const pdf = await require('../services/voucher').vistaPrevia(req.validatedBody);

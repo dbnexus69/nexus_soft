@@ -56,6 +56,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   const abreviatura = abreviaturaDe(tipoElegido);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [cambiarPassword, setCambiarPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -93,6 +94,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)]
       });
     }
+    setCambiarPassword(false);
     setErrors({});
   }, [editingUser, isOpen, documentTypes]);
 
@@ -106,7 +108,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     if (!apellidos) newErrors.lastName = "El apellido es obligatorio";
     else if (mensajeNombre(apellidos)) newErrors.lastName = mensajeNombre(apellidos)!;
     if (!formData.email.trim()) newErrors.email = "El correo es obligatorio";
-    if (!editingUser && !formData.password.trim()) newErrors.password = "La contraseña es obligatoria";
+    if ((!editingUser || cambiarPassword) && !formData.password.trim()) newErrors.password = "La contraseña es obligatoria";
     else if (formData.password && mensajeContrasena(formData.password)) newErrors.password = mensajeContrasena(formData.password)!;
     if (!formData.docTypeId) newErrors.docTypeId = "Seleccione el tipo de documento";
     if (!docNumber) newErrors.docNumber = "El número de documento es obligatorio";
@@ -243,6 +245,53 @@ export const UserModal: React.FC<UserModalProps> = ({
                   </button>
                 </div>
                 <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">{AYUDA_CONTRASENA}</p>
+              </FormField>
+            )}
+
+            {editingUser && !cambiarPassword && (
+              <button
+                type="button"
+                className="text-sm font-medium text-primary hover:underline"
+                onClick={() => setCambiarPassword(true)}
+              >
+                Cambiar contraseña
+              </button>
+            )}
+
+            {editingUser && cambiarPassword && (
+              <FormField label="Nueva Contraseña" error={errors.password} required>
+                <div className="relative">
+                  <Input
+                    className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors pr-10"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="••••••••"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-3.5 text-slate-500 hover:text-primary transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Ocultar la contraseña" : "Mostrar la contraseña"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{AYUDA_CONTRASENA}</p>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-slate-500 hover:underline"
+                    onClick={() => { setCambiarPassword(false); setFormData({ ...formData, password: "" }); setErrors(prev => ({ ...prev, password: "" })); }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                {/* Igual que cuando un admin inhabilita una cuenta: cambiar la contraseña le cierra las
+                    sesiones abiertas (`users.service.js::updateUser`), para que no quede entrando con la vieja. */}
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">Esto cierra cualquier sesión abierta de este usuario.</p>
               </FormField>
             )}
 

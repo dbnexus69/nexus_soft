@@ -42,5 +42,8 @@ export {
   startImpersonation, stopImpersonation,
 } from './companies';
 export type { Empresa, NuevaEmpresa } from './companies';
-export { getCompanyProfile, updateCompanyProfile, uploadCompanyProfileLogo, previewVoucher } from './companyProfile';
+export {
+  getCompanyProfile, updateCompanyProfile, uploadCompanyProfileLogo,
+  uploadVoucherHeaderImage, uploadVoucherFooterImage, previewVoucher,
+} from './companyProfile';
 export type { PerfilEmpresa, CambiosPerfil, Clausula } from './companyProfile';

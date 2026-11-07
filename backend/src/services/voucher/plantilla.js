@@ -2,6 +2,7 @@ const PdfPrinter = require('pdfmake');
 const vfsFuentes = require('pdfmake/build/vfs_fonts.js');
 const TERMINOS_POR_DEFECTO = require('./terminosPorDefecto');
 const { fecha, dinero, SECCIONES, titulo, tarjeta, rejilla, bloqueTiquete, bloquesDeHijos } = require('./secciones');
+const { dimensiones } = require('./dimensionesImagen');
 
 /**
  * El voucher en PDF (spec 011): venta + configuración de la agencia → definición de `pdfmake` → Buffer.
@@ -26,9 +27,9 @@ const impresora = new PdfPrinter({
  * La definición del documento.
  * @param venta   la venta como la devuelve `getSaleById` + `getSaleProducts`
  * @param config  { nombre, nit, direccion, telefono, emailContacto, sitioWeb, colores: { primario, acento, realce }, pie, terminos }
- * @param extra   { logo: Buffer|null, aeropuertos: { BOG: 'Bogotá' } , hoy: Date }
+ * @param extra   { logo, encabezadoImagen, pieImagen: Buffer|null, aeropuertos: { BOG: 'Bogotá' } , hoy: Date }
  */
-function definicion(venta, config, { logo = null, aeropuertos = {}, hoy = new Date() } = {}) {
+function definicion(venta, config, { logo = null, encabezadoImagen = null, pieImagen = null, aeropuertos = {}, hoy = new Date() } = {}) {
   const c = {
     primario: config.colores?.primario || '#1e293b',
     acento: config.colores?.acento || '#2563eb',
@@ -55,9 +56,31 @@ function definicion(venta, config, { logo = null, aeropuertos = {}, hoy = new Da
     }
   }
 
+  // El ancho de LETTER (72 pt/in) y el alto que se le reserva a cada imagen propia: `header`/`footer`
+  // de pdfmake dibujan de borde a borde de la página (sin los márgenes de `content`), así que es la
+  // única forma de que toquen las 4 esquinas de verdad. El alto se calcula de la proporción REAL de
+  // cada imagen a ese ancho completo (nunca uno fijo a ojo: con uno fijo, una imagen menos alta que
+  // ese número quedaba angosta en vez de a todo el ancho — bug reportado el 2026-11-07); se acota
+  // entre un mínimo y un máximo para que una imagen muy vertical no se coma media página.
+  const ANCHO_PAGINA = 612;
+  const SEPARACION_ENCABEZADO = 14;
+  const SEPARACION_PIE = 8;
+  const altoParaAncho = (buffer, porDefecto, min, max) => {
+    const d = buffer && dimensiones(buffer);
+    const alto = d ? ANCHO_PAGINA * (d.height / d.width) : porDefecto;
+    return Math.max(min, Math.min(max, alto));
+  };
+  const ALTO_ENCABEZADO_IMAGEN = encabezadoImagen ? altoParaAncho(encabezadoImagen, 130, 40, 220) : 0;
+  const ALTO_PIE_IMAGEN = pieImagen ? altoParaAncho(pieImagen, 60, 25, 150) : 0;
+
   return {
     pageSize: 'LETTER',
-    pageMargins: [36, 36, 36, 48],
+    pageMargins: [
+      36,
+      encabezadoImagen ? ALTO_ENCABEZADO_IMAGEN + SEPARACION_ENCABEZADO : 36,
+      36,
+      48 + (pieImagen ? ALTO_PIE_IMAGEN + SEPARACION_PIE : 0),
+    ],
     info: { title: `Voucher ${venta.numero ?? venta.id} - ${agencia}`, author: agencia },
     defaultStyle: { font: 'Roboto', fontSize: 9, color: '#0f172a' },
     styles: {
@@ -67,26 +90,34 @@ function definicion(venta, config, { logo = null, aeropuertos = {}, hoy = new Da
       cabecera: { fontSize: 7, bold: true, color: '#334155' },
     },
     ...(venta.status === 'anulado' ? { watermark: { text: 'ANULADA', color: '#dc2626', opacity: 0.15, bold: true } } : {}),
+    ...(encabezadoImagen ? { header: () => ({ image: encabezadoImagen, fit: [ANCHO_PAGINA, ALTO_ENCABEZADO_IMAGEN] }) } : {}),
     footer: (pagina, total) => ({
-      columns: [
-        { text: config.pie || `© ${hoy.getFullYear()} ${agencia}. Documento generado electrónicamente.`, fontSize: 7, color: c.tenue },
-        { text: `${pagina} / ${total}`, alignment: 'right', fontSize: 7, color: c.tenue },
+      stack: [
+        {
+          columns: [
+            { text: config.pie || `© ${hoy.getFullYear()} ${agencia}. Documento generado electrónicamente.`, fontSize: 7, color: c.tenue },
+            { text: `${pagina} / ${total}`, alignment: 'right', fontSize: 7, color: c.tenue },
+          ],
+          margin: [36, 16, 36, pieImagen ? SEPARACION_PIE : 0],
+        },
+        // Al final del stack para que quede pegada al borde inferior de la página, no arriba del texto.
+        ...(pieImagen ? [{ image: pieImagen, fit: [ANCHO_PAGINA, ALTO_PIE_IMAGEN] }] : []),
       ],
-      margin: [36, 16, 36, 0],
     }),
     content: [
-      // Cabecera con el color principal de la agencia.
-      {
-        table: { widths: [logo ? 90 : 0, '*'], body: [[
-          logo ? { image: logo, fit: [80, 50], margin: [6, 6, 0, 6] } : { text: '' },
-          { stack: [
-            { text: agencia.toUpperCase(), fontSize: 16, bold: true, color: '#ffffff' },
-            { text: 'CONFIRMACIÓN DE SERVICIOS', fontSize: 8, color: '#ffffff', characterSpacing: 1 },
-            ...(contacto ? [{ text: contacto, fontSize: 7, color: '#ffffff', margin: [0, 4, 0, 0] }] : []),
-          ], margin: [8, 8, 8, 8] },
-        ]] },
-        layout: { fillColor: () => c.primario, hLineWidth: () => 0, vLineWidth: () => 0 },
-      },
+      // Cabecera: con imagen propia la reemplaza entera y la pinta `header` arriba (decisión del
+      // usuario, 2026-11-07); si no, la banda de color + logo + nombre de siempre, acá en el cuerpo.
+      ...(encabezadoImagen ? [] : [{
+            table: { widths: [logo ? 90 : 0, '*'], body: [[
+              logo ? { image: logo, fit: [80, 50], margin: [6, 6, 0, 6] } : { text: '' },
+              { stack: [
+                { text: agencia.toUpperCase(), fontSize: 16, bold: true, color: '#ffffff' },
+                { text: 'CONFIRMACIÓN DE SERVICIOS', fontSize: 8, color: '#ffffff', characterSpacing: 1 },
+                ...(contacto ? [{ text: contacto, fontSize: 7, color: '#ffffff', margin: [0, 4, 0, 0] }] : []),
+              ], margin: [8, 8, 8, 8] },
+            ]] },
+            layout: { fillColor: () => c.primario, hLineWidth: () => 0, vLineWidth: () => 0 },
+      }]),
       {
         columns: [
           { stack: [{ text: 'PASAJERO PRINCIPAL', style: 'etiqueta', color: c.tenue }, { text: venta.clientName || '—', bold: true }] },

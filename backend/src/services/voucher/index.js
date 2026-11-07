@@ -41,6 +41,10 @@ async function empresaYConfig(borrador = {}) {
     },
     // Un `logo_url` de antes del bucket (`/uploads/…`) no se usa: se vuelve a subir.
     logo: e.logo_url && !e.logo_url.startsWith('/') ? e.logo_url : null,
+    // Imágenes propias de encabezado/pie (spec del 2026-11-07): la de encabezado reemplaza del todo la
+    // banda de color + logo + nombre; la de pie se agrega sobre el texto de `voucherPie`.
+    encabezadoImagen: e.voucher_encabezado_imagen,
+    pieImagen: e.voucher_pie_imagen,
   };
 }
 
@@ -71,12 +75,14 @@ async function ventaCompleta(ventaId, alcance) {
   return { ...cabecera, ...productos };
 }
 
-async function generarCon(venta, { config, logo }) {
-  const [buffer, aeropuertos] = await Promise.all([
+async function generarCon(venta, { config, logo, encabezadoImagen, pieImagen }) {
+  const [logoBuffer, encabezadoBuffer, pieBuffer, aeropuertos] = await Promise.all([
     logo ? almacenamiento.leer('logos', logo) : null,
+    encabezadoImagen ? almacenamiento.leer('logos', encabezadoImagen) : null,
+    pieImagen ? almacenamiento.leer('logos', pieImagen) : null,
     ciudades(venta.ticketData),
   ]);
-  return generar(venta, config, { logo: buffer, aeropuertos });
+  return generar(venta, config, { logo: logoBuffer, encabezadoImagen: encabezadoBuffer, pieImagen: pieBuffer, aeropuertos });
 }
 
 /** El voucher guardado de la venta (generándolo si hace falta): `{ nombre, huella, venta, buffer? }`. */

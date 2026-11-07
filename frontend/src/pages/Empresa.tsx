@@ -69,6 +69,8 @@ export default function Empresa() {
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [subiendoEncabezado, setSubiendoEncabezado] = useState(false);
+  const [subiendoPie, setSubiendoPie] = useState(false);
   const [previa, setPrevia] = useState<string | null>(null);
   const [generando, setGenerando] = useState(false);
   const urlPrevia = useRef<string | null>(null);
@@ -123,6 +125,30 @@ export default function Empresa() {
       toast.error((err as any)?.response?.data?.error?.message || 'No se pudo subir el logo');
     } finally {
       setSubiendo(false);
+    }
+  };
+
+  const subirImagenEncabezado = async (archivo: File) => {
+    setSubiendoEncabezado(true);
+    try {
+      setPerfil(await api.uploadVoucherHeaderImage(archivo));
+      toast.success('Imagen de encabezado actualizada');
+    } catch (err) {
+      toast.error((err as any)?.response?.data?.error?.message || 'No se pudo subir la imagen');
+    } finally {
+      setSubiendoEncabezado(false);
+    }
+  };
+
+  const subirImagenPie = async (archivo: File) => {
+    setSubiendoPie(true);
+    try {
+      setPerfil(await api.uploadVoucherFooterImage(archivo));
+      toast.success('Imagen de pie actualizada');
+    } catch (err) {
+      toast.error((err as any)?.response?.data?.error?.message || 'No se pudo subir la imagen');
+    } finally {
+      setSubiendoPie(false);
     }
   };
 
@@ -229,6 +255,39 @@ export default function Empresa() {
                 {(errores.colorPrimario || errores.colorAcento || errores.colorRealce) && (
                   <p className="text-xs text-red-600" role="alert">{errores.colorPrimario || errores.colorAcento || errores.colorRealce}</p>
                 )}
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader>Encabezado y pie del voucher</CardHeader>
+              <CardBody className="space-y-5">
+                <p className="text-xs text-slate-500">
+                  Si ya tenés tu propio diseño, subí tus imágenes acá en vez de usar el logo y los colores. La de
+                  encabezado reemplaza entera la banda de arriba; la de pie se agrega encima del texto de abajo.
+                </p>
+                <div className="flex items-center gap-4">
+                  {perfil.voucherEncabezadoImagenUrl && (
+                    <img src={perfil.voucherEncabezadoImagenUrl} alt="Encabezado actual" className="h-12 w-auto max-w-[220px] rounded border border-gray-border object-contain dark:border-slate-700" />
+                  )}
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                    {subiendoEncabezado ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {perfil.voucherEncabezadoImagenUrl ? 'Cambiar encabezado' : 'Subir encabezado'}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={subiendoEncabezado}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenEncabezado(f); e.target.value = ''; }} />
+                  </label>
+                </div>
+                <div className="flex items-center gap-4">
+                  {perfil.voucherPieImagenUrl && (
+                    <img src={perfil.voucherPieImagenUrl} alt="Pie actual" className="h-12 w-auto max-w-[220px] rounded border border-gray-border object-contain dark:border-slate-700" />
+                  )}
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                    {subiendoPie ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {perfil.voucherPieImagenUrl ? 'Cambiar pie' : 'Subir pie'}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={subiendoPie}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenPie(f); e.target.value = ''; }} />
+                  </label>
+                </div>
+                <span className="text-xs text-slate-500">PNG, JPG o WebP, hasta 2 MB cada una. Se ven en la vista previa de al lado.</span>
               </CardBody>
             </Card>
 

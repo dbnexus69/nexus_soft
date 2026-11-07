@@ -21,9 +21,13 @@ export interface PerfilEmpresa {
   voucherPie: string | null;
   /** null = la agencia usa los términos por defecto. */
   voucherTerminos: Clausula[] | null;
+  /** Si está, reemplaza del todo la banda de color + logo + nombre del voucher. */
+  voucherEncabezadoImagenUrl: string | null;
+  /** Se agrega sobre el texto de `voucherPie`, que sigue aparte. */
+  voucherPieImagenUrl: string | null;
 }
 
-export type CambiosPerfil = Partial<Omit<PerfilEmpresa, 'slug' | 'nombre' | 'logoUrl'>>;
+export type CambiosPerfil = Partial<Omit<PerfilEmpresa, 'slug' | 'nombre' | 'logoUrl' | 'voucherEncabezadoImagenUrl' | 'voucherPieImagenUrl'>>;
 
 export async function getCompanyProfile() {
   const res = await api.get<Recurso<PerfilEmpresa>>('/company-profile');
@@ -39,6 +43,22 @@ export async function uploadCompanyProfileLogo(archivo: File) {
   const form = new FormData();
   form.append('logo', archivo);
   const res = await api.put<Recurso<PerfilEmpresa>>('/company-profile/logo', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return res.data.data;
+}
+
+/** Imagen propia para el encabezado del voucher: reemplaza del todo la banda de color + logo + nombre. */
+export async function uploadVoucherHeaderImage(archivo: File) {
+  const form = new FormData();
+  form.append('imagen', archivo);
+  const res = await api.put<Recurso<PerfilEmpresa>>('/company-profile/voucher-encabezado', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return res.data.data;
+}
+
+/** Imagen propia para el pie del voucher, además del texto de `voucherPie`. */
+export async function uploadVoucherFooterImage(archivo: File) {
+  const form = new FormData();
+  form.append('imagen', archivo);
+  const res = await api.put<Recurso<PerfilEmpresa>>('/company-profile/voucher-pie-imagen', form, { headers: { 'Content-Type': 'multipart/form-data' } });
   return res.data.data;
 }
 

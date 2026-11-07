@@ -15,6 +15,9 @@ const almacenamiento = require('../utils/almacenamiento');
 
 const LOGO_SEGUNDOS = 3600;
 const TIPOS_LOGO = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+// Buckets de logos y de las imágenes de encabezado/pie del voucher: mismo bucket `logos`, mismo patrón
+// de nombre con hash de contenido — nunca el mismo nombre dos veces, aunque cambie el contenido.
+const BUCKET_IMAGENES = 'logos';
 
 // Campo de la API → columna de `empresas`.
 const COLUMNAS = {
@@ -71,6 +74,10 @@ async function aPerfil(e) {
     voucherPie: e.voucher_pie,
     // null = la agencia no escribió los suyos; el voucher usa los de por defecto.
     voucherTerminos: e.voucher_terminos ?? null,
+    // Si hay encabezado propio, reemplaza del todo la banda de color + logo + nombre (decisión del
+    // usuario, 2026-11-07); el de pie se suma al texto de `voucherPie`, que sigue aparte.
+    voucherEncabezadoImagenUrl: await urlDelLogo(e.id, e.voucher_encabezado_imagen),
+    voucherPieImagenUrl: await urlDelLogo(e.id, e.voucher_pie_imagen),
   };
 }
 
@@ -93,36 +100,49 @@ async function actualizar(datos) {
 }
 
 /**
- * Sube el logo de `empresaId` al bucket y borra el anterior.
+ * Sube una imagen de `empresaId` al bucket `logos` y borra la anterior en esa misma columna.
  *
- * El nombre lleva un hash del contenido: un logo nuevo es un objeto nuevo, y una URL firmada vieja que siga
- * en una pestaña abierta no enseña el logo nuevo con el nombre del viejo. Lo usa "Mi empresa" (empresa del
- * contexto) y `/companies/:id/logo` del superadministrador (la que diga la URL, que solo él puede pedir).
+ * El nombre lleva un hash del contenido: una imagen nueva es un objeto nuevo, y una URL firmada vieja que
+ * siga en una pestaña abierta no enseña la nueva con el nombre de la vieja. La usan el logo ("Mi empresa"
+ * y `/companies/:id/logo` del superadministrador) y las imágenes de encabezado/pie del voucher (solo
+ * "Mi empresa": cada agencia pone las suyas).
  */
-async function guardarLogo(empresaId, fichero) {
+async function subirImagen(empresaId, fichero, { campo, columna, prefijo }) {
   if (!fichero?.buffer?.length) {
-    throw new AppError('No llegó ningún archivo', 422, 'VALIDATION_ERROR', [{ field: 'logo', message: 'Elige una imagen' }]);
+    throw new AppError('No llegó ningún archivo', 422, 'VALIDATION_ERROR', [{ field: campo, message: 'Elige una imagen' }]);
   }
   const ext = TIPOS_LOGO[fichero.mimetype];
   if (!ext) {
-    throw new AppError('El logo tiene que ser PNG, JPG o WebP', 422, 'VALIDATION_ERROR',
-      [{ field: 'logo', message: 'El logo tiene que ser PNG, JPG o WebP' }]);
+    throw new AppError('La imagen tiene que ser PNG, JPG o WebP', 422, 'VALIDATION_ERROR',
+      [{ field: campo, message: 'La imagen tiene que ser PNG, JPG o WebP' }]);
   }
   const empresa = await prisma.empresas.findFirst({ where: { id: Number(empresaId), deleted_at: null } });
   if (!empresa) throw new NotFoundError('Empresa no encontrada');
 
   const huella = crypto.createHash('sha256').update(fichero.buffer).digest('hex').slice(0, 16);
-  const nombre = `logo-${huella}.${ext}`;
-  await conEmpresa(empresa.id, () => almacenamiento.subir('logos', nombre, fichero.buffer, fichero.mimetype));
-  await prisma.empresas.update({ where: { id: empresa.id }, data: { logo_url: nombre } });
+  const nombre = `${prefijo}-${huella}.${ext}`;
+  await conEmpresa(empresa.id, () => almacenamiento.subir(BUCKET_IMAGENES, nombre, fichero.buffer, fichero.mimetype));
+  await prisma.empresas.update({ where: { id: empresa.id }, data: { [columna]: nombre } });
 
-  const anterior = empresa.logo_url;
+  const anterior = empresa[columna];
   if (anterior && anterior !== nombre && !anterior.startsWith('/')) {
-    // El logo nuevo ya está guardado; no poder borrar el viejo no es motivo para fallar.
-    await conEmpresa(empresa.id, () => almacenamiento.borrar('logos', anterior))
-      .catch(err => console.warn('[OLD_LOGO_DELETE_FAILED]', empresa.id, err.message));
+    // La imagen nueva ya está guardada; no poder borrar la vieja no es motivo para fallar.
+    await conEmpresa(empresa.id, () => almacenamiento.borrar(BUCKET_IMAGENES, anterior))
+      .catch(err => console.warn('[OLD_IMAGE_DELETE_FAILED]', empresa.id, err.message));
   }
-  return { ...empresa, logo_url: nombre };
+  return { ...empresa, [columna]: nombre };
 }
 
-module.exports = { perfil, actualizar, guardarLogo, urlDelLogo };
+function guardarLogo(empresaId, fichero) {
+  return subirImagen(empresaId, fichero, { campo: 'logo', columna: 'logo_url', prefijo: 'logo' });
+}
+
+function guardarImagenEncabezado(empresaId, fichero) {
+  return subirImagen(empresaId, fichero, { campo: 'imagen', columna: 'voucher_encabezado_imagen', prefijo: 'encabezado' });
+}
+
+function guardarImagenPie(empresaId, fichero) {
+  return subirImagen(empresaId, fichero, { campo: 'imagen', columna: 'voucher_pie_imagen', prefijo: 'pie' });
+}
+
+module.exports = { perfil, actualizar, guardarLogo, guardarImagenEncabezado, guardarImagenPie, urlDelLogo };

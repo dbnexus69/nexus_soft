@@ -26,6 +26,7 @@ No ejecutar pruebas por rutina. Elige la comprobación más pequeña que cubra e
 - Cambios en destinos preferidos de clientes: `pnpm test:clientes-destinos`, con permiso.
 - Cambios en perfil/logo/vouchers: `pnpm test:voucher`, con permiso.
 - Cambios en límites de usuarios por empresa: `pnpm test:limite-usuarios`, con permiso.
+- Cambios en imágenes de cotizaciones: `pnpm test:cotizacion-imagenes`, con permiso.
 - Cambios de documentación, comentarios o textos sin lógica: no ejecutes pruebas por defecto.
 
 ## CI y scripts conocidos
@@ -44,6 +45,7 @@ Desde `backend/`. Las que levantan servidor usan el montaje común `tests/montaj
 - `test:clientes-destinos` — destinos de preferencia (spec 017): máximo 5, el reciente es el último, filtros, sugerencias.
 - `test:voucher` — perfil de la empresa y logo (spec 011); sube bajo la carpeta `prueba/` de los buckets y la borra al terminar.
 - `test:limite-usuarios` — límite de usuarios por plan (spec 029): plan por defecto, 422 en el tope, reactivar, altas simultáneas, sin límite.
+- `test:cotizacion-imagenes` — fotos de los servicios de una cotización (specs 021, 023): dos agencias y un asesor de prueba; sube al bucket `cotizacion-imagenes` bajo `prueba/` y la borra al terminar.
 - `test:validaciones` — reglas de datos de personas; sin BD.
 - `test:reglas-espejo` — compila `frontend/src/utils/datosPersona.ts` y lo compara con la copia del servidor en ~800 entradas; sin BD.
 - `check:prisma` — valida cada `prisma.<modelo>.<método>({...})` contra el DMMF (camelCase frente a snake_case); sale con 1 si encuentra algo.

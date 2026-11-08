@@ -2,7 +2,7 @@
 
 Leyenda: `[x]` hecho · `[~]` hecho, con algo por confirmar · `[ ]` pendiente · `[-]` descartada
 
-**Estado (2026-11-08).** Completada: tareas hechas o descartadas, suites en verde con la base local y repaso en pantalla aprobado por el usuario. Solo queda T22.
+**Estado (2026-11-08).** Completada: tareas hechas o descartadas, suites en verde con la base local y repaso en pantalla aprobado por el usuario.
 
 ## T0 · Revisión y reproducción `[x]`
 Lectura del núcleo de tenencia, autenticación, suplantación, usuarios, ventas (cobros, anulación, borrado, revisión),
@@ -34,7 +34,7 @@ base local, `test:voucher`, `test:cotizacion-imagenes`, `test:limite-usuarios` y
 ## T21 · H28 correo guardado con mayúsculas `[x]`
 ## T20 · H27 migración `20261107120000` en producción antes de subir a `main` `[x]`
 Ya estaba aplicada: `migrate status` contra producción (2026-11-08) responde «up to date» con las 36 migraciones. No hizo falta `migrate deploy`.
-## T22 · Aplicar la migración `20261108120000` en producción `[ ]` — justo después de subir el código; la ejecuta el usuario (`pnpm db:migrate:produ`)
+## T22 · Aplicar la migración `20261108120000` en producción `[x]` — la aplicó el usuario
 
 ## Registro
 
@@ -48,3 +48,4 @@ Ya estaba aplicada: `migrate status` contra producción (2026-11-08) responde «
 | 2026-11-08 | T3, T4, T10, T12, T15–T18 | Corregidas; suite `test:revision-039` nueva y en verde con la base local. `link-sale` retirado: el enlace va en `POST /sales`. |
 | 2026-11-08 | T2, T5, T6, T8, T9, T11, T13, T14 | Decisiones 2–10 tomadas y aplicadas; migración de T13 aplicada en local. |
 | 2026-11-08 | — | Repaso en pantalla de todo aprobado por el usuario. Spec cerrada salvo T22. |
+| 2026-11-08 | T22 | Migración aplicada en producción por el usuario. Spec cerrada. |

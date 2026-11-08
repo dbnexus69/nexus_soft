@@ -1,6 +1,6 @@
 # Spec 039 — Revisión de lógica, permisos y dinero (2026-11-07)
 
-**Estado:** completada (2026-11-08), probada con la base local y aprobada en pantalla por el usuario; solo falta aplicar en producción la migración de T13 · **Rama:** `feat-bayrol` ·
+**Estado:** completada (2026-11-08), probada con la base local y aprobada en pantalla por el usuario; migración de T13 aplicada en producción por el usuario · **Rama:** `feat-bayrol` ·
 **Toca la base compartida:** no (ninguna migración prevista) · **Origen:** revisión del 2026-11-07 (multitenencia,
 autenticación, permisos por módulo, dinero y frontend) · **Relacionadas:**
 [`025`](../025-auditoria-de-permisos/spec.md), [`027`](../027-permisos-coherentes/spec.md),

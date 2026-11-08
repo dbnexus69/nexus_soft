@@ -383,9 +383,9 @@ async function main() {
   comprobar('el asesor ve la venta del admin: 200', (await estado('GET', `/sales/${ventaA.id}`)) === 200);
   comprobar('…pero no la edita: 403', (await estado('PUT', `/sales/${ventaA.id}`, { observations: 'spec 020' })) === 403);
   comprobar('…ni la cobra: 403', (await estado('POST', `/sales/${ventaA.id}/payments`, { amount: 1 })) === 403);
-  comprobar('…ni la borra: 403', (await estado('DELETE', `/sales/${ventaA.id}`)) === 403);
+  comprobar('…y eliminar ventas ya no existe: 404', (await estado('DELETE', `/sales/${ventaA.id}`)) === 404);
   comprobar('edita la suya: 200', (await estado('PUT', `/sales/${ventaPropia?.id}`, { observations: 'spec 020' })) === 200);
-  comprobar('borrar la suya tampoco (borrar: ninguna): 403', (await estado('DELETE', `/sales/${ventaPropia?.id}`)) === 403);
+  comprobar('…tampoco la suya: 404', (await estado('DELETE', `/sales/${ventaPropia?.id}`)) === 404);
   comprobar('ve el cliente del admin: 200', (await estado('GET', `/clients/${cliA.id}`)) === 200);
   comprobar('…pero no lo edita: 403', (await estado('PUT', `/clients/${cliA.id}`, { phone: '3009998877' })) === 403);
   comprobar('edita el suyo: 200', (await estado('PUT', `/clients/${cliAsesor?.id}`, { phone: '3009998866' })) === 200);
@@ -575,6 +575,7 @@ async function main() {
   comprobar('un comisionista sin mínimo propio tiene el de por defecto (50.000)', Number(agenteMinListado?.paymentThreshold) === 50000, String(agenteMinListado?.paymentThreshold));
   await pedir('POST', '/sales', tokA, ventaMinima(cliA.id, {
     commissionAgentId: agenteMin?.id, commissionAgentAmount: 5000, commissionAgentRetentionPercentage: 0, commissionAgentNetPayment: 5000,
+    restaurantData: [{ reservationName: 'Comisión mínima', peopleCount: 2, supplierCost: 1000, ta: 10000 }],
   }));
   const bajoMinimo = await pedir('POST', '/commissions/settlements', tokA, { agentId: agenteMin?.id });
   comprobar('liquidar por debajo del mínimo: 400 que dice cuál es', bajoMinimo.status === 400 && bajoMinimo.json?.error?.code === 'BELOW_MINIMUM' && /50\.000/.test(bajoMinimo.json?.error?.message || ''),

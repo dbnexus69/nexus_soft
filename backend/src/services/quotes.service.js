@@ -393,20 +393,6 @@ class QuotesService {
     return { quoteId: cotizacion.id, clientId: cotizacion.cliente_id, client: cliente, products };
   }
 
-  /** Llamado por el frontend justo después de que `POST /sales` cree la venta. */
-  async linkSale(id, { saleId }, alcance = {}) {
-    const cotizacion = await cotizacionVisible(id, alcance, { paraEscribir: true });
-    // No pisar un enlace ya puesto: dejaría la cotización apuntando a una venta
-    // distinta de la que realmente se generó a partir de ella.
-    if (cotizacion.venta_id) {
-      throw new BadRequestError('Esta cotización ya está enlazada a una venta');
-    }
-    const venta = await prisma.ventas.findFirst({ where: { id: Number(saleId), deleted_at: null }, select: { id: true } });
-    if (!venta) throw new BadRequestError('La venta no existe');
-    await prisma.cotizaciones.update({ where: { id: cotizacion.id }, data: { venta_id: venta.id } });
-    return this.getQuoteById(cotizacion.id, alcance);
-  }
-
   /** La línea, comprobando que de verdad sea de esta cotización (spec 021, mismo resguardo que un producto de venta). */
   async _lineaDeLaCotizacion(cotizacionId, lineId) {
     const linea = await prisma.detalle_cotizacion.findFirst({ where: { id: lineId, cotizacion_id: cotizacionId } });

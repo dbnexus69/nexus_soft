@@ -1,7 +1,7 @@
 const prisma = require('../config/db');
-const { NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
+const { NotFoundError, BadRequestError, ForbiddenError, ConflictError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
-const { recalcularVenta, aCentimos, bloquearVenta } = require('./saleTotals');
+const { recalcularVenta, aCentimos, comisionNeta, bloquearVenta } = require('./saleTotals');
 const productValidation = require('./productValidation');
 
 // Los includes, transforms y helpers de producto viven en el catálogo:
@@ -70,7 +70,7 @@ const NO_EDITABLES = {
   // categoría no obliga a acordarse de este archivo.
   ...Object.fromEntries(SLUGS.map(slug => [
     CATALOG[slug].responseKey,
-    'los productos se editan en /sales/:saleId/products/:categoria',
+    'los productos de una venta no se pueden editar',
   ])),
   total: 'el total lo suman los productos',
   ta: 'la ganancia la suman los productos',
@@ -78,7 +78,7 @@ const NO_EDITABLES = {
   supplierCost: 'el costo de proveedor lo suman los productos',
   status: 'el estado lo deciden los pagos',
   paidAmount: 'lo suman los pagos',
-  products: 'los productos se editan en /sales/:saleId/products/...',
+  products: 'los productos de una venta no se pueden editar',
   payments: 'los abonos se registran en POST /sales/:id/payments',
   asesorId: 'la venta no cambia de asesor por aquí',
   isReviewed: 'se marca en PATCH /sales/:id/review-status',
@@ -233,9 +233,9 @@ class SalesService {
       clientId, asesorId, total, paymentMethod, payments = [],
       status = 'credito', isCredit = false, creditDueDate,
       observations, products = [], responsableId,
-      commissionAgentId, commissionAgentAmount, commissionAgentRetentionPercentage, commissionAgentNetPayment,
+      commissionAgentId, commissionAgentAmount, commissionAgentRetentionPercentage,
       ta = 0, supplierCost = 0,
-      ticketData = [],
+      ticketData = [], quoteId,
     } = body;
 
     // Quien solo puede ver sus propias ventas tampoco puede crear una a nombre
@@ -341,7 +341,7 @@ class SalesService {
           // decimales de coma flotante que luego no cuadran al sumar comisiones.
           monto_comision_bruto: aCentimos(commissionAgentAmount),
           porcentaje_retencion_comision: Number(commissionAgentRetentionPercentage) || 0,
-          monto_comision_neto: aCentimos(commissionAgentNetPayment),
+          monto_comision_neto: comisionNeta(commissionAgentAmount, commissionAgentRetentionPercentage),
           comision_liquidada: false,
           metodo_pago_principal_id,
           status,
@@ -354,6 +354,21 @@ class SalesService {
       });
 
       const ventaId = venta.id;
+
+      // Convertir una cotización: se enlaza en la misma transacción. Solo vale una
+      // aceptada, viva y sin venta (dos pestañas no crean dos ventas); si no, se deshace todo.
+      if (quoteId !== undefined && quoteId !== null) {
+        const enlazada = await tx.cotizaciones.updateMany({
+          where: {
+            id: Number(quoteId), deleted_at: null, estado: 'aceptada', venta_id: null,
+            ...(alcance.cotizacionesSoloPropias ? { usuario_id: alcance.user.id } : {}),
+          },
+          data: { venta_id: ventaId },
+        });
+        if (enlazada.count === 0) {
+          throw new ConflictError('La cotización no está aceptada, ya tiene una venta o no se puede convertir');
+        }
+      }
 
       // Los productos y sus personas, a razón de una inserción por tabla (ventaProductos.js).
       await escribirProductos(tx, {
@@ -380,6 +395,9 @@ class SalesService {
       const cabecera = await recalcularVenta(tx, ventaId);
       // El mismo tope que `registerPayment`, contra el total que acaba de
       // calcular la base. Lanzar aquí deshace la venta entera.
+      if (aCentimos(commissionAgentAmount) > cabecera.ta_total) {
+        throw new BadRequestError('La comisión no puede superar la ganancia (TA) de la venta');
+      }
       if (cabecera.monto_pagado_credito > cabecera.monto_total) {
         throw new BadRequestError(
           `Los abonos (${cabecera.monto_pagado_credito}) superan el total de la venta (${cabecera.monto_total})`
@@ -612,12 +630,6 @@ class SalesService {
     return { message: 'Venta anulada correctamente' };
   }
 
-  async removeSale(id, alcance = {}) {
-    await ventaVisible(id, alcance, { paraEscribir: true });
-    await prisma.ventas.update({ where: { id }, data: { deleted_at: new Date() } });
-    return { message: 'Venta eliminada' };
-  }
-
   async registerPayment(id, { amount, isTotal, method, reference }, alcance = {}) {
     await ventaVisible(id, alcance, { paraEscribir: true });
     const { randomUUID } = require('crypto');
@@ -631,7 +643,8 @@ class SalesService {
       const comoId = Number(method);
       if (Number.isInteger(comoId) && comoId > 0) {
         const m = await prisma.metodos_pago.findUnique({ where: { id: comoId } });
-        if (m) metodo_pago_id = m.id;
+        if (!m) throw new BadRequestError('El método de pago no existe');
+        metodo_pago_id = m.id;
       } else {
         metodo_pago_id = await idPorNombre('metodos_pago', method, 'method');
       }
@@ -693,10 +706,19 @@ class SalesService {
 
   async deletePayment(saleId, paymentId, alcance = {}) {
     await ventaVisible(saleId, alcance, { paraEscribir: true });
+    // Borrar el registro de dinero que entró es del administrador, como marcar revisada (spec 039, H16).
+    if (alcanceDeEscritura(alcance) !== 'all') {
+      throw new ForbiddenError('Solo un administrador puede borrar un abono');
+    }
     // Misma corrección que en `registerPayment`: la rama que aceptaba
     // `currentPayments` y `saleTotal` del cuerpo dejaba que el cliente
     // decidiera el estado de cobro resultante.
     const actualizada = await prisma.transaccion(async (tx) => {
+      // El cerrojo primero, como al cobrar: si no, un cobro simultáneo deja el saldo calculado con datos viejos.
+      await bloquearVenta(tx, saleId);
+      const venta = await tx.ventas.findFirst({ where: { id: saleId, deleted_at: null }, select: { status: true } });
+      // Una venta pagada ya está cerrada; una revisada siempre lo está. La pantalla aplica la misma regla.
+      if (venta?.status === 'pagado') throw new BadRequestError('No se puede borrar un abono de una venta pagada');
       const pago = await tx.pagos_venta.findUnique({
         where: { id: paymentId },
         select: { id: true, venta_id: true },
@@ -771,6 +793,17 @@ class SalesService {
       data.monto_comision_bruto = 0;
       data.porcentaje_retencion_comision = 0;
       data.monto_comision_neto = 0;
+    }
+
+    // El neto nunca se toma del cliente, y el bruto no puede superar la ganancia de la venta (spec 039, H7).
+    if ('commissionAgentAmount' in body && (data.monto_comision_bruto || 0) > venta.ta_total) {
+      throw new BadRequestError('La comisión no puede superar la ganancia (TA) de la venta');
+    }
+    if (CLAVES_COMISION.some(clave => clave in body)) {
+      data.monto_comision_neto = comisionNeta(
+        'monto_comision_bruto' in data ? data.monto_comision_bruto : venta.monto_comision_bruto,
+        'porcentaje_retencion_comision' in data ? data.porcentaje_retencion_comision : venta.porcentaje_retencion_comision,
+      );
     }
 
     // La misma comprobación que en el alta, con el mismo helper: los ids que

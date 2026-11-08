@@ -382,10 +382,13 @@ class CompaniesService {
   }
 
   /** Salir. Cierra la sesión suplantada y cierra la fila de auditoría. */
-  async terminarSuplantacion(suplantacionId, { usuario, tokenHash }) {
+  async terminarSuplantacion(suplantacionId, { usuario, tokenHash, empresaId }) {
     await prisma.transaccion(async (tx) => {
+      // La fila tiene que ser de la empresa de la URL y del superadministrador que pide.
       const [fila] = await tx.$queryRaw`
-        SELECT id FROM suplantaciones WHERE id = ${suplantacionId} AND terminada_at IS NULL`;
+        SELECT id FROM suplantaciones
+        WHERE id = ${suplantacionId} AND empresa_id = ${Number(empresaId)}
+          AND superadmin_id = ${usuario.id} AND terminada_at IS NULL`;
       if (!fila) throw new NotFoundError('Esa suplantación no está abierta');
 
       await tx.$executeRaw`UPDATE suplantaciones SET terminada_at = NOW() WHERE id = ${suplantacionId}`;
@@ -421,7 +424,8 @@ class CompaniesService {
         motivo: f.motivo,
         iniciadaAt: f.iniciada_at,
         expiraAt: f.expira_at,
-        terminadaAt: f.terminada_at,
+        // Una suplantación caducada sin pulsar salir no se cierra en la base: se muestra como terminada al vencer.
+        terminadaAt: f.terminada_at ?? (f.expira_at < new Date() ? f.expira_at : null),
         ip: f.ip,
       })),
       meta: buildMeta(total, page, perPage),

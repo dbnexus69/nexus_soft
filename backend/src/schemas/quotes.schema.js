@@ -28,7 +28,6 @@ const updateQuoteSchema = createQuoteSchema.omit({ asesorId: true });
 
 const respondSchema = z.object({ accepted: z.boolean() });
 
-const linkSaleSchema = z.object({ saleId: z.union([z.string(), z.number()]) });
 
 // `.passthrough()`: `page`/`perPage`/`search`/`sortBy`/`sortOrder` los valida `paginate`,
 // no este esquema (ver middleware/validate.js).
@@ -36,4 +35,4 @@ const listQuotesQuerySchema = z.object({
   status: z.enum(['borrador', 'enviada', 'aceptada', 'rechazada']).optional(),
 }).passthrough();
 
-module.exports = { createQuoteSchema, updateQuoteSchema, respondSchema, linkSaleSchema, listQuotesQuerySchema };
+module.exports = { createQuoteSchema, updateQuoteSchema, respondSchema, listQuotesQuerySchema };

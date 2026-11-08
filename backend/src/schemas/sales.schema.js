@@ -36,6 +36,7 @@ const paymentSchema = z.object({
 const productArrays = productArraysDe({ mensajeMax: 'Demasiados productos de este tipo en una venta' });
 
 const baseSale = {
+  quoteId: z.number().int().positive().optional(),
   clientId: idRequerido('El cliente'),
   asesorId: id,
   responsableId: id,

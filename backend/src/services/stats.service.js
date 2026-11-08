@@ -5,15 +5,27 @@ const prisma = require('../config/db');
 const { dashboardAggregates } = require('@prisma/client/sql');
 const { vuelosDePlan } = require('./flights.service');
 const { buildMeta } = require('../utils/paginationHelper');
+const { rangoDeDias } = require('../utils/fechas');
 
 // `limit` llega de la URL. Sin el piso de 1, `?limit=-5` acababa en un
 // `LIMIT -5` que Postgres rechaza con un 500.
 const topeDe = (limit, max = 50) => Math.min(Math.max(Number(limit) || 6, 1), max);
 
+/**
+ * El filtro de fechas como días de Bogotá, ambos incluidos. `hasta` es EXCLUSIVO (medianoche del día
+ * siguiente); `findo` es el último milisegundo incluido, para el SQL tipado que compara con `<=`.
+ * Un valor sin forma de día se ignora en vez de dar 500.
+ */
+function limitesDeDias(dateFrom, dateTo) {
+  const { desde, hasta } = rangoDeDias(dateFrom, dateTo);
+  return { desde, hasta, findo: hasta ? new Date(hasta.getTime() - 1) : null };
+}
+
 class StatsService {
   async getDashboardStats({ dateFrom, dateTo, permissionScope, user }) {
     const currentYear = new Date().getFullYear();
     const scopeUserId = permissionScope === 'own' ? user.id : null;
+    const { desde, hasta, findo } = limitesDeDias(dateFrom, dateTo);
 
     /**
      * Condiciones de fecha y de ámbito con parámetros posicionales.
@@ -36,8 +48,8 @@ class StatsService {
       const push = (sql, ...valores) => {
         filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
       };
-      if (dateFrom) push(`${prefijo}creado_at >= ?`, new Date(dateFrom));
-      if (dateTo) push(`${prefijo}creado_at <= ?`, new Date(dateTo));
+      if (desde) push(`${prefijo}creado_at >= ?`, desde);
+      if (hasta) push(`${prefijo}creado_at < ?`, hasta);
       if (scopeUserId !== null) push(`${prefijo}usuario_id = ?`, scopeUserId);
       return { sql: filtros.length ? 'AND ' + filtros.join(' AND ') : '', params };
     };
@@ -83,10 +95,10 @@ class StatsService {
     if (permissionScope === 'own') {
       clientsWhere.creado_por_id = user.id;
     }
-    if (dateFrom || dateTo) {
+    if (desde || hasta) {
       clientsWhere.fecha_registro = {};
-      if (dateFrom) clientsWhere.fecha_registro.gte = new Date(dateFrom);
-      if (dateTo) clientsWhere.fecha_registro.lte = new Date(dateTo);
+      if (desde) clientsWhere.fecha_registro.gte = desde;
+      if (hasta) clientsWhere.fecha_registro.lt = hasta;
     }
 
     // Se retiró `recentSales`. Era una consulta más por petición para alimentar
@@ -97,8 +109,8 @@ class StatsService {
     const [aggResult, activeClientsCount, totalClientsCount, categoryResult, trendResult, suppliersCount] = await prisma.transaccion(async (tx) => {
       return Promise.all([
         tx.$queryRawTyped(dashboardAggregates(
-          dateFrom ? new Date(dateFrom) : null,
-          dateTo ? new Date(dateTo) : null,
+          desde,
+          findo, // el SQL compara con `<=`
           scopeUserId,
           currentYear,
         )),
@@ -191,8 +203,9 @@ class StatsService {
     const push = (sql, ...valores) => {
       filtros.push(sql.replace(/\?/g, () => `$${params.push(valores.shift())}`));
     };
-    if (dateFrom) push('v.creado_at >= ?', new Date(dateFrom));
-    if (dateTo) push('v.creado_at <= ?', new Date(dateTo));
+    const { desde, hasta } = limitesDeDias(dateFrom, dateTo);
+    if (desde) push('v.creado_at >= ?', desde);
+    if (hasta) push('v.creado_at < ?', hasta);
     if (scopeUserId !== null) push('v.usuario_id = ?', scopeUserId);
     const extraSql = filtros.length ? 'AND ' + filtros.join(' AND ') : '';
 
@@ -471,13 +484,14 @@ class StatsService {
    */
   async getIva({ dateFrom, dateTo, permissionScope, user, pagination }) {
     const { page, perPage, skip } = pagination;
+    const { desde, hasta } = limitesDeDias(dateFrom, dateTo);
     const where = {
       deleted_at: null,
       status: { not: 'anulado' },
-      ...((dateFrom || dateTo) && {
+      ...((desde || hasta) && {
         creado_at: {
-          ...(dateFrom && { gte: new Date(dateFrom) }),
-          ...(dateTo && { lte: new Date(dateTo) }),
+          ...(desde && { gte: desde }),
+          ...(hasta && { lt: hasta }),
         },
       }),
       ...(permissionScope === 'own' && { usuario_id: user.id }),

@@ -76,6 +76,7 @@ exports.terminarSuplantacion = async (req, res, next) => {
       // trabajando: es la sesión del superadministrador. Buscarla en la de
       // destino no la encuentra, y el token seguiría valiendo.
       usuario: { id: req.user.id, empresaId: req.empresaOrigen },
+      empresaId: req.params.id,
       tokenHash: token ? crypto.createHash('sha256').update(token).digest('hex') : null,
     });
     // Vuelve la sesión del superadministrador; si no la hay, no queda ninguna.

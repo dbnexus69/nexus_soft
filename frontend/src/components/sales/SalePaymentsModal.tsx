@@ -29,7 +29,8 @@ interface SalePaymentsModalProps {
   isOpen: boolean;
   onClose: () => void;
   sale: Sale | null;
-  isAdmin: boolean;
+  /** Editar ventas en 'all': el mismo permiso con el que el servidor deja borrar un abono. */
+  puedeBorrarAbonos: boolean;
   onUpdateSale?: (id: number, data: any) => void;
   onRegisterPayment: (saleId: number, amount: number, method?: string, reference?: string) => Promise<any>;
   onDeletePayment: (saleId: number, paymentId: string) => Promise<void>;
@@ -105,7 +106,7 @@ export default function SalePaymentsModal({
   isOpen,
   onClose,
   sale: saleProp,
-  isAdmin,
+  puedeBorrarAbonos,
   onUpdateSale,
   onRegisterPayment,
   onDeletePayment,
@@ -525,7 +526,7 @@ export default function SalePaymentsModal({
                         </div>
                       </div>
                       <div className="flex gap-2 items-center mt-2 sm:mt-0">
-                        {isAdmin && sale.status !== "pagado" && (
+                        {puedeBorrarAbonos && sale.status !== "pagado" && (
                           <Button
                             variant="outline"
                             size="sm"

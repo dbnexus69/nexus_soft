@@ -14,7 +14,7 @@ interface CatalogDetailModalProps {
   /** El registro de la fila. null cierra la modal. */
   item: any | null;
   onClose: () => void;
-  onEditar: (item: any) => void;
+  onEditar?: (item: any) => void;
 }
 
 /**
@@ -81,13 +81,15 @@ export function CatalogDetailModal({ def, item, onClose, onEditar }: CatalogDeta
           >
             Cerrar
           </button>
-          <button
-            type="button"
-            onClick={() => { onEditar(item); onClose(); }}
-            className="rounded-lg bg-highlight px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-          >
-            Editar
-          </button>
+          {onEditar && (
+            <button
+              type="button"
+              onClick={() => { onEditar(item); onClose(); }}
+              className="rounded-lg bg-highlight px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Editar
+            </button>
+          )}
         </div>
       }
     >

@@ -221,6 +221,12 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
 
   const slugEfectivo = slugTocado ? slug : comoSlug(nombre);
 
+  // Mismos mínimos que el servidor (companies.schema.js), para no habilitar un botón que va a fallar.
+  const datosCompletos =
+    nombre.trim().length >= 2 && slugEfectivo.length >= 3 &&
+    admin.firstName.trim().length >= 2 && admin.lastName.trim().length >= 2 &&
+    Boolean(admin.email.trim()) && Boolean(admin.password) && !mensajeContrasena(admin.password);
+
   const guardar = async () => {
     setGuardando(true); setError('');
     try {
@@ -249,7 +255,7 @@ function AltaDeAgencia({ onClose, onCreada }: { onClose: () => void; onCreada: (
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button onClick={guardar} disabled={guardando || !nombre.trim() || !admin.email || !admin.firstName || !admin.password || Boolean(mensajeContrasena(admin.password))}>
+          <Button onClick={guardar} disabled={guardando || !datosCompletos}>
             {guardando ? 'Creando…' : 'Crear la agencia'}
           </Button>
         </>

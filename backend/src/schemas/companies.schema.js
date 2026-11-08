@@ -41,7 +41,7 @@ const color = z.string()
   .optional();
 
 const marca = {
-  nombre: z.string().trim().min(2, 'Mínimo 2 caracteres').max(120),
+  nombre: z.string().trim().min(2, 'Mínimo 2 caracteres').max(120, 'Máximo 120 caracteres'),
   nombreComercial: z.string().trim().max(120).nullable().optional(),
   colorPrimario: color,
   colorAcento: color,
@@ -73,9 +73,9 @@ const createCompanySchema = z.object({
   ...plan,
   slug,
   admin: z.object({
-    firstName: z.string().trim().min(2).max(60),
-    lastName: z.string().trim().min(2).max(60),
-    email: z.string().trim().toLowerCase().email('No parece un correo válido').max(180),
+    firstName: z.string().trim().min(2, 'Mínimo 2 caracteres').max(60, 'Máximo 60 caracteres'),
+    lastName: z.string().trim().min(2, 'Mínimo 2 caracteres').max(60, 'Máximo 60 caracteres'),
+    email: z.string().trim().toLowerCase().email('No parece un correo válido').max(180, 'Máximo 180 caracteres'),
     password: contrasena,
   }),
 }).strict();

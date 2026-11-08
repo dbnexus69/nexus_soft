@@ -498,7 +498,7 @@ export default function Sales() {
         isOpen={isPaymentsOpen}
         onClose={() => setIsPaymentsOpen(false)}
         sale={paymentsSale}
-        isAdmin={isAdmin}
+        puedeBorrarAbonos={scopeOf("sales", "edit") === "all"}
         onUpdateSale={updateSale}
         onRegisterPayment={(saleId, amount, method, reference) => registerCreditPayment(Number(saleId), { amount, method, reference })}
         onDeletePayment={(saleId, paymentId) => deleteSalePayment(saleId, paymentId)}

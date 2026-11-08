@@ -411,17 +411,8 @@ class UsersService {
     if (data.lastName) personaUpdate.apellidos = formatName(data.lastName);
     if (data.phone !== undefined) personaUpdate.telefono = data.phone;
 
-    if (data.docNumber !== undefined) {
-      if (data.docNumber) {
-        const existingDoc = await prisma.personas.findFirst({
-          where: { documento: data.docNumber }
-        });
-        if (existingDoc && existingDoc.id !== usuario.persona_id) {
-          throw new BadRequestError('Este número de documento ya está asignado a otra persona en el sistema');
-        }
-      }
-      personaUpdate.documento = data.docNumber;
-    }
+    // La comprobación de documento duplicado va dentro de la transacción, tras el control de cupo.
+    if (data.docNumber !== undefined) personaUpdate.documento = data.docNumber;
 
     if (data.birthDate) personaUpdate.birth_date = new Date(data.birthDate);
     if (data.avatar !== undefined) personaUpdate.avatar_url = data.avatar;
@@ -430,13 +421,7 @@ class UsersService {
     const tipo = await validarDocumento(data);
     if (tipo) personaUpdate.tipo_documento_id = tipo.id;
 
-    if (Object.keys(personaUpdate).length > 0) {
-      personaUpdate.updated_at = new Date();
-      await prisma.personas.update({
-        where: { id: usuario.persona_id },
-        data: personaUpdate
-      });
-    }
+    if (Object.keys(personaUpdate).length > 0) personaUpdate.updated_at = new Date();
 
     const updateData = {};
     if (data.email) updateData.email = data.email;
@@ -458,6 +443,15 @@ class UsersService {
     const reactiva = updateData.status === 'active' && usuario.status !== 'active';
     const updated = await prisma.transaccion(async (tx) => {
       if (reactiva) await this._comprobarLimiteDeUsuarios(tx);
+      if (data.docNumber) {
+        const existingDoc = await tx.personas.findFirst({ where: { documento: data.docNumber } });
+        if (existingDoc && existingDoc.id !== usuario.persona_id) {
+          throw new BadRequestError('Este número de documento ya está asignado a otra persona en el sistema');
+        }
+      }
+      if (Object.keys(personaUpdate).length > 0) {
+        await tx.personas.update({ where: { id: usuario.persona_id }, data: personaUpdate });
+      }
       const fila = await tx.usuarios.update({
         where: { id },
         data: updateData,
@@ -476,7 +470,9 @@ class UsersService {
       }
       return fila;
     });
-    if (cortaSesiones) olvidarUsuario(id);
+    // El rol nuevo vale desde su siguiente petición, sin esperar a que caduque la caché (spec 039, H2).
+    const cambiaRol = updateData.rol_id !== undefined && updateData.rol_id !== usuario.rol_id;
+    if (cortaSesiones || cambiaRol) olvidarUsuario(id);
     if (reseteoAjeno) await this._avisarCambioDeContrasena(updated);
 
     // Solo lo editado (spec 034); la contraseña no está en el mapa y no vuelve nunca.

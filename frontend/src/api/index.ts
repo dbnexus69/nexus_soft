@@ -11,7 +11,7 @@ export {
   listResponsables, getResponsable, createResponsable, updateResponsable, setResponsableStatus,
 } from './responsables';
 export {
-  listSales, getSale, getCreditPortfolio, getClientCredits, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, deleteSale, voidSale,
+  listSales, getSale, getCreditPortfolio, getClientCredits, getSaleProducts, getSaleProductsByCategory, createSale, updateSale, voidSale,
   registerPayment, deletePayment, getSalePayments, uploadProductVoucher,
   sendVoucher, getVoucherUrl, updateReviewStatus,
 } from './sales';
@@ -24,7 +24,7 @@ export {
 } from './commissions';
 export {
   listQuotes, getQuote, createQuote, updateQuote, deleteQuote, duplicateQuote,
-  sendQuote, respondQuote, convertQuoteToSale, linkQuoteSale, getQuotePdfUrl,
+  sendQuote, respondQuote, convertQuoteToSale, getQuotePdfUrl,
   uploadQuoteLineImage, deleteQuoteLineImage,
 } from './quotes';
 export type { QuoteDraft } from './quotes';

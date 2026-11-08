@@ -1,6 +1,6 @@
 # Spec 039 — Revisión de lógica, permisos y dinero (2026-11-07)
 
-**Estado:** hallazgos documentados; correcciones pendientes de las decisiones del usuario · **Rama:** `feat-bayrol` ·
+**Estado:** completada (2026-11-08), probada con la base local y aprobada en pantalla por el usuario; solo falta aplicar en producción la migración de T13 · **Rama:** `feat-bayrol` ·
 **Toca la base compartida:** no (ninguna migración prevista) · **Origen:** revisión del 2026-11-07 (multitenencia,
 autenticación, permisos por módulo, dinero y frontend) · **Relacionadas:**
 [`025`](../025-auditoria-de-permisos/spec.md), [`027`](../027-permisos-coherentes/spec.md),
@@ -30,7 +30,7 @@ admins**, así que H1 hoy es latente.
 | H4 | 🟡 media | **Auditoría de suplantación que no cierra.** Si el token caduca sin pulsar "salir", `terminada_at` queda nulo para siempre. `terminarSuplantacion` no comprueba que la suplantación sea de la empresa de la URL ni del superadmin que pide (relevante si hay más de uno). | `services/companies.service.js:385-402` | Lectura. |
 | H5 | 🔵 a decidir | **Suspender una agencia no corta una suplantación abierta en ella** (esa sesión vive en la agencia de origen). | `services/companies.service.js:309-316` | Lectura. |
 | H6 | 🟠 alta | **`total` explícito por producto desacopla precio, TA e IVA.** `products.schema.js` acepta `total`/`subtotal` y `precioProducto` lo usa tal cual si es > 0. Por la API, un asesor registra costo 1.000.000 + TA 500.000 cobrando 1: la venta queda "pagada" con 1 y el IVA declarado (95.000) no cuadra con lo cobrado. El asistente no envía ese campo: solo es alcanzable por la API. | `schemas/products.schema.js:109-110`; `services/saleTotals.js:48-53` | Reproducido: `monto_total=1, ta_total=500000, iva_total=95000`. |
-| H7 | 🟠 alta | **Comisión neta sin relación con bruto y retención.** Bruto, % de retención y neto llegan los tres del cliente y se guardan sin contrastar; la liquidación paga el **neto**. La pantalla además deja escribir el neto a mano (`Step3Payment.tsx`, «Neto a Pagar al Comisionista»). | `services/sales.service.js:335-341` (alta) y `CAMPOS_EDITABLES` (edición) | Reproducido: bruto 100 + 10 % → neto 999.999 guardado y liquidado por 999.999. |
+| H7 | 🟠 alta | **Comisión neta sin relación con bruto y retención.** Bruto, % de retención y neto llegan los tres del cliente y se guardan sin contrastar; la liquidación paga el **neto**. La pantalla lo calcula y lo muestra de solo lectura: el hueco es la API. | `services/sales.service.js:335-341` (alta) y `CAMPOS_EDITABLES` (edición) | Reproducido: bruto 100 + 10 % → neto 999.999 guardado y liquidado por 999.999. |
 | H8 | 🔵 a decidir | **Se liquida la comisión de ventas que el cliente no ha pagado.** `VENTA_CON_COMISION_PENDIENTE` no mira el estado de cobro: una venta a crédito sin un abono ya se puede liquidar. | `services/commissions.service.js:33-37` | Reproducido (201 sobre una venta en `credito`). |
 | H9 | 🟠 alta | **Borrar un pago de una venta revisada la deja revisada y con deuda**, y sin forma de cambiarlo (`updateReviewStatus` rechaza tocar una revisada). | `services/sales.service.js:694-714, 828` | Reproducido: `status=credito, is_reviewed=true`. |
 | H10 | 🔵 a decidir | **Se elimina (borrado lógico) una venta pagada, revisada o con comisión ya liquidada.** Desaparece de cartera y estadísticas; la liquidación sigue apuntándola. Anular sí conserva los pagos; eliminar no tiene ninguna guarda. | `services/sales.service.js:615-619` | Reproducido (204 en los dos casos). |
@@ -48,7 +48,7 @@ admins**, así que H1 hoy es latente.
 | H17 | 🟡 media | **Editar o borrar un paquete no es atómico.** Se borran sus hoteles, vuelos, tarifas, asistencia y proveedores y después se escribe el paquete, fuera de una transacción: si la escritura falla (validación, clave ajena), el paquete queda vacío. | `services/config.service.js:413-420, 444-450` | Lectura. |
 | H18 | 🟡 media | **El dashboard filtra por días de la zona del navegador, no de Bogotá.** `Dashboard.tsx` manda `toISOString()` del inicio/fin del día local, que es justo lo que la spec 004 prohíbe; `stats.service.js` hace `new Date(...)` sin `rangoDeDias`. Fuera de Colombia (o con el reloj en otra zona), las cifras del dashboard no cuadran con el listado de ventas del mismo rango. | `frontend/src/pages/Dashboard.tsx:146-151`; `services/stats.service.js:39-40, 88-89, 194-195, 479-480` | Lectura. |
 | H19 | 🔵 baja | **Convertir una cotización en venta.** `linkSale` acepta cualquier venta vigente de la agencia (también la de otro asesor que quien enlaza no puede ver) sin exigir que la cotización esté `aceptada`. Y dos conversiones simultáneas (dos pestañas) crean dos ventas: la segunda no se enlaza y queda duplicada. | `services/quotes.service.js:375-407`; `NewSaleWizard.tsx` (enlace tras el 201) | Lectura. |
-| H20 | 🔵 baja | **Check-in enviado y no guardado.** El correo al cliente sale antes de la transacción; si esta falla, el cliente recibió el check-in, el tramo sigue pendiente y los adjuntos se borran del bucket. Reintentar lo reenvía. | `services/flights.service.js:880-905` | Lectura. |
+| H20 | 🔵 baja | **Check-in enviado y no guardado.** El correo al cliente sale antes de la transacción; si esta falla, el cliente recibió el check-in, el tramo sigue pendiente y los adjuntos se borran del bucket. Reintentar lo reenvía. **Descartado (2026-11-08):** invertir el orden sería peor, podría constar como hecho un check-in que el cliente no recibió; el fallo actual solo repite un correo. | `services/flights.service.js:880-905` | Lectura. |
 | H21 | 🔵 baja | **Alta de agencia: errores y pruebas.** El botón no exige apellidos ni largo mínimo y el servidor responde en inglés («String must contain at least 2 character(s)»: `min(2)` sin mensaje en `admin.firstName/lastName`). Las suites crean agencias por el servicio con `sinEmpresa`, nunca por `POST /companies` con la sesión del superadmin: el flujo real no está cubierto (probado a mano el 2026-11-07: funciona). | `schemas/companies.schema.js:73-74`; `pages/Companies.tsx:249`; `tests/montaje.js:123-135` | Lectura + prueba por la API. |
 
 ### Tercera tanda (2026-11-08): commit `0a82629` (spec 040), corregido en esta spec
@@ -76,6 +76,11 @@ cotizaciones (incluidos PDF, imágenes y duplicar) y en vuelos/check-in (tambié
 con política en las 47 tablas con `empresa_id` (consulta a la base local); `SCOPED_ACTIONS` igual en los dos lados.
 
 ## Decisiones del usuario (antes de implementar)
+
+**Tomadas el 2026-11-08:** 1 → solo otro superadministrador (T19); 2 → invalidar la caché; 3 → se conserva `total` y se exige
+que cuadre con costo + TA + IVA; 4 → el servidor deriva el neto y el bruto no supera la TA; 5 → se puede liquidar sin que el
+cliente haya pagado, como hasta ahora; 6 → no se borran abonos de una venta pagada; 7 → se retira `DELETE /sales/:id`, solo
+se anula; 8 → H5 se queda, H14 se corrige al cerrar sesión a mano; 9 → los dos cierres; 10 → editar ventas en `all`.
 
 1. **H1:** ¿el rol `superadmin` deja de poder asignarse por `/users` (solo por script/BD), y un usuario superadmin
    solo lo puede editar otro superadmin? *(Recomendado: sí a las dos.)*

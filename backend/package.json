@@ -27,6 +27,7 @@
     "test:limite-usuarios": "node tests/limite-usuarios-api.js",
     "test:validaciones": "node tests/validaciones.js",
     "test:voucher-plantilla": "node tests/voucher-plantilla.js",
+    "test:revision-039": "node tests/revision-039-api.js",
     "test:reglas-espejo": "node tests/reglas-espejo.js"
   },
   "keywords": [

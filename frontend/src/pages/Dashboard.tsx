@@ -143,21 +143,22 @@ export default function Dashboard() {
   /** Los parámetros de fecha, derivados del rango elegido. */
   const paramsDeFecha = useCallback(() => {
     const params: Record<string, unknown> = {};
-    const aIso = (v: any, finDeDia: boolean) => {
-      const s = typeof v === "string" ? v.replace(/-/g, "/") : v;
-      const d = new Date(s);
-      if (isNaN(d.getTime())) return null;
-      finDeDia ? d.setHours(23, 59, 59, 999) : d.setHours(0, 0, 0, 0);
-      return d.toISOString();
+    // El servidor espera días AAAA-MM-DD de Bogotá (ambos incluidos): se envía el día elegido
+    // tal cual, sin pasar por instantes ni por la zona del navegador.
+    const aDia = (v: any): string | null => {
+      if (v instanceof Date) {
+        if (isNaN(v.getTime())) return null;
+        const mm = String(v.getMonth() + 1).padStart(2, "0");
+        const dd = String(v.getDate()).padStart(2, "0");
+        return `${v.getFullYear()}-${mm}-${dd}`;
+      }
+      const s = typeof v === "string" ? v.trim().slice(0, 10).replace(/\//g, "-") : "";
+      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
     };
-    if (dateRange?.startDate) {
-      const v = aIso(dateRange.startDate, false);
-      if (v) params.dateFrom = v;
-    }
-    if (dateRange?.endDate) {
-      const v = aIso(dateRange.endDate, true);
-      if (v) params.dateTo = v;
-    }
+    const desde = aDia(dateRange?.startDate);
+    if (desde) params.dateFrom = desde;
+    const hasta = aDia(dateRange?.endDate);
+    if (hasta) params.dateTo = hasta;
     return params;
   }, [dateRange]);
 

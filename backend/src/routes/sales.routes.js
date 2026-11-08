@@ -34,7 +34,6 @@ router.put('/:id', authorize('sales', 'edit'), validate(updateSaleSchema), sales
 router.patch('/:id/review-status', authorize('sales', 'edit'), validate(reviewStatusSchema), salesController.updateReviewStatus);
 // La anulación es un sub-recurso, no un verbo en la URL.
 router.post('/:id/cancellation', authorize('sales', 'delete'), validate(voidSaleSchema), salesController.voidSale);
-router.delete('/:id', authorize('sales', 'delete'), salesController.remove);
 router.post('/:id/payments', authorize('sales', 'edit'), validate(registerPaymentSchema), salesController.registerPayment);
 router.delete('/:saleId/payments/:paymentId', authorize('sales', 'edit'), salesController.deletePayment);
 router.get('/:id/payments', authorize('sales', 'view'), salesController.listPayments);

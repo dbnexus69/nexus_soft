@@ -29,6 +29,7 @@ import { FormField, Input, Select } from '../components/ui/Form';
 import { Table, TableRow, TableCell } from '../components/ui/Table';
 import { useData } from '../context/DataContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { useAuth } from '../context/AuthContext';
 import { ConfigData } from '../types';
 import ConfigForms from '../components/config/ConfigForms';
 
@@ -81,7 +82,10 @@ export default function Config() {
   const [paginationMeta, setPaginationMeta] = useState<any>(null);
   const [isSectionLoading, setIsSectionLoading] = useState(false);
 
+  const { user } = useAuth();
   const def = CATALOGO_POR_ID[currentSection];
+  // Los catálogos comunes a todas las agencias solo los escribe el superadministrador (spec 039).
+  const soloLectura = !def.propio && user?.role !== 'superadmin';
 
   // Orden: sin elegir manda el del servidor, que cada catálogo declara.
   const [orden, setOrden] = useState<{ por: string | null; sentido: 'asc' | 'desc' }>(
@@ -343,10 +347,16 @@ export default function Config() {
 
           {/* Decía "Nuevo Aerolíneas": el rótulo era el plural. Cada catálogo
               declara su singular. */}
-          <Button size="sm" onClick={() => handleOpenModal()}>
-            <Plus size={15} aria-hidden />
-            Nuevo {def.singular.toLowerCase()}
-          </Button>
+          {soloLectura ? (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              Catálogo común a todas las agencias. Si falta algo, pídeselo a soporte.
+            </span>
+          ) : (
+            <Button size="sm" onClick={() => handleOpenModal()}>
+              <Plus size={15} aria-hidden />
+              Nuevo {def.singular.toLowerCase()}
+            </Button>
+          )}
         </div>
 
         {def.vista === 'fichas' ? (
@@ -412,6 +422,7 @@ export default function Config() {
                       >
                         <Eye size={14} />
                       </button>
+                      {!soloLectura && (<>
                       <button
                         type="button"
                         onClick={() => handleOpenModal(item)}
@@ -432,6 +443,7 @@ export default function Config() {
                       >
                         <Trash2 size={14} />
                       </button>
+                      </>)}
                     </div>
                   </li>
                 ))}
@@ -533,6 +545,7 @@ export default function Config() {
                             <Eye size={14} />
                           </button>
                         )}
+                        {!soloLectura && (<>
                         <button
                           type="button"
                           onClick={() => handleOpenModal(item)}
@@ -553,6 +566,7 @@ export default function Config() {
                         >
                           <Trash2 size={14} />
                         </button>
+                        </>)}
                       </div>
                     </td>
                   </tr>
@@ -580,7 +594,7 @@ export default function Config() {
         def={def}
         item={viendoItem}
         onClose={() => setViendoItem(null)}
-        onEditar={handleOpenModal}
+        onEditar={soloLectura ? undefined : handleOpenModal}
       />
 
       <Modal

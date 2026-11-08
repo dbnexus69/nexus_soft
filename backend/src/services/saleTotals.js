@@ -30,6 +30,11 @@ function calcularIva(ta) {
   return aCentimos(Number(ta || 0) * TASA_IVA);
 }
 
+/** Lo que se le paga al comisionista: nunca una cifra del cliente, siempre el bruto menos su retención (spec 039). */
+function comisionNeta(bruto, porcentajeRetencion) {
+  return aCentimos((Number(bruto) || 0) * (1 - (Number(porcentajeRetencion) || 0) / 100));
+}
+
 /**
  * Precio de un producto dentro de la venta.
  *
@@ -143,6 +148,6 @@ async function bloquearVenta(tx, ventaId) {
 }
 
 module.exports = {
-  recalcularVenta, estadoSegunPago, aCentimos, precioProducto, bloquearVenta,
+  recalcularVenta, estadoSegunPago, aCentimos, comisionNeta, precioProducto, bloquearVenta,
   calcularIva, datosFinancieros, TASA_IVA,
 };

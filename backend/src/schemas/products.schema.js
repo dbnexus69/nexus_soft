@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const { Prisma } = require('@prisma/client');
+const { calcularIva } = require('../services/saleTotals');
 
 /**
  * Validación de los productos de una venta, en su única puerta: `POST /sales`.
@@ -157,10 +158,26 @@ const EXTRAS = {
   restaurant: { people: cantidad },
 };
 
+/**
+ * Un `total`/`subtotal` explícito tiene que ser costo + TA + IVA (spec 039, H6). Si no, se podía cobrar 1 por un
+ * servicio de 1.500.000 con el IVA declarado sobre la TA real. El precio manda sobre el resto (`precioProducto`).
+ */
+function precioCuadra(x, ctx) {
+  const ta = Number(x.ta) || 0;
+  const esperado = ta + (Number(x.supplierCost) || 0) + calcularIva(ta);
+  for (const campo of ['total', 'subtotal']) {
+    const valor = Number(x[campo]);
+    if (vacio(x[campo]) || !Number.isFinite(valor) || valor <= 0) continue;
+    if (Math.abs(valor - esperado) > 0.01) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: `no cuadra con costo + TA + IVA (${esperado})` });
+    }
+  }
+}
+
 const ESQUEMAS = Object.fromEntries(
   Object.keys(require('../catalog/products').CATALOG).map(slug => [
     slug,
-    z.object({ ...SOBRE, ...(EXTRAS[slug] || {}) }).passthrough(),
+    z.object({ ...SOBRE, ...(EXTRAS[slug] || {}) }).passthrough().superRefine(precioCuadra),
   ])
 );
 
@@ -181,7 +198,7 @@ const EXTRAS_RELAJADOS = Object.fromEntries(
 const ESQUEMAS_RELAJADOS = Object.fromEntries(
   Object.keys(require('../catalog/products').CATALOG).map(slug => [
     slug,
-    z.object({ ...SOBRE, ...(EXTRAS_RELAJADOS[slug] || {}) }).passthrough(),
+    z.object({ ...SOBRE, ...(EXTRAS_RELAJADOS[slug] || {}) }).passthrough().superRefine(precioCuadra),
   ])
 );
 

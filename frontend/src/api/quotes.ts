@@ -59,12 +59,6 @@ export async function convertQuoteToSale(id: number) {
   return res.data.data;
 }
 
-/** Se llama justo después de que `POST /sales` cree la venta, para enlazarla de vuelta. */
-export async function linkQuoteSale(id: number, saleId: number) {
-  const res = await api.patch<Recurso<Quote>>(`/quotes/${id}/link-sale`, { saleId });
-  return res.data.data;
-}
-
 /** URL firmada (5 min) del PDF de la cotización; lo genera y lo guarda el servidor. */
 export async function getQuotePdfUrl(id: number) {
   const res = await api.get<Recurso<{ url: string; expiraEn: number }>>(`/quotes/${id}/pdf`);

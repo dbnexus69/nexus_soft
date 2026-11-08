@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { listSales, getSale, createSale, updateSale, voidSale, deleteSale, registerPayment, deletePayment, updateReviewStatus } from '../api/sales';
+import { listSales, getSale, createSale, updateSale, voidSale, registerPayment, deletePayment, updateReviewStatus } from '../api/sales';
 import { Sale } from '../types';
 
 export interface SalesMeta {
@@ -91,11 +91,6 @@ export function useSales() {
     await fetchSales();
   };
 
-  const handleDeleteSale = async (id: number) => {
-    await deleteSale(id);
-    await fetchSales();
-  };
-
   const handleRegisterPayment = async (saleId: number, data: Record<string, unknown>) => {
     const res = await registerPayment(saleId, data);
     await fetchSales();
@@ -135,7 +130,6 @@ export function useSales() {
     handleCreateSale,
     handleUpdateSale,
     handleVoidSale,
-    handleDeleteSale,
     handleRegisterPayment,
     handleDeletePayment,
     handleToggleReviewStatus

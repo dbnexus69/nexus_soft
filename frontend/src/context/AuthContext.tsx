@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { login as apiLogin, logout as apiLogout, getMe, getBranding } from '../api';
+import { olvidarBorradoresDe } from '../utils/borradoresVenta';
 import { aplicarMarca, type Marca } from '../utils/marca';
 import { invalidateClientsCache } from '../utils/clientsCache';
 import { invalidateUsersCache } from '../utils/usersCache';
@@ -96,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     apiLogout().catch(() => {});
+    if (user) olvidarBorradoresDe(user.id);
     cerrarSesionLocal();
   };
 

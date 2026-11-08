@@ -2,6 +2,8 @@ const salesService = require('../services/sales.service');
 const voucher = require('../services/voucher');
 const { success, noContent } = require('../utils/apiResponse');
 const { getEffectivePermissions } = require('../middleware/authorize');
+const { masEstrecho } = require('../utils/alcancePermisos');
+const { ForbiddenError } = require('../errors/AppError');
 
 // Crear o editar una venta también mira el alcance de ver responsables (spec 026): el responsable
 // asignado tiene que ser uno que quien escribe puede ver.
@@ -130,16 +132,6 @@ exports.voidSale = async (req, res, next) => {
   }
 };
 
-exports.remove = async (req, res, next) => {
-  try {
-    const id = parseInt(req.params.id);
-    await salesService.removeSale(id, alcanceDe(req));
-    noContent(res);
-  } catch (err) {
-    next(err);
-  }
-};
-
 exports.registerPayment = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
@@ -195,7 +187,16 @@ exports.sendVoucher = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await salesService.createSale(req.validatedBody || req.body, conResponsables(req));
+    const body = req.validatedBody || req.body;
+    const alcance = conResponsables(req);
+    // Convertir una cotización exige poder editar cotizaciones (la venta solo pide sales.create).
+    if (body.quoteId !== undefined && body.quoteId !== null) {
+      const q = getEffectivePermissions(req.user).permissions.quotes;
+      const alcanceCot = masEstrecho(q?.edit, q?.view);
+      if (alcanceCot === 'none') throw new ForbiddenError('No tiene permiso para convertir cotizaciones');
+      alcance.cotizacionesSoloPropias = alcanceCot === 'own';
+    }
+    const result = await salesService.createSale(body, alcance);
     success(res, result, null, 201);
   } catch (err) {
     next(err);

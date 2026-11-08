@@ -15,7 +15,7 @@ const paginate = require('../middleware/paginate');
 const { validate, validateQuery } = require('../middleware/validate');
 const { uploadQuoteImage } = require('../middleware/uploadQuoteImage');
 const {
-  createQuoteSchema, updateQuoteSchema, respondSchema, linkSaleSchema, listQuotesQuerySchema,
+  createQuoteSchema, updateQuoteSchema, respondSchema, listQuotesQuerySchema,
 } = require('../schemas/quotes.schema');
 
 router.use(auth);
@@ -31,7 +31,6 @@ router.post('/:id/duplicate', authorize('quotes', 'create'), controller.duplicat
 router.post('/:id/send', authorize('quotes', 'edit'), controller.send);
 router.post('/:id/respond', authorize('quotes', 'edit'), validate(respondSchema), controller.respond);
 router.post('/:id/convert-to-sale', authorize('quotes', 'edit'), controller.convertToSale);
-router.patch('/:id/link-sale', authorize('quotes', 'edit'), validate(linkSaleSchema), controller.linkSale);
 router.get('/:id/pdf', authorize('quotes', 'view'), controller.pdfUrl);
 
 // Fotos de un servicio cotizado (spec 021): mismo permiso que editar la cotización.

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { borradoresEnMemoria } from "../../utils/borradoresVenta";
 import { validarPaso } from "./wizard/validarPaso";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -118,7 +119,6 @@ function dataUrlABlob(dataUrl: string): Blob {
 // localStorage no sirve de copia única: los vouchers viajan en base64 y pueden
 // superar su cupo (~5 MB), en cuyo caso la escritura falla. Por eso la copia
 // viva está aquí, con la misma clave (empresa + usuario) que el localStorage.
-const borradoresEnMemoria = new Map<string, WizardFormData>();
 
 /**
  * Para quien escribe un borrador nuevo sin pasar por este componente —
@@ -562,6 +562,8 @@ export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props
       isSettled: !!form.commissionAgentId ? false : undefined,
       ta: Number(form.ta) || 0,
       supplierCost: Number(form.supplierCost) || 0,
+      // El servidor enlaza la cotización dentro de la misma transacción de la venta.
+      quoteId: fromQuoteId ?? undefined,
     };
 
     // Los archivos no viajan en el JSON de la venta. Antes iban dentro, en
@@ -578,13 +580,6 @@ export default function NewSaleWizard({ onClose, onSuccess, fromQuoteId }: Props
       // porque sus cifras cambian con cada venta nueva.
       const creada = await handleCreateSale(saleData);
       invalidateDashboard();
-      // La venta ya existe y es lo que importa: si el enlace de vuelta falla, se avisa en
-      // consola y no se bloquea el éxito. Un reintento manual (abrir la cotización y
-      // "convertir" de nuevo) lo resuelve sin perder la venta.
-      if (fromQuoteId) {
-        try { await api.linkQuoteSale(fromQuoteId, creada.id); }
-        catch (err) { console.warn('[QUOTE_LINK_FAILED]', err); }
-      }
       borradoresEnMemoria.delete(draftKey);
       localStorage.removeItem(draftKey);
 

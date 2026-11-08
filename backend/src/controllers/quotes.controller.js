@@ -90,14 +90,6 @@ exports.convertToSale = async (req, res, next) => {
   }
 };
 
-exports.linkSale = async (req, res, next) => {
-  try {
-    success(res, await quotesService.linkSale(parseInt(req.params.id), req.validatedBody, alcanceDe(req)));
-  } catch (err) {
-    next(err);
-  }
-};
-
 exports.pdfUrl = async (req, res, next) => {
   try {
     success(res, await quotesPdf.urlDeDescarga(parseInt(req.params.id), alcanceDe(req)));

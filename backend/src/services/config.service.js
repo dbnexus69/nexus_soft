@@ -409,23 +409,22 @@ class ConfigService {
     let updateData;
     if (config.reverseTransform) {
       updateData = await config.reverseTransform(data);
-      // For packages and other complex updates, we need to clean up old relations before creating new ones
-      if (section === 'packages') {
-        await prisma.paquete_hotel.deleteMany({ where: { paquete_id: Number(id) } });
-        await prisma.paquete_vuelo.deleteMany({ where: { paquete_id: Number(id) } });
-        await prisma.paquete_tarifas.deleteMany({ where: { paquete_id: Number(id) } });
-        await prisma.paquete_asistencia_medica.deleteMany({ where: { paquete_id: Number(id) } });
-        await prisma.paquete_proveedor.deleteMany({ where: { paquete_id: Number(id) } });
-      }
     } else {
       updateData = { ...data };
       delete updateData.id;
     }
 
-    const updated = await prisma[config.model].update({
-      where: { [config.idField]: Number(id) },
-      data: updateData,
-      include: config.include
+    const updated = await prisma.transaccion(async (tx) => {
+      // En paquetes se limpian las relaciones viejas antes de escribir las nuevas; si la escritura
+      // falla, la transacción deja el paquete como estaba.
+      if (config.reverseTransform && section === 'packages') {
+        await this._borrarRelacionesDePaquete(tx, id);
+      }
+      return tx[config.model].update({
+        where: { [config.idField]: Number(id) },
+        data: updateData,
+        include: config.include
+      });
     });
 
     // El id y lo que se mandó, con su valor guardado (spec 034). La pantalla ya aplicó el cambio en
@@ -441,18 +440,22 @@ class ConfigService {
     const config = SECTION_MAP[section];
     if (!config) throw new NotFoundError('Sección no encontrada');
 
-    if (section === 'packages') {
-      await prisma.paquete_hotel.deleteMany({ where: { paquete_id: Number(id) } });
-      await prisma.paquete_vuelo.deleteMany({ where: { paquete_id: Number(id) } });
-      await prisma.paquete_tarifas.deleteMany({ where: { paquete_id: Number(id) } });
-      await prisma.paquete_asistencia_medica.deleteMany({ where: { paquete_id: Number(id) } });
-      await prisma.paquete_proveedor.deleteMany({ where: { paquete_id: Number(id) } });
-    }
-
-    await prisma[config.model].delete({
-      where: { [config.idField]: Number(id) }
+    await prisma.transaccion(async (tx) => {
+      if (section === 'packages') await this._borrarRelacionesDePaquete(tx, id);
+      await tx[config.model].delete({
+        where: { [config.idField]: Number(id) }
+      });
     });
     return true;
+  }
+
+  async _borrarRelacionesDePaquete(tx, id) {
+    const where = { paquete_id: Number(id) };
+    await tx.paquete_hotel.deleteMany({ where });
+    await tx.paquete_vuelo.deleteMany({ where });
+    await tx.paquete_tarifas.deleteMany({ where });
+    await tx.paquete_asistencia_medica.deleteMany({ where });
+    await tx.paquete_proveedor.deleteMany({ where });
   }
 }
 

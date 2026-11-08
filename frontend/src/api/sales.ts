@@ -65,10 +65,6 @@ export async function updateSale(id: number, data: Record<string, unknown>) {
   return res.data.data;
 }
 
-export async function deleteSale(id: number) {
-  await api.delete(`/sales/${id}`);
-}
-
 export async function voidSale(id: number, reason: string) {
   const res = await api.post(`/sales/${id}/cancellation`, { reason });
   return res.data.data;

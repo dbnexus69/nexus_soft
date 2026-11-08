@@ -33,7 +33,8 @@ desmontadas al terminar): H1, H2, H6, H7, H8, H9, H10.
 base local, `test:voucher`, `test:cotizacion-imagenes`, `test:limite-usuarios` y `test:aislamiento-api`, todas en verde.
 **Falta:** el repaso en pantalla de «Mi empresa» y del modal de Usuarios.
 ## T21 · H28 correo guardado con mayúsculas `[x]`
-## T20 · H27 aplicar la migración `20261107120000` en producción antes de subir a `main` `[ ]` — requiere orden expresa
+## T20 · H27 migración `20261107120000` en producción antes de subir a `main` `[x]`
+Ya estaba aplicada: `migrate status` contra producción (2026-11-08) responde «up to date» con las 36 migraciones. No hizo falta `migrate deploy`.
 
 ## Registro
 

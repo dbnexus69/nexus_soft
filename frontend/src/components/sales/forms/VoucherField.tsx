@@ -338,7 +338,7 @@ interface ImagesFieldProps {
   onError?: (msg: string) => void;
 }
 
-const TIPOS_IMAGEN_PERMITIDOS = ["image/png", "image/jpeg", "image/webp"];
+const TIPOS_IMAGEN_PERMITIDOS = ["image/png", "image/jpeg"];
 const MAX_IMAGENES_POR_SERVICIO = 5;
 const MAX_BYTES_IMAGEN = 3 * 1024 * 1024;
 
@@ -367,7 +367,7 @@ export function ImagesField({ images = [], quoteId, lineId, onChange, onError }:
     if (e.target) e.target.value = "";
     if (!file || !quoteId || !lineId) return;
     if (!TIPOS_IMAGEN_PERMITIDOS.includes(file.type)) {
-      onError?.("La imagen tiene que ser PNG, JPG o WebP");
+      onError?.("La imagen tiene que ser PNG o JPG");
       return;
     }
     if (file.size > MAX_BYTES_IMAGEN) {
@@ -432,7 +432,7 @@ export function ImagesField({ images = [], quoteId, lineId, onChange, onError }:
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg"
                 className="hidden"
                 onChange={handleFileChange}
               />

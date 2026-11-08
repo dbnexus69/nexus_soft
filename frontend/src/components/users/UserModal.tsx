@@ -6,6 +6,7 @@ import { Input, Select, FormField } from "../ui/Form";
 import AvatarPicker, { AVATARS } from "../ui/AvatarPicker";
 import { DatePicker } from "../sales/forms/TicketForm";
 import { User } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 import { capitalizeName, todayStr } from "../../utils/formatters";
 import { AYUDA_CONTRASENA, mensajeContrasena } from "../../utils/contrasena";
 import {
@@ -54,6 +55,12 @@ export const UserModal: React.FC<UserModalProps> = ({
   // La regla del número depende del tipo, y el tipo es un id: aquí se busca su abreviatura.
   const tipoElegido = documentTypes.find(dt => String(dt.id) === String(formData.docTypeId));
   const abreviatura = abreviaturaDe(tipoElegido);
+
+  const { user: quienEdita } = useAuth();
+  // Igual que `users.service.js::comprobarEdicion`: el servidor es el que decide; esto solo evita ofrecerlo.
+  const cuentaProtegida = Boolean(editingUser) && quienEdita?.role !== "superadmin" && (
+    editingUser?.role === "superadmin" || (editingUser?.role === "admin" && editingUser?.id !== quienEdita?.id)
+  );
 
   const [showPassword, setShowPassword] = useState(false);
   const [cambiarPassword, setCambiarPassword] = useState(false);
@@ -221,6 +228,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="juan.perez@nexus.com"
+                disabled={cuentaProtegida}
               />
             </FormField>
 
@@ -248,7 +256,13 @@ export const UserModal: React.FC<UserModalProps> = ({
               </FormField>
             )}
 
-            {editingUser && !cambiarPassword && (
+            {cuentaProtegida && (
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                La contraseña, el correo y el rol de esta cuenta solo los cambia el superadministrador.
+              </p>
+            )}
+
+            {editingUser && !cambiarPassword && !cuentaProtegida && (
               <button
                 type="button"
                 className="text-sm font-medium text-primary hover:underline"
@@ -301,6 +315,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                   className="h-12 rounded-xl bg-white dark:bg-slate-900 focus:bg-gray-50 dark:focus:bg-slate-800 transition-colors"
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  disabled={cuentaProtegida}
                 >
                   <option value="asesor">Asesor</option>
                   <option value="freelancer">Freelancer</option>

@@ -7,7 +7,7 @@
  */
 const {
   comprobar, pedir, entrar, CLAVE,
-  levantarServidor, montarAgencia, montarSuperadmin, ejecutar,
+  levantarServidor, montarAgencia, montarSuperadmin, ejecutar, WEBP, PNG_DANADO,
 } = require('./montaje');
 
 const { isDeepStrictEqual } = require('util');
@@ -19,6 +19,11 @@ const GIF = Buffer.from('R0lGODlhAQABAAAAACw=', 'base64');
 const conArchivo = (buffer, tipo, nombre) => {
   const form = new FormData();
   form.append('logo', new Blob([buffer], { type: tipo }), nombre);
+  return form;
+};
+const conImagen = (buffer, tipo, nombre) => {
+  const form = new FormData();
+  form.append('imagen', new Blob([buffer], { type: tipo }), nombre);
   return form;
 };
 const camposDe = (r) => (r.json?.error?.details || []).map(d => d.field).sort();
@@ -101,6 +106,29 @@ async function main() {
   const gif = await pedir('PUT', '/company-profile/logo', tokA, undefined, { form: conArchivo(GIF, 'image/gif', 'l.gif') });
   comprobar('un GIF: 422 en el campo logo', gif.status === 422 && camposDe(gif).includes('logo'), `HTTP ${gif.status}`);
   comprobar('B sigue sin logo', (await pedir('GET', '/company-profile', tokB)).json?.data?.logoUrl === null);
+
+  // ── 2b. Imágenes propias del voucher (spec 040, corregidas en la 039)
+  console.log('\n  Imágenes del voucher');
+  const subirA = (ruta, form, tok = tokA) => pedir('PUT', `/company-profile/${ruta}`, tok, undefined, { form });
+  const webpLogo = await pedir('PUT', '/company-profile/logo', tokA, undefined, { form: conArchivo(WEBP, 'image/webp', 'l.webp') });
+  comprobar('un logo WebP: 422 en el campo logo', webpLogo.status === 422 && camposDe(webpLogo).includes('logo'), `HTTP ${webpLogo.status}`);
+  const webpEnc = await subirA('voucher-encabezado', conImagen(WEBP, 'image/webp', 'e.webp'));
+  comprobar('un encabezado WebP: 422 en el campo imagen', webpEnc.status === 422 && camposDe(webpEnc).includes('imagen'), `HTTP ${webpEnc.status}`);
+  const danada = await subirA('voucher-pie-imagen', conImagen(PNG_DANADO, 'image/png', 'p.png'));
+  comprobar('un PNG dañado: 422 en el campo imagen', danada.status === 422 && camposDe(danada).includes('imagen'), `HTTP ${danada.status}`);
+  comprobar('…y el servidor sigue vivo', (await pedir('GET', '/company-profile', tokA)).status === 200);
+  comprobar('el asesor no sube un encabezado: 403', (await subirA('voucher-encabezado', conImagen(PNG, 'image/png', 'e.png'), tokAsesor)).status === 403);
+  comprobar('el asesor no quita un encabezado: 403', (await pedir('DELETE', '/company-profile/voucher-encabezado', tokAsesor)).status === 403);
+  const enc = await subirA('voucher-encabezado', conImagen(PNG, 'image/png', 'e.png'));
+  comprobar('sube el encabezado', enc.status === 200 && (enc.json?.data?.voucherEncabezadoImagenUrl || '').includes(`/prueba/${A.id}/encabezado-`), `HTTP ${enc.status}`);
+  const pieImg = await subirA('voucher-pie-imagen', conImagen(PNG, 'image/png', 'p.png'));
+  comprobar('sube el pie', pieImg.status === 200 && (pieImg.json?.data?.voucherPieImagenUrl || '').includes(`/prueba/${A.id}/pie-`), `HTTP ${pieImg.status}`);
+  comprobar('la vista previa sale con las dos', (await pedir('POST', '/company-profile/voucher-preview', tokA, {})).status === 200);
+  comprobar('quita el encabezado: 204', (await pedir('DELETE', '/company-profile/voucher-encabezado', tokA)).status === 204);
+  comprobar('quita el pie: 204', (await pedir('DELETE', '/company-profile/voucher-pie-imagen', tokA)).status === 204);
+  const sinImagenes = (await pedir('GET', '/company-profile', tokA)).json?.data;
+  comprobar('ya no hay ninguna', sinImagenes?.voucherEncabezadoImagenUrl === null && sinImagenes?.voucherPieImagenUrl === null);
+  comprobar('quitar otra vez no falla: 204', (await pedir('DELETE', '/company-profile/voucher-encabezado', tokA)).status === 204);
 
   // ── 3. El superadministrador
   console.log('\n  Superadministrador');

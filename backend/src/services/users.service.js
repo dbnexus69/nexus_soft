@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
 const { empresaActual } = require('../config/tenant');
-const { AppError, NotFoundError, BadRequestError } = require('../errors/AppError');
+const { AppError, NotFoundError, BadRequestError, ForbiddenError } = require('../errors/AppError');
 const { buildMeta } = require('../utils/paginationHelper');
 const emailService = require('../utils/emailService');
 const { olvidarUsuario } = require('../middleware/authCache');
@@ -19,6 +19,38 @@ const CAMPOS_DE_RESPUESTA = {
   birthDate: ['birth_date', 'birthDate'], birth_date: ['birth_date', 'birthDate'],
   avatar: ['avatar'], status: ['status'],
 };
+
+const esSuperadmin = (solicitante) => solicitante?.role === 'superadmin';
+
+/** El rol `superadmin` solo lo reparte otro superadministrador: existe como fila en la agencia donde vive el suyo. */
+function comprobarRolAsignable(rol, solicitante) {
+  if (rol === 'superadmin' && !esSuperadmin(solicitante)) {
+    throw new ForbiddenError('Solo un superadministrador puede asignar ese rol');
+  }
+}
+
+/**
+ * Lo que nadie puede cambiarle a una cuenta más alta o igual que la suya.
+ *
+ * A otro admin no se le toca la contraseña, pero tampoco el correo (con él bastaría "olvidé mi contraseña")
+ * ni el rol (bajarlo a asesor y resetearlo después). El formulario reenvía todos los campos en cada guardado:
+ * se compara con lo guardado, no se rechaza porque el campo venga. Un admin bloqueado tiene "olvidé mi
+ * contraseña", o el superadministrador entrando a la agencia.
+ */
+function comprobarEdicion(usuario, data, solicitante) {
+  if (esSuperadmin(solicitante)) return;
+  if (usuario.roles.nombre === 'superadmin') {
+    throw new ForbiddenError('Solo otro superadministrador puede editar esta cuenta');
+  }
+  comprobarRolAsignable(data.role, solicitante);
+  if (usuario.roles.nombre !== 'admin' || usuario.id === solicitante?.id) return;
+  // `data.email` ya viene en minúsculas (schema): una cuenta antigua guardada con mayúsculas no cuenta como cambio.
+  const cambiaCorreo = data.email && data.email !== usuario.email.toLowerCase();
+  const cambiaRol = data.role && data.role !== 'admin';
+  if (data.password || cambiaCorreo || cambiaRol) {
+    throw new ForbiddenError('Solo el superadministrador puede cambiar la contraseña, el correo o el rol de otro administrador');
+  }
+}
 
 class UsersService {
   async listUsers({ pagination, search, role, status }) {
@@ -237,7 +269,8 @@ class UsersService {
     }
   }
 
-  async createUser(data) {
+  async createUser(data, solicitante) {
+    comprobarRolAsignable(data.role, solicitante);
     // Un alta inactiva no ocupa cupo. Esta primera comprobación corta antes de tocar la persona
     // (que `reutilizarPersona` puede actualizar); la que vale es la de la transacción del final.
     const activa = (data.status || 'active') === 'active';
@@ -357,15 +390,17 @@ class UsersService {
     return { ...soloLoPedido(ficha, data, CAMPOS_DE_RESPUESTA), numero: ficha.numero, aviso };
   }
 
-  async updateUser(id, data) {
+  async updateUser(id, data, solicitante) {
     const usuario = await prisma.usuarios.findFirst({
       where: { id, personas: { deleted_at: null } },
-      include: { personas: true },
+      include: { personas: true, roles: true },
     });
     if (!usuario) {
       throw new NotFoundError('Usuario no encontrado');
     }
+    comprobarEdicion(usuario, data, solicitante);
 
+    const reseteoAjeno = Boolean(data.password) && usuario.id !== solicitante?.id;
     if (data.password) {
       data.password_hash = await bcrypt.hash(data.password, 12);
       delete data.password;
@@ -416,22 +451,33 @@ class UsersService {
     // Cambiar la contraseña o inhabilitar a alguien tiene que cortarle las
     // sesiones abiertas. Antes no: el token seguía valiendo su plazo entero,
     // así que ni una cosa ni la otra surtían efecto hasta que caducara.
-    if (updateData.password_hash || updateData.status === 'inactive') {
-      await prisma.sesiones.deleteMany({ where: { usuario_id: id } });
-      olvidarUsuario(id);
-    }
+    const cortaSesiones = Boolean(updateData.password_hash) || updateData.status === 'inactive';
 
     // Reactivar a un inactivo ocupa un cupo del plan (spec 029): sin esto, inactivar a uno, dar de
     // alta a otro y reactivar al primero dejaba la agencia por encima del límite.
     const reactiva = updateData.status === 'active' && usuario.status !== 'active';
     const updated = await prisma.transaccion(async (tx) => {
       if (reactiva) await this._comprobarLimiteDeUsuarios(tx);
-      return tx.usuarios.update({
+      const fila = await tx.usuarios.update({
         where: { id },
         data: updateData,
         include: { personas: { include: { tipos_documento: true } }, roles: true }
       });
+      if (cortaSesiones) await tx.sesiones.deleteMany({ where: { usuario_id: id } });
+      // A nombre del afectado, no de quien lo hizo: suplantando, ese no pertenece a esta agencia y la
+      // clave ajena compuesta lo rechazaría. Quién fue queda en la descripción.
+      if (reseteoAjeno) {
+        await tx.logs_usuarios.create({
+          data: {
+            usuario_id: id, accion: 'cambio_contrasena', modulo: 'users',
+            descripcion: `Contraseña cambiada por ${solicitante?.email ?? 'desconocido'}${solicitante?.suplantando ? ' (soporte, suplantando la agencia)' : ''}`,
+          },
+        });
+      }
+      return fila;
     });
+    if (cortaSesiones) olvidarUsuario(id);
+    if (reseteoAjeno) await this._avisarCambioDeContrasena(updated);
 
     // Solo lo editado (spec 034); la contraseña no está en el mapa y no vuelve nunca.
     return soloLoPedido({
@@ -466,13 +512,30 @@ class UsersService {
    * seguir sabiendo quién las hizo. Las sesiones y el registro de accesos son
    * suyos y se van con él.
    */
-  async removeUser(id, { requestedBy } = {}) {
+  /** Quien no lo hizo tiene que enterarse. `sendEmail` no lanza: un correo que falla no deshace el cambio. */
+  async _avisarCambioDeContrasena(usuario) {
+    const { nombre: agencia } = await emailService.marcaDeCorreo();
+    const envio = await emailService.sendEmail({
+      to: usuario.email,
+      subject: `${agencia} · se cambió la contraseña de tu cuenta`,
+      html: `
+        <p>Hola ${usuario.personas?.nombres || ''},</p>
+        <p>Un administrador cambió la contraseña de tu cuenta en ${agencia}, y las sesiones que tenías abiertas se cerraron.</p>
+        <p>Si no lo esperabas, comunícate con tu agencia.</p>`,
+    });
+    if (!envio.success) console.error('[PASSWORD_NOTICE_FAILED]', 'usuario', usuario.id);
+  }
+
+  async removeUser(id, { requestedBy, requestedRole } = {}) {
     const usuario = await prisma.usuarios.findFirst({
       where: { id, personas: { deleted_at: null } },
       include: { personas: true, roles: true },
     });
     if (!usuario) {
       throw new NotFoundError('Usuario no encontrado');
+    }
+    if (usuario.roles.nombre === 'superadmin' && requestedRole !== 'superadmin') {
+      throw new ForbiddenError('Solo otro superadministrador puede dar de baja esta cuenta');
     }
 
     // Nadie se borra a sí mismo: quedaría con una sesión abierta sobre una

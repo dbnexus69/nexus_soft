@@ -3,6 +3,7 @@ const vfsFuentes = require('pdfmake/build/vfs_fonts.js');
 const TERMINOS_POR_DEFECTO = require('./terminosPorDefecto');
 const { fecha, dinero, SECCIONES, titulo, tarjeta, rejilla, bloqueTiquete, bloquesDeHijos } = require('./secciones');
 const { dimensiones } = require('./dimensionesImagen');
+const { imagenSana } = require('./imagenSegura');
 
 /**
  * El voucher en PDF (spec 011): venta + configuración de la agencia → definición de `pdfmake` → Buffer.
@@ -12,7 +13,7 @@ const { dimensiones } = require('./dimensionesImagen');
  * con el PDF de la cotización): título y pares etiqueta/valor; un valor vacío no se pinta. Subir
  * `PLANTILLA_VERSION` cuando cambie el diseño invalida la caché.
  */
-const PLANTILLA_VERSION = 5;
+const PLANTILLA_VERSION = 6;
 
 const vfs = (vfsFuentes.pdfMake && vfsFuentes.pdfMake.vfs) || vfsFuentes.vfs || vfsFuentes;
 const fuente = (archivo) => Buffer.from(vfs[archivo], 'base64');
@@ -22,6 +23,33 @@ const impresora = new PdfPrinter({
     italics: fuente('Roboto-Italic.ttf'), bolditalics: fuente('Roboto-MediumItalic.ttf'),
   },
 });
+
+const ANCHO_PAGINA = 612; // LETTER, a 72 pt por pulgada
+const SEPARACION_ENCABEZADO = 14;
+// Lo que se reserva al texto del pie encima de la imagen: caben las líneas de los 300 caracteres de `voucher_pie`.
+const RESERVA_TEXTO_PIE = 56;
+
+/** ¿Puede ir esta imagen en un PDF? Primero `imagenSana`: lo que el motor no sobrevive no debe llegarle. Nunca lanza. */
+function imagenUtilizable(buffer) {
+  if (!imagenSana(buffer)) return false;
+  try {
+    impresora.createPdfKitDocument({ content: [{ image: buffer, width: 1 }] }).end();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * La imagen guardada, o null si ya no sirve para un PDF (un WebP o un archivo dañado de antes de validar al subir).
+ * Una imagen de adorno no puede impedir que salga un voucher: sin ella, sale con lo que tenga por defecto.
+ */
+function soloUtilizable(buffer, etiqueta) {
+  if (!buffer) return null;
+  if (imagenUtilizable(buffer)) return buffer;
+  console.warn('[PDF_IMAGE_SKIPPED]', etiqueta);
+  return null;
+}
 
 /**
  * La definición del documento.
@@ -56,30 +84,27 @@ function definicion(venta, config, { logo = null, encabezadoImagen = null, pieIm
     }
   }
 
-  // El ancho de LETTER (72 pt/in) y el alto que se le reserva a cada imagen propia: `header`/`footer`
-  // de pdfmake dibujan de borde a borde de la página (sin los márgenes de `content`), así que es la
-  // única forma de que toquen las 4 esquinas de verdad. El alto se calcula de la proporción REAL de
-  // cada imagen a ese ancho completo (nunca uno fijo a ojo: con uno fijo, una imagen menos alta que
-  // ese número quedaba angosta en vez de a todo el ancho — bug reportado el 2026-11-07); se acota
-  // entre un mínimo y un máximo para que una imagen muy vertical no se coma media página.
-  const ANCHO_PAGINA = 612;
-  const SEPARACION_ENCABEZADO = 14;
-  const SEPARACION_PIE = 8;
-  const altoParaAncho = (buffer, porDefecto, min, max) => {
-    const d = buffer && dimensiones(buffer);
-    const alto = d ? ANCHO_PAGINA * (d.height / d.width) : porDefecto;
-    return Math.max(min, Math.min(max, alto));
+  // `header`/`footer` de pdfmake dibujan de borde a borde de la página (sin los márgenes de `content`): es
+  // la única forma de que las imágenes propias toquen las esquinas. Su tamaño sale de la proporción REAL
+  // de cada una (con un alto fijo, una imagen menos alta quedaba angosta — bug del 2026-11-07), con un alto
+  // máximo para que una vertical no se coma media página: esa queda más angosta y va centrada.
+  const aAnchoCompleto = (buffer, porDefecto, max) => {
+    const d = dimensiones(buffer);
+    if (!d) return { ancho: ANCHO_PAGINA, alto: porDefecto };
+    const alto = ANCHO_PAGINA * (d.height / d.width);
+    return alto <= max ? { ancho: ANCHO_PAGINA, alto } : { ancho: max * (d.width / d.height), alto: max };
   };
-  const ALTO_ENCABEZADO_IMAGEN = encabezadoImagen ? altoParaAncho(encabezadoImagen, 130, 40, 220) : 0;
-  const ALTO_PIE_IMAGEN = pieImagen ? altoParaAncho(pieImagen, 60, 25, 150) : 0;
+  const centrado = (medida) => (ANCHO_PAGINA - medida.ancho) / 2;
+  const medidaEncabezado = encabezadoImagen ? aAnchoCompleto(encabezadoImagen, 130, 220) : null;
+  const medidaPie = pieImagen ? aAnchoCompleto(pieImagen, 60, 150) : null;
 
   return {
     pageSize: 'LETTER',
     pageMargins: [
       36,
-      encabezadoImagen ? ALTO_ENCABEZADO_IMAGEN + SEPARACION_ENCABEZADO : 36,
+      medidaEncabezado ? medidaEncabezado.alto + SEPARACION_ENCABEZADO : 36,
       36,
-      48 + (pieImagen ? ALTO_PIE_IMAGEN + SEPARACION_PIE : 0),
+      medidaPie ? RESERVA_TEXTO_PIE + medidaPie.alto : 48,
     ],
     info: { title: `Voucher ${venta.numero ?? venta.id} - ${agencia}`, author: agencia },
     defaultStyle: { font: 'Roboto', fontSize: 9, color: '#0f172a' },
@@ -90,7 +115,9 @@ function definicion(venta, config, { logo = null, encabezadoImagen = null, pieIm
       cabecera: { fontSize: 7, bold: true, color: '#334155' },
     },
     ...(venta.status === 'anulado' ? { watermark: { text: 'ANULADA', color: '#dc2626', opacity: 0.15, bold: true } } : {}),
-    ...(encabezadoImagen ? { header: () => ({ image: encabezadoImagen, fit: [ANCHO_PAGINA, ALTO_ENCABEZADO_IMAGEN] }) } : {}),
+    ...(medidaEncabezado ? {
+      header: () => ({ image: encabezadoImagen, width: medidaEncabezado.ancho, height: medidaEncabezado.alto, margin: [centrado(medidaEncabezado), 0, 0, 0] }),
+    } : {}),
     footer: (pagina, total) => ({
       stack: [
         {
@@ -98,10 +125,14 @@ function definicion(venta, config, { logo = null, encabezadoImagen = null, pieIm
             { text: config.pie || `© ${hoy.getFullYear()} ${agencia}. Documento generado electrónicamente.`, fontSize: 7, color: c.tenue },
             { text: `${pagina} / ${total}`, alignment: 'right', fontSize: 7, color: c.tenue },
           ],
-          margin: [36, 16, 36, pieImagen ? SEPARACION_PIE : 0],
+          margin: [36, 16, 36, 0],
         },
-        // Al final del stack para que quede pegada al borde inferior de la página, no arriba del texto.
-        ...(pieImagen ? [{ image: pieImagen, fit: [ANCHO_PAGINA, ALTO_PIE_IMAGEN] }] : []),
+        // Fuera del flujo: `absolutePosition` aquí se mide desde el inicio del pie, así que `y` la deja a ras del
+        // borde. Dentro del flujo quedaba un hueco abajo, y con un texto largo la imagen desaparecía sin aviso.
+        ...(medidaPie ? [{
+          image: pieImagen, width: medidaPie.ancho, height: medidaPie.alto,
+          absolutePosition: { x: centrado(medidaPie), y: RESERVA_TEXTO_PIE },
+        }] : []),
       ],
     }),
     content: [
@@ -165,4 +196,4 @@ function generar(venta, config, extra) {
   });
 }
 
-module.exports = { PLANTILLA_VERSION, definicion, generar, SECCIONES };
+module.exports = { PLANTILLA_VERSION, definicion, generar, imagenUtilizable, soloUtilizable, SECCIONES };

@@ -71,6 +71,7 @@ export default function Empresa() {
   const [subiendo, setSubiendo] = useState(false);
   const [subiendoEncabezado, setSubiendoEncabezado] = useState(false);
   const [subiendoPie, setSubiendoPie] = useState(false);
+  const [quitando, setQuitando] = useState<'encabezado' | 'pie' | null>(null);
   const [previa, setPrevia] = useState<string | null>(null);
   const [generando, setGenerando] = useState(false);
   const urlPrevia = useRef<string | null>(null);
@@ -149,6 +150,20 @@ export default function Empresa() {
       toast.error((err as any)?.response?.data?.error?.message || 'No se pudo subir la imagen');
     } finally {
       setSubiendoPie(false);
+    }
+  };
+
+  const quitarImagen = async (cual: 'encabezado' | 'pie') => {
+    setQuitando(cual);
+    try {
+      if (cual === 'encabezado') await api.deleteVoucherHeaderImage();
+      else await api.deleteVoucherFooterImage();
+      setPerfil(p => p && ({ ...p, ...(cual === 'encabezado' ? { voucherEncabezadoImagenUrl: null } : { voucherPieImagenUrl: null }) }));
+      toast.success(cual === 'encabezado' ? 'Imagen de encabezado quitada' : 'Imagen de pie quitada');
+    } catch (err) {
+      toast.error((err as any)?.response?.data?.error?.message || 'No se pudo quitar la imagen');
+    } finally {
+      setQuitando(null);
     }
   };
 
@@ -246,10 +261,10 @@ export default function Empresa() {
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800">
                     {subiendo ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                     {perfil.logoUrl ? 'Cambiar logo' : 'Subir logo'}
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={subiendo}
+                    <input type="file" accept="image/png,image/jpeg" className="sr-only" disabled={subiendo}
                       onChange={e => { const f = e.target.files?.[0]; if (f) subirLogo(f); e.target.value = ''; }} />
                   </label>
-                  <span className="text-xs text-slate-500">PNG, JPG o WebP, hasta 2 MB.</span>
+                  <span className="text-xs text-slate-500">PNG o JPG, hasta 2 MB.</span>
                 </div>
                 <SelectorDeColores colores={form.colores} onChange={(clave, valor) => poner('colores', { ...form.colores, [clave]: valor })} />
                 {(errores.colorPrimario || errores.colorAcento || errores.colorRealce) && (
@@ -272,9 +287,14 @@ export default function Empresa() {
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800">
                     {subiendoEncabezado ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                     {perfil.voucherEncabezadoImagenUrl ? 'Cambiar encabezado' : 'Subir encabezado'}
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={subiendoEncabezado}
+                    <input type="file" accept="image/png,image/jpeg" className="sr-only" disabled={subiendoEncabezado}
                       onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenEncabezado(f); e.target.value = ''; }} />
                   </label>
+                  {perfil.voucherEncabezadoImagenUrl && (
+                    <Button variant="outline" size="sm" disabled={quitando !== null} onClick={() => quitarImagen('encabezado')}>
+                      {quitando === 'encabezado' ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Quitar
+                    </Button>
+                  )}
                 </div>
                 <div className="flex items-center gap-4">
                   {perfil.voucherPieImagenUrl && (
@@ -283,11 +303,16 @@ export default function Empresa() {
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800">
                     {subiendoPie ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                     {perfil.voucherPieImagenUrl ? 'Cambiar pie' : 'Subir pie'}
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={subiendoPie}
+                    <input type="file" accept="image/png,image/jpeg" className="sr-only" disabled={subiendoPie}
                       onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenPie(f); e.target.value = ''; }} />
                   </label>
+                  {perfil.voucherPieImagenUrl && (
+                    <Button variant="outline" size="sm" disabled={quitando !== null} onClick={() => quitarImagen('pie')}>
+                      {quitando === 'pie' ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Quitar
+                    </Button>
+                  )}
                 </div>
-                <span className="text-xs text-slate-500">PNG, JPG o WebP, hasta 2 MB cada una. Se ven en la vista previa de al lado.</span>
+                <span className="text-xs text-slate-500">PNG o JPG, hasta 2 MB cada una. Se ven en la vista previa de al lado.</span>
               </CardBody>
             </Card>
 

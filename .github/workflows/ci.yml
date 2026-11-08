@@ -60,5 +60,7 @@ jobs:
         working-directory: backend
       - run: pnpm test:validaciones
         working-directory: backend
+      - run: pnpm test:voucher-plantilla
+        working-directory: backend
       - run: pnpm test:reglas-espejo
         working-directory: backend

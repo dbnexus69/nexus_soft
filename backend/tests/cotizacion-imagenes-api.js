@@ -6,7 +6,7 @@
  */
 const {
   comprobar, pedir, entrar,
-  levantarServidor, montarAgencia, ejecutar,
+  levantarServidor, montarAgencia, ejecutar, WEBP, PNG_DANADO,
 } = require('./montaje');
 
 const PREFIJO = 'prueba-coti-img-';
@@ -46,6 +46,10 @@ async function main() {
 
   const tipoInvalido = await pedir('POST', `/quotes/${cotizacionId}/lines/${lineId}/images`, tokA, undefined, { form: conArchivo(GIF, 'image/gif', 'foto.gif') });
   comprobar('un GIF se rechaza: 422', tipoInvalido.status === 422, `HTTP ${tipoInvalido.status}`);
+  const fotoWebp = await pedir('POST', `/quotes/${cotizacionId}/lines/${lineId}/images`, tokA, undefined, { form: conArchivo(WEBP, 'image/webp', 'foto.webp') });
+  comprobar('una foto WebP se rechaza: 422', fotoWebp.status === 422, `HTTP ${fotoWebp.status}`);
+  const fotoDanada = await pedir('POST', `/quotes/${cotizacionId}/lines/${lineId}/images`, tokA, undefined, { form: conArchivo(PNG_DANADO, 'image/png', 'foto.png') });
+  comprobar('una foto dañada se rechaza: 422', fotoDanada.status === 422, `HTTP ${fotoDanada.status}`);
 
   for (let i = 0; i < 4; i++) {
     await pedir('POST', `/quotes/${cotizacionId}/lines/${lineId}/images`, tokA, undefined, { form: conArchivo(PNG, 'image/png', `foto${i + 2}.png`) });

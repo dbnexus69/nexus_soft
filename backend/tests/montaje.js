@@ -148,6 +148,21 @@ async function montarSuperadmin(A) {
   return `${A.slug}-super@prueba.local`;
 }
 
+// Imágenes que el motor del PDF no puede usar. El PNG dañado tiene cabecera válida con transparencia y datos que
+// no son deflate: entregado al motor, revienta en un callback y se lleva el proceso. No se lee el CRC.
+const WEBP = Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA', 'base64');
+const trozoPng = (tipo, datos) => {
+  const largo = Buffer.alloc(4);
+  largo.writeUInt32BE(datos.length);
+  return Buffer.concat([largo, Buffer.from(tipo), datos, Buffer.alloc(4)]);
+};
+const PNG_DANADO = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  trozoPng('IHDR', Buffer.from([0, 0, 0, 50, 0, 0, 0, 50, 8, 6, 0, 0, 0])),
+  trozoPng('IDAT', Buffer.from('esto no es deflate')),
+  trozoPng('IEND', Buffer.alloc(0)),
+]);
+
 const ventaMinima = (clienteId, extra = {}) => ({
   clientId: clienteId, total: 1, status: 'credito', creditDueDate: '2027-12-31T00:00:00.000Z',
   restaurantData: [{ reservationName: 'Prueba', peopleCount: 2, supplierCost: 1000, ta: 500 }],
@@ -222,5 +237,5 @@ function ejecutar(titulo, prefijo, prueba) {
 
 module.exports = {
   admin, BASE, API, CLAVE, comprobar, pedir, entrar, una,
-  levantarServidor, montarAgencia, montarSuperadmin, ventaMinima, ejecutar,
+  levantarServidor, montarAgencia, montarSuperadmin, ventaMinima, ejecutar, WEBP, PNG_DANADO,
 };

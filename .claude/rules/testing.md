@@ -13,7 +13,7 @@ No ejecutar pruebas por rutina. Elige la comprobación más pequeña que cubra e
 ## Permisos
 - Las pruebas que acceden a la BD, levantan servidores o escriben datos requieren permiso expreso del usuario. Corren contra la base local en Docker (spec 038): `pnpm local:up` y `pnpm local:preparar`, y se niegan si la base o Storage no son locales (`scripts/solo-local.js`).
 - No ejecutes pruebas en navegador ni levantes servidores sin permiso.
-- Sin permiso, las comprobaciones habituales que no levantan servicios ni tocan la BD son `pnpm check:prisma`, `pnpm test:validaciones` y `pnpm test:reglas-espejo` en `backend/`, y `pnpm build` en `frontend/`. Verifica el alcance real del script antes de ejecutarlo si hay dudas.
+- Sin permiso, las comprobaciones habituales que no levantan servicios ni tocan la BD son `pnpm check:prisma`, `pnpm test:validaciones`, `pnpm test:voucher-plantilla` y `pnpm test:reglas-espejo` en `backend/`, y `pnpm build` en `frontend/`. Verifica el alcance real del script antes de ejecutarlo si hay dudas.
 
 ## Selección de pruebas
 - Cambios de consultas Prisma: `pnpm check:prisma` en `backend/`, si está permitido.
@@ -47,5 +47,6 @@ Desde `backend/`. Las que levantan servidor usan el montaje común `tests/montaj
 - `test:limite-usuarios` — límite de usuarios por plan (spec 029): plan por defecto, 422 en el tope, reactivar, altas simultáneas, sin límite.
 - `test:cotizacion-imagenes` — fotos de los servicios de una cotización (specs 021, 023): dos agencias y un asesor de prueba; sube al bucket `cotizacion-imagenes` bajo `prueba/` y la borra al terminar.
 - `test:validaciones` — reglas de datos de personas; sin BD.
+- `test:voucher-plantilla` — qué imágenes puede usar el PDF y dónde quedan en la página; sin BD.
 - `test:reglas-espejo` — compila `frontend/src/utils/datosPersona.ts` y lo compara con la copia del servidor en ~800 entradas; sin BD.
 - `check:prisma` — valida cada `prisma.<modelo>.<método>({...})` contra el DMMF (camelCase frente a snake_case); sale con 1 si encuentra algo.

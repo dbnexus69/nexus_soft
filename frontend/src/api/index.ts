@@ -44,6 +44,6 @@ export {
 export type { Empresa, NuevaEmpresa } from './companies';
 export {
   getCompanyProfile, updateCompanyProfile, uploadCompanyProfileLogo,
-  uploadVoucherHeaderImage, uploadVoucherFooterImage, previewVoucher,
+  uploadVoucherHeaderImage, uploadVoucherFooterImage, deleteVoucherHeaderImage, deleteVoucherFooterImage, previewVoucher,
 } from './companyProfile';
 export type { PerfilEmpresa, CambiosPerfil, Clausula } from './companyProfile';

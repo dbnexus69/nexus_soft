@@ -8,7 +8,8 @@ const createUserSchema = z.object({
   name: z.string().optional(),
   firstName: nombre.optional(),
   lastName: nombre.optional(),
-  email: z.string({ required_error: 'Email es requerido' }).email('Email inválido'),
+  // En minúsculas, como lo busca el login (`app_identidad_por_correo`): con mayúsculas la cuenta no podía entrar.
+  email: z.string({ required_error: 'Email es requerido' }).trim().toLowerCase().email('Email inválido'),
   password: contrasena,
   role: z.string({ required_error: 'Rol es requerido' }),
   phone: telefono,
@@ -25,7 +26,7 @@ const updateUserSchema = z.object({
   name: z.string().optional(),
   firstName: nombre.optional(),
   lastName: nombre.optional(),
-  email: z.string().email('Email inválido').optional(),
+  email: z.string().trim().toLowerCase().email('Email inválido').optional(),
   password: contrasena.optional(),
   role: z.string().optional(),
   phone: telefono,

@@ -1,6 +1,6 @@
 const perfilEmpresa = require('../services/perfilEmpresa.service');
 const { empresaActual } = require('../config/tenant');
-const { success } = require('../utils/apiResponse');
+const { success, noContent } = require('../utils/apiResponse');
 
 exports.perfil = async (req, res, next) => {
   try {
@@ -32,6 +32,20 @@ exports.subirImagenPie = async (req, res, next) => {
   try {
     await perfilEmpresa.guardarImagenPie(empresaActual(), req.file);
     success(res, await perfilEmpresa.perfil());
+  } catch (err) { next(err); }
+};
+
+exports.quitarImagenEncabezado = async (req, res, next) => {
+  try {
+    await perfilEmpresa.quitarImagenEncabezado();
+    noContent(res);
+  } catch (err) { next(err); }
+};
+
+exports.quitarImagenPie = async (req, res, next) => {
+  try {
+    await perfilEmpresa.quitarImagenPie();
+    noContent(res);
   } catch (err) { next(err); }
 };
 

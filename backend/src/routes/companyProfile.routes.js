@@ -16,6 +16,8 @@ router.put('/logo', soloAdminDeLaEmpresa, uploadLogo.single('logo'), controller.
 // middleware que el logo, solo cambia el campo del formulario y a qué columna va.
 router.put('/voucher-encabezado', soloAdminDeLaEmpresa, uploadLogo.single('imagen'), controller.subirImagenEncabezado);
 router.put('/voucher-pie-imagen', soloAdminDeLaEmpresa, uploadLogo.single('imagen'), controller.subirImagenPie);
+router.delete('/voucher-encabezado', soloAdminDeLaEmpresa, controller.quitarImagenEncabezado);
+router.delete('/voucher-pie-imagen', soloAdminDeLaEmpresa, controller.quitarImagenPie);
 router.post('/voucher-preview', soloAdminDeLaEmpresa, validate(updateCompanyProfileSchema), controller.vistaPrevia);
 
 module.exports = router;

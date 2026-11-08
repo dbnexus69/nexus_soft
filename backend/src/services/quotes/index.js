@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const almacenamiento = require('../../utils/almacenamiento');
 const { PLANTILLA_VERSION, generar } = require('./plantilla');
+const { soloUtilizable } = require('../voucher/plantilla');
 const { empresaYConfig, ciudades } = require('../voucher');
 const quotesService = require('../quotes.service');
 
@@ -19,7 +20,7 @@ async function imagenesDeLineas(lines) {
   const rutas = lines.flatMap(l => Array.isArray(l.detalle?.images) ? l.detalle.images : []);
   if (!rutas.length) return {};
   const pares = await Promise.all(rutas.map(async (r) => [r, await almacenamiento.leer('cotizacion-imagenes', r)]));
-  return Object.fromEntries(pares.filter(([, buffer]) => buffer));
+  return Object.fromEntries(pares.filter(([ruta, buffer]) => soloUtilizable(buffer, `quote_photo ${ruta}`)));
 }
 
 async function generarCon(cotizacion, { config, logo }) {
@@ -29,7 +30,7 @@ async function generarCon(cotizacion, { config, logo }) {
     ciudades(tiquetes),
     imagenesDeLineas(cotizacion.lines),
   ]);
-  return generar(cotizacion, config, { logo: buffer, aeropuertos, imagenes });
+  return generar(cotizacion, config, { logo: soloUtilizable(buffer, 'logo'), aeropuertos, imagenes });
 }
 
 /** El PDF guardado de la cotización (generándolo si hace falta): `{ nombre, huella, cotizacion, buffer? }`. */

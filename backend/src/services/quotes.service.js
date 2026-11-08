@@ -1,7 +1,8 @@
 const { randomUUID: uuidv4 } = require('crypto');
 const prisma = require('../config/db');
-const { BadRequestError, ForbiddenError, NotFoundError } = require('../errors/AppError');
+const { AppError, BadRequestError, ForbiddenError, NotFoundError } = require('../errors/AppError');
 const almacenamiento = require('../utils/almacenamiento');
+const { imagenUtilizable } = require('./voucher/plantilla');
 const { datosFinancieros } = require('./saleTotals');
 const { soloLasSuyas, cotizacionVisible } = require('./quotesAlcance');
 const clientsService = require('./clients.service');
@@ -16,7 +17,7 @@ const ESTADOS_CERRADOS = ['aceptada', 'rechazada'];
 // Spec 021: fotos de un servicio cotizado, para que el cliente vea cómo es.
 const BUCKET_IMAGENES = 'cotizacion-imagenes';
 const MAX_IMAGENES_POR_LINEA = 5;
-const EXT_IMAGEN = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+const EXT_IMAGEN = { 'image/png': 'png', 'image/jpeg': 'jpg' };
 // Cuánto dura la URL firmada que ve el navegador al abrir la cotización — igual de corta que
 // la del PDF (`urlDeDescarga`); se vuelve a pedir cada vez que se abre.
 const IMAGEN_SEGUNDOS = 300;
@@ -428,7 +429,12 @@ class QuotesService {
       throw new BadRequestError('No llegó ningún archivo', 'VALIDATION_ERROR', [{ field: 'image', message: 'Elige una imagen' }]);
     }
     const ext = EXT_IMAGEN[fichero.mimetype];
-    if (!ext) throw new BadRequestError('La imagen tiene que ser PNG, JPG o WebP');
+    if (!ext) throw new BadRequestError('La imagen tiene que ser PNG o JPG');
+    // El tipo lo declara el navegador; una foto dañada tumbaría el servidor al generar el PDF.
+    if (!imagenUtilizable(fichero.buffer)) {
+      const mensaje = 'No se pudo leer la imagen. Vuelve a exportarla como PNG o JPG';
+      throw new AppError(mensaje, 422, 'VALIDATION_ERROR', [{ field: 'image', message: mensaje }]);
+    }
 
     const imagenes = Array.isArray(linea.detalle?.images) ? linea.detalle.images : [];
     if (imagenes.length >= MAX_IMAGENES_POR_LINEA) {

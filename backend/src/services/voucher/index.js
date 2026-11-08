@@ -4,7 +4,7 @@ const { empresaActual } = require('../../config/tenant');
 const { AppError, BadRequestError, NotFoundError } = require('../../errors/AppError');
 const almacenamiento = require('../../utils/almacenamiento');
 const emailService = require('../../utils/emailService');
-const { PLANTILLA_VERSION, generar } = require('./plantilla');
+const { PLANTILLA_VERSION, generar, soloUtilizable } = require('./plantilla');
 const VENTA_DE_EJEMPLO = require('./ventaDeEjemplo');
 
 /**
@@ -82,7 +82,12 @@ async function generarCon(venta, { config, logo, encabezadoImagen, pieImagen }) 
     pieImagen ? almacenamiento.leer('logos', pieImagen) : null,
     ciudades(venta.ticketData),
   ]);
-  return generar(venta, config, { logo: logoBuffer, encabezadoImagen: encabezadoBuffer, pieImagen: pieBuffer, aeropuertos });
+  return generar(venta, config, {
+    logo: soloUtilizable(logoBuffer, 'logo'),
+    encabezadoImagen: soloUtilizable(encabezadoBuffer, 'voucher_header'),
+    pieImagen: soloUtilizable(pieBuffer, 'voucher_footer'),
+    aeropuertos,
+  });
 }
 
 /** El voucher guardado de la venta (generándolo si hace falta): `{ nombre, huella, venta, buffer? }`. */

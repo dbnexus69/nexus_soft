@@ -51,6 +51,22 @@ admins**, así que H1 hoy es latente.
 | H20 | 🔵 baja | **Check-in enviado y no guardado.** El correo al cliente sale antes de la transacción; si esta falla, el cliente recibió el check-in, el tramo sigue pendiente y los adjuntos se borran del bucket. Reintentar lo reenvía. | `services/flights.service.js:880-905` | Lectura. |
 | H21 | 🔵 baja | **Alta de agencia: errores y pruebas.** El botón no exige apellidos ni largo mínimo y el servidor responde en inglés («String must contain at least 2 character(s)»: `min(2)` sin mensaje en `admin.firstName/lastName`). Las suites crean agencias por el servicio con `sinEmpresa`, nunca por `POST /companies` con la sesión del superadmin: el flujo real no está cubierto (probado a mano el 2026-11-07: funciona). | `schemas/companies.schema.js:73-74`; `pages/Companies.tsx:249`; `tests/montaje.js:123-135` | Lectura + prueba por la API. |
 
+### Tercera tanda (2026-11-08): commit `0a82629` (spec 040), corregido en esta spec
+
+| # | Gravedad | Qué | Corrección | Cómo se comprobó |
+|---|---|---|---|---|
+| H22 | 🔴 crítica | **Una imagen dañada tumba el servidor para todas las agencias.** Un PNG con transparencia y datos dañados revienta en un callback de zlib del motor del PDF: ningún `try/catch` lo alcanza. Existía ya con el logo y con las fotos de cotización, que sube cualquier asesor. | `voucher/imagenSegura.js` revisa los datos del PNG antes de que el motor los vea; se valida al subir y se omite al generar lo guardado que no sirva. | Reproducido (el proceso muere con `Z_DATA_ERROR` e `Invalid filter algorithm`). |
+| H23 | 🔴 alta | **Un WebP impide generar todos los vouchers de la agencia** (y el PDF de una cotización con foto WebP). | Solo PNG y JPG en logo, encabezado, pie y fotos; 422 con el campo correcto. | Reproducido con la plantilla. |
+| H24 | 🟠 media | **Una imagen de voucher no se podía quitar.** | `DELETE /company-profile/voucher-encabezado` y `/voucher-pie-imagen`, y botón «Quitar». | Lectura. |
+| H25 | 🟡 media | **El pie no llegaba al borde** (hueco de 23,8 pt) y **desaparecía sin aviso** con más de ~260 caracteres de texto. | La imagen sale del flujo del pie (`absolutePosition`). | Medido en el PDF, antes y después. |
+| H26 | 🟠 alta | **Cambiar contraseñas a un clic** hacía alcanzable H1 desde la pantalla y permitía a un admin tomar la cuenta de otro, sin rastro. | `users.service.js::comprobarEdicion`: el rol y la cuenta de un superadmin solo los toca otro superadmin (también la baja); contraseña, correo y rol de otro admin, solo el superadmin. Reseteo ajeno: fila en `logs_usuarios` y correo al afectado. **Resuelve H1 y la decisión 1.** | Casos añadidos en `aislamiento-api`. |
+| H27 | 🔵 proceso | **La migración de la spec 040 debe ir antes que el código** en producción: sin ella, las consultas a `empresas` sin `select` fallarían. Es aditiva, así que puede aplicarse primero sin riesgo. | Orden de despliegue, sin código. | Deducido. |
+| H28 | 🟡 media | **Un correo guardado con mayúsculas no puede entrar.** `users.schema.js` lo guarda tal como llega, y el login busca `u.email = lower(p_email)` (`app_identidad_por_correo`). Dar de alta o editar a alguien como `Juan@x.com` le impedía iniciar sesión. Ya existía. | `users.schema.js` lo normaliza a minúsculas (como `companies.schema.js`). Una fila antigua con mayúsculas se arregla al editarla. | Reproducido y cubierto en `test:aislamiento-api`. |
+
+Se mantienen como están: el encabezado se repite en cada página (membrete) y sustituye la línea de NIT y contacto
+(decisión 2 de la spec 040). No se admite PNG entrelazado. Las versiones WebP reducidas para pantalla (`sharp`) quedan
+como mejora aparte: el PDF sigue necesitando PNG o JPG.
+
 **Revisado y sin hallazgo:** fijar la empresa por transacción y la marca de "ya en transacción"; `authorize`
 (escritura nunca más amplia que ver); alcance `own` en todas las rutas de ventas (`ventaVisible`, cartera, listado,
 voucher de producto); cobro con cerrojo y tope; recálculo de cabecera desde productos y pagos; liquidación con

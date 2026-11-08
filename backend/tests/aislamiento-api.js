@@ -52,6 +52,57 @@ async function main() {
   comprobar('el admin de A crea un asesor', asesorCreado.status === 201, `HTTP ${asesorCreado.status}`);
   const tokAsesor = await entrar(correoAsesor);
 
+  // Quién puede tocar qué cuenta (spec 039, H1 y corrección de la 040).
+  console.log('\n  Cuentas protegidas');
+  const crearEnA = (sufijo, role) => pedir('POST', '/users', tokA, {
+    firstName: 'Cuenta', lastName: 'Prueba', email: `${A.slug}-${sufijo}@prueba.local`, password: CLAVE, role,
+  });
+  const correoOtroAdmin = `${A.slug}-admin2@prueba.local`;
+  const correoOtroAsesor = `${A.slug}-asesor2@prueba.local`;
+  const otroAdmin = (await crearEnA('admin2', 'admin')).json?.data;
+  const otroAsesor = (await crearEnA('asesor2', 'asesor')).json?.data;
+  const filaSuper = await admin.usuarios.findFirst({ where: { email: correoSuper }, select: { id: true } });
+  const NUEVA = 'Otra-clave-api-2!';
+  const estadoAdmin = async (metodo, ruta, cuerpo) => (await pedir(metodo, ruta, tokA, cuerpo)).status;
+
+  comprobar('un admin no crea un superadmin: 403',
+    (await pedir('POST', '/users', tokA, { firstName: 'Nuevo', lastName: 'Super', email: `${A.slug}-nsuper@prueba.local`, password: CLAVE, role: 'superadmin' })).status === 403);
+  comprobar('un admin no asciende a superadmin: 403', (await estadoAdmin('PUT', `/users/${otroAsesor.id}`, { role: 'superadmin' })) === 403);
+  comprobar('un admin no se asciende a sí mismo: 403',
+    (await estadoAdmin('PUT', `/users/${(await admin.usuarios.findFirst({ where: { email: A.correo }, select: { id: true } })).id}`, { role: 'superadmin' })) === 403);
+  comprobar('un admin no cambia la contraseña del superadmin: 403', (await estadoAdmin('PUT', `/users/${filaSuper.id}`, { password: NUEVA })) === 403);
+  comprobar('un admin no edita al superadmin: 403', (await estadoAdmin('PUT', `/users/${filaSuper.id}`, { firstName: 'Otro' })) === 403);
+  comprobar('un admin no da de baja al superadmin: 403', (await estadoAdmin('DELETE', `/users/${filaSuper.id}`)) === 403);
+  comprobar('la contraseña de otro admin: 403', (await estadoAdmin('PUT', `/users/${otroAdmin.id}`, { password: NUEVA })) === 403);
+  comprobar('el correo de otro admin: 403', (await estadoAdmin('PUT', `/users/${otroAdmin.id}`, { email: `${A.slug}-robado@prueba.local` })) === 403);
+  comprobar('bajar de rol a otro admin: 403', (await estadoAdmin('PUT', `/users/${otroAdmin.id}`, { role: 'asesor' })) === 403);
+  comprobar('el mismo correo de otro admin con mayúsculas no es un cambio: 200',
+    (await estadoAdmin('PUT', `/users/${otroAdmin.id}`, { email: correoOtroAdmin.toUpperCase() })) === 200);
+  comprobar('…y se guarda en minúsculas', (await admin.usuarios.findUnique({ where: { id: otroAdmin.id } })).email === correoOtroAdmin);
+  await admin.usuarios.update({ where: { id: otroAdmin.id }, data: { email: correoOtroAdmin.toUpperCase() } });
+  comprobar('una cuenta antigua con mayúsculas se puede editar y queda arreglada: 200',
+    (await estadoAdmin('PUT', `/users/${otroAdmin.id}`, { firstName: 'Antiguo', email: correoOtroAdmin.toUpperCase(), role: 'admin' })) === 200
+    && (await admin.usuarios.findUnique({ where: { id: otroAdmin.id } })).email === correoOtroAdmin);
+  const correoMayus = `${A.slug}-mayus@prueba.local`;
+  await pedir('POST', '/users', tokA, { firstName: 'Con', lastName: 'Mayusculas', email: correoMayus.toUpperCase(), password: CLAVE, role: 'asesor' });
+  comprobar('quien se da de alta con mayúsculas puede entrar', (await pedir('POST', '/auth/login', null, { email: correoMayus, password: CLAVE })).status === 200);
+  comprobar('su nombre sí, aunque el formulario reenvíe correo y rol: 200',
+    (await estadoAdmin('PUT', `/users/${otroAdmin.id}`, { firstName: 'Renombrado', email: correoOtroAdmin, role: 'admin' })) === 200);
+
+  const tokOtroAsesor = await entrar(correoOtroAsesor);
+  await pedir('GET', '/auth/me', tokOtroAsesor);
+  comprobar('un admin resetea a un asesor: 200', (await estadoAdmin('PUT', `/users/${otroAsesor.id}`, { password: NUEVA })) === 200);
+  const rastro = await admin.logs_usuarios.findMany({ where: { usuario_id: otroAsesor.id, accion: 'cambio_contrasena' } });
+  comprobar('…queda el rastro con quién lo hizo', rastro.length === 1 && rastro[0].descripcion.includes(A.correo), JSON.stringify(rastro.map(r => r.descripcion)));
+  comprobar('…su sesión abierta se cierra en el acto: 401', (await pedir('GET', '/auth/me', tokOtroAsesor)).status === 401);
+  comprobar('…y entra con la nueva', (await pedir('POST', '/auth/login', null, { email: correoOtroAsesor, password: NUEVA })).status === 200);
+
+  const tokOtroAdmin = await entrar(correoOtroAdmin);
+  comprobar('cada admin cambia su propia contraseña: 200', (await pedir('PUT', `/users/${otroAdmin.id}`, tokOtroAdmin, { password: NUEVA })).status === 200);
+  comprobar('…sin rastro de reseteo ajeno', (await admin.logs_usuarios.count({ where: { usuario_id: otroAdmin.id, accion: 'cambio_contrasena' } })) === 0);
+  const tokSuperCuentas = await entrar(correoSuper);
+  comprobar('el superadmin sí resetea a otro admin: 200', (await pedir('PUT', `/users/${otroAdmin.id}`, tokSuperCuentas, { password: CLAVE })).status === 200);
+
   // Datos propios de cada agencia.
   const cliA = (await pedir('POST', '/clients', tokA, { firstName: 'Cliente', lastName: 'Ay', docType: 'CC', docNumber: '910000001' })).json?.data;
   const cliB = (await pedir('POST', '/clients', tokB, { firstName: 'Cliente', lastName: 'Be', docType: 'CC', docNumber: '910000001' })).json?.data;

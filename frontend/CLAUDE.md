@@ -19,7 +19,7 @@ el campo — nadie, ni siquiera el propio admin de la agencia, tenía manera de 
 compañero bloqueado. Ahora, al editar, aparece un link "Cambiar contraseña" que despliega el campo (opcional;
 vacío = no se toca, igual que antes); al crear sigue siendo obligatorio como siempre. Es la vía recomendada
 para un admin bloqueado de una agencia sin otro admin: el superadministrador suplanta (auditado, `/companies`)
-y lo resetea desde `/users` — nunca tocando la base a mano ni desde el panel de Empresas.
+y lo resetea desde `/users` — nunca tocando la base a mano ni desde el panel de Empresas. Un admin no puede cambiar la contraseña, el correo ni el rol de otro admin (spec 039): el modal los bloquea con `cuentaProtegida`, y quien decide es `users.service.js::comprobarEdicion`.
 
 `src/utils/datosPersona.ts` es una réplica escrita a mano de `backend/src/utils/datosPersona.js` (reglas en `backend/CLAUDE.md`): cambia los dos a la vez; `pnpm test:reglas-espejo` en `backend/` falla si se separan.
 

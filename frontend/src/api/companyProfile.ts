@@ -62,6 +62,16 @@ export async function uploadVoucherFooterImage(archivo: File) {
   return res.data.data;
 }
 
+/** Quita la imagen de encabezado: el voucher vuelve a la banda de color + logo + nombre. */
+export async function deleteVoucherHeaderImage() {
+  await api.delete('/company-profile/voucher-encabezado');
+}
+
+/** Quita la imagen de pie: el voucher se queda solo con el texto de `voucherPie`. */
+export async function deleteVoucherFooterImage() {
+  await api.delete('/company-profile/voucher-pie-imagen');
+}
+
 /** El PDF de una venta de ejemplo con el borrador sin guardar. */
 export async function previewVoucher(borrador: CambiosPerfil) {
   const res = await api.post<Blob>('/company-profile/voucher-preview', borrador, { responseType: 'blob' });

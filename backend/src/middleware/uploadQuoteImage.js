@@ -5,15 +5,16 @@ const { conservarContexto } = require('./conservarContexto');
 // La foto de un servicio cotizado va al bucket `cotizacion-imagenes` de Supabase Storage
 // (spec 021): se guarda en memoria y la sube `quotes.service.js`. Mismo patrón que
 // `uploadLogo.js` (spec 011) — sin SVG, el bucket no lo admite y un SVG puede llevar scripts.
-const TIPOS = ['image/png', 'image/jpeg', 'image/webp'];
+// Sin WebP: las fotos van al PDF de la cotización, y su motor solo entiende PNG y JPG.
+const TIPOS = ['image/png', 'image/jpeg'];
 
 const uploadQuoteImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (TIPOS.includes(file.mimetype)) return cb(null, true);
-    cb(new AppError('La imagen tiene que ser PNG, JPG o WebP', 422, 'VALIDATION_ERROR',
-      [{ field: 'image', message: 'La imagen tiene que ser PNG, JPG o WebP' }]), false);
+    cb(new AppError('La imagen tiene que ser PNG o JPG', 422, 'VALIDATION_ERROR',
+      [{ field: 'image', message: 'La imagen tiene que ser PNG o JPG' }]), false);
   },
 });
 

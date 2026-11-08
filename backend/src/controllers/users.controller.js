@@ -25,9 +25,11 @@ exports.getById = async (req, res, next) => {
   }
 };
 
+const solicitanteDe = (req) => ({ id: req.user.id, role: req.user.role, email: req.user.email, suplantando: Boolean(req.suplantacion) });
+
 exports.create = async (req, res, next) => {
   try {
-    const { aviso, ...data } = await usersService.createUser(req.validatedBody);
+    const { aviso, ...data } = await usersService.createUser(req.validatedBody, solicitanteDe(req));
     success(res, data, aviso ? { aviso } : null, 201);
   } catch (err) {
     next(err);
@@ -37,7 +39,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const data = await usersService.updateUser(id, req.validatedBody);
+    const data = await usersService.updateUser(id, req.validatedBody, solicitanteDe(req));
     success(res, data);
   } catch (err) {
     next(err);
@@ -49,7 +51,7 @@ exports.remove = async (req, res, next) => {
     const id = parseInt(req.params.id);
     // `requestedBy` para que el servicio pueda impedir que alguien se dé de
     // baja a sí mismo.
-    const resultado = await usersService.removeUser(id, { requestedBy: req.user?.id });
+    const resultado = await usersService.removeUser(id, { requestedBy: req.user?.id, requestedRole: req.user?.role });
     // No es 204: la respuesta dice si se borró de verdad o solo se inhabilitó,
     // y por qué. La pantalla necesita ese matiz para no prometer un borrado
     // que no ha ocurrido.

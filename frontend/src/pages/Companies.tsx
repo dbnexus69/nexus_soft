@@ -464,12 +464,12 @@ function FichaDeAgencia({ empresa, onClose, onGuardada, onSuspender }: {
               {subiendo ? 'Subiendo…' : logo ? 'Cambiar el logo' : 'Subir un logo'}
               <input
                 type="file"
-                accept=".png,.jpg,.jpeg,.svg,.webp"
+                accept=".png,.jpg,.jpeg"
                 className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) subirLogo(f); e.target.value = ''; }}
               />
             </label>
-            <p className="mt-1 text-xs text-accent">PNG, JPG, SVG o WEBP, hasta 2 MB.</p>
+            <p className="mt-1 text-xs text-accent">PNG o JPG, hasta 2 MB.</p>
           </div>
         </div>
 

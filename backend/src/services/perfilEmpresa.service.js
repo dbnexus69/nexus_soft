@@ -4,6 +4,7 @@ const prisma = require('../config/db');
 const { conEmpresa, empresaActual } = require('../config/tenant');
 const { NotFoundError, AppError } = require('../errors/AppError');
 const almacenamiento = require('../utils/almacenamiento');
+const { imagenUtilizable } = require('./voucher/plantilla');
 
 /**
  * El perfil de la agencia y su logo (spec 011).
@@ -14,7 +15,8 @@ const almacenamiento = require('../utils/almacenamiento');
  */
 
 const LOGO_SEGUNDOS = 3600;
-const TIPOS_LOGO = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+// Sin WebP: estas imágenes van al PDF y su motor solo entiende PNG y JPG.
+const TIPOS_LOGO = { 'image/png': 'png', 'image/jpeg': 'jpg' };
 // Buckets de logos y de las imágenes de encabezado/pie del voucher: mismo bucket `logos`, mismo patrón
 // de nombre con hash de contenido — nunca el mismo nombre dos veces, aunque cambie el contenido.
 const BUCKET_IMAGENES = 'logos';
@@ -113,8 +115,13 @@ async function subirImagen(empresaId, fichero, { campo, columna, prefijo }) {
   }
   const ext = TIPOS_LOGO[fichero.mimetype];
   if (!ext) {
-    throw new AppError('La imagen tiene que ser PNG, JPG o WebP', 422, 'VALIDATION_ERROR',
-      [{ field: campo, message: 'La imagen tiene que ser PNG, JPG o WebP' }]);
+    throw new AppError('La imagen tiene que ser PNG o JPG', 422, 'VALIDATION_ERROR',
+      [{ field: campo, message: 'La imagen tiene que ser PNG o JPG' }]);
+  }
+  // El tipo lo declara el navegador; lo que cuenta es el contenido.
+  if (!imagenUtilizable(fichero.buffer)) {
+    const mensaje = 'No se pudo leer la imagen. Vuelve a exportarla como PNG o JPG';
+    throw new AppError(mensaje, 422, 'VALIDATION_ERROR', [{ field: campo, message: mensaje }]);
   }
   const empresa = await prisma.empresas.findFirst({ where: { id: Number(empresaId), deleted_at: null } });
   if (!empresa) throw new NotFoundError('Empresa no encontrada');
@@ -145,4 +152,21 @@ function guardarImagenPie(empresaId, fichero) {
   return subirImagen(empresaId, fichero, { campo: 'imagen', columna: 'voucher_pie_imagen', prefijo: 'pie' });
 }
 
-module.exports = { perfil, actualizar, guardarLogo, guardarImagenEncabezado, guardarImagenPie, urlDelLogo };
+/** Quita una imagen del voucher: sin ella vuelve la banda de color (encabezado) o solo el texto (pie). */
+async function quitarImagen(columna) {
+  const empresa = await empresaDelContexto();
+  const anterior = empresa[columna];
+  if (!anterior) return;
+  await prisma.empresas.update({ where: { id: empresa.id }, data: { [columna]: null } });
+  // Ya no está en uso; no poder borrar el archivo no es motivo para fallar.
+  await almacenamiento.borrar(BUCKET_IMAGENES, anterior)
+    .catch(err => console.warn('[OLD_IMAGE_DELETE_FAILED]', empresa.id, err.message));
+}
+
+const quitarImagenEncabezado = () => quitarImagen('voucher_encabezado_imagen');
+const quitarImagenPie = () => quitarImagen('voucher_pie_imagen');
+
+module.exports = {
+  perfil, actualizar, guardarLogo, guardarImagenEncabezado, guardarImagenPie,
+  quitarImagenEncabezado, quitarImagenPie, urlDelLogo,
+};

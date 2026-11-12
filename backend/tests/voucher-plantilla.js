@@ -127,6 +127,15 @@ async function main() {
   comprobar('genera el PDF', (await generar(venta, config('Pie'), {})).length > 1000);
   comprobar('con imágenes también', (await generar(venta, config('Pie'), { encabezadoImagen: panoramica, pieImagen: png(1018, 230, 6) })).length > 1000);
 
+  // El cliente ve que el IVA está incluido, nunca el monto; sin IVA en ninguna línea (spec 041) la fila no sale.
+  console.log('\n  IVA en el resumen de pago');
+  const textoDe = (v) => JSON.stringify(definicion(v, config(), {}).content);
+  const conIva = textoDe({ ...venta, iva: 190 });
+  comprobar('con IVA dice «Incluido»', conIva.includes('"IVA"') && conIva.includes('Incluido'));
+  comprobar('con IVA no enseña el monto', !conIva.includes('190'));
+  const sinIva = textoDe({ ...venta, iva: 0 });
+  comprobar('sin IVA no hay fila de IVA', !sinIva.includes('"IVA"') && !sinIva.includes('Incluido'));
+
   console.log(fallos ? `\n${fallos} comprobación(es) fallida(s)\n` : '\nTodo en orden\n');
   process.exit(fallos ? 1 : 0);
 }

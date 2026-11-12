@@ -47,7 +47,8 @@ Desde `backend/`. Las que levantan servidor usan el montaje común `tests/montaj
 - `test:limite-usuarios` — límite de usuarios por plan (spec 029): plan por defecto, 422 en el tope, reactivar, altas simultáneas, sin límite.
 - `test:cotizacion-imagenes` — fotos de los servicios de una cotización (specs 021, 023): dos agencias y un asesor de prueba; sube al bucket `cotizacion-imagenes` bajo `prueba/` y la borra al terminar.
 - `test:revision-039` — lo corregido de la revisión de la spec 039 (alta de agencia, edición atómica, suplantación, paquetes, días del dashboard, convertir cotización); con BD, y crece al corregir el resto.
-- `test:validaciones` — reglas de datos de personas; sin BD.
+- `test:iva-opcional` — IVA opcional por servicio (spec 041): venta y cotización con líneas con y sin IVA, el IVA por línea y de cabecera, el total, el interruptor leído de vuelta y el 422 si el total no cuadra; con BD.
+- `test:validaciones` — reglas de datos de personas y el cuadre de precio con y sin IVA; sin BD.
 - `test:voucher-plantilla` — qué imágenes puede usar el PDF y dónde quedan en la página; sin BD.
 - `test:reglas-espejo` — compila `frontend/src/utils/datosPersona.ts` y lo compara con la copia del servidor en ~800 entradas; sin BD.
 - `check:prisma` — valida cada `prisma.<modelo>.<método>({...})` contra el DMMF (camelCase frente a snake_case); sale con 1 si encuentra algo.

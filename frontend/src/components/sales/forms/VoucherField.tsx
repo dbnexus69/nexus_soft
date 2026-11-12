@@ -1,7 +1,7 @@
 import { LuFileText, LuSend, LuUser, LuUpload, LuX, LuFileCheck, LuDollarSign, LuBuilding, LuCreditCard, LuImage } from "react-icons/lu";
 import { Input, Combobox , CurrencyInput, Select} from "../../ui/Form";
 import { FormField } from "../../ui/Form";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import * as api from "../../../api";
 import type { Client, ConfigData, Quote } from "../../../types";
 import { calcularIva } from "../../../utils/iva";
@@ -236,6 +236,8 @@ interface FinancialSectionProps {
 }
 
 export function FinancialSection({ supplierName, supplierCost, ta, incluyeIva = true, supplierPaymentMethod, isPaymentMethodRequired, paymentMethods = [], suppliers = [], onChange, cotizando = false }: FinancialSectionProps) {
+  // Un id por instancia: con dos servicios iguales en pantalla, un id fijo hacía que el texto del segundo marcara el primero.
+  const idIva = useId();
   const supplierOptions = suppliers.map(s => ({ value: s.name, label: s.name }));
 
   const handleNumericChange = (field: 'supplierCost' | 'ta', value: string) => {
@@ -320,12 +322,12 @@ export function FinancialSection({ supplierName, supplierCost, ta, incluyeIva = 
       <div className="flex items-center gap-3">
         <input
           type="checkbox"
-          id="incluye-iva"
+          id={idIva}
           checked={incluyeIva}
           onChange={(e) => onChange({ incluyeIva: e.target.checked })}
           className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
         />
-        <label htmlFor="incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+        <label htmlFor={idIva} className="text-sm font-medium text-gray-700 dark:text-slate-300">
           Este servicio lleva IVA (19% sobre la ganancia){iva > 0 && ` — $${iva.toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
         </label>
       </div>

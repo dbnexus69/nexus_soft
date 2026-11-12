@@ -28,6 +28,7 @@
     "test:validaciones": "node tests/validaciones.js",
     "test:voucher-plantilla": "node tests/voucher-plantilla.js",
     "test:revision-039": "node tests/revision-039-api.js",
+    "test:iva-opcional": "node tests/iva-opcional-api.js",
     "test:reglas-espejo": "node tests/reglas-espejo.js"
   },
   "keywords": [

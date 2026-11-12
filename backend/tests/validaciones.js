@@ -117,6 +117,20 @@ for (const slug of ['ticket', 'hotel', 'insurance', 'plan']) {
   comprobar(`${slug} con costo en texto "1500" pasa`, !(conCosto(slug, '1500').error?.issues || []).some(i => i.path[0] === 'supplierCost'));
 }
 
+// ── IVA opcional por servicio (spec 041): TA 1000 y costo 5000 → con IVA 6190, sin IVA 6000
+const { datosFinancieros } = require('../src/services/saleTotals');
+const totalTour = (total, extra = {}) => esquemaDeCategoria('tour').safeParse({ ta: 1000, supplierCost: 5000, total, ...extra });
+const falloEnTotal = (r) => (r.error?.issues || []).some(i => i.path[0] === 'total');
+comprobar('IVA: sin el campo, el total con IVA cuadra', !falloEnTotal(totalTour(6190)));
+comprobar('IVA: encendido, el total sin IVA se rechaza', falloEnTotal(totalTour(6000, { incluyeIva: true })));
+comprobar('IVA: apagado, el total sin IVA cuadra', !falloEnTotal(totalTour(6000, { incluyeIva: false })));
+comprobar('IVA: apagado, el total con IVA se rechaza', falloEnTotal(totalTour(6190, { incluyeIva: false })));
+comprobar('IVA: el interruptor tiene que ser booleano', !totalTour(6190, { incluyeIva: 'no' }).success);
+const conIva = datosFinancieros({ ta: 1000, supplierCost: 5000 });
+const sinIva = datosFinancieros({ ta: 1000, supplierCost: 5000, incluyeIva: false });
+comprobar('IVA: por defecto la línea lleva IVA', conIva.iva === 190 && conIva.incluye_iva === true && conIva.subtotal === 6190);
+comprobar('IVA: apagado, la línea guarda 0 y su precio baja', sinIva.iva === 0 && sinIva.incluye_iva === false && sinIva.subtotal === 6000);
+
 // ── Destinos de preferencia del cliente (spec 017)
 const { normalizarDestinos } = require('../src/utils/destinos');
 const destinos = (l) => normalizarDestinos(l).destinos;

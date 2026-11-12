@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useId } from "react";
 import { AlertCircle, Users, Briefcase, Trash2, PlusCircle, TriangleAlert } from "lucide-react";
 import { FormField, Input, Select, CurrencyInput, Combobox } from "../../ui/Form";
 import { Button } from "../../ui/Button";
@@ -22,6 +22,8 @@ interface InsuranceFormProps {
 }
 
 export function InsuranceForm({ insurance, onChange, data, client, suppliers = [], cotizando = false, quoteId, lineId }: InsuranceFormProps) {
+  // Un id por instancia: con dos servicios iguales en pantalla, un id fijo hacía que el texto del segundo marcara el primero.
+  const idIva = useId();
   useEffect(() => {
     if (!insurance.phone && client?.phone) {
       onChange({ phone: client.phone });
@@ -244,12 +246,12 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
         <div className="flex items-center gap-3 mt-4">
           <input
             type="checkbox"
-            id="insurance-incluye-iva"
+            id={idIva}
             checked={insurance.incluyeIva !== false}
             onChange={(e) => onChange({ incluyeIva: e.target.checked })}
             className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <label htmlFor="insurance-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+          <label htmlFor={idIva} className="text-sm font-medium text-gray-700 dark:text-slate-300">
             Este servicio lleva IVA (19% sobre la ganancia)
             {insurance.incluyeIva !== false && (insurance.ta || 0) > 0 && ` — $${calcularIva(Number(insurance.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
           </label>

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Building2, Users, Briefcase, Trash2, PlusCircle } from "lucide-react";
 import * as LuIcons from "react-icons/lu";
 import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
@@ -24,6 +25,8 @@ interface HotelFormProps {
 }
 
 export function HotelForm({ hotel, onChange, triggerError, data, mainClient, suppliers = [], cotizando = false, quoteId, lineId }: HotelFormProps) {
+  // Un id por instancia: con dos servicios iguales en pantalla, un id fijo hacía que el texto del segundo marcara el primero.
+  const idIva = useId();
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -245,12 +248,12 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
         <div className="flex items-center gap-3 mt-4">
           <input
             type="checkbox"
-            id="hotel-incluye-iva"
+            id={idIva}
             checked={hotel.incluyeIva !== false}
             onChange={(e) => onChange({ incluyeIva: e.target.checked })}
             className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <label htmlFor="hotel-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+          <label htmlFor={idIva} className="text-sm font-medium text-gray-700 dark:text-slate-300">
             Este servicio lleva IVA (19% sobre la ganancia)
             {hotel.incluyeIva !== false && (hotel.ta || 0) > 0 && ` — $${calcularIva(Number(hotel.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
           </label>

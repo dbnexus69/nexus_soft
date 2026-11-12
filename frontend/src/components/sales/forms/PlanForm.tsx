@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { Package, Plane, Users, Briefcase, Trash2, PlusCircle, Link2, Plus, Car, Bus, Building2 } from "lucide-react";
 import * as api from "../../../api";
 import { FormField, Input, Combobox, Select, CurrencyInput} from "../../ui/Form";
@@ -41,6 +41,8 @@ export function PlanForm({
   quoteId,
   lineId,
 }: PlanFormProps) {
+  // Un id por instancia: con dos servicios iguales en pantalla, un id fijo hacía que el texto del segundo marcara el primero.
+  const idIva = useId();
   const minDateTime = (() => {
     const now = new Date();
     const tzOffset = now.getTimezoneOffset() * 60000;
@@ -418,12 +420,12 @@ export function PlanForm({
         <div className="flex items-center gap-3 mt-4">
           <input
             type="checkbox"
-            id="plan-incluye-iva"
+            id={idIva}
             checked={plan.incluyeIva !== false}
             onChange={(e) => onChange({ incluyeIva: e.target.checked })}
             className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <label htmlFor="plan-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+          <label htmlFor={idIva} className="text-sm font-medium text-gray-700 dark:text-slate-300">
             Este servicio lleva IVA (19% sobre la ganancia)
             {plan.incluyeIva !== false && (plan.ta || 0) > 0 && ` — $${calcularIva(Number(plan.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
           </label>

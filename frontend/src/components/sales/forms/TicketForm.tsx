@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import Datepicker from "react-tailwindcss-datepicker";
 import dayjs from "dayjs";
@@ -295,6 +295,8 @@ export function TicketForm({
   quoteId,
   lineId,
 }: TicketFormProps & { mainClient?: ClienteDelFormulario }) {
+  // Un id por instancia: con dos servicios iguales en pantalla, un id fijo hacía que el texto del segundo marcara el primero.
+  const idIva = useId();
   const { data } = useData();
   const airportOptions = airports.map((a) => ({
     value: a.abbreviation,
@@ -1158,12 +1160,12 @@ export function TicketForm({
         <div className="flex items-center gap-3 mt-4">
           <input
             type="checkbox"
-            id="ticket-incluye-iva"
+            id={idIva}
             checked={ticket.incluyeIva !== false}
             onChange={(e) => onChange({ incluyeIva: e.target.checked })}
             className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <label htmlFor="ticket-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+          <label htmlFor={idIva} className="text-sm font-medium text-gray-700 dark:text-slate-300">
             Este servicio lleva IVA (19% sobre la ganancia)
             {ticket.incluyeIva !== false && (ticket.ta || 0) > 0 && ` — $${calcularIva(Number(ticket.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
           </label>

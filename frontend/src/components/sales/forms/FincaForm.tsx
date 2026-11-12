@@ -168,6 +168,7 @@ export function FincaForm({ finca, client, suppliers, paymentMethods, documentTy
         isPaymentMethodRequired={true}
         paymentMethods={paymentMethods}
         ta={finca.ta}
+        incluyeIva={finca.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

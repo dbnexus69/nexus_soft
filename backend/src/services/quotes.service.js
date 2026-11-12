@@ -58,7 +58,7 @@ function lineasDe(body, guardadas = new Set()) {
   for (const slug of SLUGS) {
     const clave = CATALOG[slug].responseKey;
     for (const item of body[clave] || []) {
-      const { ta, costo_proveedor, iva } = datosFinancieros(item);
+      const { ta, costo_proveedor, iva, incluye_iva } = datosFinancieros(item);
       const { images, ...resto } = item;
       const imagenes = imagenesConocidas(images, guardadas);
       lineas.push({
@@ -69,6 +69,7 @@ function lineasDe(body, guardadas = new Set()) {
         costo_proveedor,
         ta,
         iva,
+        incluye_iva,
       });
     }
   }

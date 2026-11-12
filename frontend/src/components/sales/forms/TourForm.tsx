@@ -267,6 +267,7 @@ export function TourForm({ tour, mainClient, data, onChange, triggerError, cotiz
         isPaymentMethodRequired={true}
         paymentMethods={data.config.cards}
         ta={tour.ta}
+        incluyeIva={tour.incluyeIva}
         suppliers={data.config.suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

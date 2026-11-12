@@ -163,6 +163,7 @@ export function MigrationForm({ migration, client, suppliers, paymentMethods, on
         isPaymentMethodRequired={false}
         paymentMethods={paymentMethods}
         ta={migration.ta}
+        incluyeIva={migration.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

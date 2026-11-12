@@ -18,14 +18,19 @@ export function useSaleCalculations(
   const totals = useMemo(() => {
     let calcSupplierCost = 0;
     let calcTa = 0;
+    // Por servicio (spec 041): sumar el IVA de cada línea, no calcularlo una sola vez sobre la TA
+    // total — con líneas mixtas (con y sin IVA) no da lo mismo.
+    let calcIva = 0;
     let totalItemsCount = 0;
 
     const addProductTotals = (items?: any[]) => {
       if (!items || !Array.isArray(items)) return;
       totalItemsCount += items.length;
       items.forEach((item) => {
+        const ta = Number(item.ta) || 0;
         calcSupplierCost += Number(item.supplierCost) || 0;
-        calcTa += Number(item.ta) || 0;
+        calcTa += ta;
+        calcIva += calcularIva(ta, item.incluyeIva !== false);
       });
     };
 
@@ -45,7 +50,6 @@ export function useSaleCalculations(
     addProductTotals(form.passports);
     addProductTotals(form.petServices);
 
-    const calcIva = calcularIva(calcTa);
     const calcTotal = calcSupplierCost + calcTa + calcIva;
 
     return {

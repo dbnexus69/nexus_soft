@@ -176,6 +176,7 @@ export function VisaForm({ visa, client, suppliers, paymentMethods, onChange, tr
         isPaymentMethodRequired={false}
         paymentMethods={paymentMethods}
         ta={visa.ta}
+        incluyeIva={visa.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

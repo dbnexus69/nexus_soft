@@ -21,12 +21,17 @@ function aCentimos(valor) {
 }
 
 // El IVA se cobra sobre la TA (el margen de la agencia), no sobre el costo
-// del proveedor. Fija para toda la app, no configurable por agencia ni por
-// producto. Si cambia la tasa nacional, se cambia aquí Y en
+// del proveedor. La tasa es fija para toda la app, no configurable por
+// agencia. Si cambia la tasa nacional, se cambia aquí Y en
 // frontend/src/utils/iva.ts (spec 003).
 const TASA_IVA = 0.19;
 
-function calcularIva(ta) {
+// Por servicio, no por venta/cotización entera (spec 041): `incluyeIva` llega
+// de cada línea, nunca de una bandera global. Por defecto `true` (el
+// comportamiento de siempre), así que una línea que nunca mandó el campo
+// sigue llevando IVA.
+function calcularIva(ta, incluyeIva = true) {
+  if (!incluyeIva) return 0;
   return aCentimos(Number(ta || 0) * TASA_IVA);
 }
 
@@ -54,21 +59,23 @@ function precioProducto(x) {
   const explicito = Number(x.total ?? x.subtotal ?? NaN);
   if (Number.isFinite(explicito) && explicito > 0) return explicito;
   const ta = Number(x.ta || 0);
-  return ta + Number(x.supplierCost || 0) + calcularIva(ta);
+  return ta + Number(x.supplierCost || 0) + calcularIva(ta, x.incluyeIva !== false);
 }
 
 /**
- * Las cuatro cifras de dinero de una línea de producto, juntas.
+ * Las cifras de dinero de una línea de producto, juntas.
  *
  * Sin esto, el IVA habría que calcularlo a mano en los 15 sitios de
  * `sales.service.js` que insertan una línea de `detalle_venta` — la misma
  * clase de copia que ya causó bugs de dinero en este repo. El IVA nunca lo
- * manda el cliente: siempre sale de recalcularlo desde `ta`.
+ * manda el cliente: siempre sale de recalcularlo desde `ta` y de si la línea
+ * lleva IVA (`incluyeIva`, spec 041; por defecto sí).
  */
 function datosFinancieros(x) {
   const ta = Number(x.ta || 0);
   const costo_proveedor = Number(x.supplierCost || 0);
-  return { subtotal: precioProducto(x), ta, costo_proveedor, iva: calcularIva(ta) };
+  const incluye_iva = x.incluyeIva !== false;
+  return { subtotal: precioProducto(x), ta, costo_proveedor, iva: calcularIva(ta, incluye_iva), incluye_iva };
 }
 
 /**

@@ -339,6 +339,8 @@ export interface HotelData {
   endDate: string;
   supplierCost: number;
   ta: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   supplierPaymentMethod: string;
   hotelType?: string;
   observations?: string;
@@ -355,6 +357,8 @@ export interface PlanData {
   hotelName: string;
   supplierCost: number;
   ta: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   reservationNumber: string;
   flightNumber: string;
   ticketNumber: string;
@@ -393,6 +397,8 @@ export interface InsuranceData {
   supplier: string;
   supplierCost: number;
   ta: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   supplierPaymentMethod: string;
   members: GuestInfo[];
   coverage: number;
@@ -416,6 +422,8 @@ export interface TicketData {
   arrivalDate: string;
   supplierCost: number;
   ta: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   supplierPaymentMethod: string;
   baggagePlan: string;
   ticketNumber: string;
@@ -462,6 +470,8 @@ export interface CheckInData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -484,6 +494,8 @@ export interface MigrationData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -507,6 +519,8 @@ export interface SimCardData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -529,6 +543,8 @@ export interface CarRentalData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -557,6 +573,8 @@ export interface FincaData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -582,6 +600,8 @@ export interface TourData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   guests: GuestInfo[];
   vouchers?: Array<{ name: string; base64: string }>;
   linkedToPlanIndex?: number;
@@ -611,6 +631,8 @@ export interface ConventionData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -632,6 +654,8 @@ export interface RestaurantData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -655,6 +679,8 @@ export interface VisaData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -675,6 +701,8 @@ export interface PassportData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */
@@ -701,6 +729,8 @@ export interface PetServiceData {
   supplierCost?: number;
   supplierPaymentMethod?: string;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí. */
+  incluyeIva?: boolean;
   linkedToPlanIndex?: number;
   images?: string[];
   /** El id de `detalle_cotizacion` ya guardado — sin él, `ImagesField` no sabe a qué línea subir (spec 021). */

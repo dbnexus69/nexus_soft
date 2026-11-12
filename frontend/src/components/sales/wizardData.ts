@@ -95,6 +95,7 @@ export const INITIAL_TICKET = (client?: ClienteDelFormulario): TicketData => ({
   arrivalDate: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
   supplierPaymentMethod: "",
   baggagePlan: "",
   ticketNumber: "",
@@ -132,6 +133,7 @@ export const INITIAL_HOTEL = (client?: ClienteDelFormulario): HotelData => ({
   endDate: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
   supplierPaymentMethod: "",
   hotelType: "",
   observations: "",
@@ -151,6 +153,7 @@ export const INITIAL_INSURANCE = (client?: ClienteDelFormulario): InsuranceData 
   supplier: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
   supplierPaymentMethod: "",
   coverage: 0,
   coverageDays: 0,
@@ -175,6 +178,7 @@ export const INITIAL_PLAN = (client?: ClienteDelFormulario): PlanData => ({
   supplier: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
   supplierPaymentMethod: "",
   reservationNumber: "",
   confirmationNumber: "",
@@ -221,6 +225,7 @@ export const INITIAL_CHECKIN = (client?: ClienteDelFormulario): CheckInData => (
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_MIGRATION = (client?: ClienteDelFormulario): MigrationData => ({
@@ -238,6 +243,7 @@ export const INITIAL_MIGRATION = (client?: ClienteDelFormulario): MigrationData 
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_SIMCARD = (client?: ClienteDelFormulario): SimCardData => ({
@@ -256,6 +262,7 @@ export const INITIAL_SIMCARD = (client?: ClienteDelFormulario): SimCardData => (
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_CAR_RENTAL = (client?: ClienteDelFormulario): CarRentalData => ({
@@ -273,6 +280,7 @@ export const INITIAL_CAR_RENTAL = (client?: ClienteDelFormulario): CarRentalData
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_FINCA = (client?: ClienteDelFormulario): FincaData => ({
@@ -296,6 +304,7 @@ export const INITIAL_FINCA = (client?: ClienteDelFormulario): FincaData => ({
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_TOUR = (client?: ClienteDelFormulario): TourData => ({
@@ -316,6 +325,7 @@ export const INITIAL_TOUR = (client?: ClienteDelFormulario): TourData => ({
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
   // Sin cliente (cotizando, spec 007) no hay acompañante que precargar.
   guests: client ? [{ name: client?.name || "", docType: client?.docType || "CC", docNumber: client?.docNumber || "" }] : [],
   vouchers: [],
@@ -341,6 +351,7 @@ export const INITIAL_CONVENTION = (client?: ClienteDelFormulario): ConventionDat
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_RESTAURANT = (client?: ClienteDelFormulario): RestaurantData => ({
@@ -357,6 +368,7 @@ export const INITIAL_RESTAURANT = (client?: ClienteDelFormulario): RestaurantDat
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_VISA = (client?: ClienteDelFormulario): VisaData => ({
@@ -375,6 +387,7 @@ export const INITIAL_VISA = (client?: ClienteDelFormulario): VisaData => ({
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_PASSPORT = (client?: ClienteDelFormulario): PassportData => ({
@@ -390,6 +403,7 @@ export const INITIAL_PASSPORT = (client?: ClienteDelFormulario): PassportData =>
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_PET_SERVICE = (client?: ClienteDelFormulario): PetServiceData => ({
@@ -411,6 +425,7 @@ export const INITIAL_PET_SERVICE = (client?: ClienteDelFormulario): PetServiceDa
   supplierName: "",
   supplierCost: 0,
   ta: 0,
+  incluyeIva: true,
 });
 
 export const INITIAL_FORM: WizardFormData = {

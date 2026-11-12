@@ -138,6 +138,7 @@ export function CheckInForm({ checkIn, client, suppliers, baggage, paymentMethod
         isPaymentMethodRequired={true}
         paymentMethods={paymentMethods}
         ta={checkIn.ta}
+        incluyeIva={checkIn.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

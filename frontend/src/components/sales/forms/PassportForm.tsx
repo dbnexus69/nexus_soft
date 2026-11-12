@@ -108,6 +108,7 @@ export function PassportForm({ passport, client, suppliers, paymentMethods, onCh
         isPaymentMethodRequired={false}
         paymentMethods={paymentMethods}
         ta={passport.ta}
+        incluyeIva={passport.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

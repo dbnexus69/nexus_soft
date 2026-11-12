@@ -111,6 +111,9 @@ const SOBRE = {
   subtotal: dinero,
   ta: dinero,
   supplierCost: dinero,
+  // Por servicio, no por venta/cotización entera (spec 041). Por defecto `true` (el de siempre):
+  // solo lo apaga un `false` explícito.
+  incluyeIva: z.boolean().optional(),
   nombre_servicio: texto(200),
   observations: texto(2000),
   startDate: fecha,
@@ -164,7 +167,7 @@ const EXTRAS = {
  */
 function precioCuadra(x, ctx) {
   const ta = Number(x.ta) || 0;
-  const esperado = ta + (Number(x.supplierCost) || 0) + calcularIva(ta);
+  const esperado = ta + (Number(x.supplierCost) || 0) + calcularIva(ta, x.incluyeIva !== false);
   for (const campo of ['total', 'subtotal']) {
     const valor = Number(x[campo]);
     if (vacio(x[campo]) || !Number.isFinite(valor) || valor <= 0) continue;

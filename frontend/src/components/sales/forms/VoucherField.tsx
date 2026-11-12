@@ -4,6 +4,7 @@ import { FormField } from "../../ui/Form";
 import { useRef, useState } from "react";
 import * as api from "../../../api";
 import type { Client, ConfigData, Quote } from "../../../types";
+import { calcularIva } from "../../../utils/iva";
 
 interface VoucherFieldProps {
   voucher?: { name: string; base64: string };
@@ -220,11 +221,13 @@ interface FinancialSectionProps {
   supplierName?: string;
   supplierCost?: number;
   ta?: number;
+  /** Si este servicio lleva IVA (spec 041); por defecto sí, como siempre. */
+  incluyeIva?: boolean;
   supplierPaymentMethod?: string;
   isPaymentMethodRequired?: boolean;
   paymentMethods?: ConfigData['cards'];
   suppliers?: { id: number; name: string }[];
-  onChange: (updates: { supplierName?: string; supplierCost?: number; ta?: number; supplierPaymentMethod?: string }) => void;
+  onChange: (updates: { supplierName?: string; supplierCost?: number; ta?: number; incluyeIva?: boolean; supplierPaymentMethod?: string }) => void;
   /**
    * Cotizando (spec 007): sin proveedor ni método de pago al proveedor — son
    * decisiones de compra que no hacen falta para cotizar, solo costo y ganancia.
@@ -232,7 +235,7 @@ interface FinancialSectionProps {
   cotizando?: boolean;
 }
 
-export function FinancialSection({ supplierName, supplierCost, ta, supplierPaymentMethod, isPaymentMethodRequired, paymentMethods = [], suppliers = [], onChange, cotizando = false }: FinancialSectionProps) {
+export function FinancialSection({ supplierName, supplierCost, ta, incluyeIva = true, supplierPaymentMethod, isPaymentMethodRequired, paymentMethods = [], suppliers = [], onChange, cotizando = false }: FinancialSectionProps) {
   const supplierOptions = suppliers.map(s => ({ value: s.name, label: s.name }));
 
   const handleNumericChange = (field: 'supplierCost' | 'ta', value: string) => {
@@ -241,6 +244,7 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
     onChange({ [field]: numValue });
   };
 
+  const iva = incluyeIva ? calcularIva(Number(ta) || 0) : 0;
   const totalCost = (Number(supplierCost) || 0) + (Number(ta) || 0);
 
   return (
@@ -312,7 +316,20 @@ export function FinancialSection({ supplierName, supplierCost, ta, supplierPayme
         </FormField>
         )}
       </div>
-      
+
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          id="incluye-iva"
+          checked={incluyeIva}
+          onChange={(e) => onChange({ incluyeIva: e.target.checked })}
+          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+        />
+        <label htmlFor="incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+          Este servicio lleva IVA (19% sobre la ganancia){iva > 0 && ` — $${iva.toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
+        </label>
+      </div>
+
       <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm animate-fade-in">
         <div className="flex flex-col">
           <span className="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tighter">Costo Total para la Agencia</span>

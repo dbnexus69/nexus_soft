@@ -200,6 +200,7 @@ export function ConventionForm({ convention, client, suppliers, paymentMethods, 
         isPaymentMethodRequired={true}
         paymentMethods={paymentMethods}
         ta={convention.ta}
+        incluyeIva={convention.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

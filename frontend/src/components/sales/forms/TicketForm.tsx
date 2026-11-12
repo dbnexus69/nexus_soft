@@ -12,6 +12,7 @@ export { DateTimePicker };
 import { useData } from "../../../context/DataContext";
 import type { Client, ConfigData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
+import { calcularIva } from "../../../utils/iva";
 
 interface TicketFormProps {
   ticket: TicketData;
@@ -1153,6 +1154,19 @@ export function TicketForm({
             />
           </FormField>
           )}
+        </div>
+        <div className="flex items-center gap-3 mt-4">
+          <input
+            type="checkbox"
+            id="ticket-incluye-iva"
+            checked={ticket.incluyeIva !== false}
+            onChange={(e) => onChange({ incluyeIva: e.target.checked })}
+            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <label htmlFor="ticket-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+            Este servicio lleva IVA (19% sobre la ganancia)
+            {ticket.incluyeIva !== false && (ticket.ta || 0) > 0 && ` — $${calcularIva(Number(ticket.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
+          </label>
         </div>
       </div>
 

@@ -208,6 +208,7 @@ export function PetServiceForm({ pet, client, suppliers, paymentMethods, onChang
         isPaymentMethodRequired={true}
         paymentMethods={paymentMethods}
         ta={pet.ta}
+        incluyeIva={pet.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

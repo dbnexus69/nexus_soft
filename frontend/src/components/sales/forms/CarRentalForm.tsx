@@ -146,6 +146,7 @@ export function CarRentalForm({ car, client, suppliers, paymentMethods, onChange
         isPaymentMethodRequired={true}
         paymentMethods={paymentMethods}
         ta={car.ta}
+        incluyeIva={car.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

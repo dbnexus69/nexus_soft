@@ -38,13 +38,9 @@ const campoTour = (t) => [
 ];
 
 // ── Secciones por categoría: [clave de la venta, título, (producto) => [[etiqueta, valor], …]]
+// `planData` va primero: un paquete es el servicio principal de la línea (todo lo demás cuelga de
+// él, spec 015), así que debe imprimirse antes que cualquier categoría suelta — nunca después.
 const SECCIONES = [
-  ['hotelData', 'ALOJAMIENTO', (h) => [
-    ['Hotel', h.hotelName], ['Destino', h.destination], ['Tipo', h.hotelType],
-    ['Check-in', fechaHora(h.startDate)], ['Check-out', fechaHora(h.endDate)],
-    ['N° reserva', h.reservationNumber || 'Pendiente'], ['Huéspedes', nombres(h.guests)], ['Observaciones', h.observations],
-  ]],
-  ['tourData', 'ACTIVIDADES Y TOURS', campoTour],
   ['planData', 'PAQUETES', (p) => {
     const terrestre = p.transportType === 'Terrestre';
     if (p.packageType === 'supplier') {
@@ -65,6 +61,12 @@ const SECCIONES = [
       ['Pasajeros', nombres(p.guests)], ['Observaciones', p.observations],
     ];
   }],
+  ['hotelData', 'ALOJAMIENTO', (h) => [
+    ['Hotel', h.hotelName], ['Destino', h.destination], ['Tipo', h.hotelType],
+    ['Check-in', fechaHora(h.startDate)], ['Check-out', fechaHora(h.endDate)],
+    ['N° reserva', h.reservationNumber || 'Pendiente'], ['Huéspedes', nombres(h.guests)], ['Observaciones', h.observations],
+  ]],
+  ['tourData', 'ACTIVIDADES Y TOURS', campoTour],
   // `coverageAmount`/`contactNumber` es como queda una venta ya guardada; `coverage`/`phone` es el
   // campo crudo del formulario. `members` nunca se renombra al guardar una venta (queda en el
   // genérico `passengers`), así que sin el resto solo servía para una cotización.

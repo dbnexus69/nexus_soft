@@ -145,6 +145,7 @@ export function SimCardForm({ sim, client, suppliers, paymentMethods, documentTy
         isPaymentMethodRequired={true}
         paymentMethods={paymentMethods}
         ta={sim.ta}
+        incluyeIva={sim.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

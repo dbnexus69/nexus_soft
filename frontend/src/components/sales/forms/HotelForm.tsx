@@ -7,6 +7,7 @@ import { HotelData, GuestInfo } from "../../../types";
 import { DateTimePicker } from "./TicketForm";
 import type { AppData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
+import { calcularIva } from "../../../utils/iva";
 
 interface HotelFormProps {
   hotel: HotelData;
@@ -240,6 +241,19 @@ export function HotelForm({ hotel, onChange, triggerError, data, mainClient, sup
             />
           </FormField>
           )}
+        </div>
+        <div className="flex items-center gap-3 mt-4">
+          <input
+            type="checkbox"
+            id="hotel-incluye-iva"
+            checked={hotel.incluyeIva !== false}
+            onChange={(e) => onChange({ incluyeIva: e.target.checked })}
+            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <label htmlFor="hotel-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+            Este servicio lleva IVA (19% sobre la ganancia)
+            {hotel.incluyeIva !== false && (hotel.ta || 0) > 0 && ` — $${calcularIva(Number(hotel.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
+          </label>
         </div>
       </div>
 

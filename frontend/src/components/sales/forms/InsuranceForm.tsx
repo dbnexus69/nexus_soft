@@ -6,6 +6,7 @@ import { ImagesField } from "./VoucherField";
 import { InsuranceData, GuestInfo } from "../../../types";
 import type { AppData } from "../../../types";
 import type { ClienteDelFormulario } from "../wizardData";
+import { calcularIva } from "../../../utils/iva";
 
 interface InsuranceFormProps {
   insurance: InsuranceData;
@@ -239,6 +240,19 @@ export function InsuranceForm({ insurance, onChange, data, client, suppliers = [
             />
           </FormField>
           )}
+        </div>
+        <div className="flex items-center gap-3 mt-4">
+          <input
+            type="checkbox"
+            id="insurance-incluye-iva"
+            checked={insurance.incluyeIva !== false}
+            onChange={(e) => onChange({ incluyeIva: e.target.checked })}
+            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <label htmlFor="insurance-incluye-iva" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+            Este servicio lleva IVA (19% sobre la ganancia)
+            {insurance.incluyeIva !== false && (insurance.ta || 0) > 0 && ` — $${calcularIva(Number(insurance.ta) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}`}
+          </label>
         </div>
       </div>
 

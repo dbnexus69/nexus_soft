@@ -131,6 +131,7 @@ export function RestaurantForm({ restaurant, client, suppliers, paymentMethods, 
         isPaymentMethodRequired={false}
         paymentMethods={paymentMethods}
         ta={restaurant.ta}
+        incluyeIva={restaurant.incluyeIva}
         suppliers={suppliers}
         onChange={(updates) => onChange(updates)}
         cotizando={cotizando}

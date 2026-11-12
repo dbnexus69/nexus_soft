@@ -165,8 +165,10 @@ function definicion(venta, config, { logo = null, encabezadoImagen = null, pieIm
         ['Método de pago', venta.paymentMethod || ((venta.payments || []).length > 1 ? 'Mixto' : venta.payments?.[0]?.method)],
         ['Emisor', agencia],
         ['Valor total', dinero(venta.total)],
-        // El valor del IVA no se enseña al cliente: solo que está incluido.
-        ['IVA', 'Incluido'],
+        // El monto real: una venta puede traer líneas con y sin IVA mezcladas (spec 041), así que ya
+        // no alcanza un "Incluido" fijo. En 0 (toda la venta sin IVA) no se pinta: `rejilla` ya oculta
+        // los pares vacíos, y 'No aplica' sería raro para una venta con una sola línea sin IVA.
+        ['IVA', Number(venta.iva) > 0 ? dinero(venta.iva) : null],
         ['Abonado', dinero(pagado)],
         ['Saldo', dinero(Math.max(0, (Number(venta.total) || 0) - pagado))],
       ], c)], c),

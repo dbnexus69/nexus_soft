@@ -112,6 +112,8 @@ model detalle_venta {
   /// ingreso real de la agencia en el dashboard, el ranking de asesores y la
   /// cartera.
   iva                      Float?              @default(0)
+  /// Si el servicio lleva IVA (spec 041): por defecto sí, igual que siempre. Apagado, `iva` queda en 0.
+  incluye_iva              Boolean             @default(true)
   costo_proveedor          Float?              @default(0)
   proveedor_id             Int?
   metodo_pago_proveedor_id Int?
@@ -1208,6 +1210,8 @@ model detalle_cotizacion {
   costo_proveedor Float           @default(0)
   ta              Float           @default(0)
   iva             Float           @default(0)
+  /// Igual que en `detalle_venta` (spec 041): por defecto sí lleva IVA.
+  incluye_iva     Boolean         @default(true)
   creado_at       DateTime        @default(now())
   cotizaciones    cotizaciones    @relation(fields: [cotizacion_id], references: [id])
 
